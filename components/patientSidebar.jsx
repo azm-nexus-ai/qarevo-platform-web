@@ -54,7 +54,7 @@ export default function Sidebar({
         aria-label={label}
         aria-current={isActive ? "page" : undefined}
         className={[
-          "group relative flex items-center w-full rounded-lg text-md  transition-colors",
+          "group relative flex items-center cursor-pointer w-full rounded-lg text-md  transition-colors",
           collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
           isActive
             ? "bg-[#E6EEF2] font-bold text-[#074360]"
@@ -68,13 +68,7 @@ export default function Sidebar({
           height={25}
         />
 
-        {!collapsed && <span className="truncate">{label}</span>}
-
-        {collapsed && (
-          <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-md px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 z-50">
-            {label}
-          </span>
-        )}
+        {!collapsed && <span className="truncate">{label}</span>}  
       </button>
     );
   };
@@ -103,7 +97,7 @@ export default function Sidebar({
 
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="flex items-center justify-center h-8 w-8 rounded-md"
+          className="flex items-center justify-center cursor-pointer h-8 w-8 rounded-md"
         >
           <Image
             src={SideBar}
@@ -115,7 +109,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      <button className="flex justify-center bg-white border border-[#94B5C7] rounded-lg px-2 py-2.5 mx-2 mt-6 gap-2 items-center">
+      <button className="flex justify-center bg-white border border-[#94B5C7] rounded-lg cursor-pointer px-2 py-2.5 mx-2 mt-6 gap-2 items-center">
         <Image
           src={plusLogo}
           alt="Plus Logo"
@@ -127,7 +121,7 @@ export default function Sidebar({
 
       <nav className="flex-1 px-2 py-4 space-y-1">
         {NAV_ITEMS.map((item) => (
-          <NavButton key={item.id} {...item} />
+          <NavButton key={item.id} {...item}  />
         ))}
       </nav>
 
@@ -149,11 +143,13 @@ export default function Sidebar({
             <p className="text-sm text-[#2D6480]">email@domain.com</p>
             </div>
 
-            <ChevronRight
-            className="text-[#2D6480] ml-auto"
-            height={30}
-            width={30}
-            />
+            <button className="cursor-pointer">
+              <ChevronRight
+              className="text-[#2D6480] ml-auto"
+              height={30}
+              width={30}
+              />
+            </button>
             </>
             )}
       </div>
