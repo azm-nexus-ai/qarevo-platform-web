@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function DoctorCard({ doctor }) {
   return (
-    <div className="bg-[#F7FAFC] px-4 py-2 mt-10 border border-[#C2D5DF] rounded-lg shadow-sm">
+    <div className="bg-[#F7FAFC] px-4 py-2 md:mt-10 mt-3 border border-[#C2D5DF] rounded-lg shadow-sm">
       <div className="flex items-center gap-3">
         <Image
           src={doctor.profilePic}

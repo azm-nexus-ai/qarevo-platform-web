@@ -13,7 +13,7 @@ export default function ConsultationSection() {
         Consultation details
       </h3>
 
-      <div className="flex gap-4">
+      <div className="flex md:flex-row flex-col gap-4">
 
         <div className="flex gap-4 items-center">
           <div className="bg-[#B2DDFF] p-3 rounded-lg">

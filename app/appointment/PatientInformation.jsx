@@ -15,7 +15,7 @@ export default function PatientInformation() {
 
       <div className="flex justify-between">
 
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-1 md:gap-4 items-center">
 
           <div className="bg-[#B2DDFF] p-3 rounded-lg">
             <Image src={user} alt="user" />
@@ -27,7 +27,7 @@ export default function PatientInformation() {
 
         </div>
 
-        <button className="flex gap-2 px-4 py-2 border border-[#94B5C7] cursor-pointer rounded-lg shadow-sm">
+        <button className="flex gap-2 md:px-4 px-2 py-3 md:py-2 text-sm md:text-0 border border-[#94B5C7] cursor-pointer rounded-lg shadow-sm">
 
           <Image
             src={plus}

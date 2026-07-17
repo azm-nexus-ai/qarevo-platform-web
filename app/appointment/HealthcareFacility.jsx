@@ -18,7 +18,7 @@ export default function HealthcareFacility() {
           Details of the healthcare facility
         </h3>
 
-        <div className="flex gap-25">
+        <div className="flex md:flex-row flex-col gap-5 md:gap-25">
 
           <div className="flex gap-4 items-center">
 
@@ -85,9 +85,9 @@ export default function HealthcareFacility() {
 
       </div>
 
-      <div className="flex justify-between pb-10 pt-2">
+      <div className="flex gap-3 md:justify-between pb-10 pt-2">
 
-        <button className="border border-[#94B5C7] cursor-pointer rounded-lg shadow-sm flex gap-2 px-20 py-2">
+        <button className="border border-[#94B5C7] cursor-pointer rounded-lg shadow-sm flex gap-1 md:gap-2 px-2 md:px-20 py-2">
 
           <Image
             src={timeLogo}
@@ -98,7 +98,7 @@ export default function HealthcareFacility() {
 
         </button>
 
-        <button className="border border-[#DB3E3E] rounded-lg cursor-pointer shadow-sm flex gap-2 px-18 py-2">
+        <button className="border border-[#DB3E3E] rounded-lg cursor-pointer shadow-sm flex gap-1 md:gap-2 px-2 md:px-18 py-2">
 
           <Image
             src={cancelLogo}

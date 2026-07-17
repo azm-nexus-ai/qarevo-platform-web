@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { ArrowLeft, ChevronLeft } from "lucide-react";
 
 import Calender from "../../public/icons/calenderIcon";
 import Clock from "../../public/icons/clockIcon";
@@ -20,15 +21,24 @@ import calenderIcon from "../../public/icons/calender2.svg";
 
 export default function AppointmentDetails({
   appointment,
+  onBack
 }) {
   return (
-    <div className="flex flex-col w-175 my-5 ml-4 border bg-white border-[#E6EEF2] rounded-lg">
+    <div className="flex flex-col md:w-175 mt-16 lg:my-5 md:ml-4 border bg-white border-[#E6EEF2] rounded-lg">
 
       <div className="bg-[#074360] flex justify-between px-5 py-3 rounded-t-lg items-center">
 
+        <div className="flex gap-2">
+        <button
+            onClick={onBack}
+            className="lg:hidden flex text-white items-center gap-2"
+        >
+            <ChevronLeft size={25} />
+        </button>
         <h1 className="font-bold text-white text-lg">
           Appointment Details
         </h1>
+        </div>
 
         <div className="flex items-center">
           <Image src={icon1} alt="" width={50} />
@@ -51,7 +61,7 @@ export default function AppointmentDetails({
 
       </div>
 
-      <div className="px-10">
+      <div className="md:px-10 px-3">
 
         <DoctorCard doctor={appointment} />
 

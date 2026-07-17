@@ -40,27 +40,55 @@ const APPOINTMENTS = [
 
 export default function AppointmentPage() {
     const [selectedAppointment, setSelectedAppointment] = useState(APPOINTMENTS[0]);
+    const [showDetails, setShowDetails] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
+
+    const handleAppointmentClick = (appointment) => {
+        setSelectedAppointment(appointment);
+
+        if (window.innerWidth < 1024) {
+            setShowDetails(true);
+        }
+    };
+
 
     return (
-       <div className="bg-[#F7FAFC] flex ">
+       <div className="bg-[#F7FAFC] md:flex ">
         <Sidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
+        mobileOpen={mobileOpen}
+        setMobileOpen= {setMobileOpen}
         />
 
         {/* Appointments Listing */}
+        <div
+                className={`
+                ${showDetails ? "hidden" : "block"}
+                lg:block
+            `}
+        >
             <AppointmentList
                 appointments={APPOINTMENTS}
                 collapsed={collapsed}
                 selectedAppointment={selectedAppointment}
-                onSelectAppointment={setSelectedAppointment}
+                onSelectAppointment={handleAppointmentClick}
             />
+        </div>
 
         {/* Appointment details */}
+        <div
+                className={`
+                ${showDetails ? "block" : "hidden"}
+                lg:block
+                 `}
+        >
             <AppointmentDetails
                 appointment={selectedAppointment}
+                onBack={() => setShowDetails(false)}
             />
+        </div>
        </div> 
     )
 }

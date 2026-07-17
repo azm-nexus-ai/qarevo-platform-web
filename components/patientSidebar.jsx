@@ -14,6 +14,7 @@ import SideBar from "../public/icons/sideBar.svg";
 import QarevoHealth from "../public/icons/qarevoHealth.svg";
 import plusLogo from "../public/icons/plusLogo.svg";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "appointments", label: "Appointments", icon: Appointments },
@@ -34,9 +35,10 @@ export default function Sidebar({
   onNavigate,
   collapsed,
   setCollapsed,
+  mobileOpen,
+  setMobileOpen,
 }) {
   const [internalActive, setInternalActive] = useState("appointments");
-
   const activeId = activeIdProp ?? internalActive;
 
   const handleSelect = (id) => {
@@ -74,15 +76,61 @@ export default function Sidebar({
   };
 
   return (
-    <div
-      className={[
-        "fixed top-0 left-0 h-screen flex flex-col bg-[#F7FAFC] transition-all duration-200 ease-in-out",
-        collapsed ? "w-[72px]" : "w-64",
-      ].join(" ")}
-    >
+    <>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-[#F7FAFC] px-4 py-3 shadow-sm">
+        
+      {/* Menu */}
+      <button onClick={() => setMobileOpen(true)}>
+        <Menu size={24} />
+      </button>
+
+      {/* Logo */}
+      <Image
+        src={QarevoHealth}
+        alt="Qarevo Health"
+        width={150}
+        height={40}
+      />
+
+      {/* Profile */}
+      <div className="bg-[#B2DDFF] w-10 h-10 rounded-full flex items-center justify-center">
+        <h1 className="text-[#074360] font-bold">AN</h1>
+      </div>
+    </div>    
+
+      {/* Overlay */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+        />
+      )}
+    
+      <div
+        className={`
+          fixed top-0 left-0 z-50 h-screen bg-[#F7FAFC]
+          transition-transform duration-300 ease-in-out flex flex-col
+          ${collapsed ? "w-[72px]" : "w-64"}
+
+          ${
+            mobileOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
+          }
+
+          lg:translate-x-0
+        `}
+      >
+      <button
+        onClick={() => setMobileOpen(false)}
+        className={`lg:hidden absolute top-4 text-[#2D6480] ${collapsed ? "right-6" : "right-4"}`}
+      >
+        <X size={24} />
+      </button>
+      
       <div
         className={[
-          "flex items-center h-16 shrink-0 border-slate-200",
+          "flex items-center h-22 pt-5 shrink-0 border-slate-200",
           collapsed ? "justify-center px-0" : "justify-between px-4",
         ].join(" ")}
       >
@@ -97,7 +145,7 @@ export default function Sidebar({
 
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="flex items-center justify-center cursor-pointer h-8 w-8 rounded-md"
+          className="flex items-center justify-center  cursor-pointer h-8 w-8 rounded-md"
         >
           <Image
             src={SideBar}
@@ -109,7 +157,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      <button className="flex justify-center bg-white border border-[#94B5C7] rounded-lg cursor-pointer px-2 py-2.5 mx-2 mt-6 gap-2 items-center">
+       <button className="flex justify-center bg-white border border-[#94B5C7] rounded-lg px-2 py-2.5 mx-2 mt-6 gap-2 items-center">
         <Image
           src={plusLogo}
           alt="Plus Logo"
@@ -131,7 +179,7 @@ export default function Sidebar({
         ))}
       </div>
 
-      <div className="px-2 py-4 flex gap-3 ">
+      <div className="px-2 ml-2 py-4 flex gap-3 ">
         <div className="bg-[#B2DDFF] w-10 h-10 rounded-full">
             <h1 className="text-[#074360] font-bold p-2">AN</h1>
         </div>
@@ -154,5 +202,6 @@ export default function Sidebar({
             )}
       </div>
     </div>
+    </>
   );
 }
