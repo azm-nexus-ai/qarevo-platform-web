@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import Sidebar from "../../components/patientSidebar";
 import ProfilePic from "../../public/icons/profilePic.svg";
 import userIcon from "../../public/icons/userIcon.svg";
@@ -31,6 +33,7 @@ import InfoRow from "./InfoRow.jsx";
 import DoctorCard from "./DoctorCard.jsx";
 import ActionButtons from "./ActionButtons.jsx";
 import AppointmentDetails from "./AppointmentDetails.jsx";
+import MobileBottomNav from "../../components/MobileBottomNav.jsx";
 
 const APPOINTMENTS = [
     {id: 1, date: "Mon, 16.03.26", time: "10:00 - 10:30", doctor: "Dr. Sarah Wilson", department: "Cardiology", patient: "Emily Johnson", profilePic: ProfilePic, icon: userIcon},
@@ -38,12 +41,40 @@ const APPOINTMENTS = [
     {id: 3, date: "Mon, 18.03.26", time: "10:00 - 10:30", doctor: "Dr. Sarah Wilson", department: "Cardiology", patient: "Emily Johnson", profilePic: ProfilePic, icon: userIcon},
 ]
 
-export default function AppointmentPage() {
+export default function AppointmentPage({}) {
     const [selectedAppointment, setSelectedAppointment] = useState(APPOINTMENTS[0]);
     const [showDetails, setShowDetails] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [activeId, setActiveId] = useState("appointments");
 
+    const router = useRouter();
+
+    const handleNavigate = (id) => {
+    setActiveId(id);
+
+    switch (id) {
+        case "home":
+        router.push("/");
+        break;
+
+        case "appointments":
+        router.push("/appointments");
+        break;
+
+        case "messages":
+        router.push("/messages");
+        break;
+
+        case "myDoctors":
+        router.push("/my-doctors");
+        break;
+
+        case "records":
+        router.push("/medical-records");
+        break;
+    }
+    };
     const handleAppointmentClick = (appointment) => {
         setSelectedAppointment(appointment);
 
@@ -60,6 +91,8 @@ export default function AppointmentPage() {
         setCollapsed={setCollapsed}
         mobileOpen={mobileOpen}
         setMobileOpen= {setMobileOpen}
+        activeId={activeId}
+        onNavigate={handleNavigate}
         />
 
         {/* Appointments Listing */}
@@ -89,6 +122,11 @@ export default function AppointmentPage() {
                 onBack={() => setShowDetails(false)}
             />
         </div>
+
+        <MobileBottomNav
+            activeId={activeId}
+            onNavigate={handleNavigate}
+        />
        </div> 
     )
 }

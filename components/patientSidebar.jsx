@@ -167,7 +167,7 @@ export default function Sidebar({
         {!collapsed && <p className="text-[#1C375E] font-bold text-sm ">Schedule Visit</p>}
       </button>
 
-      <nav className="flex-1 px-2 py-4 space-y-1">
+      <nav className="hidden lg:flex flex-1 flex-col px-2 py-4 space-y-1">
         {NAV_ITEMS.map((item) => (
           <NavButton key={item.id} {...item}  />
         ))}
