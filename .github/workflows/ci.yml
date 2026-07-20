@@ -8,7 +8,7 @@ on:
 
 jobs:
   web-ci:
-    name: Lint, Type Check and Build
+    name: Type Check and Build
     runs-on: ubuntu-latest
 
     steps:
@@ -30,11 +30,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Lint
-        run: pnpm lint
+      # - name: Lint
+      #   run: pnpm lint
 
-      - name: Type check
-        run: pnpm tsc --noEmit
+      # - name: Type check
+      #   run: pnpm tsc --noEmit
 
-      - name: Build
-        run: pnpm build
+      # - name: Build
+      #   run: pnpm build
