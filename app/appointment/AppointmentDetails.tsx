@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowLeft, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import Calender from "../../public/icons/calenderIcon";
 import Clock from "../../public/icons/clockIcon";
@@ -19,36 +19,51 @@ import HealthcareFacility from "./HealthcareFacility";
 import document from "../../public/icons/document.svg";
 import calenderIcon from "../../public/icons/calender2.svg";
 
+import type { Appointment } from "../../components/types/Appointment";
+
+type AppointmentDetailsProps = {
+  appointment: Appointment;
+  onBack: () => void;
+};
+
 export default function AppointmentDetails({
   appointment,
-  onBack
-}) {
+  onBack,
+}: AppointmentDetailsProps) {
   return (
     <div className="flex flex-col md:w-175 mt-16 lg:my-5 md:ml-4 border bg-white border-[#E6EEF2] rounded-lg">
-
       <div className="bg-[#074360] flex justify-between px-5 py-3 rounded-t-lg items-center">
-
         <div className="flex gap-2">
-        <button
+          <button
             onClick={onBack}
             className="lg:hidden flex text-white items-center gap-2"
-        >
+          >
             <ChevronLeft size={25} />
-        </button>
-        <h1 className="font-bold text-white text-lg">
-          Appointment Details
-        </h1>
+          </button>
+
+          <h1 className="font-bold text-white text-lg">
+            Appointment Details
+          </h1>
         </div>
 
         <div className="flex items-center">
-          <Image src={icon1} alt="" width={50} />
-          <Image src={icon2} alt="" width={100} />
-        </div>
+          <Image
+            src={icon1}
+            alt="Decoration"
+            width={50}
+            height={50}
+          />
 
+          <Image
+            src={icon2}
+            alt="Decoration"
+            width={100}
+            height={100}
+          />
+        </div>
       </div>
 
       <div className="bg-[#E6EEF2] px-5 py-3 flex gap-3">
-
         <div className="flex items-center gap-2 text-[#074360]">
           <Calender className="text-[#074360]" />
           <p>{appointment.date}</p>
@@ -58,11 +73,9 @@ export default function AppointmentDetails({
           <Clock className="text-[#074360]" />
           <p>{appointment.time}</p>
         </div>
-
       </div>
 
       <div className="md:px-10 px-3">
-
         <DoctorCard doctor={appointment} />
 
         <ActionButtons />
@@ -83,9 +96,7 @@ export default function AppointmentDetails({
         <PatientInformation />
 
         <HealthcareFacility />
-
       </div>
-
     </div>
   );
 }

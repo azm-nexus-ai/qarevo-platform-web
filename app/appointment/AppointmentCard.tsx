@@ -1,20 +1,33 @@
 "use client";
 
+import Calender from "../../public/icons/calenderIcon";
+import Clock from "../../public/icons/clockIcon";
 import Image from "next/image";
-import Calender from "../../public/icons/calenderIcon.jsx";
-import Clock from "../../public/icons/clockIcon.jsx";
+import type { Appointment } from "../../components/types/Appointment";
 
-export default function AppointmentCard({ appointment, active, onClick, }) {
+type AppointmentCardProps = {
+  appointment: Appointment;
+  active: boolean;
+  onClick: () => void;
+};
+
+export default function AppointmentCard({
+  appointment,
+  active,
+  onClick,
+}: AppointmentCardProps) {
   return (
-    <div 
-    onClick={onClick}
-    className={`border-2 rounded-xl shadow-sm cursor-pointer ${active ? "border-[#074360]" : "border-[#1A9AC0]"}`}>
-
-      <div  className={`flex gap-4 items-center p-3 rounded-t-lg text-white text-sm transition-colors duration-300 ${
-        active
-            ? "bg-[#074360]"
-            : "bg-[#1A9AC0]"
-        }`}>
+    <div
+      onClick={onClick}
+      className={`border-2 rounded-xl shadow-sm cursor-pointer ${
+        active ? "border-[#074360]" : "border-[#1A9AC0]"
+      }`}
+    >
+      <div
+        className={`flex gap-4 items-center p-3 rounded-t-lg text-white text-sm transition-colors duration-300 ${
+          active ? "bg-[#074360]" : "bg-[#1A9AC0]"
+        }`}
+      >
         <div className="flex items-center gap-2">
           <Calender className="text-white" />
           <p>{appointment.date}</p>

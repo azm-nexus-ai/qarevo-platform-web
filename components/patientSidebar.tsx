@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from "react";
-import Image from "next/image";
+import { useState, type Dispatch, type SetStateAction } from "react";import Image from "next/image";
+import type { StaticImageData } from "next/image";
+import {ChevronRight, Menu, X } from "lucide-react";
 
 import Appointments from "../public/icons/appointmentLogo.svg";
 import Messages from "../public/icons/messageLogo.svg";
@@ -13,40 +14,61 @@ import HelpCenter from "../public/icons/HelpCenter.svg";
 import SideBar from "../public/icons/sideBar.svg";
 import QarevoHealth from "../public/icons/qarevoHealth.svg";
 import plusLogo from "../public/icons/plusLogo.svg";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Menu, X } from "lucide-react";
 
-const NAV_ITEMS = [
+type NavButtonProps = {
+  id: string;
+  label: string;
+  icon: StaticImageData;
+};
+
+type SidebarProps = {
+  activeId?: string;
+  onNavigate?: (id: string) => void;
+
+  collapsed: boolean;
+  setCollapsed: Dispatch<SetStateAction<boolean>>;
+
+  mobileOpen: boolean;
+  setMobileOpen: Dispatch<SetStateAction<boolean>>;
+};
+
+type NavItem = {
+  id: string;
+  label: string;
+  icon: StaticImageData;
+};
+
+const NAV_ITEMS: NavItem[] = [
   { id: "appointments", label: "Appointments", icon: Appointments },
   { id: "messages", label: "Messages", icon: Messages },
   { id: "myDoctors", label: "My Doctors", icon: MyDoctors },
   { id: "medicalRecords", label: "Medical Records", icon: MedicalRecords },
 ];
 
-const FOOTER_ITEMS = [
+const FOOTER_ITEMS: NavItem[] = [
   { id: "notifications", label: "Notifications", icon: Notifications },
   { id: "support", label: "Support", icon: Support },
   { id: "helpCenter", label: "Help Center", icon: HelpCenter },
 ];
 
 export default function Sidebar({
-  defaultCollapsed = false,
   activeId: activeIdProp,
   onNavigate,
   collapsed,
   setCollapsed,
   mobileOpen,
   setMobileOpen,
-}) {
-  const [internalActive, setInternalActive] = useState("appointments");
+}: SidebarProps) {
+  
+  const [internalActive, setInternalActive] = useState<string>("appointments");
   const activeId = activeIdProp ?? internalActive;
 
-  const handleSelect = (id) => {
+  const handleSelect = (id: string) => {
     setInternalActive(id);
     onNavigate?.(id);
   };
 
-  const NavButton = ({ id, label, icon }) => {
+  const NavButton = ({ id, label, icon } : NavButtonProps) => {
     const isActive = activeId === id;
 
     return (
@@ -150,7 +172,6 @@ export default function Sidebar({
           <Image
             src={SideBar}
             alt="Toggle Sidebar"
-            size="100"
             width={25}
             height={25}
           />
@@ -168,13 +189,13 @@ export default function Sidebar({
       </button>
 
       <nav className="hidden lg:flex flex-1 flex-col px-2 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.map((item: NavItem) => (
           <NavButton key={item.id} {...item}  />
         ))}
       </nav>
 
       <div className="px-2 py-4 border-b border-slate-200 space-y-1">
-        {FOOTER_ITEMS.map((item) => (
+        {FOOTER_ITEMS.map((item: NavItem) => (
           <NavButton key={item.id} {...item} />
         ))}
       </div>
