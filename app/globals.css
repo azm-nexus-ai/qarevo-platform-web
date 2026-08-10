@@ -1,138 +1,219 @@
-@import "tailwindcss";
-
-/*
-  --font-public-sans is defined on <html> by next/font (Public Sans + Next.js metric-adjusted fallback).
-  --font-sans-fallback is used if the variable is ever missing; otherwise it continues the stack after Next’s value.
-*/
-:root {
-  --color-primary-50: #e6eef2;
-  --background: var(--color-primary-50);
-  --foreground: #171717;
-  --font-sans-fallback: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-
-  /* Primary CTA gradient stops (used by .q-btn-primary) */
-  --q-btn-primary-top: #1e70cc;
-  --q-btn-primary-mid: #175cd3;
-  --q-btn-primary-bottom: #19407c;
-  --q-btn-primary-border: #0d2847;
-  --q-azure-400: #53a8f4;
-}
+@import 'tailwindcss';
 
 @theme {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-public-sans), var(--font-sans-fallback);
-
-  /* Brilliant Azure ramp — Tailwind utilities: bg-q-azure-50, text-q-azure-700, border-q-azure-200, etc. */
-  --color-q-azure-50: #eff8ff;
-  --color-q-azure-100: #d1e9ff;
-  --color-q-azure-200: #b2ddff;
-  --color-q-azure-300: #84c5fb;
-  --color-q-azure-400: #53a8f4;
-  --color-q-azure-500: #348cea;
-  --color-q-azure-600: #1e70cc;
-  --color-q-azure-700: #175cd3;
-  --color-q-azure-800: #1849a9;
-  --color-q-azure-900: #19407c;
-
-  /* Brand semantic tokens — Tailwind utilities: text-q-heading, bg-q-danger-bg, etc. */
-  --color-q-heading: #04354d;
-  --color-q-muted-text: #647585;
-  --color-q-text: #0e151a;
-  --color-q-link: #348cea;
-  --color-q-label: #04354d;
-  --color-q-accent: #20b5df;
-  --color-q-sky-surge: #20b5df;
-  --color-q-border: #e2eaef;
-  --color-q-border-input: #c9d5e5;
-  --color-q-success: #047857;
-  --color-q-danger: #b42318;
-  --color-q-danger-bg: #fef3f2;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-jakarta), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
 }
 
-html,
-body {
-  height: 100%;
-  font-family: var(--font-public-sans), var(--font-sans-fallback);
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: var(--color-primary-50);
-  color: var(--q-text, #0f172a);
+  background: #F7FAFC;
+  color: #04354D;
+  line-height: 1.5;
+  overflow-x: hidden;
 }
 
-/* Primary action buttons — glossy Azure gradient, dark edge, top highlight */
-.q-btn-primary {
-  box-sizing: border-box;
-  color: #fff;
-  font-weight: 600;
-  border: 1px solid var(--q-btn-primary-border);
-  background: linear-gradient(
-    180deg,
-    var(--q-btn-primary-top) 0%,
-    var(--q-btn-primary-mid) 46%,
-    var(--q-btn-primary-bottom) 100%
-  );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.15),
-    0 1px 2px rgba(13, 40, 71, 0.22);
-  transition:
-    filter 0.22s ease,
-    opacity 0.22s ease,
-    box-shadow 0.18s ease;
+a {
+  color: #348CEA;
 }
 
-.q-btn-primary:hover:not(:disabled) {
-  filter: brightness(1.12) saturate(0.82);
-  opacity: 0.96;
+::selection {
+  background: rgba(32, 181, 223, 0.2);
+  color: #04354D;
 }
 
-.q-btn-primary:active:not(:disabled) {
-  filter: brightness(0.84) saturate(0.88);
-  opacity: 0.94;
-  box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 1px 1px rgba(13, 40, 71, 0.15);
+:focus-visible {
+  outline: 2px solid rgba(32, 181, 223, 0.7);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
-.q-btn-primary:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
-.q-btn-primary:focus-visible {
-  outline: 2px solid var(--q-azure-400);
-  outline-offset: 2px;
+button {
+  font-family: inherit;
 }
 
-@keyframes auth-slider-text-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
+/* ── Responsive visibility helpers ── */
+.hide-mobile {
+  display: flex;
+}
+.show-mobile {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .hide-mobile {
+    display: none !important;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .show-mobile {
+    display: flex !important;
   }
 }
 
-.auth-slider-text {
-  animation: auth-slider-text-in 0.4s ease-out;
+/* ── Responsive grid helpers ── */
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .auth-slider-text {
-    animation: none;
+@media (max-width: 767px) {
+  .grid-responsive-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid-responsive-dashboard {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .grid-responsive-dashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Trust cards flex wrap ── */
+.trust-flex {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+/* ── Compliance row wrap ── */
+.compliance-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+@media (max-width: 600px) {
+  .compliance-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+/* ── Hero button row ── */
+.hero-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .hero-btns {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .hero-btns button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ── Section padding responsive ── */
+.section-pad {
+  padding: 96px 0 88px;
+}
+
+@media (max-width: 767px) {
+  .section-pad {
+    padding: 64px 0 56px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-pad {
+    padding: 48px 0 40px;
+  }
+}
+
+/* ── Container responsive padding ── */
+.container-pad {
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+@media (max-width: 600px) {
+  .container-pad {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+/* ── Whitepaper page ── */
+.whitepaper-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 767px) {
+  .whitepaper-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Footer grid ── */
+.footer-grid {
+  grid-template-columns: 1fr auto auto;
+}
+
+@media (max-width: 640px) {
+  .footer-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Stats grid (whitepaper) ── */
+.stats-grid {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+@media (max-width: 767px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Physician grid divider: hide on mobile stack ── */
+@media (max-width: 767px) {
+  .physician-left-panel {
+    border-right: none !important;
+    border-bottom: 1px solid rgba(4,53,77,0.07);
   }
 }
