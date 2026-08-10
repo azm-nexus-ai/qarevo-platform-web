@@ -412,18 +412,21 @@ function DeviceCheckPageContent() {
   }, [phase])
 
   // ── Hero CTA ─────────────────────────────────────────────────────────────
-  const heroCta = useMemo(() => {
-    switch (phase) {
-      case 'idle':
-        return { label: 'Run Device Test', onClick: handleRunChecks, disabled: false, style: { background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', boxShadow: '0 8px 22px rgba(32,181,223,0.26)', cursor: 'pointer' } }
-      case 'running':
-        return { label: 'Testing…', onClick: undefined, disabled: true, style: { background: 'rgba(4,53,77,0.08)', color: T.slate2, cursor: 'not-allowed' } }
-      case 'success':
-        return { label: 'Join Consultation', onClick: handleJoin, disabled: false, style: { background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', boxShadow: '0 8px 22px rgba(32,181,223,0.28)', cursor: 'pointer' } }
-      case 'failure':
-        return { label: 'Run Test Again', onClick: handleRetry, disabled: false, style: { background: 'rgba(245,158,11,0.12)', color: T.amber, border: '1px solid rgba(245,158,11,0.24)', cursor: 'pointer' } }
-    }
-  }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
+  let heroCta: { label: string; onClick?: () => void; disabled: boolean; style: React.CSSProperties }
+  switch (phase) {
+    case 'idle':
+      heroCta = { label: 'Run Device Test', onClick: handleRunChecks, disabled: false, style: { background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', boxShadow: '0 8px 22px rgba(32,181,223,0.26)', cursor: 'pointer' } }
+      break
+    case 'running':
+      heroCta = { label: 'Testing…', onClick: undefined, disabled: true, style: { background: 'rgba(4,53,77,0.08)', color: T.slate2, cursor: 'not-allowed' } }
+      break
+    case 'success':
+      heroCta = { label: 'Join Consultation', onClick: handleJoin, disabled: false, style: { background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', boxShadow: '0 8px 22px rgba(32,181,223,0.28)', cursor: 'pointer' } }
+      break
+    case 'failure':
+      heroCta = { label: 'Run Test Again', onClick: handleRetry, disabled: false, style: { background: 'rgba(245,158,11,0.12)', color: T.amber, border: '1px solid rgba(245,158,11,0.24)', cursor: 'pointer' } }
+      break
+  }
 
   const waitingRoomHref = `/patient/video-consultation/waiting-room?${searchParams.toString()}`
 
@@ -559,7 +562,7 @@ function DeviceCheckPageContent() {
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>Your device is ready</p>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate }}>Camera, microphone, speakers, and connection are all confirmed. Click <strong>Join Consultation</strong> when you're ready.</p>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate }}>Camera, microphone, speakers, and connection are all confirmed. Click <strong>Join Consultation</strong> when you&apos;re ready.</p>
             </div>
           </div>
         )}

@@ -531,7 +531,7 @@ export default function InsurancePrivacyConsentPage() {
   useEffect(() => {
     try {
       const stored = parseStoredForm(window.localStorage.getItem(STORAGE_KEY))
-      if (stored) setForm(stored)
+      if (stored) queueMicrotask(() => setForm(stored))
     } catch {
       // Ignore prototype storage issues.
     }
@@ -556,7 +556,7 @@ export default function InsurancePrivacyConsentPage() {
   }, [form])
 
   useEffect(() => {
-    if (submitted) setErrors(validateForm(form))
+    if (submitted) queueMicrotask(() => setErrors(validateForm(form)))
   }, [form, submitted])
 
   const validationErrors = useMemo(() => validateForm(form), [form])

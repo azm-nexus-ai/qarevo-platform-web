@@ -103,10 +103,20 @@ function SuccessPageContent() {
 
   const appointmentId = useMemo(() => {
     const prefix = physicianData.name.split(' ').pop()?.slice(0, 3).toUpperCase() ?? 'QRV'
-    return `QRV-${prefix}-${String(Date.now()).slice(-5)}`
-  }, [physicianData.name])
+    let hash = 0
+    const str = `${physicianData.name}-${date}-${slot}`
+    for (let i = 0; i < str.length; i++) { hash = (hash << 5) - hash + str.charCodeAt(i); hash |= 0 }
+    const suffix = Math.abs(hash).toString().padStart(5, '0').slice(-5)
+    return `QRV-${prefix}-${suffix}`
+  }, [physicianData.name, date, slot])
 
-  const bookingReference = useMemo(() => `REF-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now()).slice(-3)}`, [])
+  const bookingReference = useMemo(() => {
+    let hash = 0
+    const str = `ref-${date}-${slot}`
+    for (let i = 0; i < str.length; i++) { hash = (hash << 5) - hash + str.charCodeAt(i); hash |= 0 }
+    const suffix = Math.abs(hash).toString().padStart(3, '0').slice(-3)
+    return `REF-20260810-${suffix}`
+  }, [date, slot])
 
   const rightRailContent = (
     <div style={{ display: 'grid', gap: '12px' }}>

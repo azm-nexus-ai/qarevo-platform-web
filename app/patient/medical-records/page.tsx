@@ -522,7 +522,7 @@ function MedicalRecordsPageInner() {
         ].map(item => (
           <button
             key={item.label}
-            onClick={() => setActiveTab(item.filter as any)}
+            onClick={() => setActiveTab(item.filter as RecordType | 'All Records')}
             style={{ textAlign: 'left', padding: '16px', borderRadius: '16px', border: `1px solid ${activeTab === item.filter ? 'rgba(32,181,223,0.3)' : 'rgba(4,53,77,0.08)'}`, background: activeTab === item.filter ? 'rgba(32,181,223,0.06)' : 'rgba(255,255,255,0.85)', boxShadow: activeTab === item.filter ? '0 4px 12px rgba(32,181,223,0.1)' : '0 2px 8px rgba(4,53,77,0.04)', cursor: 'pointer', transition: 'all 0.15s ease' }}
           >
             <p style={{ margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: activeTab === item.filter ? T.blue : T.slate2 }}>{item.label}</p>
@@ -552,7 +552,7 @@ function MedicalRecordsPageInner() {
             {['All Records', ...CATEGORIES].map(cat => (
               <button
                 key={cat}
-                onClick={() => setActiveTab(cat as any)}
+                onClick={() => setActiveTab(cat as RecordType | 'All Records')}
                 style={{
                   padding: '8px 16px',
                   borderRadius: '999px',

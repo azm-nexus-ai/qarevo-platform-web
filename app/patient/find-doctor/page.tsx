@@ -213,7 +213,7 @@ export default function FindDoctorPage() {
   }, [router])
 
   useEffect(() => {
-    setLoading(true)
+    queueMicrotask(() => setLoading(true))
     const timer = window.setTimeout(() => setLoading(false), 600)
     return () => window.clearTimeout(timer)
   }, [filteredPhysicians.length, specialty, sortBy, rating, distance, consultationType, insurance, gender, language, experience, price, availability])

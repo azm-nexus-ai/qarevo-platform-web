@@ -308,14 +308,14 @@ export default function PersonalInformationPage() {
       const signupRaw = window.localStorage.getItem('qarevo.auth.signup.v1')
       if (raw) {
         const parsed = JSON.parse(raw) as PersonalInfoForm
-        setForm({ ...INITIAL_FORM, ...parsed })
+        queueMicrotask(() => setForm({ ...INITIAL_FORM, ...parsed }))
         return
       }
 
       if (signupRaw) {
         const signup = JSON.parse(signupRaw) as { fullName?: string }
         if (signup.fullName) {
-          setForm((prev) => ({ ...prev, fullName: signup.fullName || '' }))
+          queueMicrotask(() => setForm((prev) => ({ ...prev, fullName: signup.fullName || '' })))
         }
       }
     } catch {

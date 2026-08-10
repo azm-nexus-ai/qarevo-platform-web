@@ -146,10 +146,20 @@ function WaitingRoomPageContent() {
 
   const appointmentId = useMemo(() => {
     const prefix = physician?.name.split(' ').pop()?.slice(0, 3).toUpperCase() ?? 'QRV'
-    return `QRV-${prefix}-${String(Date.now()).slice(-5)}`
-  }, [physician?.name])
+    let hash = 0
+    const str = `${physician?.name ?? ''}-${date}-${slot}`
+    for (let i = 0; i < str.length; i++) { hash = (hash << 5) - hash + str.charCodeAt(i); hash |= 0 }
+    const suffix = Math.abs(hash).toString().padStart(5, '0').slice(-5)
+    return `QRV-${prefix}-${suffix}`
+  }, [physician?.name, date, slot])
 
-  const bookingReference = useMemo(() => `REF-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now()).slice(-3)}`, [])
+  const bookingReference = useMemo(() => {
+    let hash = 0
+    const str = `ref-${date}-${slot}`
+    for (let i = 0; i < str.length; i++) { hash = (hash << 5) - hash + str.charCodeAt(i); hash |= 0 }
+    const suffix = Math.abs(hash).toString().padStart(3, '0').slice(-3)
+    return `REF-20260810-${suffix}`
+  }, [date, slot])
 
   const countdown = useMemo(() => {
     const target = getAppointmentTarget(date, slot)

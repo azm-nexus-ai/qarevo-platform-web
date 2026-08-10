@@ -259,20 +259,23 @@ export default function ContactInformationPage() {
       const personalRaw = window.localStorage.getItem(PERSONAL_INFO_STORAGE_KEY)
 
       if (stored) {
-        setForm({ ...INITIAL_FORM, ...JSON.parse(stored) })
+        const parsed = JSON.parse(stored)
+        queueMicrotask(() => setForm({ ...INITIAL_FORM, ...parsed }))
         return
       }
 
       const signup = signupRaw ? (JSON.parse(signupRaw) as { email?: string; country?: string; phone?: string }) : null
       const personal = personalRaw ? (JSON.parse(personalRaw) as { fullName?: string }) : null
 
-      setForm((prev) => ({
-        ...prev,
-        email: signup?.email || '',
-        country: signup?.country || '',
-        primaryPhone: signup?.phone || '',
-        emergencyName: personal?.fullName || '',
-      }))
+      queueMicrotask(() => {
+        setForm((prev) => ({
+          ...prev,
+          email: signup?.email || '',
+          country: signup?.country || '',
+          primaryPhone: signup?.phone || '',
+          emergencyName: personal?.fullName || '',
+        }))
+      })
     } catch {
       // Ignore storage parse issues in prototype mode.
     }

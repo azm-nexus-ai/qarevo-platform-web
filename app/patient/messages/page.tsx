@@ -203,7 +203,7 @@ function MessagesPageInner() {
     if (initialContactId) {
       const conv = conversations.find(c => c.contactId === initialContactId)
       if (conv) {
-        setActiveConvId(conv.id)
+        queueMicrotask(() => setActiveConvId(conv.id))
       }
     }
   }, [initialContactId, conversations])
