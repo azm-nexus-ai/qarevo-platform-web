@@ -461,6 +461,7 @@ export default function DoctorRegisterPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field
                   label="Date of Birth"
+                  placeholder="Select date of birth"
                   type="date"
                   value={dateOfBirth}
                   onChange={setDateOfBirth}
