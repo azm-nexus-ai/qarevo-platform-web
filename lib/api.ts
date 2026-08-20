@@ -69,3 +69,80 @@ export async function createMeeting(body: CreateMeetingRequest): Promise<CreateM
 export async function getProviders(consultationId: string): Promise<Provider[]> {
     return apiGet<Provider[]>(`/api/v1/consultations/${consultationId}/providers`);
 }
+
+// Doctor Authentication Types
+export type DoctorRegisterRequest = {
+    first_name: string;
+    middle_name?: string;
+    last_name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    country_code?: string;
+    date_of_birth?: string;
+    gender?: string;
+    specialty?: string;
+    experience_years?: number;
+    license_number?: string;
+    is_independent?: boolean;
+    consents: {
+        terms_privacy: boolean;
+        telehealth: boolean;
+        marketing?: boolean;
+    };
+};
+
+export type DoctorRegisterResponse = {
+    user_id: string;
+    provider_id: string;
+    message: string;
+};
+
+export type DoctorLoginRequest = {
+    identifier: string; // email, username, or phone
+    password: string;
+};
+
+export type DoctorLoginResponse = {
+    temp_token: string;
+    token_type: string;
+    expires_in: number;
+    email_verified: boolean;
+    phone_verified: boolean;
+};
+
+export type VerifyEmailCodeRequest = {
+    email: string;
+    code: string;
+};
+
+export type VerifyEmailCodeResponse = {
+    message: string;
+};
+
+export type VerifyPhoneCodeRequest = {
+    country_code: string;
+    phone: string;
+    code: string;
+};
+
+export type VerifyPhoneCodeResponse = {
+    message: string;
+};
+
+// Doctor Authentication API Functions
+export async function registerDoctor(body: DoctorRegisterRequest): Promise<DoctorRegisterResponse> {
+    return apiPost<DoctorRegisterResponse>("/api/v1/doctor/register", body);
+}
+
+export async function loginDoctor(body: DoctorLoginRequest): Promise<DoctorLoginResponse> {
+    return apiPost<DoctorLoginResponse>("/api/v1/auth/doctor/login", body);
+}
+
+export async function verifyDoctorEmailCode(body: VerifyEmailCodeRequest): Promise<VerifyEmailCodeResponse> {
+    return apiPost<VerifyEmailCodeResponse>("/api/v1/auth/verify-email-code", body);
+}
+
+export async function verifyDoctorPhoneCode(body: VerifyPhoneCodeRequest): Promise<VerifyPhoneCodeResponse> {
+    return apiPost<VerifyPhoneCodeResponse>("/api/v1/auth/verify-phone-code", body);
+}
