@@ -469,7 +469,8 @@ export default function DoctorRegisterPage() {
                 />
                 <Field
                   label="Gender"
-                  placeholder="Select gender"
+                  placeholder="e.g., Male, Female, Other"
+                  type="text"
                   value={gender}
                   onChange={setGender}
                   optional
