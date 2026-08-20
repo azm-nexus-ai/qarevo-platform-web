@@ -42,7 +42,7 @@ function getStrength(pw: string) {
 // Field component
 interface FieldProps {
   label: string
-  placeholder: string
+  placeholder?: string
   type?: string
   value: string
   onChange: (v: string) => void
