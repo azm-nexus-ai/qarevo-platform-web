@@ -1,75 +1,149 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { DOCTOR_SIDEBAR_ITEMS, DOCTOR_ROUTES, isDoctorNavActive } from '@/constants/doctor-navigation'
 import { ICONS } from '@/constants/icons'
-
-function Icon({ icon }: { icon: string | readonly string[] }) {
-  if (typeof icon === 'string') {
-    return <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={icon} /></svg>
-  }
-  return <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{icon.map((path, i) => <path key={i} d={path} />)}</svg>
-}
+import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import Ico from '@/components/ui/Ico'
+import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 
 export default function DoctorLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const handleProfileClick = () => {
+    router.push('/doctor/profile')
+  }
+
+  const handleSettingsClick = () => {
+    router.push('/doctor/settings')
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex">
+    <div style={{ minHeight: '100vh', background: PAGE_BG }}>
+      <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-200 min-h-screen fixed left-0 top-0 z-10">
-          <div className="p-6 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-900">Qarevo Health</h1>
-            <p className="text-sm text-gray-500 mt-1">Doctor Portal</p>
+        <aside style={{
+          width: '260px',
+          background: 'rgba(247,250,252,0.82)',
+          backdropFilter: 'blur(22px) saturate(175%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(175%)',
+          borderRight: '1px solid rgba(4,53,77,0.08)',
+          minHeight: '100vh',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          zIndex: 10,
+          boxShadow: Sh.nav,
+        }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
+            <AuthenticatedLogo width={140} />
+            <p style={{ margin: '8px 0 0', fontSize: '11px', color: T.slate2, fontWeight: 500 }}>Doctor Portal</p>
           </div>
           
-          <nav className="p-4">
-            <ul className="space-y-1">
-              {DOCTOR_SIDEBAR_ITEMS.map((item) => (
-                <li key={item.href}>
-                  <a
-                    href={item.href}
-                    className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                      isDoctorNavActive(typeof window !== 'undefined' ? window.location.pathname : item.href, item.href)
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className="mr-3"><Icon icon={item.icon} /></span>
-                    {item.label}
-                  </a>
-                </li>
-              ))}
+          <nav style={{ padding: '16px 12px' }}>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {DOCTOR_SIDEBAR_ITEMS.map((item) => {
+                const isActive = isDoctorNavActive(pathname, item.href)
+                return (
+                  <li key={item.href}>
+                    <a
+                      href={item.href}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        transition: 'all 0.15s ease',
+                        ...(isActive
+                          ? { background: 'rgba(32,181,223,0.12)', color: T.blue, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }
+                          : { color: T.slate, background: 'transparent' }
+                        ),
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'rgba(4,53,77,0.04)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'transparent'
+                        }
+                      }}
+                    >
+                      <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={isActive ? T.blue : T.slate2} /></span>
+                      {item.label}
+                    </a>
+                  </li>
+                )
+              })}
             </ul>
           </nav>
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 ml-64">
+        <main style={{ flex: 1, marginLeft: '260px' }}>
           {/* Header */}
-          <header className="bg-white border-b border-gray-200 px-8 py-4 sticky top-0 z-5">
-            <div className="flex items-center justify-between">
+          <header style={{
+            background: 'rgba(255,255,255,0.86)',
+            backdropFilter: 'blur(22px) saturate(175%)',
+            WebkitBackdropFilter: 'blur(22px) saturate(175%)',
+            borderBottom: '1px solid rgba(4,53,77,0.08)',
+            padding: '16px 32px',
+            position: 'sticky',
+            top: 0,
+            zIndex: 5,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Welcome, Doctor</h2>
-                <p className="text-sm text-gray-500">Manage your consultations and patients</p>
+                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Welcome, Doctor</h2>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Manage your consultations and patients</p>
               </div>
-              <div className="flex items-center space-x-4">
-                <button className="p-2 text-gray-500 hover:text-gray-700">
-                  <Icon icon={ICONS.info} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button 
+                  onClick={handleSettingsClick}
+                  style={{ padding: '10px', borderRadius: '10px', border: 'none', background: 'rgba(247,250,252,0.8)', cursor: 'pointer', transition: 'all 0.15s' }}
+                  title="Settings"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.slate2 }}>
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1.1.73V4a2 2 0 0 0-2-2z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
                 </button>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                <button 
+                  onClick={handleProfileClick}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(4,53,77,0.08)', cursor: 'pointer', transition: 'all 0.15s' }}
+                  title="View Profile"
+                >
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.25)' }}>
                     DR
                   </div>
-                </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: T.navy, lineHeight: 1.2 }}>Dr. Smith</p>
+                    <p style={{ margin: 0, fontSize: '11px', color: T.slate2, lineHeight: 1 }}>Cardiology</p>
+                  </div>
+                </button>
               </div>
             </div>
           </header>
 
           {/* Page content */}
-          <div className="p-8">
-            {children}
+          <div style={{ padding: '28px 32px' }}>
+            {mounted ? children : null}
           </div>
         </main>
       </div>
