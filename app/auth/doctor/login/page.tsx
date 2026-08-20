@@ -38,9 +38,10 @@ interface FieldProps {
   icon?: string | readonly string[]
   rightSlot?: React.ReactNode
   autoComplete?: string
+  onBlur?: () => void
 }
 
-function Field({ label, placeholder, type = 'text', value, onChange, error, success, icon, rightSlot, autoComplete }: FieldProps) {
+function Field({ label, placeholder, type = 'text', value, onChange, error, success, icon, rightSlot, autoComplete, onBlur }: FieldProps) {
   const [focused, setFocused] = useState(false)
   const id = useId()
 
@@ -242,7 +243,7 @@ export default function DoctorLoginPage() {
         password,
       }
 
-      const response = await apiPost('/api/v1/auth/doctor/login', loginData)
+      const response = await apiPost('/api/v1/auth/doctor/login', loginData) as { temp_token: string }
       
       // Store TEMP_AUTH token for 2FA flow
       localStorage.setItem('doctor_temp_token', response.temp_token)
