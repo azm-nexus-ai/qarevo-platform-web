@@ -1,0 +1,247 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+
+interface AppointmentDetail {
+  appointment_id: string
+  patient_id: string
+  patient_name: string
+  patient_email: string | null
+  patient_phone: string | null
+  start_at: string
+  end_at: string
+  status: string
+  consultation_id: string | null
+  consultation_modality: string | null
+  consultation_status: string | null
+  created_at: string
+}
+
+export default function AppointmentDetailPage() {
+  const router = useRouter()
+  const params = useParams()
+  const appointmentId = params.appointmentId as string
+  
+  const [appointmentData, setAppointmentData] = useState<AppointmentDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+
+  useEffect(() => {
+    // TODO: Replace with actual provider ID from auth
+    const providerId = 'mock-provider-id'
+    
+    fetch(`/api/v1/doctor/appointments/${appointmentId}?provider_id=${providerId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch appointment details')
+        return res.json()
+      })
+      .then(data => {
+        setAppointmentData(data)
+        setLoading(false)
+      })
+      .catch(err => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [appointmentId])
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const handleStatusUpdate = (newStatus: string) => {
+    setUpdatingStatus(true)
+    // TODO: Replace with actual provider ID from auth
+    const providerId = 'mock-provider-id'
+    
+    fetch(`/api/v1/doctor/appointments/${appointmentId}/status?provider_id=${providerId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: newStatus }),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to update status')
+        return res.json()
+      })
+      .then(data => {
+        setAppointmentData(data)
+        setUpdatingStatus(false)
+      })
+      .catch(err => {
+        setError(err.message)
+        setUpdatingStatus(false)
+      })
+  }
+
+  const handleBack = () => {
+    router.push('/doctor/appointments')
+  }
+
+  const handleGoToConsultation = () => {
+    if (appointmentData?.consultation_id) {
+      router.push(`/doctor/workspace/${appointmentData.consultation_id}`)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading appointment details...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="text-red-800">Error: {error}</div>
+        <button
+          onClick={handleBack}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Back to Appointments
+        </button>
+      </div>
+    )
+  }
+
+  if (!appointmentData) return null
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={handleBack}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            ← Back
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Appointment Details</h1>
+            <p className="text-gray-500 mt-1">ID: {appointmentData.appointment_id}</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-3">
+          {appointmentData.consultation_id && (
+            <button
+              onClick={handleGoToConsultation}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Go to Consultation
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Patient Information */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
+        </div>
+        <div className="p-6">
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 font-bold text-xl">
+                {appointmentData.patient_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1">
+              <h4 className="text-xl font-semibold text-gray-900">{appointmentData.patient_name}</h4>
+              <div className="mt-2 space-y-1">
+                {appointmentData.patient_email && (
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Email:</span> {appointmentData.patient_email}
+                  </p>
+                )}
+                {appointmentData.patient_phone && (
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Phone:</span> {appointmentData.patient_phone}
+                  </p>
+                )}
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Patient ID:</span> {appointmentData.patient_id}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Appointment Details */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Appointment Details</h3>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Status</p>
+              <p className="mt-1 text-gray-900">{appointmentData.status.replace('_', ' ').toUpperCase()}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Consultation Modality</p>
+              <p className="mt-1 text-gray-900">{appointmentData.consultation_modality || 'Not specified'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Start Time</p>
+              <p className="mt-1 text-gray-900">{formatDate(appointmentData.start_at)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">End Time</p>
+              <p className="mt-1 text-gray-900">{formatDate(appointmentData.end_at)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Consultation ID</p>
+              <p className="mt-1 text-gray-900">{appointmentData.consultation_id || 'None'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Consultation Status</p>
+              <p className="mt-1 text-gray-900">{appointmentData.consultation_status || 'None'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Created At</p>
+              <p className="mt-1 text-gray-900">{formatDate(appointmentData.created_at)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status Update */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Update Status</h3>
+        </div>
+        <div className="p-6">
+          <div className="flex items-center space-x-3">
+            <select
+              value={appointmentData.status}
+              onChange={(e) => handleStatusUpdate(e.target.value)}
+              disabled={updatingStatus}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+            >
+              <option value="booked">Booked</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="no_show">No Show</option>
+            </select>
+            {updatingStatus && (
+              <span className="text-sm text-gray-500">Updating...</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
