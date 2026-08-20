@@ -258,8 +258,8 @@ export default function DoctorRegisterPage() {
 
       const response = await registerDoctor(registerData)
       
-      // Redirect to email verification page
-      router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`)
+      // Redirect to doctor-specific email verification page
+      router.push(`/auth/doctor-verify-email?email=${encodeURIComponent(email)}`)
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'Registration failed. Please try again.')
     } finally {
