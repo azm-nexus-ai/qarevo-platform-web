@@ -281,7 +281,7 @@ export default function DoctorRegisterPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`* { box-sizing: border-box; } input::placeholder { color: rgba(4,53,77,0.3); }`}</style>
+      <style>{`* { box-sizing: border-box; } input::placeholder { color: rgba(4,53,77,0.3); } body { margin: 0; }`}</style>
 
       {/* Left panel - branding */}
       <div style={{
