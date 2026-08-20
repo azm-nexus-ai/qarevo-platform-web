@@ -405,7 +405,7 @@ export default function DoctorLoginPage() {
             {/* Register link */}
             <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
               New physician?{' '}
-              <Link href="/doctor/register" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>
+              <Link href="/auth/doctor-register" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>
                 Create an account
               </Link>
             </p>

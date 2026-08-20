@@ -571,7 +571,7 @@ export default function DoctorRegisterPage() {
             {/* Sign in link */}
             <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '24px 0 0', letterSpacing: '-0.01em' }}>
               Already have an account?{' '}
-              <Link href="/auth/sign-in" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>
+              <Link href="/auth/doctor/login" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>
                 Sign In
               </Link>
             </p>
