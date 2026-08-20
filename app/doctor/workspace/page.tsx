@@ -1,7 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { T, Sh } from '@/lib/tokens'
+import { ICONS } from '@/constants/icons'
+import Ico from '@/components/ui/Ico'
 
 interface ConsultationInQueue {
   consultation_id: string
@@ -19,35 +22,53 @@ interface WorkspaceData {
   filtered_count: number
 }
 
+const dummyWorkspaceData: WorkspaceData = {
+  consultations: [
+    {
+      consultation_id: 'cons-001',
+      patient_id: 'pat-001',
+      patient_name: 'Sarah Johnson',
+      scheduled_time: '2026-08-20T14:30:00',
+      status: 'in_progress',
+      priority: 'high',
+      waiting_duration_minutes: 0
+    },
+    {
+      consultation_id: 'cons-002',
+      patient_id: 'pat-002',
+      patient_name: 'Michael Chen',
+      scheduled_time: '2026-08-20T15:00:00',
+      status: 'waiting',
+      priority: 'medium',
+      waiting_duration_minutes: 15
+    },
+    {
+      consultation_id: 'cons-003',
+      patient_id: 'pat-003',
+      patient_name: 'Emily Davis',
+      scheduled_time: '2026-08-20T16:30:00',
+      status: 'scheduled',
+      priority: 'low',
+      waiting_duration_minutes: null
+    },
+    {
+      consultation_id: 'cons-004',
+      patient_id: 'pat-004',
+      patient_name: 'James Wilson',
+      scheduled_time: '2026-08-21T09:00:00',
+      status: 'scheduled',
+      priority: 'medium',
+      waiting_duration_minutes: null
+    }
+  ],
+  total_count: 4,
+  filtered_count: 4
+}
+
 export default function PhysicianWorkspace() {
   const router = useRouter()
-  const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [workspaceData] = useState<WorkspaceData>(dummyWorkspaceData)
   const [statusFilter, setStatusFilter] = useState<string>('')
-
-  useEffect(() => {
-    // TODO: Replace with actual provider ID from auth
-    const providerId = 'mock-provider-id'
-    
-    const url = statusFilter 
-      ? `/api/v1/doctor/workspace?provider_id=${providerId}&status=${statusFilter}`
-      : `/api/v1/doctor/workspace?provider_id=${providerId}`
-    
-    fetch(url)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch workspace data')
-        return res.json()
-      })
-      .then(data => {
-        setWorkspaceData(data)
-        setLoading(false)
-      })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [statusFilter])
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Not scheduled'
@@ -77,22 +98,6 @@ export default function PhysicianWorkspace() {
 
   const handleConsultationClick = (consultationId: string) => {
     router.push(`/doctor/workspace/${consultationId}`)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading workspace...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="text-red-800">Error: {error}</div>
-      </div>
-    )
   }
 
   if (!workspaceData) return null

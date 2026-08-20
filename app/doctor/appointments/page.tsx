@@ -1,7 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { T, Sh } from '@/lib/tokens'
+import { ICONS } from '@/constants/icons'
+import Ico from '@/components/ui/Ico'
 
 interface AppointmentSummary {
   appointment_id: string
@@ -20,35 +23,67 @@ interface AppointmentsData {
   filtered_count: number
 }
 
+const dummyAppointmentsData: AppointmentsData = {
+  appointments: [
+    {
+      appointment_id: 'apt-001',
+      patient_id: 'pat-001',
+      patient_name: 'Sarah Johnson',
+      start_at: '2026-08-20T14:30:00',
+      end_at: '2026-08-20T15:00:00',
+      status: 'booked',
+      consultation_id: 'cons-001',
+      consultation_modality: 'video'
+    },
+    {
+      appointment_id: 'apt-002',
+      patient_id: 'pat-002',
+      patient_name: 'Michael Chen',
+      start_at: '2026-08-20T15:00:00',
+      end_at: '2026-08-20T15:45:00',
+      status: 'booked',
+      consultation_id: null,
+      consultation_modality: 'in-person'
+    },
+    {
+      appointment_id: 'apt-003',
+      patient_id: 'pat-003',
+      patient_name: 'Emily Davis',
+      start_at: '2026-08-20T16:30:00',
+      end_at: '2026-08-20T17:00:00',
+      status: 'booked',
+      consultation_id: null,
+      consultation_modality: 'video'
+    },
+    {
+      appointment_id: 'apt-004',
+      patient_id: 'pat-004',
+      patient_name: 'James Wilson',
+      start_at: '2026-08-21T09:00:00',
+      end_at: '2026-08-21T09:30:00',
+      status: 'booked',
+      consultation_id: null,
+      consultation_modality: 'video'
+    },
+    {
+      appointment_id: 'apt-005',
+      patient_id: 'pat-005',
+      patient_name: 'Lisa Anderson',
+      start_at: '2026-08-21T10:30:00',
+      end_at: '2026-08-21T11:00:00',
+      status: 'booked',
+      consultation_id: null,
+      consultation_modality: 'in-person'
+    }
+  ],
+  total_count: 5,
+  filtered_count: 5
+}
+
 export default function DoctorAppointments() {
   const router = useRouter()
-  const [appointmentsData, setAppointmentsData] = useState<AppointmentsData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [appointmentsData] = useState<AppointmentsData>(dummyAppointmentsData)
   const [statusFilter, setStatusFilter] = useState<string>('')
-
-  useEffect(() => {
-    // TODO: Replace with actual provider ID from auth
-    const providerId = 'mock-provider-id'
-    
-    const url = statusFilter 
-      ? `/api/v1/doctor/appointments?provider_id=${providerId}&status=${statusFilter}`
-      : `/api/v1/doctor/appointments?provider_id=${providerId}`
-    
-    fetch(url)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch appointments')
-        return res.json()
-      })
-      .then(data => {
-        setAppointmentsData(data)
-        setLoading(false)
-      })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [statusFilter])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -75,24 +110,8 @@ export default function DoctorAppointments() {
     }
   }
 
-  const handleAppointmentClick = (appointmentId: string) => {
+  const handleViewDetails = (appointmentId: string) => {
     router.push(`/doctor/appointments/${appointmentId}`)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading appointments...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="text-red-800">Error: {error}</div>
-      </div>
-    )
   }
 
   if (!appointmentsData) return null
@@ -151,7 +170,7 @@ export default function DoctorAppointments() {
               {appointmentsData.appointments.map((appointment) => (
                 <div
                   key={appointment.appointment_id}
-                  onClick={() => handleAppointmentClick(appointment.appointment_id)}
+                  onClick={() => handleViewDetails(appointment.appointment_id)}
                   className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center space-x-4">

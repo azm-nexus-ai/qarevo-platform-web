@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -114,6 +115,7 @@ const dummyDashboardData: DashboardData = {
 }
 
 export default function DoctorDashboard() {
+  const router = useRouter()
   const dashboardData = dummyDashboardData
 
   const formatDate = (dateString: string) => {
@@ -166,70 +168,94 @@ export default function DoctorDashboard() {
     </div>
   )
 
-  const ActivityCard = ({ title, items, type }: { title: string; items: any[]; type: 'appointments' | 'consultations' }) => (
-    <div style={{
-      background: 'rgba(255,255,255,0.88)',
-      backdropFilter: 'blur(22px) saturate(175%)',
-      WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-      borderRadius: '20px',
-      border: '1px solid rgba(255,255,255,0.88)',
-      boxShadow: Sh.card,
-      overflow: 'hidden',
-    }}>
-      <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
-        <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{title}</h3>
-      </div>
-      <div style={{ padding: '16px 24px 24px' }}>
-        {items.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: T.slate2, fontSize: '13px' }}>No recent activity</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {items.map((item) => (
-              <div key={item.appointment_id || item.consultation_id} style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 16px',
-                borderRadius: '14px',
-                background: 'rgba(247,250,252,0.6)',
-                border: '1px solid rgba(4,53,77,0.04)',
-                transition: 'all 0.15s ease',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(32,181,223,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.blue, fontSize: '13px', fontWeight: 700 }}>
-                    {item.patient_name.split(' ').map((n: string) => n[0]).join('')}
+  const ActivityCard = ({ title, items, type }: { title: string; items: any[]; type: 'appointments' | 'consultations' }) => {
+    const handleClick = (item: any) => {
+      if (type === 'appointments') {
+        router.push(`/doctor/appointments/${item.appointment_id}`)
+      } else {
+        router.push(`/doctor/workspace/${item.consultation_id}`)
+      }
+    }
+    
+    return (
+      <div style={{
+        background: 'rgba(255,255,255,0.88)',
+        backdropFilter: 'blur(22px) saturate(175%)',
+        WebkitBackdropFilter: 'blur(22px) saturate(175%)',
+        borderRadius: '20px',
+        border: '1px solid rgba(255,255,255,0.88)',
+        boxShadow: Sh.card,
+        overflow: 'hidden',
+      }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
+          <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{title}</h3>
+        </div>
+        <div style={{ padding: '16px 24px 24px' }}>
+          {items.length === 0 ? (
+            <div style={{ padding: '32px', textAlign: 'center', color: T.slate2, fontSize: '13px' }}>No recent activity</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {items.map((item) => (
+                <div 
+                  key={item.appointment_id || item.consultation_id} 
+                  onClick={() => handleClick(item)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 16px',
+                    borderRadius: '14px',
+                    background: 'rgba(247,250,252,0.6)',
+                    border: '1px solid rgba(4,53,77,0.04)',
+                    transition: 'all 0.15s ease',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(32,181,223,0.08)'
+                    e.currentTarget.style.borderColor = 'rgba(32,181,223,0.15)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(247,250,252,0.6)'
+                    e.currentTarget.style.borderColor = 'rgba(4,53,77,0.04)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(32,181,223,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.blue, fontSize: '13px', fontWeight: 700 }}>
+                      {item.patient_name.split(' ').map((n: string) => n[0]).join('')}
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: T.navy }}>{item.patient_name}</p>
+                      <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate2 }}>
+                        {type === 'appointments' ? `${formatDate(item.scheduled_time)} at ${formatTime(item.scheduled_time)}` : formatDate(item.completed_at)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: T.navy }}>{item.patient_name}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate2 }}>
-                      {type === 'appointments' ? `${formatDate(item.scheduled_time)} at ${formatTime(item.scheduled_time)}` : formatDate(item.completed_at)}
-                    </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {type === 'appointments' && (
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        background: getStatusColor(item.status).bg,
+                        color: getStatusColor(item.status).color
+                      }}>
+                        {item.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                    )}
+                    {type === 'consultations' && item.duration_minutes && (
+                      <span style={{ fontSize: '12px', color: T.slate, fontWeight: 500 }}>{item.duration_minutes} min</span>
+                    )}
+                    <span style={{ color: T.slate2, fontSize: '14px' }}>→</span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {type === 'appointments' && (
-                    <span style={{
-                      padding: '4px 10px',
-                      borderRadius: '999px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      background: getStatusColor(item.status).bg,
-                      color: getStatusColor(item.status).color
-                    }}>
-                      {item.status.replace('_', ' ').toUpperCase()}
-                    </span>
-                  )}
-                  {type === 'consultations' && item.duration_minutes && (
-                    <span style={{ fontSize: '12px', color: T.slate, fontWeight: 500 }}>{item.duration_minutes} min</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
