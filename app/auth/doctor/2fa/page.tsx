@@ -256,7 +256,7 @@ export default function Doctor2FAPage() {
 
     try {
       const tempToken = localStorage.getItem('doctor_temp_token')
-      const headers = tempToken ? { Authorization: `Bearer ${tempToken}` } : {}
+      const headers: Record<string, string> | undefined = tempToken ? { Authorization: `Bearer ${tempToken}` } : undefined
       
       if (method === 'email') {
         await apiPost('/api/v1/auth/mfa/verify-email', { email, code }, headers)
