@@ -282,7 +282,7 @@ function RightPanel() {
           </Link>
 
           <Link
-            href="/auth/sign-in"
+            href="/auth/doctor-register"
             onMouseEnter={() => setSecondaryHov(true)}
             onMouseLeave={() => setSecondaryHov(false)}
             style={{
@@ -298,7 +298,7 @@ function RightPanel() {
               justifyContent: 'center',
             }}
           >
-            Sign In
+            Physician Registration
           </Link>
         </div>
 
@@ -316,6 +316,8 @@ function RightPanel() {
         <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: 0, letterSpacing: '-0.01em' }}>
           Already have an account?{' '}
           <Link href="/auth/sign-in" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>Sign In</Link>
+          {' '}or{' '}
+          <Link href="/auth/doctor/login" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>Physician Portal</Link>
         </p>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
