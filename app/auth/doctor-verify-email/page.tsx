@@ -26,9 +26,6 @@ const LEFT_BG = [
   T.navy,
 ].join(', ')
 
-// Demo OTP code
-const DEMO_CODE = '482719'
-
 // Field component
 interface FieldProps {
   label: string
@@ -193,18 +190,11 @@ export default function DoctorVerifyEmailPage() {
     setAuthError('')
 
     try {
-      // For demo purposes, accept the demo code
-      if (code === DEMO_CODE) {
-        setSuccess(true)
-        setTimeout(() => {
-          router.push('/auth/doctor/login')
-        }, 1500)
-        return
-      }
-
-      // In production, call the actual API
-      // await apiPost('/api/v1/auth/verify-doctor-email', { email, code })
-      setAuthError('Invalid verification code')
+      await apiPost('/api/v1/auth/verify-email-code', { email, code })
+      setSuccess(true)
+      setTimeout(() => {
+        router.push('/auth/doctor/login')
+      }, 1500)
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'Verification failed. Please try again.')
     } finally {
@@ -308,12 +298,6 @@ export default function DoctorVerifyEmailPage() {
                 maxLength={6}
               />
 
-              {/* Demo code hint */}
-              <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(52,140,234,0.06)', border: '1px solid rgba(52,140,234,0.12)' }}>
-                <p style={{ margin: 0, fontSize: '11px', color: T.slate2, lineHeight: 1.4 }}>
-                  Demo code: <strong style={{ color: T.blue, letterSpacing: '0.06em' }}>{DEMO_CODE}</strong>
-                </p>
-              </div>
 
               {/* Verify button */}
               <button
