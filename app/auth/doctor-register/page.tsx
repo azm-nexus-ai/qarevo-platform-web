@@ -261,7 +261,18 @@ export default function DoctorRegisterPage() {
       // Redirect to doctor-specific email verification page
       router.push(`/auth/doctor-verify-email?email=${encodeURIComponent(email)}`)
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Registration failed. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.'
+      
+      // Improve error messages for better UX
+      if (errorMessage.includes('Email already registered')) {
+        setAuthError('This email is already registered. Please sign in or use a different email address.')
+      } else if (errorMessage.includes('Password')) {
+        setAuthError('Password does not meet requirements. Please use a stronger password.')
+      } else if (errorMessage.includes('specialty')) {
+        setAuthError('Invalid medical specialty. Please select a valid specialty.')
+      } else {
+        setAuthError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
