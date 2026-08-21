@@ -252,7 +252,20 @@ export default function DoctorLoginPage() {
       // Redirect to 2FA verification page
       router.push('/auth/doctor/2fa')
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Login failed. Please check your credentials.')
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please check your credentials.'
+      
+      // Improve error messages for better UX
+      if (errorMessage.includes('Phone not verified')) {
+        setAuthError('Phone verification required. A verification code has been sent to your phone. Please complete phone verification to continue.')
+      } else if (errorMessage.includes('EMAIL_VERIFICATION_PENDING')) {
+        setAuthError('Email verification required. A verification code has been sent to your email. Please verify your email first.')
+      } else if (errorMessage.includes('Invalid identifier or password')) {
+        setAuthError('Invalid email, username, phone, or password. Please check your credentials and try again.')
+      } else if (errorMessage.includes('Use patient login endpoint')) {
+        setAuthError('This is a patient account. Please use the patient login page instead.')
+      } else {
+        setAuthError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
