@@ -194,9 +194,11 @@ export default function DoctorVerifyEmailPage() {
     try {
       await apiPost('/api/v1/auth/verify-email-code', { email, code })
       setSuccess(true)
+      // Keep loading state true during redirect to prevent button clicks
       setTimeout(() => {
         router.push(`/auth/doctor-verify-phone?country_code=${country_code}&phone=${phone}`)
       }, 1500)
+      return // Don't set loading to false yet
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Verification failed. Please try again.'
       

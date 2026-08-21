@@ -209,9 +209,11 @@ export default function DoctorVerifyPhonePage() {
     try {
       await apiPost('/api/v1/auth/doctor/verify-phone-code', { country_code, phone, code })
       setSuccess(true)
+      // Keep loading state true during redirect to prevent button clicks
       setTimeout(() => {
         router.push('/auth/doctor/login')
       }, 1500)
+      return // Don't set loading to false yet
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Verification failed. Please try again.'
       
