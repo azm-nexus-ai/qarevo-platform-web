@@ -17,11 +17,12 @@ export async function apiGet<T>(path: string): Promise<T> {
     return res.json() as Promise<T>;
 }
 
-export async function apiPost<T, B = unknown>(path: string, body?: B): Promise<T> {
+export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
     const res = await fetch(`${getBaseUrl()}${path}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
+            ...headers,
         },
         body: body ? JSON.stringify(body) : undefined,
         cache: "no-store",
