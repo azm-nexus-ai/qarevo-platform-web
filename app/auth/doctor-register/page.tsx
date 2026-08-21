@@ -248,7 +248,7 @@ export default function DoctorRegisterPage() {
         phone: phone || undefined,
         country_code: countryCode,
         date_of_birth: dateOfBirth || undefined,
-        gender: gender || undefined,
+        gender: gender || null,
         specialty: specialty || undefined,
         experience_years: experienceYears ? parseInt(experienceYears) : undefined,
         license_number: licenseNumber || undefined,
