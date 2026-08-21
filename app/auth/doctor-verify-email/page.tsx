@@ -196,7 +196,26 @@ export default function DoctorVerifyEmailPage() {
         router.push('/auth/doctor/login')
       }, 1500)
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Verification failed. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Verification failed. Please try again.'
+      
+      // Improve error messages for better UX
+      if (errorMessage.includes('Invalid verification code')) {
+        setAuthError('The verification code you entered is incorrect. Please check the code and try again.')
+      } else if (errorMessage.includes('expired')) {
+        setAuthError('The verification code has expired. Please request a new code.')
+      } else if (errorMessage.includes('already used')) {
+        setAuthError('This verification code has already been used. Please request a new code.')
+      } else if (errorMessage.includes('replaced')) {
+        setAuthError('This code has been replaced. Please request a new code.')
+      } else if (errorMessage.includes('No verification code found')) {
+        setAuthError('No verification code found. Please request a new code.')
+      } else if (errorMessage.includes('User not found')) {
+        setAuthError('User not found. Please register again.')
+      } else if (errorMessage.includes('already verified')) {
+        setAuthError('This email has already been verified. Please sign in.')
+      } else {
+        setAuthError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
