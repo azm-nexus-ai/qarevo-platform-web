@@ -9,6 +9,7 @@ import NavigationBar from '@/components/layout/NavigationBar'
 import Footer from '@/components/layout/Footer'
 import HeroSection from '@/components/sections/HeroSection'
 import ComplianceSection from '@/components/sections/ComplianceSection'
+import PhysicianSection from '@/components/sections/PhysicianSection'
 import PhysicianConsultationSection from '@/components/sections/PhysicianConsultationSection'
 import DashboardSection from '@/components/sections/DashboardSection'
 
@@ -77,6 +78,7 @@ export default function LandingPage() {
       <main id="main-content">
         <HeroSection />
         <ComplianceSection />
+        <PhysicianSection />
         <PhysicianConsultationSection />
         <DashboardSection />
       </main>
