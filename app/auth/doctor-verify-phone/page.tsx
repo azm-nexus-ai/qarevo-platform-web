@@ -178,8 +178,24 @@ export default function DoctorVerifyPhonePage() {
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [otpSent, setOtpSent] = useState(false)
 
   const codeErr = !code ? 'Verification code is required' : ''
+
+  // Automatically send phone verification OTP when page loads
+  useEffect(() => {
+    const sendPhoneOtp = async () => {
+      if (phone && country_code && !otpSent) {
+        try {
+          await apiPost('/api/v1/auth/doctor/resend-phone-verification', { country_code, phone })
+          setOtpSent(true)
+        } catch (error) {
+          console.error('Failed to send phone verification OTP:', error)
+        }
+      }
+    }
+    sendPhoneOtp()
+  }, [country_code, phone, otpSent])
 
   const handleVerify = async () => {
     if (!code) {
@@ -228,8 +244,7 @@ export default function DoctorVerifyPhonePage() {
     setLoading(true)
     setAuthError('')
     try {
-      // In production, call the actual API
-      // await apiPost('/api/v1/auth/resend-doctor-phone-verification', { country_code, phone })
+      await apiPost('/api/v1/auth/doctor/resend-phone-verification', { country_code, phone })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (error) {
