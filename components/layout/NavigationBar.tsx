@@ -407,10 +407,10 @@ export default function NavigationBar() {
               textAlign: 'center',
               padding: '12px 20px',
               borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.08)',
-              fontSize: '13px',
+              border: '1px solid rgba(4,53,77,0.12)',
+              fontSize: '14px',
               fontWeight: 500,
-              color: T.slate2,
+              color: T.slate,
               textDecoration: 'none',
               transition: 'background 0.12s',
             }}
