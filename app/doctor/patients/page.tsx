@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { apiGet } from '@/lib/api'
+import { readDoctorAuthSession } from '@/lib/doctor-auth-session'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -9,10 +12,10 @@ interface Patient {
   patient_id: string
   name: string
   email: string
-  phone: string
+  phone: string | null
   age: number
   gender: string
-  last_visit: string
+  last_visit: string | null
   total_consultations: number
   status: 'active' | 'inactive'
 }
@@ -23,95 +26,33 @@ interface PatientsData {
   filtered_count: number
 }
 
-const dummyPatients: PatientsData = {
-  patients: [
-    {
-      patient_id: 'pat-001',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@email.com',
-      phone: '+1 555-0123',
-      age: 34,
-      gender: 'Female',
-      last_visit: '2026-08-19',
-      total_consultations: 5,
-      status: 'active'
-    },
-    {
-      patient_id: 'pat-002',
-      name: 'Michael Chen',
-      email: 'michael.chen@email.com',
-      phone: '+1 555-0124',
-      age: 45,
-      gender: 'Male',
-      last_visit: '2026-08-18',
-      total_consultations: 3,
-      status: 'active'
-    },
-    {
-      patient_id: 'pat-003',
-      name: 'Emily Davis',
-      email: 'emily.davis@email.com',
-      phone: '+1 555-0125',
-      age: 28,
-      gender: 'Female',
-      last_visit: '2026-08-15',
-      total_consultations: 2,
-      status: 'active'
-    },
-    {
-      patient_id: 'pat-004',
-      name: 'James Wilson',
-      email: 'james.wilson@email.com',
-      phone: '+1 555-0126',
-      age: 52,
-      gender: 'Male',
-      last_visit: '2026-08-10',
-      total_consultations: 8,
-      status: 'active'
-    },
-    {
-      patient_id: 'pat-005',
-      name: 'Lisa Anderson',
-      email: 'lisa.anderson@email.com',
-      phone: '+1 555-0127',
-      age: 39,
-      gender: 'Female',
-      last_visit: '2026-07-28',
-      total_consultations: 1,
-      status: 'inactive'
-    }
-  ],
-  total_count: 5,
-  filtered_count: 5
-}
-
 export default function PatientsPage() {
+  const router = useRouter()
   const [patientsData, setPatientsData] = useState<PatientsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        // TODO: Replace with actual provider ID from auth
-        const providerId = 'mock-provider-id'
-        const response = await fetch(`/api/v1/doctor/patients?provider_id=${providerId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setPatientsData(data)
-        } else {
-          // Fall back to dummy data if API fails
-          setPatientsData(dummyPatients)
+        const session = readDoctorAuthSession()
+        if (!session) {
+          router.replace('/auth/doctor/login')
+          return
         }
+        const data = await apiGet<PatientsData>('/api/v1/doctor/patients/', {
+          authToken: session.access_token,
+        })
+        setPatientsData(data)
       } catch (error) {
-        // Fall back to dummy data on error
-        setPatientsData(dummyPatients)
+        setError(error instanceof Error ? error.message : 'Failed to load patients')
       } finally {
         setLoading(false)
       }
     }
 
     fetchPatients()
-  }, [])
+  }, [router])
 
   if (loading) {
     return (
@@ -121,8 +62,13 @@ export default function PatientsPage() {
     )
   }
 
+  if (error) {
+    return <p style={{ color: T.red, fontSize: '14px' }}>{error}</p>
+  }
+
   if (!patientsData) return null
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'No completed visits'
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',

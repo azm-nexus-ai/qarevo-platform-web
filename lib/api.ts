@@ -4,8 +4,24 @@ const getBaseUrl = () => {
     return baseUrl;
 };
 
-export async function apiGet<T>(path: string): Promise<T> {
+type ApiOptions = {
+    authToken?: string | null;
+    headers?: Record<string, string>;
+};
+
+const withAuthHeaders = (options?: ApiOptions) => {
+    const headers: Record<string, string> = {
+        ...(options?.headers ?? {}),
+    };
+    if (options?.authToken) {
+        headers.Authorization = `Bearer ${options.authToken}`;
+    }
+    return headers;
+};
+
+export async function apiGet<T>(path: string, options?: ApiOptions): Promise<T> {
     const res = await fetch(`${getBaseUrl()}${path}`, {
+        headers: withAuthHeaders(options),
         cache: "no-store",
     });
 
@@ -23,6 +39,25 @@ export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: 
         headers: {
             "Content-Type": "application/json",
             ...headers,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        cache: "no-store",
+    });
+
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`API error ${res.status}: ${text}`);
+    }
+
+    return res.json() as Promise<T>;
+}
+
+export async function apiPut<T, B = unknown>(path: string, body?: B, options?: ApiOptions): Promise<T> {
+    const res = await fetch(`${getBaseUrl()}${path}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            ...withAuthHeaders(options),
         },
         body: body ? JSON.stringify(body) : undefined,
         cache: "no-store",
@@ -110,6 +145,17 @@ export type DoctorLoginResponse = {
     expires_in: number;
     email_verified: boolean;
     phone_verified: boolean;
+};
+
+export type DoctorAuthResponse = {
+    access_token: string;
+    refresh_token: string;
+    token_type: string;
+    expires_in: number;
+    email_verified: boolean;
+    phone_verified: boolean;
+    user_id: string;
+    provider_id: string;
 };
 
 export type VerifyEmailCodeRequest = {

@@ -1,6 +1,9 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { apiGet } from '@/lib/api'
+import { readDoctorAuthSession } from '@/lib/doctor-auth-session'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -34,89 +37,45 @@ interface DashboardData {
   current_date: string
 }
 
-// Dummy data for development
-const dummyDashboardData: DashboardData = {
+const emptyDashboardData: DashboardData = {
   stats: {
-    today_appointments: 8,
-    pending_patients: 3,
-    upcoming_consultations: 12,
-    completed_consultations: 47
+    today_appointments: 0,
+    pending_patients: 0,
+    upcoming_consultations: 0,
+    completed_consultations: 0
   },
-  recent_appointments: [
-    {
-      appointment_id: 'apt-001',
-      patient_name: 'Sarah Johnson',
-      scheduled_time: '2026-08-20T14:30:00',
-      status: 'booked',
-      consultation_type: 'Video Consultation'
-    },
-    {
-      appointment_id: 'apt-002',
-      patient_name: 'Michael Chen',
-      scheduled_time: '2026-08-20T15:00:00',
-      status: 'booked',
-      consultation_type: 'In-Person'
-    },
-    {
-      appointment_id: 'apt-003',
-      patient_name: 'Emily Davis',
-      scheduled_time: '2026-08-20T16:30:00',
-      status: 'booked',
-      consultation_type: 'Video Consultation'
-    },
-    {
-      appointment_id: 'apt-004',
-      patient_name: 'James Wilson',
-      scheduled_time: '2026-08-20T17:00:00',
-      status: 'booked',
-      consultation_type: 'Follow-Up'
-    },
-    {
-      appointment_id: 'apt-005',
-      patient_name: 'Lisa Anderson',
-      scheduled_time: '2026-08-20T17:30:00',
-      status: 'booked',
-      consultation_type: 'Video Consultation'
-    }
-  ],
-  recent_consultations: [
-    {
-      consultation_id: 'cons-001',
-      patient_name: 'Robert Martinez',
-      completed_at: '2026-08-19T16:45:00',
-      duration_minutes: 28
-    },
-    {
-      consultation_id: 'cons-002',
-      patient_name: 'Jennifer Lee',
-      completed_at: '2026-08-19T15:30:00',
-      duration_minutes: 35
-    },
-    {
-      consultation_id: 'cons-003',
-      patient_name: 'David Brown',
-      completed_at: '2026-08-19T14:15:00',
-      duration_minutes: 42
-    },
-    {
-      consultation_id: 'cons-004',
-      patient_name: 'Maria Garcia',
-      completed_at: '2026-08-19T11:00:00',
-      duration_minutes: 30
-    },
-    {
-      consultation_id: 'cons-005',
-      patient_name: 'Thomas Taylor',
-      completed_at: '2026-08-19T09:30:00',
-      duration_minutes: 25
-    }
-  ],
-  current_date: '2026-08-20'
+  recent_appointments: [],
+  recent_consultations: [],
+  current_date: new Date().toISOString().slice(0, 10)
 }
 
 export default function DoctorDashboard() {
   const router = useRouter()
-  const dashboardData = dummyDashboardData
+  const [dashboardData, setDashboardData] = useState<DashboardData>(emptyDashboardData)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const session = readDoctorAuthSession()
+        if (!session) {
+          router.replace('/auth/doctor/login')
+          return
+        }
+        const data = await apiGet<DashboardData>(`/api/v1/doctor/dashboard?provider_id=${session.provider_id}`, {
+          authToken: session.access_token,
+        })
+        setDashboardData(data)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Failed to load dashboard')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboard()
+  }, [router])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -144,6 +103,14 @@ export default function DoctorDashboard() {
       default:
         return { bg: 'rgba(32,181,223,0.12)', color: T.blue }
     }
+  }
+
+  if (loading) {
+    return <p style={{ color: T.slate2 }}>Loading dashboard...</p>
+  }
+
+  if (error) {
+    return <p style={{ color: T.red, fontSize: '14px' }}>{error}</p>
   }
 
   const StatCard = ({ title, value, icon, color }: { title: string; value: number; icon: string | readonly string[]; color: string }) => (

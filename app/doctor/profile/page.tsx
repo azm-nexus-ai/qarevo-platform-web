@@ -1,18 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { apiGet } from '@/lib/api'
+import { readDoctorAuthSession } from '@/lib/doctor-auth-session'
 import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
 
 interface DoctorProfileData {
   user_id: string
-  username: string
-  email: string
+  provider_id: string
+  username: string | null
+  email: string | null
   phone: string | null
-  specialty: string
-  experience_years: number
-  license_number: string
+  specialty: string | null
+  experience_years: number | null
+  license_number: string | null
   license_verified: boolean
   is_independent: boolean
   address: string | null
@@ -24,52 +26,33 @@ interface DoctorProfileData {
   years_active: number
 }
 
-const dummyProfileData: DoctorProfileData = {
-  user_id: 'mock-doctor-id',
-  username: 'david.smith',
-  email: 'david.smith@qarevo.com',
-  phone: '+1 555-0199',
-  specialty: 'Cardiology',
-  experience_years: 15,
-  license_number: 'MD-12345-67890',
-  license_verified: true,
-  is_independent: true,
-  address: '123 Medical Center Dr',
-  city: 'New York',
-  state: 'NY',
-  country: 'USA',
-  total_consultations: 1247,
-  patient_rating: 4.9,
-  years_active: 15
-}
-
 export default function DoctorProfilePage() {
+  const router = useRouter()
   const [profileData, setProfileData] = useState<DoctorProfileData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // TODO: Replace with actual provider ID from auth
-        const providerId = 'mock-provider-id'
-        const response = await fetch(`/api/v1/doctor/profile?provider_id=${providerId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setProfileData(data)
-        } else {
-          // Fall back to dummy data if API fails
-          setProfileData(dummyProfileData)
+        const session = readDoctorAuthSession()
+        if (!session) {
+          router.replace('/auth/doctor/login')
+          return
         }
+        const data = await apiGet<DoctorProfileData>('/api/v1/doctor/profile/', {
+          authToken: session.access_token,
+        })
+        setProfileData(data)
       } catch (error) {
-        // Fall back to dummy data on error
-        setProfileData(dummyProfileData)
+        setError(error instanceof Error ? error.message : 'Failed to load profile')
       } finally {
         setLoading(false)
       }
     }
 
     fetchProfile()
-  }, [])
+  }, [router])
 
   if (loading) {
     return (
@@ -79,7 +62,20 @@ export default function DoctorProfilePage() {
     )
   }
 
+  if (error) {
+    return <p style={{ color: T.red, fontSize: '14px' }}>{error}</p>
+  }
+
   if (!profileData) return null
+  const displayName = profileData.username || profileData.email || 'Doctor'
+  const initials = displayName.split(/[.\s@]+/).filter(Boolean).slice(0, 2).map((n) => n[0]).join('').toUpperCase()
+  const doctorName = displayName
+    .split(/[.\s@]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n.charAt(0).toUpperCase() + n.slice(1))
+    .join(' ')
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
@@ -100,17 +96,17 @@ export default function DoctorProfilePage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
           <div style={{ width: '100px', height: '100px', borderRadius: '16px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 24px rgba(32,181,223,0.3)' }}>
-            {profileData.username.split('.').map((n: string) => n[0]).join('').toUpperCase()}
+            {initials || 'DR'}
           </div>
           <div style={{ flex: 1 }}>
-            <h2 style={{ margin: '0 0 4px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Dr. {profileData.username.split('.').map((n: string) => n.charAt(0).toUpperCase() + n.slice(1)).join(' ')}</h2>
-            <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{profileData.specialty} · Qarevo Virtual Clinic</p>
+            <h2 style={{ margin: '0 0 4px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Dr. {doctorName}</h2>
+            <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{profileData.specialty || 'Specialty not set'} · Qarevo Virtual Clinic</p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <span style={{ padding: '6px 12px', borderRadius: '999px', background: 'rgba(15,158,119,0.12)', color: T.green, fontSize: '12px', fontWeight: 700 }}>
                 {profileData.license_verified ? 'VERIFIED' : 'UNVERIFIED'}
               </span>
               <span style={{ padding: '6px 12px', borderRadius: '999px', background: 'rgba(32,181,223,0.12)', color: T.blue, fontSize: '12px', fontWeight: 700 }}>
-                {profileData.experience_years} YEARS EXPERIENCE
+                {profileData.experience_years ?? 0} YEARS EXPERIENCE
               </span>
             </div>
           </div>
@@ -123,15 +119,15 @@ export default function DoctorProfilePage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Specialty</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.specialty}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.specialty || 'Not provided'}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>License Number</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.license_number}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.license_number || 'Not provided'}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.email}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.email || 'Not provided'}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Phone</p>

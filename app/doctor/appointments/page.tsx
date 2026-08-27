@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
+import { apiGet } from '@/lib/api'
+import { readDoctorAuthSession } from '@/lib/doctor-auth-session'
 
 interface AppointmentSummary {
   appointment_id: string
@@ -23,67 +22,36 @@ interface AppointmentsData {
   filtered_count: number
 }
 
-const dummyAppointmentsData: AppointmentsData = {
-  appointments: [
-    {
-      appointment_id: 'apt-001',
-      patient_id: 'pat-001',
-      patient_name: 'Sarah Johnson',
-      start_at: '2026-08-20T14:30:00',
-      end_at: '2026-08-20T15:00:00',
-      status: 'booked',
-      consultation_id: 'cons-001',
-      consultation_modality: 'video'
-    },
-    {
-      appointment_id: 'apt-002',
-      patient_id: 'pat-002',
-      patient_name: 'Michael Chen',
-      start_at: '2026-08-20T15:00:00',
-      end_at: '2026-08-20T15:45:00',
-      status: 'booked',
-      consultation_id: null,
-      consultation_modality: 'in-person'
-    },
-    {
-      appointment_id: 'apt-003',
-      patient_id: 'pat-003',
-      patient_name: 'Emily Davis',
-      start_at: '2026-08-20T16:30:00',
-      end_at: '2026-08-20T17:00:00',
-      status: 'booked',
-      consultation_id: null,
-      consultation_modality: 'video'
-    },
-    {
-      appointment_id: 'apt-004',
-      patient_id: 'pat-004',
-      patient_name: 'James Wilson',
-      start_at: '2026-08-21T09:00:00',
-      end_at: '2026-08-21T09:30:00',
-      status: 'booked',
-      consultation_id: null,
-      consultation_modality: 'video'
-    },
-    {
-      appointment_id: 'apt-005',
-      patient_id: 'pat-005',
-      patient_name: 'Lisa Anderson',
-      start_at: '2026-08-21T10:30:00',
-      end_at: '2026-08-21T11:00:00',
-      status: 'booked',
-      consultation_id: null,
-      consultation_modality: 'in-person'
-    }
-  ],
-  total_count: 5,
-  filtered_count: 5
-}
-
 export default function DoctorAppointments() {
   const router = useRouter()
-  const [appointmentsData] = useState<AppointmentsData>(dummyAppointmentsData)
+  const [appointmentsData, setAppointmentsData] = useState<AppointmentsData | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const session = readDoctorAuthSession()
+        if (!session) {
+          router.replace('/auth/doctor/login')
+          return
+        }
+        const query = new URLSearchParams({ provider_id: session.provider_id })
+        if (statusFilter) query.set('status', statusFilter)
+        const data = await apiGet<AppointmentsData>(`/api/v1/doctor/appointments?${query.toString()}`, {
+          authToken: session.access_token,
+        })
+        setAppointmentsData(data)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Failed to load appointments')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAppointments()
+  }, [router, statusFilter])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -112,6 +80,14 @@ export default function DoctorAppointments() {
 
   const handleViewDetails = (appointmentId: string) => {
     router.push(`/doctor/appointments/${appointmentId}`)
+  }
+
+  if (loading) {
+    return <p className="text-gray-500">Loading appointments...</p>
+  }
+
+  if (error) {
+    return <p className="text-red-600">{error}</p>
   }
 
   if (!appointmentsData) return null

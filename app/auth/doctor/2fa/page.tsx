@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation'
 import { T, Sh, Glass } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { apiPost } from '@/lib/api'
+import { apiPost, type DoctorAuthResponse } from '@/lib/api'
+import { setDoctorAuthSession } from '@/lib/doctor-auth-session'
 
 // Page background
 const PAGE_BG = [
@@ -258,11 +259,11 @@ export default function Doctor2FAPage() {
       const tempToken = localStorage.getItem('doctor_temp_token')
       const headers: Record<string, string> | undefined = tempToken ? { Authorization: `Bearer ${tempToken}` } : undefined
       
-      if (method === 'email') {
-        await apiPost('/api/v1/auth/mfa/verify-email', { email, code }, headers)
-      } else {
-        await apiPost('/api/v1/auth/mfa/verify-phone', { country_code: countryCode, phone, code }, headers)
-      }
+      const authSession = method === 'email'
+        ? await apiPost<DoctorAuthResponse>('/api/v1/auth/mfa/verify-email', { email, code }, headers)
+        : await apiPost<DoctorAuthResponse>('/api/v1/auth/mfa/verify-phone', { country_code: countryCode, phone, code }, headers)
+
+      setDoctorAuthSession(authSession)
 
       // Clear temp tokens
       localStorage.removeItem('doctor_temp_token')

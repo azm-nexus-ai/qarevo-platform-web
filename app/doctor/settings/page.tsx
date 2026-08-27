@@ -1,13 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { apiGet } from '@/lib/api'
+import { readDoctorAuthSession } from '@/lib/doctor-auth-session'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
 interface DoctorSettingsData {
   user_id: string
-  email: string
+  provider_id: string
+  email: string | null
   phone: string | null
   email_notifications: boolean
   sms_notifications: boolean
@@ -19,47 +23,33 @@ interface DoctorSettingsData {
   two_factor_enabled: boolean
 }
 
-const dummySettingsData: DoctorSettingsData = {
-  user_id: 'mock-doctor-id',
-  email: 'david.smith@qarevo.com',
-  phone: '+1 555-0199',
-  email_notifications: true,
-  sms_notifications: true,
-  push_notifications: false,
-  weekly_reports: true,
-  working_hours_start: '09:00',
-  working_hours_end: '17:00',
-  available_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-  two_factor_enabled: false
-}
-
 export default function DoctorSettingsPage() {
+  const router = useRouter()
   const [settingsData, setSettingsData] = useState<DoctorSettingsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        // TODO: Replace with actual provider ID from auth
-        const providerId = 'mock-provider-id'
-        const response = await fetch(`/api/v1/doctor/settings?provider_id=${providerId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setSettingsData(data)
-        } else {
-          // Fall back to dummy data if API fails
-          setSettingsData(dummySettingsData)
+        const session = readDoctorAuthSession()
+        if (!session) {
+          router.replace('/auth/doctor/login')
+          return
         }
+        const data = await apiGet<DoctorSettingsData>('/api/v1/doctor/settings/', {
+          authToken: session.access_token,
+        })
+        setSettingsData(data)
       } catch (error) {
-        // Fall back to dummy data on error
-        setSettingsData(dummySettingsData)
+        setError(error instanceof Error ? error.message : 'Failed to load settings')
       } finally {
         setLoading(false)
       }
     }
 
     fetchSettings()
-  }, [])
+  }, [router])
 
   if (loading) {
     return (
@@ -67,6 +57,10 @@ export default function DoctorSettingsPage() {
         <p style={{ color: T.slate2 }}>Loading settings...</p>
       </div>
     )
+  }
+
+  if (error) {
+    return <p style={{ color: T.red, fontSize: '14px' }}>{error}</p>
   }
 
   if (!settingsData) return null
@@ -101,7 +95,7 @@ export default function DoctorSettingsPage() {
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>Email Address</label>
               <input
                 type="email"
-                defaultValue={settingsData.email}
+                defaultValue={settingsData.email || ''}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', fontSize: '13px', color: T.navy, outline: 'none' }}
               />
             </div>

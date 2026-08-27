@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { apiGet } from '@/lib/api'
+import { readDoctorAuthSession } from '@/lib/doctor-auth-session'
 
 interface ConsultationDetail {
   consultation_id: string
@@ -34,23 +36,27 @@ export default function ConsultationDetailPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // TODO: Replace with actual provider ID from auth
-    const providerId = 'mock-provider-id'
-    
-    fetch(`/api/v1/doctor/workspace/${consultationId}?provider_id=${providerId}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch consultation details')
-        return res.json()
-      })
-      .then(data => {
+    const fetchConsultation = async () => {
+      try {
+        const session = readDoctorAuthSession()
+        if (!session) {
+          router.replace('/auth/doctor/login')
+          return
+        }
+        const data = await apiGet<ConsultationDetailData>(
+          `/api/v1/doctor/workspace/${consultationId}?provider_id=${session.provider_id}`,
+          { authToken: session.access_token },
+        )
         setConsultationData(data)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Failed to fetch consultation details')
+      } finally {
         setLoading(false)
-      })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [consultationId])
+      }
+    }
+
+    fetchConsultation()
+  }, [consultationId, router])
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Not set'
