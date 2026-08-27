@@ -258,10 +258,21 @@ export default function DoctorRegisterPage() {
 
       const response = await registerDoctor(registerData)
       
-      // Redirect to doctor-specific email verification page
-      router.push(`/auth/doctor-verify-email?email=${encodeURIComponent(email)}`)
+      // Redirect to doctor-specific email verification page with phone details
+      router.push(`/auth/doctor-verify-email?email=${encodeURIComponent(email)}&country_code=${countryCode}&phone=${phone || ''}`)
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Registration failed. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.'
+      
+      // Improve error messages for better UX
+      if (errorMessage.includes('Email already registered')) {
+        setAuthError('This email is already registered. Please sign in or use a different email address.')
+      } else if (errorMessage.includes('Password')) {
+        setAuthError('Password does not meet requirements. Please use a stronger password.')
+      } else if (errorMessage.includes('specialty')) {
+        setAuthError('Invalid medical specialty. Please select a valid specialty.')
+      } else {
+        setAuthError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
@@ -336,7 +347,7 @@ export default function DoctorRegisterPage() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
         <div style={{ width: '100%', maxWidth: '500px' }}>
           {/* Back link */}
-          <Link href="/auth" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
             Back
           </Link>

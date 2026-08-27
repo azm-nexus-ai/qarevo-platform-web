@@ -179,6 +179,23 @@ export default function NavigationBar() {
             className="hide-mobile"
           >
             <Link
+              href="/auth/doctor/login"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '7px 14px',
+                borderRadius: '9px',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: T.slate2,
+                letterSpacing: '-0.01em',
+                textDecoration: 'none',
+              }}
+            >
+              Physician Portal
+            </Link>
+            <Link
               href="/auth/sign-in"
               style={{
                 background: 'none',
@@ -382,6 +399,24 @@ export default function NavigationBar() {
 
         {/* Drawer auth buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(4,53,77,0.08)' }}>
+          <Link
+            href="/auth/doctor/login"
+            onClick={() => setMobileOpen(false)}
+            style={{
+              display: 'block',
+              textAlign: 'center',
+              padding: '12px 20px',
+              borderRadius: '10px',
+              border: '1px solid rgba(4,53,77,0.12)',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: T.slate,
+              textDecoration: 'none',
+              transition: 'background 0.12s',
+            }}
+          >
+            Physician Portal
+          </Link>
           <Link
             href="/auth/sign-in"
             onClick={() => setMobileOpen(false)}

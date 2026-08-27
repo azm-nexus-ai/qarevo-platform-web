@@ -149,10 +149,10 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
         <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
-          Email Verification
+          Phone Verification
         </h2>
         <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-          Verify your email address to activate your physician account
+          Verify your phone number to complete your physician account setup
         </p>
       </div>
 
@@ -168,10 +168,9 @@ function LeftPanel() {
 }
 
 // Main page
-function DoctorVerifyEmailPageContent() {
+function DoctorVerifyPhonePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const email = searchParams.get('email') || ''
   const country_code = searchParams.get('country_code') || '234'
   const phone = searchParams.get('phone') || ''
   
@@ -179,8 +178,24 @@ function DoctorVerifyEmailPageContent() {
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [otpSent, setOtpSent] = useState(false)
 
   const codeErr = !code ? 'Verification code is required' : ''
+
+  // Automatically send phone verification OTP when page loads
+  useEffect(() => {
+    const sendPhoneOtp = async () => {
+      if (phone && country_code && !otpSent) {
+        try {
+          await apiPost('/api/v1/auth/doctor/resend-phone-verification', { country_code, phone })
+          setOtpSent(true)
+        } catch (error) {
+          console.error('Failed to send phone verification OTP:', error)
+        }
+      }
+    }
+    sendPhoneOtp()
+  }, [country_code, phone, otpSent])
 
   const handleVerify = async () => {
     if (!code) {
@@ -192,11 +207,11 @@ function DoctorVerifyEmailPageContent() {
     setAuthError('')
 
     try {
-      await apiPost('/api/v1/auth/verify-email-code', { email, code })
+      await apiPost('/api/v1/auth/doctor/verify-phone-code', { country_code, phone, code })
       setSuccess(true)
       // Keep loading state true during redirect to prevent button clicks
       setTimeout(() => {
-        router.push(`/auth/doctor-verify-phone?country_code=${country_code}&phone=${phone}`)
+        router.push('/auth/doctor/login')
       }, 1500)
       return // Don't set loading to false yet
     } catch (error) {
@@ -216,7 +231,9 @@ function DoctorVerifyEmailPageContent() {
       } else if (errorMessage.includes('User not found')) {
         setAuthError('User not found. Please register again.')
       } else if (errorMessage.includes('already verified')) {
-        setAuthError('This email has already been verified. Please sign in.')
+        setAuthError('This phone has already been verified. Please sign in.')
+      } else if (errorMessage.includes('Verify your email')) {
+        setAuthError('Please verify your email before verifying your phone number.')
       } else {
         setAuthError(errorMessage)
       }
@@ -229,8 +246,7 @@ function DoctorVerifyEmailPageContent() {
     setLoading(true)
     setAuthError('')
     try {
-      // In production, call the actual API
-      // await apiPost('/api/v1/auth/resend-doctor-verification', { email })
+      await apiPost('/api/v1/auth/doctor/resend-phone-verification', { country_code, phone })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (error) {
@@ -242,10 +258,10 @@ function DoctorVerifyEmailPageContent() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`* { box-sizing: border-box; } input::placeholder { color: rgba(4,53,77,0.3); } @media (max-width: 860px) { .doctor-verify-left { display: none !important; } }`}</style>
+      <style>{`* { box-sizing: border-box; } input::placeholder { color: rgba(4,53,77,0.3); } @media (max-width: 860px) { .doctor-verify-phone-left { display: none !important; } }`}</style>
 
       {/* Left panel */}
-      <div className="doctor-verify-left">
+      <div className="doctor-verify-phone-left">
         <LeftPanel />
       </div>
 
@@ -275,14 +291,14 @@ function DoctorVerifyEmailPageContent() {
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
                 <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
-                  Verify Your Email
+                  Verify Your Phone
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                  Enter the 6-digit code sent to your email
+                  Enter the 6-digit code sent to your phone
                 </p>
               </div>
               <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Ico p={ICONS.ema} size={20} sw={1.25} color="#fff" />
+                <Ico p={ICONS.phone} size={20} sw={1.25} color="#fff" />
               </div>
             </div>
 
@@ -302,10 +318,10 @@ function DoctorVerifyEmailPageContent() {
               </div>
             )}
 
-            {/* Email display */}
+            {/* Phone display */}
             <div style={{ padding: '12px 16px', borderRadius: '11px', background: 'rgba(32,181,223,0.06)', border: '1px solid rgba(32,181,223,0.12)', marginBottom: '20px' }}>
-              <p style={{ margin: 0, fontSize: '12px', color: T.slate2, fontWeight: 600, marginBottom: '4px' }}>Email address</p>
-              <p style={{ margin: 0, fontSize: '14px', color: T.navy, fontWeight: 600 }}>{email || 'doctor@example.com'}</p>
+              <p style={{ margin: 0, fontSize: '12px', color: T.slate2, fontWeight: 600, marginBottom: '4px' }}>Phone number</p>
+              <p style={{ margin: 0, fontSize: '14px', color: T.navy, fontWeight: 600 }}>+{country_code} {phone || '8116454074'}</p>
             </div>
 
             {/* Form */}
@@ -320,7 +336,6 @@ function DoctorVerifyEmailPageContent() {
                 error={codeErr}
                 maxLength={6}
               />
-
 
               {/* Verify button */}
               <button
@@ -347,7 +362,7 @@ function DoctorVerifyEmailPageContent() {
                   boxShadow: loading ? 'none' : '0 3px 10px rgba(32,181,223,0.32), 0 1px 3px rgba(32,181,223,0.2)',
                 }}
               >
-                {loading ? 'Verifying...' : 'Verify Email'}
+                {loading ? 'Verifying...' : 'Verify Phone'}
                 {!loading && <Ico p={ICONS.check} size={15} sw={2.2} />}
               </button>
 
@@ -386,10 +401,10 @@ function DoctorVerifyEmailPageContent() {
   )
 }
 
-export default function DoctorVerifyEmailPage() {
+export default function DoctorVerifyPhonePage() {
   return (
     <Suspense>
-      <DoctorVerifyEmailPageContent />
+      <DoctorVerifyPhonePageContent />
     </Suspense>
   )
 }

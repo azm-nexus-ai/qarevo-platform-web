@@ -255,10 +255,13 @@ export default function Doctor2FAPage() {
     setAuthError('')
 
     try {
+      const tempToken = localStorage.getItem('doctor_temp_token')
+      const headers: Record<string, string> | undefined = tempToken ? { Authorization: `Bearer ${tempToken}` } : undefined
+      
       if (method === 'email') {
-        await apiPost('/api/v1/auth/verify-email-code', { email, code })
+        await apiPost('/api/v1/auth/mfa/verify-email', { email, code }, headers)
       } else {
-        await apiPost('/api/v1/auth/verify-phone-code', { country_code, phone, code })
+        await apiPost('/api/v1/auth/mfa/verify-phone', { country_code: countryCode, phone, code }, headers)
       }
 
       // Clear temp tokens

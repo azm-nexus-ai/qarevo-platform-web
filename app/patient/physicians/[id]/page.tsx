@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { notFound, useParams, useSearchParams } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, Suspense } from 'react'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams } from '@/lib/booking'
 import { ICONS } from '@/constants/icons'
@@ -57,7 +57,7 @@ function toBookingHref(physician: (typeof PHYSICIANS)[number], serviceType: stri
   return `/patient/consultation-booking?${params.toString()}`
 }
 
-export default function PhysicianProfilePage() {
+function PhysicianProfilePageContent() {
   const params = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const physicianId = params.id
@@ -437,5 +437,13 @@ export default function PhysicianProfilePage() {
         </Link>
       </div>
     </main>
+  )
+}
+
+export default function PhysicianProfilePage() {
+  return (
+    <Suspense>
+      <PhysicianProfilePageContent />
+    </Suspense>
   )
 }

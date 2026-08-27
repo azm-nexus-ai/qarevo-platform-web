@@ -252,7 +252,20 @@ export default function DoctorLoginPage() {
       // Redirect to 2FA verification page
       router.push('/auth/doctor/2fa')
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Login failed. Please check your credentials.')
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please check your credentials.'
+      
+      // Improve error messages for better UX
+      if (errorMessage.includes('Phone not verified')) {
+        setAuthError('Phone verification required. A verification code has been sent to your phone. Please complete phone verification to continue.')
+      } else if (errorMessage.includes('EMAIL_VERIFICATION_PENDING')) {
+        setAuthError('Email verification required. A verification code has been sent to your email. Please verify your email first.')
+      } else if (errorMessage.includes('Invalid identifier or password')) {
+        setAuthError('Invalid email, username, phone, or password. Please check your credentials and try again.')
+      } else if (errorMessage.includes('Use patient login endpoint')) {
+        setAuthError('This is a patient account. Please use the patient login page instead.')
+      } else {
+        setAuthError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
@@ -283,7 +296,7 @@ export default function DoctorLoginPage() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
         <div style={{ width: '100%', maxWidth: '460px' }}>
           {/* Back link */}
-          <Link href="/auth" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
             Back
           </Link>
