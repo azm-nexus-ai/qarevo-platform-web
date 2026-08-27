@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useId } from 'react'
+import { useState, useEffect, useId, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -168,7 +168,7 @@ function LeftPanel() {
 }
 
 // Main page
-export default function DoctorVerifyPhonePage() {
+function DoctorVerifyPhonePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const country_code = searchParams.get('country_code') || '234'
@@ -398,5 +398,13 @@ export default function DoctorVerifyPhonePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function DoctorVerifyPhonePage() {
+  return (
+    <Suspense>
+      <DoctorVerifyPhonePageContent />
+    </Suspense>
   )
 }

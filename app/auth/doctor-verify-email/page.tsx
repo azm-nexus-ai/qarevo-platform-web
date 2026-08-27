@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useId } from 'react'
+import { useState, useEffect, useId, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -168,7 +168,7 @@ function LeftPanel() {
 }
 
 // Main page
-export default function DoctorVerifyEmailPage() {
+function DoctorVerifyEmailPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
@@ -383,5 +383,13 @@ export default function DoctorVerifyEmailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function DoctorVerifyEmailPage() {
+  return (
+    <Suspense>
+      <DoctorVerifyEmailPageContent />
+    </Suspense>
   )
 }
