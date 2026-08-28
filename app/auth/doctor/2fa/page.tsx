@@ -261,7 +261,8 @@ export default function Doctor2FAPage() {
       if (method === 'email') {
         await apiPost('/api/v1/auth/mfa/verify-email', { email, code }, headers)
       } else {
-        await apiPost('/api/v1/auth/mfa/verify-phone', { country_code: countryCode, phone, code }, headers)
+        await apiPost('/api/v1/auth/mfa/verify-phone', { 
+          countryCode, phone, code }, headers)
       }
 
       // Clear temp tokens

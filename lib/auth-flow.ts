@@ -26,6 +26,23 @@ const DEFAULT_AUTH_FLOW_STATE: AuthFlowState = {
   updatedAt: '',
 }
 
+export async function signupRequest(email: string, password: string) {
+  const res = await fetch(`${process.env.API_BASE_URL}/api/v1/patient/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      email, password,
+    consents: {
+    terms_privacy: true,
+    telehealth: true,
+    marketing: false
+  }
+    }),
+  })
+  if (!res.ok) throw new Error('Login failed')
+  return res.json()
+}
+
 export function readAuthFlowState(): AuthFlowState | null {
   if (typeof window === 'undefined') return null
 

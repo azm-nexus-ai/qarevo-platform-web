@@ -11,35 +11,6 @@ export default function HeroSection() {
     <div id="hero" style={{ position: 'relative', zIndex: 1 }}>
       <div style={{ maxWidth: '1080px', margin: '0 auto' }} className="container-pad">
         <section className="section-pad" style={{ textAlign: 'center' }}>
-          {/* Status badge */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 16px 6px 10px',
-              borderRadius: '100px',
-              marginBottom: '40px',
-              boxShadow: `0 0 0 6px rgba(9,173,112,0.06), ${Glass.pill.boxShadow}`,
-              ...Glass.pill,
-            }}
-          >
-            <span
-              style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: T.green,
-                boxShadow: `0 0 0 2.5px ${T.greenLight}, 0 0 8px rgba(9,173,112,0.4)`,
-                display: 'block',
-                flexShrink: 0,
-              }}
-            />
-            <span style={{ fontSize: '12.5px', fontWeight: 500, color: T.slate, letterSpacing: '-0.01em' }}>
-              Systems Nominal
-            </span>
-          </div>
-
           <h1
             style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",

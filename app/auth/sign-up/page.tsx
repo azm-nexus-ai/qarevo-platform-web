@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { T, Sh, Glass } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import { useStore } from '@/store/useStore'
 
 // ─── Page background ──────────────────────────────────────────────────────────
 
@@ -31,11 +32,11 @@ const COUNTRIES = [
 
 function getStrength(pw: string) {
   const checks = {
-    length:    pw.length >= 8,
-    upper:     /[A-Z]/.test(pw),
-    number:    /[0-9]/.test(pw),
-    special:   /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?/]/.test(pw),
-    noCommon:  !/(password|123456|qwerty|admin)/i.test(pw),
+    length: pw.length >= 8,
+    upper: /[A-Z]/.test(pw),
+    number: /[0-9]/.test(pw),
+    special: /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?/]/.test(pw),
+    noCommon: !/(password|123456|qwerty|admin)/i.test(pw),
   }
   const score = Object.values(checks).filter(Boolean).length
   const levels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent']
@@ -69,10 +70,10 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, hint
   const bdr = error
     ? 'rgba(220,38,38,0.55)'
     : success
-    ? 'rgba(9,173,112,0.5)'
-    : focused
-    ? 'rgba(32,181,223,0.45)'
-    : 'rgba(4,53,77,0.1)'
+      ? 'rgba(9,173,112,0.5)'
+      : focused
+        ? 'rgba(32,181,223,0.45)'
+        : 'rgba(4,53,77,0.1)'
 
   const shadow = focused
     ? error
@@ -83,12 +84,12 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, hint
   const bg = error
     ? '#FFF5F5'
     : success
-    ? '#F0FDF8'
-    : focused
-    ? '#fff'
-    : 'rgba(255,255,255,0.7)'
+      ? '#F0FDF8'
+      : focused
+        ? '#fff'
+        : 'rgba(255,255,255,0.7)'
 
-  const hasLeft  = !!icon
+  const hasLeft = !!icon
   const hasRight = !!rightSlot || success || !!error
 
   return (
@@ -136,8 +137,8 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, hint
             {rightSlot
               ? rightSlot
               : success
-              ? <Ico p={ICONS.check} size={14} sw={2.5} color={T.green} />
-              : <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} />}
+                ? <Ico p={ICONS.check} size={14} sw={2.5} color={T.green} />
+                : <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} />}
           </span>
         )}
       </div>
@@ -158,7 +159,7 @@ function PasswordField({ label, value, onChange, error, showStrength, confirm }:
 }) {
   const [show, setShow] = useState(false)
   const strength = showStrength ? getStrength(value) : null
-  const isMatch  = confirm !== undefined ? value === confirm && value.length > 0 : undefined
+  const isMatch = confirm !== undefined ? value === confirm && value.length > 0 : undefined
 
   const toggle = (
     <button
@@ -198,9 +199,9 @@ function PasswordField({ label, value, onChange, error, showStrength, confirm }:
           {/* Requirement pills */}
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {[
-              { key: 'length',  label: '8+ chars' },
-              { key: 'upper',   label: 'Uppercase' },
-              { key: 'number',  label: 'Number' },
+              { key: 'length', label: '8+ chars' },
+              { key: 'upper', label: 'Uppercase' },
+              { key: 'number', label: 'Number' },
               { key: 'special', label: 'Symbol' },
             ].map(({ key, label }) => {
               const met = strength.checks[key as keyof typeof strength.checks]
@@ -262,10 +263,10 @@ function SocialBtn({ provider, onClick }: { provider: 'google' | 'microsoft'; on
       label: 'Continue with Google',
       icon: (
         <svg width="17" height="17" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
-          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908C16.658 14.075 17.64 11.767 17.64 9.2z" fill="#4285F4"/>
-          <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-          <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908C16.658 14.075 17.64 11.767 17.64 9.2z" fill="#4285F4" />
+          <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853" />
+          <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
+          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335" />
         </svg>
       ),
     },
@@ -273,10 +274,10 @@ function SocialBtn({ provider, onClick }: { provider: 'google' | 'microsoft'; on
       label: 'Continue with Microsoft',
       icon: (
         <svg width="17" height="17" viewBox="0 0 21 21" style={{ flexShrink: 0 }}>
-          <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-          <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-          <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+          <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+          <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+          <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+          <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
         </svg>
       ),
     },
@@ -364,10 +365,10 @@ function LeftDecor() {
           </div>
           {/* Orbit nodes */}
           {[
-            { angle: 0,   icon: ICONS.shield,   bg: 'rgba(9,173,112,0.28)',  border: 'rgba(165,224,218,0.3)'  },
-            { angle: 90,  icon: ICONS.brain,    bg: 'rgba(52,140,234,0.28)', border: 'rgba(52,140,234,0.3)' },
-            { angle: 180, icon: ICONS.heart,    bg: 'rgba(32,181,223,0.28)',  border: 'rgba(52,140,234,0.3)'  },
-            { angle: 270, icon: ICONS.lock,     bg: 'rgba(217,119,6,0.22)',  border: 'rgba(251,191,36,0.25)' },
+            { angle: 0, icon: ICONS.shield, bg: 'rgba(9,173,112,0.28)', border: 'rgba(165,224,218,0.3)' },
+            { angle: 90, icon: ICONS.brain, bg: 'rgba(52,140,234,0.28)', border: 'rgba(52,140,234,0.3)' },
+            { angle: 180, icon: ICONS.heart, bg: 'rgba(32,181,223,0.28)', border: 'rgba(52,140,234,0.3)' },
+            { angle: 270, icon: ICONS.lock, bg: 'rgba(217,119,6,0.22)', border: 'rgba(251,191,36,0.25)' },
           ].map(({ angle, icon, bg, border }) => {
             const r = 82; const rad = (angle - 90) * Math.PI / 180
             const x = 110 + r * Math.cos(rad), y = 110 + r * Math.sin(rad)
@@ -390,9 +391,9 @@ function LeftDecor() {
 
         {/* Social proof strip */}
         {[
-          { icon: ICONS.shield, label: 'HIPAA Ready',    color: 'rgba(165,224,218,0.85)'  },
-          { icon: ICONS.lock,   label: 'GDPR Compliant', color: 'rgba(147,197,253,0.85)' },
-          { icon: ICONS.check,  label: 'ISO 27001',      color: 'rgba(251,191,36,0.85)'  },
+          { icon: ICONS.shield, label: 'HIPAA Ready', color: 'rgba(165,224,218,0.85)' },
+          { icon: ICONS.lock, label: 'GDPR Compliant', color: 'rgba(147,197,253,0.85)' },
+          { icon: ICONS.check, label: 'ISO 27001', color: 'rgba(251,191,36,0.85)' },
         ].map(({ icon, label, color }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
             <Ico p={icon} size={14} sw={1.75} color={color} />
@@ -419,27 +420,32 @@ export default function SignUpPage() {
     country: '', phone: '', referral: '',
   })
   const [touched, setTouched] = useState<Partial<Record<keyof typeof form, boolean>>>({})
-  const [terms, setTerms]     = useState(false)
+  const [terms, setTerms] = useState(false)
   const [privacy, setPrivacy] = useState(false)
+  const [marketing, setMarketing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+
+  const signup = useStore((state) => state.signup)
+  const isLoading = useStore((state) => state.isLoading)
+  const error = useStore((state) => state.error)
 
   const set = (k: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [k]: v }))
   const touch = (k: keyof typeof form) => setTouched(t => ({ ...t, [k]: true }))
 
   // Validation
   const errors = {
-    firstName:       touched.firstName       && !form.firstName.trim()                         ? 'First name is required' : '',
-    lastName:        touched.lastName        && !form.lastName.trim()                          ? 'Last name is required' : '',
-    email:           touched.email           && !EMAIL_RE.test(form.email)                     ? 'Enter a valid email address' : '',
-    password:        touched.password        && form.password.length < 8                       ? 'Password must be at least 8 characters' : '',
-    confirmPassword: touched.confirmPassword && form.confirmPassword !== form.password         ? 'Passwords do not match' : '',
-    country:         touched.country         && !form.country                                  ? 'Please select your country' : '',
-    phone:           touched.phone           && form.phone && !PHONE_RE.test(form.phone)       ? 'Enter a valid phone number' : '',
+    firstName: touched.firstName && !form.firstName.trim() ? 'First name is required' : '',
+    lastName: touched.lastName && !form.lastName.trim() ? 'Last name is required' : '',
+    email: touched.email && !EMAIL_RE.test(form.email) ? 'Enter a valid email address' : '',
+    password: touched.password && form.password.length < 8 ? 'Password must be at least 8 characters' : '',
+    confirmPassword: touched.confirmPassword && form.confirmPassword !== form.password ? 'Passwords do not match' : '',
+    country: touched.country && !form.country ? 'Please select your country' : '',
+    phone: touched.phone && form.phone && !PHONE_RE.test(form.phone) ? 'Enter a valid phone number' : '',
   }
 
   const strength = getStrength(form.password)
-  const isValid  = !Object.values(errors).some(Boolean)
+  const isValid = !Object.values(errors).some(Boolean)
     && form.firstName && form.lastName && EMAIL_RE.test(form.email)
     && strength.score >= 3 && form.confirmPassword === form.password
     && form.country && terms && privacy
@@ -515,30 +521,6 @@ export default function SignUpPage() {
             <form onSubmit={handleSubmit} noValidate>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                {/* Name row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <Field
-                    label="First Name"
-                    placeholder="Emma"
-                    value={form.firstName}
-                    onChange={set('firstName')}
-                    error={errors.firstName}
-                    success={!!form.firstName.trim() && !errors.firstName}
-                    autoComplete="given-name"
-                    onBlur={() => touch('firstName')}
-                  />
-                  <Field
-                    label="Last Name"
-                    placeholder="Richardson"
-                    value={form.lastName}
-                    onChange={set('lastName')}
-                    error={errors.lastName}
-                    success={!!form.lastName.trim() && !errors.lastName}
-                    autoComplete="family-name"
-                    onBlur={() => touch('lastName')}
-                  />
-                </div>
-
                 {/* Email */}
                 <Field
                   label="Email Address"
@@ -575,39 +557,6 @@ export default function SignUpPage() {
                   />
                 </div>
 
-                {/* Country */}
-                <CountrySelect
-                  value={form.country}
-                  onChange={set('country')}
-                  error={errors.country}
-                  onBlur={() => touch('country')}
-                />
-
-                {/* Phone + referral */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <Field
-                    label="Phone Number"
-                    placeholder="+44 7700 900 000"
-                    type="tel"
-                    value={form.phone}
-                    onChange={set('phone')}
-                    error={errors.phone || ''}
-                    hint={!errors.phone ? undefined : undefined}
-                    optional
-                    icon={ICONS.activity}
-                    autoComplete="tel"
-                    onBlur={() => touch('phone')}
-                  />
-                  <Field
-                    label="Referral Code"
-                    placeholder="QRV-XXXXX"
-                    value={form.referral}
-                    onChange={set('referral')}
-                    optional
-                    icon={ICONS.zap}
-                  />
-                </div>
-
                 {/* Agreements */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: `1px solid ${submitted && !terms ? 'rgba(220,38,38,0.3)' : T.borderFaint}` }}>
                   <Checkbox checked={terms} onChange={() => setTerms(t => !t)} error={submitted && !terms}>
@@ -619,10 +568,13 @@ export default function SignUpPage() {
                     <Link href="/privacy" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>Privacy Policy</Link>
                     {' '}and data processing under GDPR
                   </Checkbox>
+                  <Checkbox checked={marketing} onChange={() => setMarketing(m => !m)} error={submitted && !marketing}>
+                    I agree to receive marketing communications from Qarevo Health
+                  </Checkbox>
                 </div>
 
                 {/* Submit */}
-                <SubmitButton loading={loading} disabled={false} />
+                <SubmitButton loading={loading} disabled={false} onClick={logConsole} />
 
                 {/* Sign-in link */}
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '4px 0 0', letterSpacing: '-0.01em' }}>
@@ -632,25 +584,13 @@ export default function SignUpPage() {
               </div>
             </form>
 
-            {/* Divider + social */}
-            <div style={{ marginTop: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(4,53,77,0.08)' }} />
-                <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(4,53,77,0.08)' }} />
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <SocialBtn provider="google" onClick={() => router.push('/auth/verify-email')} />
-                <SocialBtn provider="microsoft" onClick={() => router.push('/auth/verify-email')} />
-              </div>
-            </div>
 
             {/* Trust row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)', flexWrap: 'wrap' }}>
               {[
-                { icon: ICONS.lock,   label: 'HIPAA Ready'    },
+                { icon: ICONS.lock, label: 'HIPAA Ready' },
                 { icon: ICONS.shield, label: 'GDPR Compliant' },
-                { icon: ICONS.check,  label: 'ISO 27001'      },
+                { icon: ICONS.check, label: 'ISO 27001' },
               ].map(({ icon, label }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Ico p={icon} size={12} sw={1.75} color={T.slate2} />
@@ -698,7 +638,7 @@ function CountrySelect({ value, onChange, error, onBlur }: { value: string; onCh
         <span style={{ position: 'absolute', right: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.slate2 }}>
           {value
             ? <Ico p={ICONS.check} size={13} sw={2.5} color={T.green} />
-            : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
         </span>
       </div>
       {error && <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{error}</p>}
@@ -708,7 +648,8 @@ function CountrySelect({ value, onChange, error, onBlur }: { value: string; onCh
 
 // ─── Submit button ─────────────────────────────────────────────────────────────
 
-function SubmitButton({ loading, disabled }: { loading: boolean; disabled: boolean }) {
+function SubmitButton({ loading, disabled, onClick }: { loading: boolean; disabled: boolean; onClick?: () => void
+}) {
   const [h, setH] = useState(false)
   return (
     <button
@@ -716,12 +657,13 @@ function SubmitButton({ loading, disabled }: { loading: boolean; disabled: boole
       disabled={disabled || loading}
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
+      onClick={onClick}
       style={{
         width: '100%', padding: '14px 20px', borderRadius: '13px', border: 'none',
         background: loading || disabled
           ? 'rgba(32,181,223,0.5)'
           : h ? 'linear-gradient(135deg,#348CEA 0%,#0F47B8 100%)'
-              : `linear-gradient(135deg,${T.blue} 0%,#348CEA 100%)`,
+            : `linear-gradient(135deg,${T.blue} 0%,#348CEA 100%)`,
         color: '#fff', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700,
         letterSpacing: '-0.02em', cursor: loading || disabled ? 'not-allowed' : 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -737,4 +679,9 @@ function SubmitButton({ loading, disabled }: { loading: boolean; disabled: boole
         : <>Create Account <Ico p={ICONS.arrowFwd} size={15} sw={2.2} /></>}
     </button>
   )
+}
+
+
+function logConsole () {
+  console.log(`console logged`)
 }
