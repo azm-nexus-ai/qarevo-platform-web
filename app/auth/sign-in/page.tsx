@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T, Sh, Glass } from '@/lib/tokens'
 import { getOnboardingRedirectPath, readAuthFlowState } from '@/lib/auth-flow'
+import { loginPatient, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
@@ -301,20 +302,16 @@ export default function SignInPage() {
   const emailErr = touched.email && !EMAIL_RE.test(email) ? 'Enter a valid email address' : ''
   const passErr  = touched.password && password.length < 1 ? 'Password is required' : ''
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setTouched({ email: true, password: true })
     if (!EMAIL_RE.test(email) || !password) return
     setLoading(true)
     setAuthError('')
-    setTimeout(() => {
-      setLoading(false)
-      // Simulate wrong credentials on first try for demo
-      if (password === 'wrong') {
-        setAuthError('Incorrect email or password. Please try again.')
-        return
-      }
 
+    try {
+      const response = await loginPatient({ email, password })
+      storeAuthTokens({ ...response, role: 'patient' })
       const authFlowState = readAuthFlowState()
       if (authFlowState?.isAuthenticated) {
         const nextRoute = authFlowState.onboardingCompleted
@@ -326,7 +323,11 @@ export default function SignInPage() {
 
       const onboardingIncomplete = /new|incomplete|onboard/i.test(email)
       router.push(onboardingIncomplete ? '/auth/profile-setup' : '/patient/dashboard')
-    }, 1200)
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Incorrect email or password. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const pwToggle = (

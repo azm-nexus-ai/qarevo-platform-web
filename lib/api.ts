@@ -4,8 +4,41 @@ const getBaseUrl = () => {
     return baseUrl;
 };
 
-export async function apiGet<T>(path: string): Promise<T> {
+export function readAccessToken(): string | null {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem("qarevo_access_token");
+}
+
+export function storeAuthTokens(payload: {
+    access_token: string;
+    refresh_token: string;
+    token_type?: string;
+    expires_in?: number;
+    user_id?: string;
+    provider_id?: string;
+    role?: string;
+}) {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("qarevo_access_token", payload.access_token);
+    window.localStorage.setItem("qarevo_refresh_token", payload.refresh_token);
+    window.localStorage.setItem("qarevo_token_type", payload.token_type ?? "bearer");
+    if (payload.expires_in) window.localStorage.setItem("qarevo_expires_in", String(payload.expires_in));
+    if (payload.user_id) window.localStorage.setItem("qarevo_user_id", payload.user_id);
+    if (payload.provider_id) window.localStorage.setItem("qarevo_provider_id", payload.provider_id);
+    if (payload.role) window.localStorage.setItem("qarevo_role", payload.role);
+}
+
+function authHeaders(headers?: Record<string, string>): Record<string, string> {
+    const token = readAccessToken();
+    return {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
+    };
+}
+
+export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
     const res = await fetch(`${getBaseUrl()}${path}`, {
+        headers: authHeaders(headers),
         cache: "no-store",
     });
 
@@ -22,7 +55,26 @@ export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: 
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            ...headers,
+            ...authHeaders(headers),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        cache: "no-store",
+    });
+
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`API error ${res.status}: ${text}`);
+    }
+
+    return res.json() as Promise<T>;
+}
+
+export async function apiPatch<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
+    const res = await fetch(`${getBaseUrl()}${path}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(headers),
         },
         body: body ? JSON.stringify(body) : undefined,
         cache: "no-store",
@@ -112,6 +164,92 @@ export type DoctorLoginResponse = {
     phone_verified: boolean;
 };
 
+export type AuthTokenResponse = {
+    access_token: string;
+    refresh_token: string;
+    token_type: string;
+    expires_in: number;
+    email_verified: boolean;
+    phone_verified: boolean;
+    user_id?: string;
+    provider_id?: string;
+};
+
+export type PatientDoctor = {
+    id: string;
+    name: string;
+    specialty: string;
+    hospital: string;
+    experienceYears: number;
+    rating: number;
+    reviews: number;
+    consultationFee: number;
+    nextAvailable: string;
+    languages: string[];
+    insurance: string[];
+    gender: "female" | "male" | "other";
+    consultationTypes: string[];
+    distanceKm: number;
+    conditions: string[];
+    imageUrl: string;
+    verification: string;
+    tags: string[];
+    profile?: Record<string, unknown>;
+};
+
+export type DoctorSearchResponse = {
+    doctors: PatientDoctor[];
+    total: number;
+    filters: Record<string, unknown>;
+};
+
+export type EpisodeCreateRequest = {
+    pack_id: string;
+    pack_version: string;
+    bundesland: string;
+    insurance_type: string;
+    flow_type: string;
+    matching_mode: string;
+    insurance_provider?: string | null;
+    insurance_number?: string | null;
+    consent_data_processing: boolean;
+    consent_ai_assistance: boolean;
+    recipient_email?: string | null;
+    recipient_phone_e164?: string | null;
+    notification_channel?: string;
+    correlation_id?: string;
+};
+
+export type EpisodeResponse = {
+    id: string;
+    patient_id: string;
+    pack_id: string;
+    pack_version: string;
+    bundesland: string;
+    insurance_type: string;
+    flow_type: string;
+    matching_mode: string;
+    insurance_provider?: string | null;
+    insurance_number?: string | null;
+    consent_data_processing: boolean;
+    consent_ai_assistance: boolean;
+    status: string;
+    assigned_doctor_id?: string | null;
+    version: number;
+    created_at: string;
+    updated_at?: string | null;
+    expires_at?: string | null;
+};
+
+export type IntakeSubmitResponse = {
+    ai_draft?: {
+        status: "submitted" | "unavailable";
+        job_id?: string;
+        detail?: string;
+    };
+    [key: string]: unknown;
+};
+
 export type VerifyEmailCodeRequest = {
     email: string;
     code: string;
@@ -140,10 +278,40 @@ export async function loginDoctor(body: DoctorLoginRequest): Promise<DoctorLogin
     return apiPost<DoctorLoginResponse>("/api/v1/auth/doctor/login", body);
 }
 
+export async function loginPatient(body: { email: string; password: string }): Promise<AuthTokenResponse> {
+    return apiPost<AuthTokenResponse>("/api/v1/auth/login", body);
+}
+
 export async function verifyDoctorEmailCode(body: VerifyEmailCodeRequest): Promise<VerifyEmailCodeResponse> {
     return apiPost<VerifyEmailCodeResponse>("/api/v1/auth/verify-email-code", body);
 }
 
 export async function verifyDoctorPhoneCode(body: VerifyPhoneCodeRequest): Promise<VerifyPhoneCodeResponse> {
     return apiPost<VerifyPhoneCodeResponse>("/api/v1/auth/verify-phone-code", body);
+}
+
+export async function searchPatientDoctors(params: URLSearchParams): Promise<DoctorSearchResponse> {
+    const query = params.toString();
+    return apiGet<DoctorSearchResponse>(`/api/v1/patient/doctors${query ? `?${query}` : ""}`);
+}
+
+export async function getPatientDoctor(doctorId: string): Promise<PatientDoctor> {
+    return apiGet<PatientDoctor>(`/api/v1/patient/doctors/${doctorId}`);
+}
+
+export async function createPatientEpisode(body: EpisodeCreateRequest): Promise<EpisodeResponse> {
+    return apiPost<EpisodeResponse>("/api/v1/patient/episodes", body);
+}
+
+export async function updatePatientEpisodeIntake(
+    episodeId: string,
+    fieldValues: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+    return apiPatch<Record<string, unknown>>(`/api/v1/patient/episodes/${episodeId}/intake`, {
+        field_values: fieldValues,
+    });
+}
+
+export async function submitPatientEpisodeIntake(episodeId: string): Promise<IntakeSubmitResponse> {
+    return apiPost<IntakeSubmitResponse>(`/api/v1/patient/episodes/${episodeId}/intake/submit`);
 }

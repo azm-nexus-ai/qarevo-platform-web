@@ -2,8 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   devIndicators: false,
-  distDir: 'out',
-  output: 'export',
 
   images: {
     remotePatterns: [

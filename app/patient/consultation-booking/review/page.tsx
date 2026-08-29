@@ -5,6 +5,11 @@ import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
+import {
+  createPatientEpisode,
+  submitPatientEpisodeIntake,
+  updatePatientEpisodeIntake,
+} from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -53,6 +58,7 @@ function ReviewPageContent() {
     policy: false,
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [showPolicy, setShowPolicy] = useState(false)
 
   const appointmentEnd = useMemo(() => {
@@ -83,12 +89,55 @@ function ReviewPageContent() {
     return `/patient/consultation-booking/date-time?${next.toString()}`
   }, [searchParams, physicianData, service])
 
-  const handleConfirm = () => {
-    if (!allAgreed) return
+  const handleConfirm = async () => {
+    if (!allAgreed || isSubmitting) return
     setIsSubmitting(true)
-    window.setTimeout(() => {
-      router.push(successHref)
-    }, 1200)
+    setSubmitError('')
+
+    try {
+      const insuranceType = /statutory|public|nhs|gkv/i.test(insurance) ? 'public' : 'private'
+      const episode = await createPatientEpisode({
+        pack_id: 'patient-booking-intake',
+        pack_version: '1.0.0',
+        bundesland: searchParams.get('bundesland') ?? 'Berlin',
+        insurance_type: insuranceType,
+        flow_type: service === 'follow-up' ? 'follow_up' : 'consultation',
+        matching_mode: physicianData.id ? 'patient_selects' : 'matching_required',
+        insurance_provider: insurance,
+        consent_data_processing: agreements.privacy,
+        consent_ai_assistance: true,
+        recipient_email: email,
+        recipient_phone_e164: phone.replace(/\s/g, ''),
+        notification_channel: 'email',
+      })
+
+      await updatePatientEpisodeIntake(episode.id, {
+        raw_text: notes || medicalConcern,
+        reported_duration: duration,
+        reported_location: physicianData.hospital,
+        reported_onset: `${date} ${slot}`,
+        reported_severity: 'Not specified',
+        associated_factors: `${physicianData.specialty}; ${readLabel(service)}; selected doctor: ${physicianData.name}`,
+        booking_date: date,
+        booking_slot: slot,
+        consultation_type: readLabel(service),
+        selected_physician_id: physicianData.id,
+        selected_physician_name: physicianData.name,
+        insurance_provider: insurance,
+        consultation_fee: fee,
+      })
+
+      const submitResult = await submitPatientEpisodeIntake(episode.id)
+      const next = new URLSearchParams(successHref.split('?')[1] ?? '')
+      next.set('episodeId', episode.id)
+      const aiDraftJobId = submitResult.ai_draft?.job_id
+      if (aiDraftJobId) next.set('aiDraftJobId', aiDraftJobId)
+      router.push(`/patient/consultation-booking/success?${next.toString()}`)
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to confirm this appointment right now.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -386,6 +435,11 @@ function ReviewPageContent() {
                 {isSubmitting ? 'Confirming…' : 'Confirm Appointment'}
                 <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
               </HoverBtn>
+              {submitError && (
+                <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: '#FFF5F5', border: '1px solid rgba(220,38,38,0.25)', color: T.red, fontSize: '12px', lineHeight: 1.5 }}>
+                  {submitError}
+                </div>
+              )}
 
               <Link href={backHref} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: '10px', color: T.slate2, textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
                 <Ico p={ICONS.arrowSm} size={13} sw={2} style={{ transform: 'rotate(180deg)' }} />

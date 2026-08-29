@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { T, Sh, Glass } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { apiPost } from '@/lib/api'
+import { AuthTokenResponse, apiPost, storeAuthTokens } from '@/lib/api'
 
 // Page background
 const PAGE_BG = [
@@ -258,16 +258,18 @@ export default function Doctor2FAPage() {
       const tempToken = localStorage.getItem('doctor_temp_token')
       const headers: Record<string, string> | undefined = tempToken ? { Authorization: `Bearer ${tempToken}` } : undefined
       
-      if (method === 'email') {
-        await apiPost('/api/v1/auth/mfa/verify-email', { email, code }, headers)
-      } else {
-        await apiPost('/api/v1/auth/mfa/verify-phone', { 
-          countryCode, phone, code }, headers)
-      }
+      const response = method === 'email'
+        ? await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-email', { email, code }, headers)
+        : await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-phone', {
+          country_code: countryCode,
+          phone,
+          code,
+        }, headers)
 
       // Clear temp tokens
       localStorage.removeItem('doctor_temp_token')
       localStorage.removeItem('doctor_identifier')
+      storeAuthTokens({ ...response, role: 'doctor' })
       
       // Redirect to doctor dashboard
       router.push('/doctor/dashboard')
