@@ -292,7 +292,7 @@ export default function PatientDashboardPage() {
         const userId = localStorage.getItem('qarevo_user_id')
         if (!userId) return
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/patient/dashboard?patient_id=${userId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/patient/dashboard?user_id=${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
