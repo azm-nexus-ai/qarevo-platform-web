@@ -2,16 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 
 export default function PatientMobileNavigation() {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
 
@@ -45,6 +48,19 @@ export default function PatientMobileNavigation() {
     setMobileOpen(false)
     hamburgerRef.current?.focus()
   }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('qarevo_access_token')
+    localStorage.removeItem('qarevo_refresh_token')
+    localStorage.removeItem('qarevo_token_type')
+    localStorage.removeItem('qarevo_expires_in')
+    localStorage.removeItem('qarevo_user_id')
+    localStorage.removeItem('qarevo_provider_id')
+    localStorage.removeItem('qarevo_role')
+    setShowLogoutModal(false)
+    closeDrawer()
+    router.push('/auth/sign-in')
+  }
 
   return (
     <>
@@ -307,26 +323,40 @@ export default function PatientMobileNavigation() {
         </nav>
 
         <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${T.borderFaint}` }}>
-          <Link
-            href={PATIENT_ROUTES.logout}
-            onClick={closeDrawer}
+          <button
+            onClick={() => {
+              closeDrawer()
+              setShowLogoutModal(true)
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
               padding: '10px 12px',
               borderRadius: '12px',
-              textDecoration: 'none',
+              border: 'none',
+              background: 'transparent',
               color: '#348CEA',
               fontSize: '13.5px',
               fontWeight: 600,
+              cursor: 'pointer',
+              width: '100%',
+              textAlign: 'left',
             }}
           >
             <Ico p={ICONS.arrowSm} size={15} sw={1.8} color="#348CEA" />
             Logout
-          </Link>
+          </button>
         </div>
       </div>
+
+      {showLogoutModal && (
+        <LogoutModal
+          isOpen={showLogoutModal}
+          onClose={() => setShowLogoutModal(false)}
+          onConfirm={handleLogout}
+        />
+      )}
     </>
   )
 }

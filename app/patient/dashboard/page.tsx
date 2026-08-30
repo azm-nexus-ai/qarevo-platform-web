@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { getOnboardingRedirectPath, readAuthFlowState } from '@/lib/auth-flow'
+import { readAccessToken } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
@@ -14,6 +14,7 @@ import HoverBtn from '@/components/buttons/HoverBtn'
 import DoctorCard from '@/components/cards/DoctorCard'
 import AIItem from '@/components/cards/AIItem'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import LogoutModal from '@/components/ui/LogoutModal'
 
 type NavItem = {
   label: string
@@ -257,14 +258,27 @@ function topButtonBase(): CSSProperties {
 export default function PatientDashboardPage() {
   const [search, setSearch] = useState('')
   const [loadingRightRail, setLoadingRightRail] = useState(true)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
   const greeting = useMemo(() => getGreeting(), [])
   const router = useRouter()
   const pathname = usePathname()
 
+  const handleLogout = () => {
+    localStorage.removeItem('qarevo_access_token')
+    localStorage.removeItem('qarevo_refresh_token')
+    localStorage.removeItem('qarevo_token_type')
+    localStorage.removeItem('qarevo_expires_in')
+    localStorage.removeItem('qarevo_user_id')
+    localStorage.removeItem('qarevo_provider_id')
+    localStorage.removeItem('qarevo_role')
+    setShowLogoutModal(false)
+    router.push('/auth/sign-in')
+  }
+
   useEffect(() => {
-    const authFlowState = readAuthFlowState()
-    if (authFlowState?.isAuthenticated && !authFlowState.onboardingCompleted) {
-      router.replace(getOnboardingRedirectPath(authFlowState))
+    const token = readAccessToken()
+    if (!token) {
+      router.replace('/auth/sign-in')
     }
   }, [router])
 
@@ -386,10 +400,13 @@ export default function PatientDashboardPage() {
                 <Ico p={ICONS.info} size={15} sw={1.7} color={T.slate2} />
                 Help & Support
               </Link>
-              <Link href={PATIENT_ROUTES.logout} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '11px', textDecoration: 'none', color: '#348CEA', fontSize: '13px', fontWeight: 600 }}>
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '11px', border: 'none', background: 'transparent', color: '#348CEA', fontSize: '13px', fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}
+              >
                 <Ico p={ICONS.arrowSm} size={15} sw={1.8} color='#348CEA' />
                 Logout
-              </Link>
+              </button>
             </div>
           </div>
         </aside>
@@ -847,6 +864,14 @@ export default function PatientDashboardPage() {
           </div>
         </aside>
       </div>
+
+      {showLogoutModal && (
+        <LogoutModal
+          isOpen={showLogoutModal}
+          onClose={() => setShowLogoutModal(false)}
+          onConfirm={handleLogout}
+        />
+      )}
     </main>
   )
 }
