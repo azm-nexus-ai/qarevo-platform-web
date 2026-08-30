@@ -7,15 +7,52 @@ import { T, Glass } from '@/lib/tokens'
 import { NAV_LINKS, NAV_ANCHORS } from '@/constants/navigation'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import LogoutModal from '@/components/ui/LogoutModal'
+import { readAccessToken } from '@/lib/api'
 
 export default function NavigationBar() {
   const [activeSection, setActiveSection] = useState<string>('Platform Overview')
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [hoverNav, setHoverNav] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
   const router = useRouter()
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = readAccessToken()
+      console.log('[NavigationBar] Access token check:', token ? 'exists' : 'null')
+      setIsAuthenticated(!!token)
+    }
+
+    checkAuth()
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'qarevo_access_token' || e.key === 'qarevo_refresh_token') {
+        console.log('[NavigationBar] Storage changed, rechecking auth')
+        checkAuth()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('qarevo_access_token')
+    localStorage.removeItem('qarevo_refresh_token')
+    localStorage.removeItem('qarevo_token_type')
+    localStorage.removeItem('qarevo_expires_in')
+    localStorage.removeItem('qarevo_user_id')
+    localStorage.removeItem('qarevo_provider_id')
+    localStorage.removeItem('qarevo_role')
+    setIsAuthenticated(false)
+    setShowLogoutModal(false)
+    router.push('/auth/sign-in')
+  }
 
   // Sticky shrink + glassmorphism intensify on scroll
   useEffect(() => {
@@ -178,62 +215,106 @@ export default function NavigationBar() {
             style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginLeft: 'auto' }}
             className="hide-mobile"
           >
-            <Link
-              href="/auth/doctor/login"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '7px 14px',
-                borderRadius: '9px',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: T.slate2,
-                letterSpacing: '-0.01em',
-                textDecoration: 'none',
-              }}
-            >
-              Physician Portal
-            </Link>
-            <Link
-              href="/auth/sign-in"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '7px 16px',
-                borderRadius: '9px',
-                fontSize: '13.5px',
-                fontWeight: 500,
-                color: T.slate,
-                letterSpacing: '-0.01em',
-                textDecoration: 'none',
-              }}
-            >
-              Sign In
-            </Link>
-            <HoverBtn
-              onClick={() => router.push('/auth')}
-              base={{
-                background: T.blue,
-                border: 'none',
-                cursor: 'pointer',
-                padding: '8px 18px',
-                borderRadius: '9px',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                color: '#fff',
-                letterSpacing: '-0.01em',
-                boxShadow: '0 2px 8px rgba(32,181,223,0.26), 0 8px 22px rgba(32,181,223,0.2)',
-              }}
-              on={{
-                background: '#348CEA',
-                transform: 'translateY(-1px)',
-                boxShadow: '0 4px 14px rgba(52,140,234,0.3), 0 10px 28px rgba(52,140,234,0.2)',
-              }}
-            >
-              Access Platform
-            </HoverBtn>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/patient/dashboard"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '7px 16px',
+                    borderRadius: '9px',
+                    fontSize: '13.5px',
+                    fontWeight: 500,
+                    color: T.slate,
+                    letterSpacing: '-0.01em',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Dashboard
+                </Link>
+                <HoverBtn
+                  onClick={() => setShowLogoutModal(true)}
+                  base={{
+                    background: 'none',
+                    border: '1px solid rgba(4,53,77,0.12)',
+                    cursor: 'pointer',
+                    padding: '8px 18px',
+                    borderRadius: '9px',
+                    fontSize: '13.5px',
+                    fontWeight: 600,
+                    color: T.slate,
+                    letterSpacing: '-0.01em',
+                  }}
+                  on={{
+                    background: 'rgba(4,53,77,0.04)',
+                    transform: 'translateY(-1px)',
+                  }}
+                >
+                  Logout
+                </HoverBtn>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/auth/doctor/login"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '7px 14px',
+                    borderRadius: '9px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: T.slate2,
+                    letterSpacing: '-0.01em',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Physician Portal
+                </Link>
+                <Link
+                  href="/auth/sign-in"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '7px 16px',
+                    borderRadius: '9px',
+                    fontSize: '13.5px',
+                    fontWeight: 500,
+                    color: T.slate,
+                    letterSpacing: '-0.01em',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Sign In
+                </Link>
+                <HoverBtn
+                  onClick={() => router.push('/auth')}
+                  base={{
+                    background: T.blue,
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '8px 18px',
+                    borderRadius: '9px',
+                    fontSize: '13.5px',
+                    fontWeight: 600,
+                    color: '#fff',
+                    letterSpacing: '-0.01em',
+                    boxShadow: '0 2px 8px rgba(32,181,223,0.26), 0 8px 22px rgba(32,181,223,0.2)',
+                  }}
+                  on={{
+                    background: '#348CEA',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 14px rgba(52,140,234,0.3), 0 10px 28px rgba(52,140,234,0.2)',
+                  }}
+                >
+                  Access Platform
+                </HoverBtn>
+              </>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -399,63 +480,117 @@ export default function NavigationBar() {
 
         {/* Drawer auth buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(4,53,77,0.08)' }}>
-          <Link
-            href="/auth/doctor/login"
-            onClick={() => setMobileOpen(false)}
-            style={{
-              display: 'block',
-              textAlign: 'center',
-              padding: '12px 20px',
-              borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              fontSize: '14px',
-              fontWeight: 500,
-              color: T.slate,
-              textDecoration: 'none',
-              transition: 'background 0.12s',
-            }}
-          >
-            Physician Portal
-          </Link>
-          <Link
-            href="/auth/sign-in"
-            onClick={() => setMobileOpen(false)}
-            style={{
-              display: 'block',
-              textAlign: 'center',
-              padding: '12px 20px',
-              borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              fontSize: '14px',
-              fontWeight: 500,
-              color: T.slate,
-              textDecoration: 'none',
-              transition: 'background 0.12s',
-            }}
-          >
-            Sign In
-          </Link>
-          <Link
-            href="/auth"
-            onClick={() => setMobileOpen(false)}
-            style={{
-              display: 'block',
-              textAlign: 'center',
-              padding: '12px 20px',
-              borderRadius: '10px',
-              background: T.blue,
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#fff',
-              textDecoration: 'none',
-              boxShadow: '0 2px 8px rgba(32,181,223,0.26)',
-              transition: 'background 0.12s, box-shadow 0.12s',
-            }}
-          >
-            Access Platform
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                href="/patient/dashboard"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  display: 'block',
+                  textAlign: 'center',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(4,53,77,0.12)',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: T.slate,
+                  textDecoration: 'none',
+                  transition: 'background 0.12s',
+                }}
+              >
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileOpen(false)
+                  setShowLogoutModal(true)
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'center',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
+                  background: 'rgba(4,53,77,0.04)',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: T.slate,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background 0.12s',
+                }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/auth/doctor/login"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  display: 'block',
+                  textAlign: 'center',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(4,53,77,0.12)',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: T.slate,
+                  textDecoration: 'none',
+                  transition: 'background 0.12s',
+                }}
+              >
+                Physician Portal
+              </Link>
+              <Link
+                href="/auth/sign-in"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  display: 'block',
+                  textAlign: 'center',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(4,53,77,0.12)',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: T.slate,
+                  textDecoration: 'none',
+                  transition: 'background 0.12s',
+                }}
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/auth"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  display: 'block',
+                  textAlign: 'center',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
+                  background: T.blue,
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#fff',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 8px rgba(32,181,223,0.26)',
+                  transition: 'background 0.12s, box-shadow 0.12s',
+                }}
+              >
+                Access Platform
+              </Link>
+            </>
+          )}
         </div>
       </div>
+
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+      />
     </>
   )
 }
