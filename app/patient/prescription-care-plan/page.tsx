@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useMemo, useState } from 'react'
+import Image from 'next/image'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { T, Sh } from '@/lib/tokens'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
@@ -138,8 +139,13 @@ const pharmacyOptions = [
   { title: 'Home Delivery', body: 'Fast delivery available within 24 hours', tag: 'Convenient' },
 ]
 
+function medicationElementId(name: string) {
+  return `medication-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+}
+
 function PrescriptionCarePlanPageContent() {
   const searchParams = useSearchParams()
+  const highlightedMedication = searchParams.get('medication') ?? ''
   const physicianId = searchParams.get('physicianId') ?? 'sophia-reed'
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const date = searchParams.get('date') ?? 'Today'
@@ -170,6 +176,19 @@ function PrescriptionCarePlanPageContent() {
     })
     return `/patient/lab-requests?${params.toString()}`
   }, [date, duration, insurance, notes, physicianId, physicianName, slot, specialty])
+
+  useEffect(() => {
+    if (!highlightedMedication) return
+
+    const timer = window.setTimeout(() => {
+      document.getElementById(medicationElementId(highlightedMedication))?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      })
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [highlightedMedication])
 
   const rightRail = (
     <div className='plan-summary-card'>
@@ -271,7 +290,7 @@ function PrescriptionCarePlanPageContent() {
             <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ width: '92px', height: '92px', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(4,53,77,0.12)', background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.24))', display: 'grid', placeItems: 'center' }}>
                 {physician ? (
-                  <img src={physician.imageUrl} alt={physicianName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src={physician.imageUrl} alt={physicianName} width={92} height={92} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <Ico p={ICONS.steth} size={28} sw={1.5} color={T.navy} />
                 )}
@@ -296,8 +315,10 @@ function PrescriptionCarePlanPageContent() {
               <div className='plan-chip'>Premium care instructions</div>
             </div>
             <div style={{ display: 'grid', gap: '12px' }}>
-              {medications.map((item) => (
-                <article key={item.name} className='med-card' style={{ background: `linear-gradient(135deg, ${item.accent} 0%, rgba(255,255,255,0.96) 100%)` }}>
+              {medications.map((item) => {
+                const highlighted = item.name.toLowerCase() === highlightedMedication.toLowerCase()
+                return (
+                <article key={item.name} id={medicationElementId(item.name)} className='med-card' style={{ background: `linear-gradient(135deg, ${item.accent} 0%, rgba(255,255,255,0.96) 100%)`, borderColor: highlighted ? 'rgba(32,181,223,0.72)' : 'rgba(4,53,77,0.08)', boxShadow: highlighted ? '0 0 0 4px rgba(32,181,223,0.14), 0 16px 34px rgba(4,53,77,0.12)' : undefined }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
                     <div>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.85)', color: T.navy, fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{item.brand}</div>
@@ -332,7 +353,8 @@ function PrescriptionCarePlanPageContent() {
                     </div>
                   </div>
                 </article>
-              ))}
+                )
+              })}
             </div>
           </section>
 

@@ -8,8 +8,14 @@ import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
-import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
-import { readAccessToken } from '@/lib/api'
+import { PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
+import { getPatientDashboard, readAccessToken } from '@/lib/api'
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return 'P'
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('')
+}
 
 export default function PatientMobileNavigation() {
   const pathname = usePathname()
@@ -17,8 +23,10 @@ export default function PatientMobileNavigation() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [patientName, setPatientName] = useState('Loading...')
+  const [carePlanStatus, setCarePlanStatus] = useState('Loading')
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
+  const patientInitials = getInitials(patientName)
 
   // Body scroll lock
   useEffect(() => {
@@ -68,30 +76,23 @@ export default function PatientMobileNavigation() {
     const token = readAccessToken()
     if (!token) return
 
-    // Fetch patient name from API
-    const fetchPatientName = async () => {
+    const fetchDashboardProfile = async () => {
       try {
         const userId = localStorage.getItem('qarevo_user_id')
-        if (!userId) return
-
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/patient/dashboard?user_id=${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          if (data.patient_name) {
-            setPatientName(data.patient_name)
-          }
+        const data = await getPatientDashboard(userId)
+        if (data.patient_name) {
+          setPatientName(data.patient_name)
         }
+        const plans = data.care_plans ?? data.carePlans ?? []
+        const activePlan = plans.find((plan) => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
+        setCarePlanStatus(activePlan?.status || (plans.length ? 'Active' : 'Not started'))
       } catch (error) {
-        console.error('Failed to fetch patient name:', error)
+        console.error('Failed to fetch dashboard profile:', error)
+        setCarePlanStatus('Unavailable')
       }
     }
 
-    fetchPatientName()
+    fetchDashboardProfile()
   }, [])
 
   return (
@@ -313,11 +314,11 @@ export default function PatientMobileNavigation() {
                 fontWeight: 700,
               }}
             >
-              J
+              {patientInitials}
             </div>
             <div>
               <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{patientName}</p>
-              <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: Active</p>
+              <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: {carePlanStatus}</p>
             </div>
           </div>
         </section>

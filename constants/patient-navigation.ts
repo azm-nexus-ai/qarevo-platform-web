@@ -28,10 +28,10 @@ export const PATIENT_SIDEBAR_ITEMS: PatientNavItem[] = [
   { label: 'Medical Records', icon: ICONS.shield, href: PATIENT_ROUTES.medicalRecords },
   { label: 'Prescriptions', icon: ICONS.heart, href: PATIENT_ROUTES.prescriptions },
   { label: 'Lab Requests', icon: ICONS.cpu, href: PATIENT_ROUTES.labRequests },
-  { label: 'Messages', icon: ICONS.ema, href: PATIENT_ROUTES.messages },
+  { label: 'Messages', icon: ICONS.message, href: PATIENT_ROUTES.messages },
   { label: 'Billing & Payments', icon: ICONS.info, href: PATIENT_ROUTES.billing },
   { label: 'Settings', icon: ICONS.user, href: PATIENT_ROUTES.settings },
-  { label: 'Help & Support', icon: ICONS.shield, href: PATIENT_ROUTES.support },
+  { label: 'Help & Support', icon: ICONS.help, href: PATIENT_ROUTES.support },
 ]
 
 export function isPatientNavActive(pathname: string, href: string) {

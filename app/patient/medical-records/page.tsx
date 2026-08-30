@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { Suspense, useEffect, useState, useMemo } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { useSearchParams } from 'next/navigation'
+import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
-import { PATIENT_ROUTES, isPatientNavActive } from '@/constants/patient-navigation'
+import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
@@ -392,7 +392,8 @@ function PreviewModal({ record, onClose }: { record: MedicalRecord; onClose: () 
 // ─── Main Page Inner ───────────────────────────────────────────────────────────
 
 function MedicalRecordsPageInner() {
-  const router = useRouter()
+  const searchParams = useSearchParams()
+  const recordId = searchParams.get('recordId')
   const [records, setRecords] = useState<MedicalRecord[]>(MOCK_RECORDS)
   const [activeTab, setActiveTab] = useState<RecordType | 'All Records'>('All Records')
   const [search, setSearch] = useState('')
@@ -427,6 +428,20 @@ function MedicalRecordsPageInner() {
     setToast('Medical record uploaded successfully.')
     setTimeout(() => setToast(null), 4000)
   }
+
+  useEffect(() => {
+    if (!recordId) return
+
+    const timer = window.setTimeout(() => {
+      const record = records.find((item) => item.id === recordId)
+      if (record) {
+        setActiveTab('All Records')
+        setSelectedRecord(record)
+      }
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [recordId, records])
 
   return (
     <PatientPortalShell

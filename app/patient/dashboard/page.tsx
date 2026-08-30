@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { readAccessToken } from '@/lib/api'
+import { getPatientDashboard, readAccessToken, searchPatientDashboard } from '@/lib/api'
+import type { PatientDashboardSearchResult } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
@@ -38,8 +39,6 @@ type QuickAction = {
   href: string
 }
 
-const patientName = 'Loading...'
-
 const sideNavItems: NavItem[] = [
   ...PATIENT_SIDEBAR_ITEMS,
 ]
@@ -49,7 +48,7 @@ const summaryCards: SummaryCard[] = [
   { label: 'Assigned Physician', value: 'Dr. Sophia Reed', sub: 'Cardiology', icon: ICONS.steth, tint: 'rgba(52,140,234,0.14)', href: '/patient/physicians/sophia-reed' },
   { label: 'Health Records', value: '18', sub: '2 new this week', icon: ICONS.shield, tint: 'rgba(165,224,218,0.24)', href: PATIENT_ROUTES.medicalRecords },
   { label: 'Active Prescriptions', value: '3', sub: '1 refill due', icon: ICONS.heart, tint: 'rgba(32,181,223,0.12)', href: PATIENT_ROUTES.prescriptions },
-  { label: 'Unread Messages', value: '4', sub: '2 from clinicians', icon: ICONS.ema, tint: 'rgba(52,140,234,0.14)', href: PATIENT_ROUTES.messages },
+  { label: 'Unread Messages', value: '4', sub: '2 from clinicians', icon: ICONS.message, tint: 'rgba(52,140,234,0.14)', href: PATIENT_ROUTES.messages },
   { label: 'Recent Lab Requests', value: '2', sub: 'Available now', icon: ICONS.cpu, tint: 'rgba(165,224,218,0.24)', href: PATIENT_ROUTES.labRequests },
 ]
 
@@ -59,7 +58,7 @@ const quickActions: QuickAction[] = [
   { label: 'View Prescriptions', sub: 'Medication plan', icon: ICONS.heart, href: PATIENT_ROUTES.prescriptions },
   { label: 'View Lab Requests', sub: 'Recent tests', icon: ICONS.cpu, href: PATIENT_ROUTES.labRequests },
   { label: 'Medical Records', sub: 'View documents', icon: ICONS.shield, href: PATIENT_ROUTES.medicalRecords },
-  { label: 'Messages', sub: 'Care team chat', icon: ICONS.ema, href: PATIENT_ROUTES.messages },
+  { label: 'Messages', sub: 'Care team chat', icon: ICONS.message, href: PATIENT_ROUTES.messages },
   { label: 'Emergency Contacts', sub: 'Urgent support', icon: ICONS.user, href: PATIENT_ROUTES.support },
   { label: 'Health Tracker', sub: 'Wellness insights', icon: ICONS.activity, href: PATIENT_ROUTES.dashboard },
 ]
@@ -134,6 +133,12 @@ function getGreeting(): string {
   if (hour < 12) return 'Good Morning'
   if (hour < 18) return 'Good Afternoon'
   return 'Good Evening'
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return 'P'
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('')
 }
 
 function SectionCard({ title, sub, action, children }: { title: string; sub?: string; action?: React.ReactNode; children: React.ReactNode }) {
@@ -257,12 +262,19 @@ function topButtonBase(): CSSProperties {
 
 export default function PatientDashboardPage() {
   const [search, setSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<PatientDashboardSearchResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
   const [loadingRightRail, setLoadingRightRail] = useState(true)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [patientName, setPatientName] = useState('')
+  const [carePlanStatus, setCarePlanStatus] = useState('Loading')
   const [greeting, setGreeting] = useState('')
   const router = useRouter()
   const pathname = usePathname()
+  const displayPatientName = patientName || 'Patient'
+  const patientInitials = getInitials(displayPatientName)
 
   const handleLogout = () => {
     localStorage.removeItem('qarevo_access_token')
@@ -277,45 +289,92 @@ export default function PatientDashboardPage() {
   }
 
   useEffect(() => {
-    // Set greeting on client side only to avoid hydration mismatch
-    setGreeting(getGreeting())
+    const timer = window.setTimeout(() => setGreeting(getGreeting()), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
 
+  useEffect(() => {
     const token = readAccessToken()
     if (!token) {
       router.replace('/auth/sign-in')
       return
     }
 
-    // Fetch patient name from API
-    const fetchPatientName = async () => {
+    const fetchDashboardProfile = async () => {
       try {
         const userId = localStorage.getItem('qarevo_user_id')
-        if (!userId) return
-
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/patient/dashboard?user_id=${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          if (data.patient_name) {
-            setPatientName(data.patient_name)
-          }
+        const data = await getPatientDashboard(userId)
+        if (data.patient_name) {
+          setPatientName(data.patient_name)
         }
+        const plans = data.care_plans ?? data.carePlans ?? []
+        const activePlan = plans.find((plan) => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
+        setCarePlanStatus(activePlan?.status || (plans.length ? 'Active' : 'Not started'))
       } catch (error) {
-        console.error('Failed to fetch patient name:', error)
+        console.error('Failed to fetch dashboard profile:', error)
+        setCarePlanStatus('Unavailable')
       }
     }
 
-    fetchPatientName()
+    fetchDashboardProfile()
   }, [router])
 
   useEffect(() => {
     const t = window.setTimeout(() => setLoadingRightRail(false), 850)
     return () => window.clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    const query = search.trim()
+    let cancelled = false
+
+    const timer = window.setTimeout(async () => {
+      if (query.length < 2) {
+        setSearchResults([])
+        setSearchError('')
+        setSearching(false)
+        return
+      }
+
+      setSearching(true)
+      setSearchError('')
+
+      try {
+        const data = await searchPatientDashboard(query)
+        if (!cancelled) {
+          setSearchResults(data.results)
+          setSearchOpen(true)
+        }
+      } catch (error) {
+        console.error('Dashboard search failed:', error)
+        if (!cancelled) {
+          setSearchResults([])
+          setSearchError('Search is unavailable right now.')
+          setSearchOpen(true)
+        }
+      } finally {
+        if (!cancelled) {
+          setSearching(false)
+        }
+      }
+    }, 250)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [search])
+
+  const handleSearchResult = (href: string) => {
+    setSearchOpen(false)
+    router.push(href)
+  }
+
+  const categoryLabel = (category: PatientDashboardSearchResult['category']) => {
+    if (category === 'doctors') return 'Doctor'
+    if (category === 'records') return 'Record'
+    return 'Prescription'
+  }
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG, position: 'relative' }}>
@@ -379,10 +438,10 @@ export default function PatientDashboardPage() {
 
             <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: '1px solid rgba(4,53,77,0.11)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>J</div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: '1px solid rgba(4,53,77,0.11)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>{patientInitials}</div>
                 <div>
-                  <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{patientName} Adewale</p>
-                  <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: Active</p>
+                  <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{displayPatientName}</p>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: {carePlanStatus}</p>
                 </div>
               </div>
             </section>
@@ -427,7 +486,7 @@ export default function PatientDashboardPage() {
 
             <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${T.borderFaint}` }}>
               <Link href='/support' style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '11px', textDecoration: 'none', color: T.slate, fontSize: '13px', fontWeight: 500 }}>
-                <Ico p={ICONS.info} size={15} sw={1.7} color={T.slate2} />
+                <Ico p={ICONS.help} size={15} sw={1.7} color={T.slate2} />
                 Help & Support
               </Link>
               <button
@@ -442,7 +501,7 @@ export default function PatientDashboardPage() {
         </aside>
 
         <section className='pd-main' aria-label='Patient dashboard home'>
-          <header style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.82)', padding: '14px 14px 12px', marginBottom: '14px' }}>
+          <header style={{ ...Glass.nav, position: 'relative', zIndex: 90, overflow: 'visible', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.82)', padding: '14px 14px 12px', marginBottom: '14px' }}>
             <div className='pd-head-row' style={{ justifyContent: 'space-between' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>
@@ -451,7 +510,7 @@ export default function PatientDashboardPage() {
                 <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>How are you feeling today?</p>
               </div>
               <div className='pd-head-row'>
-                <label className='pd-search' htmlFor='dashboard-search' style={{ width: '300px', position: 'relative', display: 'block' }}>
+                <label className='pd-search' htmlFor='dashboard-search' style={{ width: '300px', position: 'relative', zIndex: 120, display: 'block' }}>
                   <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: search ? '#348CEA' : T.slate2, pointerEvents: 'none' }}>
                     <Ico p={ICONS.search} size={15} sw={1.8} />
                   </span>
@@ -460,19 +519,106 @@ export default function PatientDashboardPage() {
                     type='search'
                     placeholder='Search doctors, records, prescriptions...'
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                      setSearch(e.target.value)
+                      setSearchOpen(true)
+                    }}
+                    onFocus={() => setSearchOpen(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setSearchOpen(false)
+                      if (e.key === 'Enter' && searchResults[0]) handleSearchResult(searchResults[0].href)
+                    }}
                     style={{ width: '100%', height: '38px', borderRadius: '11px', border: `1px solid ${search ? 'rgba(32,181,223,0.45)' : 'rgba(4,53,77,0.1)'}`, padding: '0 12px 0 38px', fontSize: '13px', color: T.navy, background: 'rgba(255,255,255,0.84)', boxShadow: search ? '0 0 0 3px rgba(32,181,223,0.1)' : 'none', transition: 'all 0.16s ease' }}
                     aria-label='Global search'
+                    autoComplete='off'
                   />
+                  {searchOpen && search.trim().length >= 2 && (
+                    <div
+                      role='listbox'
+                      aria-label='Dashboard search results'
+                      style={{
+                        position: 'absolute',
+                        top: '46px',
+                        left: 0,
+                        right: 0,
+                        zIndex: 200,
+                        maxHeight: '360px',
+                        overflow: 'auto',
+                        borderRadius: '14px',
+                        border: '1px solid rgba(4,53,77,0.12)',
+                        background: 'rgba(255,255,255,0.98)',
+                        boxShadow: '0 18px 36px rgba(4,53,77,0.16), inset 0 1px 0 rgba(255,255,255,0.96)',
+                        padding: '8px',
+                      }}
+                    >
+                      {searching && (
+                        <div style={{ padding: '12px', fontSize: '12px', color: T.slate }}>
+                          Searching...
+                        </div>
+                      )}
+                      {!searching && searchError && (
+                        <div style={{ padding: '12px', fontSize: '12px', color: '#B42318' }}>
+                          {searchError}
+                        </div>
+                      )}
+                      {!searching && !searchError && searchResults.length === 0 && (
+                        <div style={{ padding: '12px', fontSize: '12px', color: T.slate }}>
+                          No matching doctors, records, or prescriptions.
+                        </div>
+                      )}
+                      {!searching && !searchError && searchResults.map((result) => (
+                        <button
+                          key={`${result.category}-${result.id}`}
+                          type='button'
+                          role='option'
+                          aria-selected={false}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSearchResult(result.href)}
+                          style={{
+                            width: '100%',
+                            border: 'none',
+                            borderRadius: '11px',
+                            background: 'transparent',
+                            padding: '10px',
+                            display: 'grid',
+                            gridTemplateColumns: 'minmax(0, 1fr) auto',
+                            gap: '10px',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <span style={{ minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</span>
+                            <span style={{ display: 'block', marginTop: '2px', fontSize: '11.5px', color: T.slate2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.subtitle}{result.description ? ` - ${result.description}` : ''}</span>
+                          </span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'center', minHeight: '22px', padding: '0 8px', borderRadius: '999px', background: 'rgba(32,181,223,0.12)', color: '#348CEA', fontSize: '10.5px', fontWeight: 800 }}>
+                            {categoryLabel(result.category)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </label>
 
-                <HoverBtn base={topButtonBase()} on={{ background: 'rgba(32,181,223,0.12)', color: '#348CEA', transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(4,53,77,0.1)' }}>
-                  <Ico p={ICONS.info} size={16} sw={1.8} />
+                <HoverBtn
+                  ariaLabel='Open help and support'
+                  title='Help and support'
+                  onClick={() => router.push(PATIENT_ROUTES.support)}
+                  base={topButtonBase()}
+                  on={{ background: 'rgba(32,181,223,0.12)', color: '#348CEA', transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(4,53,77,0.1)' }}
+                >
+                  <Ico p={ICONS.help} size={16} sw={1.8} />
                 </HoverBtn>
-                <HoverBtn base={topButtonBase()} on={{ background: 'rgba(32,181,223,0.12)', color: '#348CEA', transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(4,53,77,0.1)' }}>
-                  <Ico p={ICONS.ema} size={16} sw={1.8} />
+                <HoverBtn
+                  ariaLabel='Open messages'
+                  title='Messages'
+                  onClick={() => router.push(PATIENT_ROUTES.messages)}
+                  base={topButtonBase()}
+                  on={{ background: 'rgba(32,181,223,0.12)', color: '#348CEA', transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(4,53,77,0.1)' }}
+                >
+                  <Ico p={ICONS.message} size={16} sw={1.8} />
                 </HoverBtn>
-                <button type='button' aria-label='Profile' style={{ width: '38px', height: '38px', borderRadius: '50%', border: '1px solid rgba(4,53,77,0.11)', background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))', color: T.navy, fontWeight: 700, cursor: 'pointer' }}>J</button>
+                <button type='button' aria-label='Open profile settings' onClick={() => router.push(PATIENT_ROUTES.settings)} style={{ width: '38px', height: '38px', borderRadius: '50%', border: '1px solid rgba(4,53,77,0.11)', background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))', color: T.navy, fontWeight: 700, cursor: 'pointer' }}>{patientInitials}</button>
               </div>
             </div>
           </header>
@@ -482,7 +628,7 @@ export default function PatientDashboardPage() {
               <div style={{ maxWidth: '620px' }}>
                 <p style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#348CEA' }}>Your Care Journey</p>
                 <h2 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '29px', lineHeight: 1.1, fontWeight: 800, letterSpacing: '-0.035em', color: T.navy }}>
-                  Welcome back, {patientName}. Your health plan is on track.
+                  Welcome back, {displayPatientName}. Your health plan is on track.
                 </h2>
                 <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.65, color: T.slate }}>
                   You have one appointment today and a follow-up recommendation to continue care with a specialist. Continue to physician discovery to find the best fit for your next consultation.

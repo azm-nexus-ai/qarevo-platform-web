@@ -1,12 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { notFound, useParams, useSearchParams } from 'next/navigation'
-import { useMemo, useState, Suspense } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams } from '@/lib/booking'
+import { getPatientDoctor } from '@/lib/api'
+import type { PatientDoctor } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import { PHYSICIANS, PHYSICIAN_PROFILES } from '@/constants/physicians'
+import type { Physician, PhysicianProfileContent } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import DoctorCard from '@/components/cards/DoctorCard'
@@ -52,22 +55,115 @@ const DEFAULT_PROFILE = {
   },
 }
 
-function toBookingHref(physician: (typeof PHYSICIANS)[number], serviceType: string, preservedParams: URLSearchParams) {
+function isPhysicianProfileContent(value: unknown): value is PhysicianProfileContent {
+  if (!value || typeof value !== 'object') return false
+  const profile = value as Partial<PhysicianProfileContent>
+  return Array.isArray(profile.services) && Array.isArray(profile.availabilitySlots)
+}
+
+function toPhysician(doctor: PatientDoctor): Physician {
+  return {
+    id: doctor.id,
+    name: doctor.name,
+    specialty: doctor.specialty,
+    hospital: doctor.hospital,
+    experienceYears: doctor.experienceYears,
+    rating: doctor.rating,
+    reviews: doctor.reviews,
+    consultationFee: doctor.consultationFee,
+    nextAvailable: doctor.nextAvailable,
+    languages: doctor.languages,
+    insurance: doctor.insurance,
+    gender: doctor.gender === 'male' ? 'male' : 'female',
+    consultationTypes: doctor.consultationTypes.filter((type): type is 'video' | 'physical' => type === 'video' || type === 'physical'),
+    distanceKm: doctor.distanceKm,
+    conditions: doctor.conditions,
+    imageUrl: doctor.imageUrl,
+    verification: doctor.verification,
+    tags: doctor.tags,
+  }
+}
+
+function toProfile(doctor: PatientDoctor): PhysicianProfileContent {
+  const profile = isPhysicianProfileContent(doctor.profile) ? doctor.profile : DEFAULT_PROFILE
+  return {
+    ...DEFAULT_PROFILE,
+    ...profile,
+    services: profile.services.length ? profile.services : DEFAULT_PROFILE.services,
+    availabilitySlots: profile.availabilitySlots.length ? profile.availabilitySlots : DEFAULT_PROFILE.availabilitySlots,
+    reviews: profile.reviews?.length ? profile.reviews : DEFAULT_PROFILE.reviews,
+    faq: profile.faq?.length ? profile.faq : DEFAULT_PROFILE.faq,
+    subSpecialties: profile.subSpecialties?.length ? profile.subSpecialties : [doctor.specialty],
+    specializations: profile.specializations?.length ? profile.specializations : doctor.conditions,
+  }
+}
+
+function toBookingHref(physician: Physician, serviceType: string, preservedParams: URLSearchParams) {
   const params = buildBookingQueryParams(preservedParams, physician, serviceType)
   return `/patient/consultation-booking?${params.toString()}`
+}
+
+function loadingPhysician(id: string): Physician {
+  return {
+    id,
+    name: 'Loading physician...',
+    specialty: 'Specialist',
+    hospital: 'Qarevo Care Network',
+    experienceYears: 0,
+    rating: 0,
+    reviews: 0,
+    consultationFee: 0,
+    nextAvailable: 'Checking availability',
+    languages: [],
+    insurance: [],
+    gender: 'female',
+    consultationTypes: ['video'],
+    distanceKm: 0,
+    conditions: [],
+    imageUrl: '',
+    verification: 'Pending',
+    tags: [],
+  }
 }
 
 function PhysicianProfilePageContent() {
   const params = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const physicianId = params.id
-  const physician = PHYSICIANS.find((item) => item.id === physicianId)
+  const staticPhysician = PHYSICIANS.find((item) => item.id === physicianId)
+  const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
+  const [loadingRemoteDoctor, setLoadingRemoteDoctor] = useState(!staticPhysician)
+  const [remoteDoctorError, setRemoteDoctorError] = useState('')
 
-  if (!physician) {
-    notFound()
-  }
+  useEffect(() => {
+    if (staticPhysician) return
 
-  const profile = PHYSICIAN_PROFILES[physician.id] ?? DEFAULT_PROFILE
+    let cancelled = false
+
+    getPatientDoctor(physicianId)
+      .then((doctor) => {
+        if (!cancelled) setRemoteDoctor(doctor)
+      })
+      .catch((error) => {
+        console.error('Failed to load physician profile:', error)
+        if (!cancelled) setRemoteDoctorError('We could not load this physician profile.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRemoteDoctor(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [physicianId, staticPhysician])
+
+  const physician = staticPhysician ?? (remoteDoctor ? toPhysician(remoteDoctor) : loadingPhysician(physicianId))
+  const profile = staticPhysician
+    ? PHYSICIAN_PROFILES[staticPhysician.id] ?? DEFAULT_PROFILE
+    : remoteDoctor
+    ? toProfile(remoteDoctor)
+    : DEFAULT_PROFILE
+
   const preselectedService = searchParams.get('svc') ?? ''
   const validPreselectedService = profile.services.some((service) => service.type === preselectedService)
     ? preselectedService
@@ -80,35 +176,58 @@ function PhysicianProfilePageContent() {
   const [expandedReviewId, setExpandedReviewId] = useState(profile.reviews[0]?.id ?? '')
   const [openFaq, setOpenFaq] = useState(profile.faq[0]?.q ?? '')
 
-  const preservedQuery = useMemo(() => {
-    const next = new URLSearchParams(searchParams.toString())
-    next.delete('intent')
-    next.delete('physicianId')
-    next.delete('service')
-    return next
-  }, [searchParams])
+  const preservedQuery = new URLSearchParams(searchParams.toString())
+  preservedQuery.delete('intent')
+  preservedQuery.delete('physicianId')
+  preservedQuery.delete('service')
 
   const backToDiscovery = `/patient/find-doctor${preservedQuery.toString() ? `?${preservedQuery.toString()}` : ''}`
-  const selectedDaySlots = profile.availabilitySlots.find((item) => item.day === selectedDay)?.slots ?? []
+  const effectiveSelectedService = profile.services.some((service) => service.type === selectedService)
+    ? selectedService
+    : profile.services[0]?.type ?? 'video'
+  const effectiveSelectedDay = profile.availabilitySlots.some((item) => item.day === selectedDay)
+    ? selectedDay
+    : profile.availabilitySlots[0]?.day ?? 'Mon'
+  const selectedDaySlots = profile.availabilitySlots.find((item) => item.day === effectiveSelectedDay)?.slots ?? []
+  const effectiveSelectedSlot = selectedDaySlots.includes(selectedSlot) ? selectedSlot : selectedDaySlots[0] ?? ''
 
-  const sortedReviews = useMemo(() => {
-    const next = [...profile.reviews]
-    if (reviewSort === 'highest') {
-      return next.sort((a, b) => b.rating - a.rating)
-    }
-    if (reviewSort === 'helpful') {
-      return next.sort((a, b) => b.helpful - a.helpful)
-    }
-    return next
-  }, [profile.reviews, reviewSort])
+  const sortedReviews = [...profile.reviews]
+  if (reviewSort === 'highest') {
+    sortedReviews.sort((a, b) => b.rating - a.rating)
+  } else if (reviewSort === 'helpful') {
+    sortedReviews.sort((a, b) => b.helpful - a.helpful)
+  }
 
-  const relatedPhysicians = useMemo(() => {
-    return PHYSICIANS.filter((item) => item.id !== physician.id)
-      .filter((item) => item.specialty === physician.specialty || item.tags.some((tag) => physician.tags.includes(tag)))
-      .slice(0, 4)
-  }, [physician.id, physician.specialty, physician.tags])
+  const relatedPhysicians = PHYSICIANS.filter((item) => item.id !== physician.id)
+    .filter((item) => item.specialty === physician.specialty || item.tags.some((tag) => physician.tags.includes(tag)))
+    .slice(0, 4)
 
-  const activeService = profile.services.find((service) => service.type === selectedService) ?? profile.services[0]
+  const activeService = profile.services.find((service) => service.type === effectiveSelectedService) ?? profile.services[0]
+
+  if (loadingRemoteDoctor && !staticPhysician && !remoteDoctor) {
+    return (
+      <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center', padding: '24px' }}>
+        <section style={{ ...Glass.nav, maxWidth: '460px', borderRadius: '18px', padding: '22px', textAlign: 'center' }}>
+          <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>Loading physician profile</h1>
+          <p style={{ margin: '8px 0 0', fontSize: '13px', color: T.slate }}>Fetching the latest doctor details.</p>
+        </section>
+      </main>
+    )
+  }
+
+  if (remoteDoctorError && !staticPhysician && !remoteDoctor) {
+    return (
+      <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center', padding: '24px' }}>
+        <section style={{ ...Glass.nav, maxWidth: '460px', borderRadius: '18px', padding: '22px', textAlign: 'center' }}>
+          <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>Physician unavailable</h1>
+          <p style={{ margin: '8px 0 14px', fontSize: '13px', color: T.slate }}>{remoteDoctorError}</p>
+          <Link href={backToDiscovery} style={{ minHeight: '40px', borderRadius: '11px', background: '#20B5DF', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', fontSize: '13px', fontWeight: 700 }}>
+            Back to Find a Doctor
+          </Link>
+        </section>
+      </main>
+    )
+  }
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG, position: 'relative' }}>
@@ -169,7 +288,7 @@ function PhysicianProfilePageContent() {
               </div>
 
               <div style={{ display: 'grid', gap: '8px' }}>
-                <Link href={toBookingHref(physician, selectedService, preservedQuery)} style={{ minHeight: '44px', borderRadius: '12px', background: '#20B5DF', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 5px 14px rgba(32,181,223,0.32)' }}>
+                <Link href={toBookingHref(physician, effectiveSelectedService, preservedQuery)} style={{ minHeight: '44px', borderRadius: '12px', background: '#20B5DF', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 5px 14px rgba(32,181,223,0.32)' }}>
                   Book Consultation
                 </Link>
                 <span style={{ fontSize: '11px', color: T.slate2, textAlign: 'center' }}>Response Time: {profile.responseTime}</span>
@@ -249,7 +368,7 @@ function PhysicianProfilePageContent() {
             <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Consultation Services</h3>
             <div className='pp-service-grid'>
               {profile.services.map((service) => {
-                const active = selectedService === service.type
+                const active = effectiveSelectedService === service.type
                 return (
                   <button
                     key={service.type}
@@ -280,7 +399,7 @@ function PhysicianProfilePageContent() {
                       setSelectedDay(item.day)
                       setSelectedSlot(item.slots[0] ?? '')
                     }}
-                    style={{ borderRadius: '9px', border: selectedDay === item.day ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: selectedDay === item.day ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.86)', color: selectedDay === item.day ? T.blue : T.slate, fontSize: '12px', fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
+                    style={{ borderRadius: '9px', border: effectiveSelectedDay === item.day ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: effectiveSelectedDay === item.day ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.86)', color: effectiveSelectedDay === item.day ? T.blue : T.slate, fontSize: '12px', fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
                   >
                     {item.day}
                   </button>
@@ -293,7 +412,7 @@ function PhysicianProfilePageContent() {
                     key={slot}
                     type='button'
                     onClick={() => setSelectedSlot(slot)}
-                    style={{ borderRadius: '10px', border: selectedSlot === slot ? '1px solid rgba(32,181,223,0.45)' : '1px solid rgba(4,53,77,0.1)', background: selectedSlot === slot ? 'rgba(32,181,223,0.15)' : 'rgba(255,255,255,0.84)', color: selectedSlot === slot ? T.blue : T.navy, fontSize: '12px', fontWeight: 700, padding: '7px 8px', cursor: 'pointer' }}
+                    style={{ borderRadius: '10px', border: effectiveSelectedSlot === slot ? '1px solid rgba(32,181,223,0.45)' : '1px solid rgba(4,53,77,0.1)', background: effectiveSelectedSlot === slot ? 'rgba(32,181,223,0.15)' : 'rgba(255,255,255,0.84)', color: effectiveSelectedSlot === slot ? T.blue : T.navy, fontSize: '12px', fontWeight: 700, padding: '7px 8px', cursor: 'pointer' }}
                   >
                     {slot}
                   </button>
@@ -404,10 +523,10 @@ function PhysicianProfilePageContent() {
             <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Book Instantly</h3>
             <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Doctor:</strong> {physician.name}</p>
             <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Service:</strong> {activeService?.label}</p>
-            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {selectedDay} {selectedSlot ? `at ${selectedSlot}` : ''}</p>
+            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {effectiveSelectedDay} {effectiveSelectedSlot ? `at ${effectiveSelectedSlot}` : ''}</p>
             <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Fee:</strong> ${activeService?.price}</p>
 
-            <Link href={toBookingHref(physician, selectedService, preservedQuery)} style={{ minHeight: '42px', borderRadius: '11px', background: '#20B5DF', color: '#fff', textDecoration: 'none', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', marginBottom: '8px' }}>
+            <Link href={toBookingHref(physician, effectiveSelectedService, preservedQuery)} style={{ minHeight: '42px', borderRadius: '11px', background: '#20B5DF', color: '#fff', textDecoration: 'none', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', marginBottom: '8px' }}>
               Book Consultation
             </Link>
 
@@ -432,7 +551,7 @@ function PhysicianProfilePageContent() {
       </div>
 
       <div className='pp-mobile-book' style={{ display: 'none', position: 'fixed', left: '0', right: '0', bottom: '0', zIndex: 50, padding: '10px', background: 'rgba(247,250,252,0.92)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', borderTop: '1px solid rgba(255,255,255,0.84)', boxShadow: '0 -8px 20px rgba(4,53,77,0.1)' }}>
-        <Link href={toBookingHref(physician, selectedService, preservedQuery)} style={{ minHeight: '46px', width: '100%', borderRadius: '12px', background: '#20B5DF', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.32)' }}>
+        <Link href={toBookingHref(physician, effectiveSelectedService, preservedQuery)} style={{ minHeight: '46px', width: '100%', borderRadius: '12px', background: '#20B5DF', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.32)' }}>
           Book Consultation - ${activeService?.price}
         </Link>
       </div>

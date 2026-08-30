@@ -203,6 +203,38 @@ export type DoctorSearchResponse = {
     filters: Record<string, unknown>;
 };
 
+export type PatientDashboardCarePlan = {
+    title?: string;
+    name?: string;
+    status?: string;
+    progress?: number;
+};
+
+export type PatientDashboardResponse = {
+    patient_name: string;
+    care_plans?: PatientDashboardCarePlan[];
+    carePlans?: PatientDashboardCarePlan[];
+    [key: string]: unknown;
+};
+
+export type PatientDashboardSearchCategory = "doctors" | "records" | "prescriptions";
+
+export type PatientDashboardSearchResult = {
+    id: string;
+    category: PatientDashboardSearchCategory;
+    title: string;
+    subtitle: string;
+    description: string;
+    href: string;
+    meta: string;
+};
+
+export type PatientDashboardSearchResponse = {
+    query: string;
+    results: PatientDashboardSearchResult[];
+    total: number;
+};
+
 export type EpisodeCreateRequest = {
     pack_id: string;
     pack_version: string;
@@ -293,6 +325,21 @@ export async function verifyDoctorPhoneCode(body: VerifyPhoneCodeRequest): Promi
 export async function searchPatientDoctors(params: URLSearchParams): Promise<DoctorSearchResponse> {
     const query = params.toString();
     return apiGet<DoctorSearchResponse>(`/api/v1/patient/doctors${query ? `?${query}` : ""}`);
+}
+
+export async function getPatientDashboard(userId?: string | null): Promise<PatientDashboardResponse> {
+    const params = new URLSearchParams();
+    if (userId) params.set("user_id", userId);
+    const query = params.toString();
+    return apiGet<PatientDashboardResponse>(`/api/v1/patient/dashboard${query ? `?${query}` : ""}`);
+}
+
+export async function searchPatientDashboard(query: string): Promise<PatientDashboardSearchResponse> {
+    return apiPost<PatientDashboardSearchResponse>("/api/v1/patient/search", {
+        query,
+        categories: ["doctors", "records", "prescriptions"],
+        limit_per_category: 4,
+    });
 }
 
 export async function getPatientDoctor(doctorId: string): Promise<PatientDoctor> {
