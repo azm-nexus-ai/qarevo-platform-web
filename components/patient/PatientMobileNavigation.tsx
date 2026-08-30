@@ -146,25 +146,27 @@ export default function PatientMobileNavigation() {
 
       {/* Mobile Top Bar */}
       <div className="pmn-topbar" role="banner">
-        <button
-          ref={hamburgerRef}
-          className="pmn-hamburger"
-          aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          aria-expanded={mobileOpen}
-          aria-controls="pmn-drawer"
-          onClick={() => setMobileOpen(true)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-        <Link
-          href="/patient/dashboard"
-          aria-label="Qarevo Health Patient Dashboard"
-          style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', flex: 1, justifyContent: 'center' }}
-        >
-          <AuthenticatedLogo width={120} />
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+          <button
+            ref={hamburgerRef}
+            className="pmn-hamburger"
+            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileOpen}
+            aria-controls="pmn-drawer"
+            onClick={() => setMobileOpen(true)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+          <Link
+            href="/patient/dashboard"
+            aria-label="Qarevo Health Patient Dashboard"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+          >
+            <AuthenticatedLogo width={120} />
+          </Link>
+        </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
           <button
             type="button"

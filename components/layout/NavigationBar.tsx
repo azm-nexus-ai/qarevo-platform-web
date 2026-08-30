@@ -17,6 +17,7 @@ export default function NavigationBar() {
   const [hoverNav, setHoverNav] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const router = useRouter()
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
@@ -39,6 +40,17 @@ export default function NavigationBar() {
 
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 900
+      setIsMobile(mobile)
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   const handleLogout = () => {
@@ -162,217 +174,235 @@ export default function NavigationBar() {
             transition: 'height 0.2s ease',
           }}
         >
-          {/* Logo */}
-          <Link
-            href="/"
-            aria-label="Qarevo Health home"
-            onClick={() => handleNavClick('Platform Overview')}
-            style={{ marginRight: '28px', flexShrink: 0, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
-          >
-            <AuthenticatedLogo priority width={136} />
-          </Link>
-
-          {/* Desktop nav links */}
-          <div
-            style={{ display: 'flex', gap: '2px', flex: 1 }}
-            className="hide-mobile"
-          >
-            {NAV_LINKS.map((label) => {
-              const isActive = activeSection === label
-              return (
-                <button
-                  key={label}
-                  aria-current={isActive ? 'true' : undefined}
-                  onMouseEnter={() => setHoverNav(label)}
-                  onMouseLeave={() => setHoverNav(null)}
-                  onClick={() => handleNavClick(label)}
-                  style={{
-                    background: isActive
-                      ? 'rgba(32,181,223,0.12)'
-                      : hoverNav === label
-                      ? 'rgba(52,140,234,0.08)'
-                      : 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '6px 13px',
-                    borderRadius: '8px',
-                    fontSize: '13.5px',
-                    fontWeight: isActive ? 600 : 400,
-                    color: isActive ? T.blue : hoverNav === label ? '#348CEA' : T.slate,
-                    letterSpacing: '-0.01em',
-                    transition: 'color 0.12s, background 0.12s',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Desktop auth buttons */}
-          <div
-            style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginLeft: 'auto' }}
-            className="hide-mobile"
-          >
-            {isAuthenticated ? (
-              <>
+          {!isMobile ? (
+            <>
+              {/* Desktop layout */}
+              <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                {/* Logo */}
                 <Link
-                  href="/patient/dashboard"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '7px 16px',
-                    borderRadius: '9px',
-                    fontSize: '13.5px',
-                    fontWeight: 500,
-                    color: T.slate,
-                    letterSpacing: '-0.01em',
-                    textDecoration: 'none',
+                  href="/"
+                  aria-label="Qarevo Health home"
+                  onClick={() => {
+                    handleNavClick('Platform Overview')
+                    if (mobileOpen) setMobileOpen(false)
                   }}
+                  style={{ marginRight: '28px', flexShrink: 0, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
                 >
-                  Dashboard
+                  <AuthenticatedLogo priority width={136} />
                 </Link>
-                <HoverBtn
-                  onClick={() => setShowLogoutModal(true)}
-                  base={{
+
+                {/* Desktop nav links */}
+                <div style={{ display: 'flex', gap: '2px', flex: 1 }}>
+                  {NAV_LINKS.map((label) => {
+                    const isActive = activeSection === label
+                    return (
+                      <button
+                        key={label}
+                        aria-current={isActive ? 'true' : undefined}
+                        onMouseEnter={() => setHoverNav(label)}
+                        onMouseLeave={() => setHoverNav(null)}
+                        onClick={() => handleNavClick(label)}
+                        style={{
+                          background: isActive
+                            ? 'rgba(32,181,223,0.12)'
+                            : hoverNav === label
+                            ? 'rgba(52,140,234,0.08)'
+                            : 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '6px 13px',
+                          borderRadius: '8px',
+                          fontSize: '13.5px',
+                          fontWeight: isActive ? 600 : 400,
+                          color: isActive ? T.blue : hoverNav === label ? '#348CEA' : T.slate,
+                          letterSpacing: '-0.01em',
+                          transition: 'color 0.12s, background 0.12s',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Desktop auth buttons */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginLeft: 'auto' }}>
+                  {isAuthenticated ? (
+                    <>
+                      <Link
+                        href="/patient/dashboard"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '7px 16px',
+                          borderRadius: '9px',
+                          fontSize: '13.5px',
+                          fontWeight: 500,
+                          color: T.slate,
+                          letterSpacing: '-0.01em',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Dashboard
+                      </Link>
+                      <HoverBtn
+                        onClick={() => setShowLogoutModal(true)}
+                        base={{
+                          background: 'none',
+                          border: '1px solid rgba(4,53,77,0.12)',
+                          cursor: 'pointer',
+                          padding: '8px 18px',
+                          borderRadius: '9px',
+                          fontSize: '13.5px',
+                          fontWeight: 600,
+                          color: T.slate,
+                          letterSpacing: '-0.01em',
+                        }}
+                        on={{
+                          background: 'rgba(4,53,77,0.04)',
+                          transform: 'translateY(-1px)',
+                        }}
+                      >
+                        Logout
+                      </HoverBtn>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/auth/doctor/login"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '7px 14px',
+                          borderRadius: '9px',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          color: T.slate2,
+                          letterSpacing: '-0.01em',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Physician Portal
+                      </Link>
+                      <Link
+                        href="/auth/sign-in"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '7px 16px',
+                          borderRadius: '9px',
+                          fontSize: '13.5px',
+                          fontWeight: 500,
+                          color: T.slate,
+                          letterSpacing: '-0.01em',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Sign In
+                      </Link>
+                      <HoverBtn
+                        onClick={() => router.push('/auth')}
+                        base={{
+                          background: T.blue,
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '8px 18px',
+                          borderRadius: '9px',
+                          fontSize: '13.5px',
+                          fontWeight: 600,
+                          color: '#fff',
+                          letterSpacing: '-0.01em',
+                          boxShadow: '0 2px 8px rgba(32,181,223,0.26), 0 8px 22px rgba(32,181,223,0.2)',
+                        }}
+                        on={{
+                          background: '#348CEA',
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 4px 14px rgba(52,140,234,0.3), 0 10px 28px rgba(52,140,234,0.2)',
+                        }}
+                      >
+                        Access Platform
+                      </HoverBtn>
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Mobile layout */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', justifyContent: 'space-between' }}>
+                <Link
+                  href="/"
+                  aria-label="Qarevo Health home"
+                  onClick={() => {
+                    if (mobileOpen) setMobileOpen(false)
+                  }}
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+                >
+                  <AuthenticatedLogo priority width={100} />
+                </Link>
+
+                {/* Mobile hamburger */}
+                <button
+                  ref={hamburgerRef}
+                  aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                  aria-expanded={mobileOpen}
+                  aria-controls="mobile-drawer"
+                  onClick={() => setMobileOpen(prev => !prev)}
+                  style={{
                     background: 'none',
                     border: '1px solid rgba(4,53,77,0.12)',
+                    borderRadius: '8px',
                     cursor: 'pointer',
-                    padding: '8px 18px',
-                    borderRadius: '9px',
-                    fontSize: '13.5px',
-                    fontWeight: 600,
-                    color: T.slate,
-                    letterSpacing: '-0.01em',
-                  }}
-                  on={{
-                    background: 'rgba(4,53,77,0.04)',
-                    transform: 'translateY(-1px)',
+                    padding: '8px 10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  Logout
-                </HoverBtn>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/auth/doctor/login"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '7px 14px',
-                    borderRadius: '9px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    color: T.slate2,
-                    letterSpacing: '-0.01em',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Physician Portal
-                </Link>
-                <Link
-                  href="/auth/sign-in"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '7px 16px',
-                    borderRadius: '9px',
-                    fontSize: '13.5px',
-                    fontWeight: 500,
-                    color: T.slate,
-                    letterSpacing: '-0.01em',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Sign In
-                </Link>
-                <HoverBtn
-                  onClick={() => router.push('/auth')}
-                  base={{
-                    background: T.blue,
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '8px 18px',
-                    borderRadius: '9px',
-                    fontSize: '13.5px',
-                    fontWeight: 600,
-                    color: '#fff',
-                    letterSpacing: '-0.01em',
-                    boxShadow: '0 2px 8px rgba(32,181,223,0.26), 0 8px 22px rgba(32,181,223,0.2)',
-                  }}
-                  on={{
-                    background: '#348CEA',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 4px 14px rgba(52,140,234,0.3), 0 10px 28px rgba(52,140,234,0.2)',
-                  }}
-                >
-                  Access Platform
-                </HoverBtn>
-              </>
-            )}
-          </div>
-
-          {/* Mobile hamburger */}
-          <button
-            ref={hamburgerRef}
-            className="show-mobile"
-            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-drawer"
-            onClick={() => setMobileOpen(prev => !prev)}
-            style={{
-              marginLeft: 'auto',
-              background: 'none',
-              border: '1px solid rgba(4,53,77,0.12)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              padding: '8px 10px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <span
-              style={{
-                display: 'block',
-                width: '18px',
-                height: '2px',
-                background: T.navy,
-                borderRadius: '2px',
-                transition: 'transform 0.2s ease, opacity 0.2s ease',
-                transform: mobileOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none',
-              }}
-            />
-            <span
-              style={{
-                display: 'block',
-                width: '18px',
-                height: '2px',
-                background: T.navy,
-                borderRadius: '2px',
-                transition: 'opacity 0.2s ease',
-                opacity: mobileOpen ? 0 : 1,
-              }}
-            />
-            <span
-              style={{
-                display: 'block',
-                width: '18px',
-                height: '2px',
-                background: T.navy,
-                borderRadius: '2px',
-                transition: 'transform 0.2s ease, opacity 0.2s ease',
-                transform: mobileOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none',
-              }}
-            />
-          </button>
+                  <span
+                    style={{
+                      display: 'block',
+                      width: '18px',
+                      height: '2px',
+                      background: T.navy,
+                      borderRadius: '2px',
+                      transition: 'transform 0.2s ease, opacity 0.2s ease',
+                      transform: mobileOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none',
+                    }}
+                  />
+                  <span
+                    style={{
+                      display: 'block',
+                      width: '18px',
+                      height: '2px',
+                      background: T.navy,
+                      borderRadius: '2px',
+                      transition: 'opacity 0.2s ease',
+                      opacity: mobileOpen ? 0 : 1,
+                    }}
+                  />
+                  <span
+                    style={{
+                      display: 'block',
+                      width: '18px',
+                      height: '2px',
+                      background: T.navy,
+                      borderRadius: '2px',
+                      transition: 'transform 0.2s ease, opacity 0.2s ease',
+                      transform: mobileOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none',
+                    }}
+                  />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </nav>
 
