@@ -259,8 +259,8 @@ export default function PatientDashboardPage() {
   const [search, setSearch] = useState('')
   const [loadingRightRail, setLoadingRightRail] = useState(true)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
-  const [patientName, setPatientName] = useState('Loading...')
-  const greeting = useMemo(() => getGreeting(), [])
+  const [patientName, setPatientName] = useState('')
+  const [greeting, setGreeting] = useState('')
   const router = useRouter()
   const pathname = usePathname()
 
@@ -277,6 +277,9 @@ export default function PatientDashboardPage() {
   }
 
   useEffect(() => {
+    // Set greeting on client side only to avoid hydration mismatch
+    setGreeting(getGreeting())
+
     const token = readAccessToken()
     if (!token) {
       router.replace('/auth/sign-in')
@@ -442,7 +445,9 @@ export default function PatientDashboardPage() {
           <header style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.82)', padding: '14px 14px 12px', marginBottom: '14px' }}>
             <div className='pd-head-row' style={{ justifyContent: 'space-between' }}>
               <div>
-                <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>{greeting}, {patientName} <span aria-hidden='true'>👋</span></h1>
+                <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>
+                  {greeting}{patientName ? `, ${patientName}` : ''} <span aria-hidden='true'>👋</span>
+                </h1>
                 <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>How are you feeling today?</p>
               </div>
               <div className='pd-head-row'>
