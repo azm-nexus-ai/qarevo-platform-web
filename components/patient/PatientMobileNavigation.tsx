@@ -9,12 +9,14 @@ import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
+import { readAccessToken } from '@/lib/api'
 
 export default function PatientMobileNavigation() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [patientName, setPatientName] = useState('Loading...')
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
 
@@ -61,6 +63,36 @@ export default function PatientMobileNavigation() {
     closeDrawer()
     router.push('/auth/sign-in')
   }
+
+  useEffect(() => {
+    const token = readAccessToken()
+    if (!token) return
+
+    // Fetch patient name from API
+    const fetchPatientName = async () => {
+      try {
+        const userId = localStorage.getItem('qarevo_user_id')
+        if (!userId) return
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/patient/dashboard?patient_id=${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.patient_name) {
+            setPatientName(data.patient_name)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch patient name:', error)
+      }
+    }
+
+    fetchPatientName()
+  }, [])
 
   return (
     <>
@@ -284,7 +316,7 @@ export default function PatientMobileNavigation() {
               J
             </div>
             <div>
-              <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>John Adewale</p>
+              <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{patientName}</p>
               <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: Active</p>
             </div>
           </div>

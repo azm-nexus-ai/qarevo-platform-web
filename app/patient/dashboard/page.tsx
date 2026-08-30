@@ -38,7 +38,7 @@ type QuickAction = {
   href: string
 }
 
-const patientName = 'John'
+const patientName = 'Loading...'
 
 const sideNavItems: NavItem[] = [
   ...PATIENT_SIDEBAR_ITEMS,
@@ -259,6 +259,7 @@ export default function PatientDashboardPage() {
   const [search, setSearch] = useState('')
   const [loadingRightRail, setLoadingRightRail] = useState(true)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [patientName, setPatientName] = useState('Loading...')
   const greeting = useMemo(() => getGreeting(), [])
   const router = useRouter()
   const pathname = usePathname()
@@ -279,7 +280,33 @@ export default function PatientDashboardPage() {
     const token = readAccessToken()
     if (!token) {
       router.replace('/auth/sign-in')
+      return
     }
+
+    // Fetch patient name from API
+    const fetchPatientName = async () => {
+      try {
+        const userId = localStorage.getItem('qarevo_user_id')
+        if (!userId) return
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/patient/dashboard?patient_id=${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.patient_name) {
+            setPatientName(data.patient_name)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch patient name:', error)
+      }
+    }
+
+    fetchPatientName()
   }, [router])
 
   useEffect(() => {
