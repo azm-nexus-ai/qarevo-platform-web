@@ -183,13 +183,6 @@ const wellnessCards = [
   { title: 'Mood', value: 'Balanced', sub: 'Steady outlook' },
 ]
 
-const metrics = [
-  { label: 'Weight', value: '72.4 kg', trend: '+0.2 kg', color: '#20B5DF' },
-  { label: 'Blood Pressure', value: '122/78', trend: 'Stable', color: '#348CEA' },
-  { label: 'Blood Sugar', value: '98 mg/dL', trend: 'In range', color: '#0F9E77' },
-  { label: 'Heart Rate', value: '72 bpm', trend: 'Calm', color: '#A5E0DA' },
-]
-
 const timelineItems = [
   { title: 'Consultation Completed', sub: 'Dr. Sophia Reed · Cardiology', time: 'Today · 10:20 AM' },
   { title: 'Lab Result Received', sub: 'Lipid panel report is now available', time: 'Yesterday · 6:45 PM' },
@@ -480,6 +473,11 @@ export default function PatientDashboardPage() {
         const data = await getPatientHealthInfo()
         setHealthInfo(data)
       } catch (error) {
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
         console.error('Failed to fetch health info:', error)
       }
     }
@@ -499,7 +497,11 @@ export default function PatientDashboardPage() {
           setRecommendedDoctors(data.doctors.slice(0, 3))
         }
       } catch (error) {
-        if (isAuthError(error)) return
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
         console.error('Failed to fetch recommended doctors:', error)
       }
     }
@@ -508,7 +510,7 @@ export default function PatientDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [router])
 
   useEffect(() => {
     const t = window.setTimeout(() => setLoadingRightRail(false), 850)
@@ -537,6 +539,11 @@ export default function PatientDashboardPage() {
           setSearchOpen(true)
         }
       } catch (error) {
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
         console.error('Dashboard search failed:', error)
         if (!cancelled) {
           setSearchResults([])
@@ -554,7 +561,7 @@ export default function PatientDashboardPage() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [search])
+  }, [router, search])
 
   const handleSearchResult = (href: string) => {
     setSearchOpen(false)
@@ -724,7 +731,6 @@ export default function PatientDashboardPage() {
       const systolic = parseInt(bp.split('/')[0]) || 120
       const trend = systolic < 120 ? 'Normal' : systolic < 140 ? 'Elevated' : 'High'
       const color = systolic < 120 ? '#10B981' : systolic < 140 ? '#F59E0B' : '#EF4444'
-      const progress = Math.min((systolic / 180) * 100, 100)
       
       return [
         {

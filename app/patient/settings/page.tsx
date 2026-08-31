@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/components/patient/PatientPortalPrimitives'
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { T } from '@/lib/tokens'
-import { getPatientHealthInfo, updatePatientHealthInfo, type PatientHealthInfo, type PatientHealthInfoUpdate } from '@/lib/api'
+import { clearAuthTokens, getPatientHealthInfo, isAuthError, readAccessToken, updatePatientHealthInfo, type PatientHealthInfoUpdate } from '@/lib/api'
 
 type ToggleKey =
   | 'emailNotifications'
@@ -54,6 +55,7 @@ const SECURITY_ITEMS = [
 ]
 
 export default function PatientSettingsPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
@@ -89,6 +91,11 @@ export default function PatientSettingsPage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLoading(false), 500)
+
+    if (!readAccessToken()) {
+      router.replace('/auth/sign-in')
+      return () => window.clearTimeout(timer)
+    }
     
     // Load health info from API
     const loadHealthInfo = async () => {
@@ -103,13 +110,18 @@ export default function PatientSettingsPage() {
           conditions: data.medical_conditions || '',
         })
       } catch (error) {
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
         console.error('Failed to load health info:', error)
       }
     }
     loadHealthInfo()
     
     return () => window.clearTimeout(timer)
-  }, [])
+  }, [router])
 
   function toggleSetting(key: ToggleKey) {
     setToggles((current) => ({ ...current, [key]: !current[key] }))
@@ -135,6 +147,12 @@ export default function PatientSettingsPage() {
       setSaveMessage('Settings saved successfully.')
       setEditingProfile(false)
     } catch (error) {
+      if (isAuthError(error)) {
+        setSaving(false)
+        clearAuthTokens()
+        router.replace('/auth/sign-in')
+        return
+      }
       console.error('Failed to save settings:', error)
       setSaving(false)
       setSaveMessage('Failed to save settings. Please try again.')
