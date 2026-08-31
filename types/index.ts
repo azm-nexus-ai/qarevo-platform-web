@@ -36,6 +36,7 @@ export interface AIItemProps {
   titleColor?: string
   body: string
   action?: string
+  href?: string
   divider?: boolean
   glass?: boolean
 }

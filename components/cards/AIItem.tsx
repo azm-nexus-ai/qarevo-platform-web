@@ -1,10 +1,18 @@
 'use client'
 
+import Link from 'next/link'
 import { T, Sh, Glass } from '@/lib/tokens'
 import Ico from '@/components/ui/Ico'
 import type { AIItemProps } from '@/types'
 
-export default function AIItem({ icon, title, titleColor, body, action, divider, glass }: AIItemProps) {
+export default function AIItem({ icon, title, titleColor, body, action, href, divider, glass }: AIItemProps) {
+  const actionContent = (
+    <>
+      {action}
+      <Ico p="M5 12h14M12 5l7 7-7 7" size={12} sw={2} style={{ color: T.blue }} />
+    </>
+  )
+
   return (
     <div style={{ borderBottom: divider && !glass ? `1px solid ${T.borderFaint}` : undefined }}>
       <div
@@ -62,8 +70,27 @@ export default function AIItem({ icon, title, titleColor, body, action, divider,
           >
             {body}
           </div>
-          {action && (
+          {action && href && (
+            <Link
+              href={href}
+              style={{
+                textDecoration: 'none',
+                padding: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '12.5px',
+                fontWeight: 500,
+                color: T.blue,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {actionContent}
+            </Link>
+          )}
+          {action && !href && (
             <button
+              type='button'
               style={{
                 background: 'none',
                 border: 'none',
@@ -78,8 +105,7 @@ export default function AIItem({ icon, title, titleColor, body, action, divider,
                 letterSpacing: '-0.01em',
               }}
             >
-              {action}
-              <Ico p="M5 12h14M12 5l7 7-7 7" size={12} sw={2} style={{ color: T.blue }} />
+              {actionContent}
             </button>
           )}
         </div>

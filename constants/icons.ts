@@ -4,6 +4,7 @@ export const ICONS = {
   shield:   'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
   check:    'M20 6 9 17l-5-5',
   arrowSm:  'M4 12h16M11 5l7 7-7 7',
+  arrowBack: 'M20 12H4M13 5l-7 7 7 7',
   arrowFwd: 'M5 12h14M12 5l7 7-7 7',
   zap:      'M13 2 3 14h9l-1 8 10-12h-9l1-8z',
   cpu:      ['M9 3H5a2 2 0 0 0-2 2v4', 'M9 3h10a2 2 0 0 1 2 2v4', 'M3 9v10a2 2 0 0 0 2 2h4', 'M9 21h10a2 2 0 0 0 2-2V9', 'M9 9h6v6H9z'],

@@ -221,9 +221,14 @@ function PhysicianProfilePageContent() {
         <section style={{ ...Glass.nav, maxWidth: '460px', borderRadius: '18px', padding: '22px', textAlign: 'center' }}>
           <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>Physician unavailable</h1>
           <p style={{ margin: '8px 0 14px', fontSize: '13px', color: T.slate }}>{remoteDoctorError}</p>
-          <Link href={backToDiscovery} style={{ minHeight: '40px', borderRadius: '11px', background: '#20B5DF', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', fontSize: '13px', fontWeight: 700 }}>
-            Back to Find a Doctor
-          </Link>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <Link href="/patient/dashboard" style={{ minHeight: '40px', borderRadius: '11px', background: 'rgba(52,140,234,0.1)', color: '#348CEA', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', fontSize: '13px', fontWeight: 700 }}>
+              Back to Dashboard
+            </Link>
+            <Link href={backToDiscovery} style={{ minHeight: '40px', borderRadius: '11px', background: '#20B5DF', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', fontSize: '13px', fontWeight: 700 }}>
+              Back to Find a Doctor
+            </Link>
+          </div>
         </section>
       </main>
     )
@@ -264,10 +269,17 @@ function PhysicianProfilePageContent() {
       <div className='pp-shell'>
         <section className='pp-main'>
           <header style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.84)', padding: '14px' }}>
-            <Link href={backToDiscovery} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: '#348CEA', fontSize: '13px', fontWeight: 700, marginBottom: '10px' }}>
-              <Ico p={ICONS.arrowSm} size={14} sw={1.8} color='#348CEA' />
-              Back to Find a Doctor
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
+              <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: '#348CEA', fontSize: '13px', fontWeight: 700 }}>
+                <Ico p={ICONS.arrowBack} size={14} sw={1.8} color='#348CEA' />
+                Back to Dashboard
+              </Link>
+              <span style={{ color: 'rgba(52,140,234,0.4)' }}>|</span>
+              <Link href={backToDiscovery} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: '#348CEA', fontSize: '13px', fontWeight: 700 }}>
+                <Ico p={ICONS.arrowBack} size={14} sw={1.8} color='#348CEA' />
+                Back to Find a Doctor
+              </Link>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '108px minmax(0, 1fr) auto', gap: '14px', alignItems: 'center' }}>
               <div style={{ width: '108px', height: '108px', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(4,53,77,0.12)', background: 'linear-gradient(135deg, rgba(32,181,223,0.24), rgba(52,140,234,0.3))', display: 'grid', placeItems: 'center', color: T.navy, fontSize: '30px', fontWeight: 700, transition: 'transform 0.2s ease' }}>
                 {physician.name.split(' ').slice(0, 2).map((chunk) => chunk[0]).join('')}

@@ -1,132 +1,50 @@
 'use client'
 
-import Link from 'next/link'
 import Image from 'next/image'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
-import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
-import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
+import {
+  getPatientMessages,
+  isAuthError,
+  markPatientConversationRead,
+  searchPatientDoctors,
+  sendPatientMessage,
+  type PortalConversation,
+} from '@/lib/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type MessageType = 'text' | 'attachment' | 'system'
-
-type Message = {
-  id: string
-  senderId: string // 'patient' or contactId
-  type: MessageType
-  text?: string
-  attachmentUrl?: string
-  attachmentName?: string
-  attachmentSize?: string
-  timestamp: string
-  isRead: boolean
-}
-
-type ContactType = 'Physician' | 'Care Team' | 'Support'
-
-type Conversation = {
-  id: string
-  contactId: string
-  contactName: string
-  contactRole: string // e.g. "Cardiologist", "Qarevo Support"
-  contactType: ContactType
-  contactAvatar: string
-  isOnline: boolean
-  isPinned: boolean
-  lastMessage: string
-  lastMessageTime: string
-  unreadCount: number
-  context?: string // e.g. "Your consultation: Today, 4:30 PM"
-  messages: Message[]
-}
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    id: 'conv-1',
-    contactId: 'dr-reed',
-    contactName: 'Dr. Sophia Reed',
-    contactRole: 'Cardiologist',
-    contactType: 'Physician',
-    contactAvatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120&h=120&fit=crop',
-    isOnline: true,
-    isPinned: true,
-    lastMessage: 'I have attached the blood pressure guidelines for your review.',
-    lastMessageTime: '10:42 AM',
-    unreadCount: 2,
-    context: 'Your consultation: Today, 4:30 PM',
-    messages: [
-      { id: 'm1', senderId: 'dr-reed', type: 'text', text: 'Hello John, how are you feeling today?', timestamp: 'Yesterday, 3:00 PM', isRead: true },
-      { id: 'm2', senderId: 'patient', type: 'text', text: 'Hi Dr. Reed, I am feeling a bit better, but still monitoring my blood pressure.', timestamp: 'Yesterday, 3:15 PM', isRead: true },
-      { id: 'm3', senderId: 'dr-reed', type: 'text', text: 'That is good to hear. Make sure you avoid high sodium foods.', timestamp: 'Yesterday, 4:00 PM', isRead: true },
-      { id: 'm4', senderId: 'dr-reed', type: 'text', text: 'I have attached the blood pressure guidelines for your review.', timestamp: '10:42 AM', isRead: false },
-      { id: 'm5', senderId: 'dr-reed', type: 'attachment', attachmentName: 'BP_Guidelines_2026.pdf', attachmentSize: '1.2 MB', timestamp: '10:42 AM', isRead: false },
-    ],
-  },
-  {
-    id: 'conv-2',
-    contactId: 'care-team',
-    contactName: 'Qarevo Care Team',
-    contactRole: 'Care Coordination',
-    contactType: 'Care Team',
-    contactAvatar: 'https://images.unsplash.com/photo-1576091160550-2173ff9e8eb4?w=120&h=120&fit=crop',
-    isOnline: true,
-    isPinned: false,
-    lastMessage: 'Your upcoming lab tests have been scheduled.',
-    lastMessageTime: 'Yesterday',
-    unreadCount: 0,
-    messages: [
-      { id: 'm1', senderId: 'care-team', type: 'text', text: 'Hello John! We are reaching out to schedule your upcoming lab tests.', timestamp: 'Aug 5, 9:00 AM', isRead: true },
-      { id: 'm2', senderId: 'patient', type: 'text', text: 'Great, anytime Thursday works for me.', timestamp: 'Aug 5, 11:30 AM', isRead: true },
-      { id: 'm3', senderId: 'care-team', type: 'text', text: 'Your upcoming lab tests have been scheduled.', timestamp: 'Yesterday', isRead: true },
-    ],
-  },
-  {
-    id: 'conv-3',
-    contactId: 'support-billing',
-    contactName: 'Billing Support',
-    contactRole: 'Financial Services',
-    contactType: 'Support',
-    contactAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop',
-    isOnline: false,
-    isPinned: false,
-    lastMessage: 'Thank you. The refund has been processed.',
-    lastMessageTime: 'Aug 4',
-    unreadCount: 0,
-    messages: [
-      { id: 'm1', senderId: 'patient', type: 'text', text: 'I cancelled my appointment yesterday but have not seen a refund yet.', timestamp: 'Aug 4, 10:00 AM', isRead: true },
-      { id: 'm2', senderId: 'support-billing', type: 'system', text: 'Ticket #10492 created', timestamp: 'Aug 4, 10:05 AM', isRead: true },
-      { id: 'm3', senderId: 'support-billing', type: 'text', text: 'Thank you. The refund has been processed. It may take 3-5 business days to appear.', timestamp: 'Aug 4, 11:00 AM', isRead: true },
-    ],
-  },
-]
+type Conversation = PortalConversation
 
 type FilterType = 'All' | 'Unread' | 'Physicians' | 'Care Team' | 'Support'
+const DEFAULT_PROVIDER_CONTACT = '__default_provider__'
+const DEFAULT_CONTACT_AVATAR = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=120&h=120&fit=crop'
+type MessageContact = { id: string; name: string; type: string }
 
 // ─── New Message Modal ─────────────────────────────────────────────────────────
 
-function NewMessageModal({ onClose, onSend }: { onClose: () => void; onSend: (contactId: string, message: string) => void }) {
+function NewMessageModal({
+  contacts,
+  sending,
+  onClose,
+  onSend,
+}: {
+  contacts: MessageContact[]
+  sending: boolean
+  onClose: () => void
+  onSend: (contactId: string, message: string) => Promise<void>
+}) {
   const [recipient, setRecipient] = useState('')
   const [message, setMessage] = useState('')
-  
-  // Contacts mock
-  const contacts = [
-    { id: 'dr-reed', name: 'Dr. Sophia Reed', type: 'Physician' },
-    { id: 'dr-okafor', name: 'Dr. Amara Okafor', type: 'Physician' },
-    { id: 'care-team', name: 'Qarevo Care Team', type: 'Care Team' },
-    { id: 'support-general', name: 'General Support', type: 'Support' },
-  ]
 
-  const handleSend = () => {
-    if (!recipient || !message.trim()) return
-    onSend(recipient, message)
+  const handleSend = async () => {
+    if (!recipient || !message.trim() || sending) return
+    await onSend(recipient, message)
   }
 
   return (
@@ -151,6 +69,7 @@ function NewMessageModal({ onClose, onSend }: { onClose: () => void; onSend: (co
             style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none' }}
           >
             <option value="" disabled>Select a recipient...</option>
+            {contacts.length === 0 ? <option value={DEFAULT_PROVIDER_CONTACT}>Available physician</option> : null}
             {contacts.map(c => (
               <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
             ))}
@@ -171,10 +90,10 @@ function NewMessageModal({ onClose, onSend }: { onClose: () => void; onSend: (co
         <div style={{ display: 'flex', gap: '10px' }}>
           <HoverBtn
             onClick={handleSend}
-            base={{ flex: 1, minHeight: '46px', padding: '0 16px', borderRadius: '12px', border: 'none', background: recipient && message.trim() ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(4,53,77,0.1)', color: recipient && message.trim() ? '#fff' : T.slate2, fontSize: '13.5px', fontWeight: 700, cursor: recipient && message.trim() ? 'pointer' : 'not-allowed', boxShadow: recipient && message.trim() ? '0 5px 16px rgba(32,181,223,0.28)' : 'none' }}
-            on={recipient && message.trim() ? { transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(52,140,234,0.34)' } : {}}
+            base={{ flex: 1, minHeight: '46px', padding: '0 16px', borderRadius: '12px', border: 'none', background: recipient && message.trim() && !sending ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(4,53,77,0.1)', color: recipient && message.trim() && !sending ? '#fff' : T.slate2, fontSize: '13.5px', fontWeight: 700, cursor: recipient && message.trim() && !sending ? 'pointer' : 'not-allowed', boxShadow: recipient && message.trim() && !sending ? '0 5px 16px rgba(32,181,223,0.28)' : 'none' }}
+            on={recipient && message.trim() && !sending ? { transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(52,140,234,0.34)' } : {}}
           >
-            Send Message
+            {sending ? 'Sending...' : 'Send Message'}
           </HoverBtn>
         </div>
       </div>
@@ -189,24 +108,58 @@ function MessagesPageInner() {
   const searchParams = useSearchParams()
   const initialContactId = searchParams.get('contactId')
 
-  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS)
+  const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConvId, setActiveConvId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<FilterType>('All')
   const [isComposing, setIsComposing] = useState(false)
   const [newMessageText, setNewMessageText] = useState('')
+  const [doctorContacts, setDoctorContacts] = useState<MessageContact[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [sending, setSending] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Initialization: check if query param specifies a contact
-  useEffect(() => {
-    if (initialContactId) {
-      const conv = conversations.find(c => c.contactId === initialContactId)
-      if (conv) {
-        queueMicrotask(() => setActiveConvId(conv.id))
+  const loadConversations = useCallback(async (selectInitial = false) => {
+    setLoading(true)
+    setError('')
+    try {
+      const payload = await getPatientMessages()
+      setConversations(payload.conversations)
+      const doctors = await searchPatientDoctors(new URLSearchParams({ limit: '12' })).catch(() => null)
+      if (doctors) {
+        setDoctorContacts(
+          doctors.doctors.map((doctor) => ({
+            id: `provider:${doctor.id}`,
+            name: doctor.name,
+            type: doctor.specialty || 'Physician',
+          })),
+        )
       }
+      if (selectInitial && payload.conversations.length > 0) {
+        const initialConversation = initialContactId
+          ? payload.conversations.find(c => c.contactId === initialContactId)
+          : null
+        setActiveConvId(initialConversation?.id ?? payload.conversations[0]?.id ?? null)
+      }
+    } catch (err) {
+      if (isAuthError(err)) {
+        router.replace('/auth/sign-in')
+        return
+      }
+      setError(err instanceof Error ? err.message : 'Unable to load conversations.')
+    } finally {
+      setLoading(false)
     }
-  }, [initialContactId, conversations])
+  }, [initialContactId, router])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadConversations(true)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [loadConversations])
 
   // Scroll to bottom of messages when conversation changes or new message added
   useEffect(() => {
@@ -229,77 +182,74 @@ function MessagesPageInner() {
   }, [conversations, search, activeFilter])
 
   const activeConversation = conversations.find(c => c.id === activeConvId)
+  const modalContacts = useMemo(() => {
+    const contacts = new Map<string, MessageContact>()
+    doctorContacts.forEach((contact) => contacts.set(contact.id, contact))
+    conversations.forEach((conversation) => {
+      if (conversation.contactType === 'Physician' || conversation.contactId.startsWith('provider:')) {
+        contacts.set(conversation.contactId, {
+          id: conversation.contactId,
+          name: conversation.contactName,
+          type: conversation.contactRole || conversation.contactType,
+        })
+      }
+    })
+    return Array.from(contacts.values())
+  }, [conversations, doctorContacts])
 
   // Handle send message in active conversation
-  const handleSendMessage = () => {
-    if (!newMessageText.trim() || !activeConvId) return
+  const handleSendMessage = async () => {
+    if (!newMessageText.trim() || !activeConversation || sending) return
 
-    setConversations(prev => prev.map(c => {
-      if (c.id === activeConvId) {
-        const newMsg: Message = {
-          id: `m-new-${Date.now()}`,
-          senderId: 'patient',
-          type: 'text',
-          text: newMessageText,
-          timestamp: 'Just now',
-          isRead: true,
-        }
-        return {
-          ...c,
-          lastMessage: newMessageText,
-          lastMessageTime: 'Just now',
-          messages: [...c.messages, newMsg]
-        }
-      }
-      return c
-    }))
-    setNewMessageText('')
+    const message = newMessageText.trim()
+    setSending(true)
+    setError('')
+    try {
+      const updated = await sendPatientMessage({
+        contact_id: activeConversation.contactId,
+        message,
+      })
+      setConversations(prev => [updated, ...prev.filter(c => c.id !== updated.id)])
+      setActiveConvId(updated.id)
+      setNewMessageText('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to send message.')
+    } finally {
+      setSending(false)
+    }
   }
 
   // Handle new message from modal
-  const handleSendNewModalMessage = (contactId: string, message: string) => {
-    setIsComposing(false)
-    const existing = conversations.find(c => c.contactId === contactId)
-    if (existing) {
-      setConversations(prev => prev.map(c => {
-        if (c.id === existing.id) {
-          return {
-            ...c,
-            lastMessage: message,
-            lastMessageTime: 'Just now',
-            messages: [...c.messages, { id: `m-new-${Date.now()}`, senderId: 'patient', type: 'text', text: message, timestamp: 'Just now', isRead: true }]
-          }
-        }
-        return c
-      }))
-      setActiveConvId(existing.id)
-    } else {
-      // Simulate creating a new conversation
-      const newConv: Conversation = {
-        id: `conv-new-${Date.now()}`,
-        contactId,
-        contactName: contactId === 'dr-okafor' ? 'Dr. Amara Okafor' : 'General Support',
-        contactRole: contactId === 'dr-okafor' ? 'Endocrinologist' : 'Customer Service',
-        contactType: contactId === 'dr-okafor' ? 'Physician' : 'Support',
-        contactAvatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=120&h=120&fit=crop',
-        isOnline: true,
-        isPinned: false,
-        lastMessage: message,
-        lastMessageTime: 'Just now',
-        unreadCount: 0,
-        messages: [{ id: `m-new-${Date.now()}`, senderId: 'patient', type: 'text', text: message, timestamp: 'Just now', isRead: true }]
-      }
-      setConversations([newConv, ...conversations])
-      setActiveConvId(newConv.id)
+  const handleSendNewModalMessage = async (contactId: string, message: string) => {
+    setSending(true)
+    setError('')
+    try {
+      const updated = await sendPatientMessage({
+        ...(contactId !== DEFAULT_PROVIDER_CONTACT ? { contact_id: contactId } : {}),
+        message: message.trim(),
+      })
+      setConversations(prev => [updated, ...prev.filter(c => c.id !== updated.id)])
+      setActiveConvId(updated.id)
+      setIsComposing(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to send message.')
+    } finally {
+      setSending(false)
     }
   }
 
   // Handle marking conversation as read
-  const handleSelectConversation = (id: string) => {
+  const handleSelectConversation = async (id: string) => {
     setActiveConvId(id)
     setConversations(prev => prev.map(c => 
       c.id === id ? { ...c, unreadCount: 0, messages: c.messages.map(m => ({ ...m, isRead: true })) } : c
     ))
+    try {
+      const updated = await markPatientConversationRead(id)
+      setConversations(prev => prev.map(c => c.id === id ? updated : c))
+    } catch {
+      await loadConversations()
+    }
   }
 
   return (
@@ -402,6 +352,12 @@ function MessagesPageInner() {
         }
       `}</style>
 
+      {error ? (
+        <div style={{ marginBottom: '14px', borderRadius: '14px', border: '1px solid rgba(220,38,38,0.18)', background: 'rgba(254,242,242,0.92)', color: '#991b1b', padding: '12px 14px', fontSize: '13px', fontWeight: 700 }}>
+          {error}
+        </div>
+      ) : null}
+
       {/* Inject CSS vars to control visibility on mobile */}
       <div 
         className="msg-grid"
@@ -451,9 +407,13 @@ function MessagesPageInner() {
           </div>
 
           <div className="msg-list-scroll">
-            {filteredConversations.length === 0 ? (
+            {loading ? (
               <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>No conversations found.</p>
+                <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>Loading conversations...</p>
+              </div>
+            ) : filteredConversations.length === 0 ? (
+              <div style={{ padding: '32px 20px', textAlign: 'center' }}>
+                <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>{conversations.length === 0 ? 'No conversations yet.' : 'No conversations found.'}</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -479,7 +439,7 @@ function MessagesPageInner() {
                       }}
                     >
                       <div style={{ position: 'relative' }}>
-                        <Image src={conv.contactAvatar} alt={conv.contactName} width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover' }} />
+                        <Image src={conv.contactAvatar || DEFAULT_CONTACT_AVATAR} alt={conv.contactName} width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover' }} />
                         {conv.isOnline && (
                           <div style={{ position: 'absolute', bottom: '2px', right: '0', width: '10px', height: '10px', borderRadius: '50%', background: T.green, border: '2px solid #fff' }} />
                         )}
@@ -522,7 +482,7 @@ function MessagesPageInner() {
                 </button>
 
                 <div style={{ position: 'relative' }}>
-                  <Image src={activeConversation.contactAvatar} alt={activeConversation.contactName} width={48} height={48} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
+                  <Image src={activeConversation.contactAvatar || DEFAULT_CONTACT_AVATAR} alt={activeConversation.contactName} width={48} height={48} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
                   {activeConversation.isOnline && (
                     <div style={{ position: 'absolute', bottom: '2px', right: '0', width: '12px', height: '12px', borderRadius: '50%', background: T.green, border: '2px solid #fff' }} />
                   )}
@@ -543,7 +503,7 @@ function MessagesPageInner() {
 
               {/* Thread Scroll Area */}
               <div className="msg-thread-scroll">
-                {activeConversation.messages.map((msg, idx) => {
+                {activeConversation.messages.map((msg) => {
                   const isPatient = msg.senderId === 'patient'
                   
                   if (msg.type === 'system') {
@@ -671,6 +631,8 @@ function MessagesPageInner() {
 
       {isComposing && (
         <NewMessageModal
+          contacts={modalContacts}
+          sending={sending}
           onClose={() => setIsComposing(false)}
           onSend={handleSendNewModalMessage}
         />

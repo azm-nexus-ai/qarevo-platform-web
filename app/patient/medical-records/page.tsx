@@ -9,6 +9,7 @@ import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
+import { getMedicalRecords, uploadMedicalRecord, downloadMedicalRecord, deleteMedicalRecord } from '@/lib/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,98 +45,6 @@ type TimelineEvent = {
 
 const CATEGORIES: RecordType[] = ['Consultation', 'Prescription', 'Lab Result', 'Diagnosis', 'Referral', 'Medical Document']
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_RECORDS: MedicalRecord[] = [
-  {
-    id: 'rec-1',
-    type: 'Consultation',
-    title: 'Consultation Summary',
-    provider: 'Dr. Sophia Reed',
-    specialty: 'Cardiology',
-    date: 'August 5, 2026',
-    status: 'Available',
-    lastUpdated: 'Aug 5, 2026',
-    summary: 'Patient reported occasional shortness of breath. Blood pressure slightly elevated at 130/85. Recommended lifestyle modifications and scheduled a follow-up.',
-    clinicalNotes: 'Heart rhythm regular. No murmurs. Lungs clear to auscultation.',
-    recommendations: 'Reduce sodium intake. Moderate exercise 3x/week. Monitor BP daily.',
-    canPreview: true,
-    canDownload: true,
-    canDelete: false,
-  },
-  {
-    id: 'rec-2',
-    type: 'Prescription',
-    title: 'Atorvastatin 20mg',
-    provider: 'Dr. Sophia Reed',
-    specialty: 'Cardiology',
-    date: 'August 5, 2026',
-    status: 'Available',
-    lastUpdated: 'Aug 5, 2026',
-    summary: 'Prescribed for lipid management.',
-    fileType: 'PDF',
-    fileSize: '45 KB',
-    canPreview: true,
-    canDownload: true,
-    canDelete: false,
-  },
-  {
-    id: 'rec-3',
-    type: 'Lab Result',
-    title: 'Comprehensive Metabolic Panel',
-    provider: 'Qarevo Diagnostics',
-    specialty: 'Laboratory',
-    date: 'August 2, 2026',
-    status: 'Available',
-    lastUpdated: 'Aug 3, 2026',
-    summary: 'All metabolic indicators within normal limits. Glucose slightly elevated.',
-    fileType: 'PDF',
-    fileSize: '1.2 MB',
-    canPreview: true,
-    canDownload: true,
-    canDelete: false,
-  },
-  {
-    id: 'rec-4',
-    type: 'Referral',
-    title: 'Referral to Endocrinology',
-    provider: 'Dr. James Whitmore',
-    specialty: 'Neurology',
-    date: 'July 15, 2026',
-    status: 'Available',
-    lastUpdated: 'July 15, 2026',
-    summary: 'Patient referred for further evaluation of ongoing fatigue and weight fluctuations.',
-    fileType: 'PDF',
-    fileSize: '120 KB',
-    canPreview: true,
-    canDownload: true,
-    canDelete: false,
-  },
-  {
-    id: 'rec-5',
-    type: 'Medical Document',
-    title: 'Previous Clinical History',
-    provider: 'Self-Uploaded',
-    specialty: 'General',
-    date: 'July 1, 2026',
-    status: 'Available',
-    lastUpdated: 'July 1, 2026',
-    summary: 'Past medical history records from previous provider.',
-    fileType: 'PDF',
-    fileSize: '3.4 MB',
-    canPreview: true,
-    canDownload: true,
-    canDelete: true, // Self uploaded
-  },
-]
-
-const MOCK_TIMELINE: TimelineEvent[] = [
-  { id: 't1', date: 'Aug 5, 2026', event: 'Cardiology Follow-up', provider: 'Dr. Sophia Reed', recordId: 'rec-1' },
-  { id: 't2', date: 'Aug 5, 2026', event: 'Prescription Issued', provider: 'Dr. Sophia Reed', recordId: 'rec-2' },
-  { id: 't3', date: 'Aug 2, 2026', event: 'Blood Test Collected', provider: 'Qarevo Diagnostics', recordId: 'rec-3' },
-  { id: 't4', date: 'Jul 15, 2026', event: 'Endocrinology Referral', provider: 'Dr. James Whitmore', recordId: 'rec-4' },
-]
-
 // ─── Modals ───────────────────────────────────────────────────────────────────
 
 function ModalOverlay({ onClose, children, width = '520px' }: { onClose: () => void; children: React.ReactNode; width?: string }) {
@@ -153,6 +62,42 @@ function ModalOverlay({ onClose, children, width = '520px' }: { onClose: () => v
   )
 }
 
+function normalizeRecord(value: Record<string, unknown>): MedicalRecord {
+  return {
+    id: String(value.id ?? ''),
+    type: (value.type as RecordType) ?? 'Medical Document',
+    title: String(value.title ?? 'Medical record'),
+    provider: String(value.provider ?? 'Self-Uploaded'),
+    specialty: String(value.specialty ?? 'General'),
+    date: String(value.date ?? ''),
+    status: (value.status as RecordStatus) ?? 'Available',
+    lastUpdated: String(value.lastUpdated ?? value.last_updated ?? ''),
+    fileType: value.fileType ? String(value.fileType) : undefined,
+    fileSize: value.fileSize ? String(value.fileSize) : undefined,
+    summary: value.summary ? String(value.summary) : undefined,
+    clinicalNotes: value.clinicalNotes ? String(value.clinicalNotes) : undefined,
+    recommendations: value.recommendations ? String(value.recommendations) : undefined,
+    canPreview: Boolean(value.canPreview),
+    canDownload: Boolean(value.canDownload),
+    canDelete: Boolean(value.canDelete),
+  }
+}
+
+function normalizeTimeline(value: Record<string, unknown>): TimelineEvent {
+  return {
+    id: String(value.id ?? ''),
+    date: String(value.date ?? ''),
+    event: String(value.event ?? value.title ?? 'Medical record activity'),
+    provider: String(value.provider ?? value.source ?? 'Qarevo Health'),
+    recordId: value.recordId ? String(value.recordId) : undefined,
+  }
+}
+
+async function openRecordDownload(record: MedicalRecord) {
+  const response = await downloadMedicalRecord(record.id)
+  window.open(response.download_url, '_blank', 'noopener,noreferrer')
+}
+
 function UploadRecordModal({ onClose, onUpload }: { onClose: () => void; onUpload: (r: MedicalRecord) => void }) {
   const [docName, setDocName] = useState('')
   const [docType, setDocType] = useState<RecordType>('Medical Document')
@@ -162,44 +107,63 @@ function UploadRecordModal({ onClose, onUpload }: { onClose: () => void; onUploa
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
-  
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0])
+      const selectedFile = e.target.files[0]
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        alert('Please choose a file that is 5MB or smaller.')
+        e.target.value = ''
+        setFile(null)
+        return
+      }
+      setFile(selectedFile)
     }
   }
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!docName || !file || !date) return
     setIsUploading(true)
-    
-    // Simulate upload progress
-    let p = 0
-    const interval = setInterval(() => {
-      p += 20
-      setProgress(p)
-      if (p >= 100) {
-        clearInterval(interval)
-        setTimeout(() => {
-          onUpload({
-            id: `rec-up-${Date.now()}`,
-            type: docType,
-            title: docName,
-            provider: provider || 'Self-Uploaded',
-            specialty: 'General',
-            date: date,
-            status: 'Available',
-            lastUpdated: 'Just now',
-            summary: desc,
-            fileType: file.name.split('.').pop()?.toUpperCase() || 'FILE',
-            fileSize: (file.size / 1024 / 1024).toFixed(1) + ' MB',
-            canPreview: false,
-            canDownload: true,
-            canDelete: true,
-          })
-        }, 400)
-      }
-    }, 200)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('title', docName)
+      formData.append('record_type', docType)
+      formData.append('description', desc || '')
+      if (provider) formData.append('provider_name', provider)
+      formData.append('record_date', date)
+
+      const response = await uploadMedicalRecord(formData)
+
+      onUpload({
+        id: response.id,
+        type: docType,
+        title: docName,
+        provider: provider || 'Self-Uploaded',
+        specialty: 'General',
+        date: new Date(response.uploaded_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        status: 'Available',
+        lastUpdated: 'Just now',
+        summary: desc,
+        fileType: file.name.split('.').pop()?.toUpperCase() || 'FILE',
+        fileSize: (response.file_size / 1024).toFixed(1) + ' KB',
+        canPreview: false,
+        canDownload: true,
+        canDelete: true,
+      })
+
+      setProgress(100)
+      setTimeout(() => {
+        onClose()
+      }, 500)
+    } catch (error) {
+      console.error('Upload failed:', error)
+      alert('Upload failed. Please try again.')
+      setProgress(0)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -230,7 +194,7 @@ function UploadRecordModal({ onClose, onUpload }: { onClose: () => void; onUploa
             <input type="text" value={provider} onChange={e => setProvider(e.target.value)} placeholder="e.g. City Hospital" style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none' }} />
           </div>
         </div>
-        
+
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: T.slate2 }}>Description (Optional)</label>
           <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none', resize: 'none' }} />
@@ -245,7 +209,7 @@ function UploadRecordModal({ onClose, onUpload }: { onClose: () => void; onUploa
                   <Ico p={ICONS.search} size={24} sw={1.5} />
                 </div>
                 <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Click or drag file to this area</p>
-                <p style={{ margin: '0 0 16px', fontSize: '12px', color: T.slate }}>Supported formats: PDF, PNG, JPG (Max 10MB)</p>
+                <p style={{ margin: '0 0 16px', fontSize: '12px', color: T.slate }}>Supported formats: PDF, DOC, DOCX, PNG, JPG (Max 5MB)</p>
                 <label style={{ display: 'inline-block', padding: '10px 20px', borderRadius: '10px', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
                   Browse Files
                   <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" onChange={handleFileChange} style={{ display: 'none' }} />
@@ -291,7 +255,7 @@ function UploadRecordModal({ onClose, onUpload }: { onClose: () => void; onUploa
   )
 }
 
-function RecordDetailsModal({ record, onClose, onPreview }: { record: MedicalRecord; onClose: () => void; onPreview: () => void }) {
+function RecordDetailsModal({ record, onClose, onPreview, onDelete }: { record: MedicalRecord; onClose: () => void; onPreview: () => void; onDelete: () => void }) {
   return (
     <ModalOverlay onClose={onClose} width="640px">
       <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(4,53,77,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -310,7 +274,7 @@ function RecordDetailsModal({ record, onClose, onPreview }: { record: MedicalRec
             <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(4,53,77,0.03)', border: '1px solid rgba(4,53,77,0.06)', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>{record.summary}</div>
           </div>
         )}
-        
+
         {record.clinicalNotes && (
           <div>
             <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Clinical Notes</h3>
@@ -343,7 +307,14 @@ function RecordDetailsModal({ record, onClose, onPreview }: { record: MedicalRec
                   <HoverBtn onClick={onPreview} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.14)', background: '#fff', color: T.navy, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }} on={{ background: 'rgba(255,255,255,0.9)', transform: 'translateY(-1px)' }}>Preview</HoverBtn>
                 )}
                 {record.canDownload && (
-                  <HoverBtn base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: 'none', background: T.blue, color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>Download</HoverBtn>
+                  <HoverBtn onClick={async () => {
+                    try {
+                      await openRecordDownload(record)
+                    } catch (error) {
+                      console.error('Download failed:', error)
+                      alert('Download failed. Please try again.')
+                    }
+                  }} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: 'none', background: T.blue, color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>Download</HoverBtn>
                 )}
               </div>
             </div>
@@ -354,7 +325,18 @@ function RecordDetailsModal({ record, onClose, onPreview }: { record: MedicalRec
       <div style={{ padding: '20px 28px', borderTop: '1px solid rgba(4,53,77,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           {record.canDelete && (
-            <button style={{ background: 'none', border: 'none', color: T.red, fontSize: '13px', fontWeight: 700, cursor: 'pointer', padding: '8px 0', textDecoration: 'underline' }}>Delete Record</button>
+            <button onClick={async () => {
+              if (confirm('Are you sure you want to delete this record? This action cannot be undone.')) {
+                try {
+                  await deleteMedicalRecord(record.id)
+                  onDelete()
+                  onClose()
+                } catch (error) {
+                  console.error('Delete failed:', error)
+                  alert('Delete failed. Please try again.')
+                }
+              }
+            }} style={{ background: 'none', border: 'none', color: T.red, fontSize: '13px', fontWeight: 700, cursor: 'pointer', padding: '8px 0', textDecoration: 'underline' }}>Delete Record</button>
           )}
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
@@ -374,7 +356,19 @@ function PreviewModal({ record, onClose }: { record: MedicalRecord; onClose: () 
           <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>{record.date} • {record.provider}</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', color: '#fff', padding: '0 16px', minHeight: '38px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Download</button>
+          <button
+            onClick={async () => {
+              try {
+                await openRecordDownload(record)
+              } catch (error) {
+                console.error('Download failed:', error)
+                alert('Download failed. Please try again.')
+              }
+            }}
+            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', color: '#fff', padding: '0 16px', minHeight: '38px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Download
+          </button>
           <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: '#fff', fontSize: '28px', lineHeight: 1, cursor: 'pointer', padding: '0 8px' }}>✕</button>
         </div>
       </div>
@@ -394,10 +388,12 @@ function PreviewModal({ record, onClose }: { record: MedicalRecord; onClose: () 
 function MedicalRecordsPageInner() {
   const searchParams = useSearchParams()
   const recordId = searchParams.get('recordId')
-  const [records, setRecords] = useState<MedicalRecord[]>(MOCK_RECORDS)
+  const [records, setRecords] = useState<MedicalRecord[]>([])
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([])
   const [activeTab, setActiveTab] = useState<RecordType | 'All Records'>('All Records')
   const [search, setSearch] = useState('')
-  
+  const [loadingRecords, setLoadingRecords] = useState(true)
+
   // Modals
   const [isUploading, setIsUploading] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null)
@@ -407,8 +403,8 @@ function MedicalRecordsPageInner() {
   // Filters
   const filteredRecords = useMemo(() => {
     return records.filter(r => {
-      const matchesSearch = r.title.toLowerCase().includes(search.toLowerCase()) || 
-                            r.provider.toLowerCase().includes(search.toLowerCase()) || 
+      const matchesSearch = r.title.toLowerCase().includes(search.toLowerCase()) ||
+                            r.provider.toLowerCase().includes(search.toLowerCase()) ||
                             r.specialty.toLowerCase().includes(search.toLowerCase())
       const matchesTab = activeTab === 'All Records' || r.type === activeTab
       return matchesSearch && matchesTab
@@ -422,12 +418,42 @@ function MedicalRecordsPageInner() {
     return c
   }, [records])
 
+  const loadRecords = async () => {
+    try {
+      const payload = await getMedicalRecords()
+      setRecords((payload.records ?? []).map((item) => normalizeRecord(item)))
+      setTimeline((payload.timeline ?? []).map((item) => normalizeTimeline(item)))
+    } catch (error) {
+      console.error('Failed to load medical records:', error)
+      setRecords([])
+      setTimeline([])
+    } finally {
+      setLoadingRecords(false)
+    }
+  }
+
   const handleUploadComplete = (newRecord: MedicalRecord) => {
-    setRecords([newRecord, ...records])
+    setRecords((current) => [newRecord, ...current.filter((item) => item.id !== newRecord.id)])
     setIsUploading(false)
     setToast('Medical record uploaded successfully.')
     setTimeout(() => setToast(null), 4000)
+    void loadRecords()
   }
+
+  const handleDeleteRecord = (recordId: string) => {
+    setRecords((current) => current.filter(r => r.id !== recordId))
+    setTimeline((current) => current.filter((item) => item.recordId !== recordId))
+    setToast('Medical record deleted successfully.')
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadRecords()
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     if (!recordId) return
@@ -489,17 +515,21 @@ function MedicalRecordsPageInner() {
           {/* Timeline */}
           <div style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', padding: '20px', boxShadow: Sh.card }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Care Timeline</h3>
-            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px', paddingLeft: '8px' }}>
-              <div style={{ position: 'absolute', left: '12px', top: '10px', bottom: '10px', width: '2px', background: 'rgba(4,53,77,0.08)' }} />
-              {MOCK_TIMELINE.map((evt, idx) => (
-                <div key={evt.id} style={{ position: 'relative', paddingLeft: '24px' }}>
-                  <div style={{ position: 'absolute', left: '0', top: '4px', width: '10px', height: '10px', borderRadius: '50%', background: idx === 0 ? T.blue : 'rgba(255,255,255,1)', border: `2px solid ${idx === 0 ? T.blue : 'rgba(4,53,77,0.2)'}`, boxShadow: idx === 0 ? '0 0 0 3px rgba(32,181,223,0.2)' : 'none' }} />
-                  <p style={{ margin: '0 0 2px', fontSize: '11px', fontWeight: 700, color: T.slate2 }}>{evt.date}</p>
-                  <p style={{ margin: '0 0 2px', fontSize: '13.5px', fontWeight: 700, color: T.navy }}>{evt.event}</p>
-                  <p style={{ margin: 0, fontSize: '12px', color: T.slate }}>{evt.provider}</p>
-                </div>
-              ))}
-            </div>
+            {timeline.length === 0 ? (
+              <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>Your uploaded records and clinical documents will build this timeline.</p>
+            ) : (
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px', paddingLeft: '8px' }}>
+                <div style={{ position: 'absolute', left: '12px', top: '10px', bottom: '10px', width: '2px', background: 'rgba(4,53,77,0.08)' }} />
+                {timeline.map((evt, idx) => (
+                  <div key={evt.id} style={{ position: 'relative', paddingLeft: '24px' }}>
+                    <div style={{ position: 'absolute', left: '0', top: '4px', width: '10px', height: '10px', borderRadius: '50%', background: idx === 0 ? T.blue : 'rgba(255,255,255,1)', border: `2px solid ${idx === 0 ? T.blue : 'rgba(4,53,77,0.2)'}`, boxShadow: idx === 0 ? '0 0 0 3px rgba(32,181,223,0.2)' : 'none' }} />
+                    <p style={{ margin: '0 0 2px', fontSize: '11px', fontWeight: 700, color: T.slate2 }}>{evt.date}</p>
+                    <p style={{ margin: '0 0 2px', fontSize: '13.5px', fontWeight: 700, color: T.navy }}>{evt.event}</p>
+                    <p style={{ margin: 0, fontSize: '12px', color: T.slate }}>{evt.provider}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Security Notice */}
@@ -518,7 +548,7 @@ function MedicalRecordsPageInner() {
         .mr-tabs::-webkit-scrollbar { display: none; }
         .mr-card-grid { display: grid; gap: 12px; }
         .mr-overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-        
+
         @media (max-width: 900px) {
           .mr-overview-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -547,7 +577,7 @@ function MedicalRecordsPageInner() {
       </div>
 
       <div style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.card, padding: '20px' }}>
-        
+
         {/* Search & Tabs */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
           <div style={{ position: 'relative' }}>
@@ -562,7 +592,7 @@ function MedicalRecordsPageInner() {
               style={{ width: '100%', height: '46px', borderRadius: '14px', border: '1px solid rgba(4,53,77,0.12)', padding: '0 16px 0 42px', fontSize: '14px', color: T.navy, background: '#fff', outline: 'none' }}
             />
           </div>
-          
+
           <div className="mr-tabs" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             {['All Records', ...CATEGORIES].map(cat => (
               <button
@@ -588,7 +618,11 @@ function MedicalRecordsPageInner() {
 
         {/* Record List */}
         <div className="mr-card-grid">
-          {filteredRecords.length === 0 ? (
+          {loadingRecords ? (
+            <div style={{ padding: '48px 24px', textAlign: 'center', background: 'rgba(4,53,77,0.02)', borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.1)' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: T.slate }}>Loading medical records...</p>
+            </div>
+          ) : filteredRecords.length === 0 ? (
             <div style={{ padding: '48px 24px', textAlign: 'center', background: 'rgba(4,53,77,0.02)', borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.1)' }}>
               <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'rgba(32,181,223,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: T.blue }}>
                 <Ico p={ICONS.search} size={24} sw={1.5} />
@@ -635,6 +669,14 @@ function MedicalRecordsPageInner() {
                   )}
                   {record.canDownload && (
                     <HoverBtn
+                      onClick={async () => {
+                        try {
+                          await openRecordDownload(record)
+                        } catch (error) {
+                          console.error('Download failed:', error)
+                          alert('Download failed. Please try again.')
+                        }
+                      }}
                       base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.1)', background: 'transparent', color: T.slate, fontSize: '12.5px', fontWeight: 600, cursor: 'pointer' }}
                       on={{ background: 'rgba(4,53,77,0.03)', color: T.navy, transform: 'translateY(-1px)' }}
                     >
@@ -649,9 +691,9 @@ function MedicalRecordsPageInner() {
       </div>
 
       {isUploading && <UploadRecordModal onClose={() => setIsUploading(false)} onUpload={handleUploadComplete} />}
-      {selectedRecord && <RecordDetailsModal record={selectedRecord} onClose={() => setSelectedRecord(null)} onPreview={() => { setSelectedRecord(null); setPreviewRecord(selectedRecord); }} />}
+      {selectedRecord && <RecordDetailsModal record={selectedRecord} onClose={() => setSelectedRecord(null)} onPreview={() => { setSelectedRecord(null); setPreviewRecord(selectedRecord); }} onDelete={() => handleDeleteRecord(selectedRecord.id)} />}
       {previewRecord && <PreviewModal record={previewRecord} onClose={() => setPreviewRecord(null)} />}
-      
+
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(15,158,119,0.22)', boxShadow: '0 8px 28px rgba(4,53,77,0.14)', color: T.navy, fontSize: '13.5px', fontWeight: 600 }}>
