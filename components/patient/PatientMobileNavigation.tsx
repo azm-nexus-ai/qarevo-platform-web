@@ -9,7 +9,7 @@ import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
 import { PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
-import { getPatientDashboard, readAccessToken } from '@/lib/api'
+import { clearAuthTokens, getPatientDashboard, isAuthError, readAccessToken } from '@/lib/api'
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -87,13 +87,18 @@ export default function PatientMobileNavigation() {
         const activePlan = plans.find((plan) => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
         setCarePlanStatus(activePlan?.status || (plans.length ? 'Active' : 'Not started'))
       } catch (error) {
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
         console.error('Failed to fetch dashboard profile:', error)
         setCarePlanStatus('Unavailable')
       }
     }
 
     fetchDashboardProfile()
-  }, [])
+  }, [router])
 
   return (
     <>

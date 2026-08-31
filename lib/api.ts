@@ -9,6 +9,37 @@ export function readAccessToken(): string | null {
     return window.localStorage.getItem("qarevo_access_token");
 }
 
+export function clearAuthTokens() {
+    if (typeof window === "undefined") return;
+    [
+        "qarevo_access_token",
+        "qarevo_refresh_token",
+        "qarevo_token_type",
+        "qarevo_expires_in",
+        "qarevo_user_id",
+        "qarevo_provider_id",
+        "qarevo_role",
+        "qarevo_temp_auth",
+        "qarevo_temp_token",
+    ].forEach((key) => window.localStorage.removeItem(key));
+}
+
+export class ApiError extends Error {
+    status: number;
+    body: string;
+
+    constructor(status: number, body: string) {
+        super(`API error ${status}: ${body}`);
+        this.name = "ApiError";
+        this.status = status;
+        this.body = body;
+    }
+}
+
+export function isAuthError(error: unknown): boolean {
+    return error instanceof ApiError && error.status === 401;
+}
+
 export function storeAuthTokens(payload: {
     access_token: string;
     refresh_token: string;
@@ -44,7 +75,7 @@ export async function apiGet<T>(path: string, headers?: Record<string, string>):
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(`API error ${res.status}: ${text}`);
+        throw new ApiError(res.status, text);
     }
 
     return res.json() as Promise<T>;
@@ -63,7 +94,7 @@ export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: 
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(`API error ${res.status}: ${text}`);
+        throw new ApiError(res.status, text);
     }
 
     return res.json() as Promise<T>;
@@ -82,7 +113,7 @@ export async function apiPatch<T, B = unknown>(path: string, body?: B, headers?:
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(`API error ${res.status}: ${text}`);
+        throw new ApiError(res.status, text);
     }
 
     return res.json() as Promise<T>;

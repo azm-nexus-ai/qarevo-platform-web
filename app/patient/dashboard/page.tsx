@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { getPatientDashboard, readAccessToken, searchPatientDashboard } from '@/lib/api'
+import { clearAuthTokens, getPatientDashboard, isAuthError, readAccessToken, searchPatientDashboard } from '@/lib/api'
 import type { PatientDashboardSearchResult } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
@@ -311,6 +311,11 @@ export default function PatientDashboardPage() {
         const activePlan = plans.find((plan) => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
         setCarePlanStatus(activePlan?.status || (plans.length ? 'Active' : 'Not started'))
       } catch (error) {
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
         console.error('Failed to fetch dashboard profile:', error)
         setCarePlanStatus('Unavailable')
       }
