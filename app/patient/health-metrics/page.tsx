@@ -19,7 +19,7 @@ export default function HealthMetricsPage() {
   const [editingMetric, setEditingMetric] = useState<HealthMetric | null>(null)
   const [formData, setFormData] = useState<HealthMetricCreate>({
     metric_type: "blood_pressure",
-    value: 0,
+    value: "",
     unit: "mmHg",
     recorded_at: new Date().toISOString(),
     notes: "",
@@ -56,7 +56,7 @@ export default function HealthMetricsPage() {
       setEditingMetric(null)
       setFormData({
         metric_type: "blood_pressure",
-        value: 0,
+        value: "",
         unit: "mmHg",
         recorded_at: new Date().toISOString(),
         notes: "",
@@ -120,7 +120,7 @@ export default function HealthMetricsPage() {
             setEditingMetric(null)
             setFormData({
               metric_type: "blood_pressure",
-              value: 0,
+              value: "",
               unit: "mmHg",
               recorded_at: new Date().toISOString(),
               notes: "",
@@ -246,10 +246,9 @@ export default function HealthMetricsPage() {
               <div style={{ marginBottom: "16px" }}>
                 <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Value</label>
                 <input
-                  type="number"
-                  step="0.1"
+                  type="text"
                   value={formData.value}
-                  onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                   style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "14px" }}
                   required
                 />

@@ -356,19 +356,21 @@ function PreviewModal({ record, onClose }: { record: MedicalRecord; onClose: () 
           <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>{record.date} • {record.provider}</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={async () => {
-              try {
-                await openRecordDownload(record)
-              } catch (error) {
-                console.error('Download failed:', error)
-                alert('Download failed. Please try again.')
-              }
-            }}
-            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', color: '#fff', padding: '0 16px', minHeight: '38px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-          >
-            Download
-          </button>
+          {record.canDownload && (
+            <button
+              onClick={async () => {
+                try {
+                  await openRecordDownload(record)
+                } catch (error) {
+                  console.error('Download failed:', error)
+                  alert('Download failed. Please try again.')
+                }
+              }}
+              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', color: '#fff', padding: '0 16px', minHeight: '38px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Download
+            </button>
+          )}
           <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: '#fff', fontSize: '28px', lineHeight: 1, cursor: 'pointer', padding: '0 8px' }}>✕</button>
         </div>
       </div>
@@ -418,6 +420,11 @@ function MedicalRecordsPageInner() {
     return c
   }, [records])
 
+  const downloadableRecords = useMemo(
+    () => records.filter((record) => record.canDownload),
+    [records],
+  )
+
   const loadRecords = async () => {
     try {
       const payload = await getMedicalRecords()
@@ -445,6 +452,22 @@ function MedicalRecordsPageInner() {
     setTimeline((current) => current.filter((item) => item.recordId !== recordId))
     setToast('Medical record deleted successfully.')
     setTimeout(() => setToast(null), 4000)
+  }
+
+  const handleDownloadRecords = async () => {
+    if (downloadableRecords.length === 0) {
+      alert('No downloadable file attachments are available yet.')
+      return
+    }
+
+    try {
+      for (const record of downloadableRecords) {
+        await openRecordDownload(record)
+      }
+    } catch (error) {
+      console.error('Download failed:', error)
+      alert('One or more downloads failed. Please try downloading the record individually.')
+    }
   }
 
   useEffect(() => {
@@ -477,6 +500,7 @@ function MedicalRecordsPageInner() {
       headerActions={
         <>
           <HoverBtn
+            onClick={handleDownloadRecords}
             base={{ minHeight: '44px', padding: '0 16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(4,53,77,0.06)', whiteSpace: 'nowrap' }}
             on={{ background: 'rgba(255,255,255,0.98)', transform: 'translateY(-1px)' }}
           >

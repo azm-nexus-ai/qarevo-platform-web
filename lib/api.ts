@@ -546,7 +546,7 @@ export async function deleteMedicalRecord(fileId: string): Promise<{ message: st
 export type HealthMetric = {
     id: string;
     metric_type: string;
-    value: number;
+    value: string;
     unit: string;
     recorded_at: string;
     notes?: string;
@@ -556,14 +556,14 @@ export type HealthMetric = {
 
 export type HealthMetricCreate = {
     metric_type: string;
-    value: number;
+    value: string;
     unit: string;
     recorded_at?: string;
     notes?: string;
 };
 
 export type HealthMetricUpdate = {
-    value?: number;
+    value?: string;
     unit?: string;
     notes?: string;
 };
