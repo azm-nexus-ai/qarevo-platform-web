@@ -12,6 +12,11 @@ export function readAccessToken(): string | null {
     return window.localStorage.getItem("qarevo_access_token");
 }
 
+export function readRefreshToken(): string | null {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem("qarevo_refresh_token");
+}
+
 export function clearAuthTokens() {
     if (typeof window === "undefined") return;
     [
@@ -456,6 +461,232 @@ export async function loginDoctor(body: DoctorLoginRequest): Promise<DoctorLogin
 
 export async function loginPatient(body: { email: string; password: string }): Promise<AuthTokenResponse> {
     return apiPost<AuthTokenResponse>("/api/v1/auth/login", body);
+}
+
+export async function logoutCurrentUser(): Promise<void> {
+    const refreshToken = readRefreshToken();
+    try {
+        if (refreshToken) {
+            await apiPost<{ message: string }, { refresh_token: string }>("/api/v1/auth/logout", {
+                refresh_token: refreshToken,
+            });
+        }
+    } finally {
+        clearAuthTokens();
+    }
+}
+
+export type DoctorDashboardStats = {
+    today_appointments: number;
+    pending_patients: number;
+    upcoming_consultations: number;
+    completed_consultations: number;
+};
+
+export type DoctorRecentAppointment = {
+    appointment_id: string;
+    patient_name: string;
+    scheduled_time: string;
+    status: string;
+    consultation_type: string | null;
+};
+
+export type DoctorRecentConsultation = {
+    consultation_id: string;
+    patient_name: string;
+    completed_at: string;
+    duration_minutes: number | null;
+};
+
+export type DoctorDashboardResponse = {
+    stats: DoctorDashboardStats;
+    recent_appointments: DoctorRecentAppointment[];
+    recent_consultations: DoctorRecentConsultation[];
+    current_date: string;
+};
+
+export type DoctorProfileResponse = {
+    user_id: string;
+    provider_id: string;
+    username: string;
+    email: string;
+    phone: string | null;
+    specialty: string | null;
+    experience_years: number | null;
+    license_number: string | null;
+    license_verified: boolean;
+    is_independent: boolean | null;
+    address: string | null;
+    address_line2?: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    zip?: string | null;
+    consultation_fee?: number | null;
+    about?: string | null;
+    education?: string | null;
+    certifications?: string | null;
+    languages?: string | null;
+    hospital?: string | null;
+    total_consultations: number;
+    patient_rating: number;
+    years_active: number;
+    created_at?: string;
+    updated_at?: string | null;
+};
+
+export type DoctorSettingsResponse = {
+    user_id: string;
+    provider_id: string;
+    email: string | null;
+    phone: string | null;
+    email_notifications: boolean;
+    sms_notifications: boolean;
+    push_notifications: boolean;
+    weekly_reports: boolean;
+    working_hours_start: string;
+    working_hours_end: string;
+    available_days: string[];
+    two_factor_enabled: boolean;
+};
+
+export type DoctorSettingsUpdate = Partial<{
+    email: string;
+    phone: string;
+    email_notifications: boolean;
+    sms_notifications: boolean;
+    push_notifications: boolean;
+    weekly_reports: boolean;
+    working_hours_start: string;
+    working_hours_end: string;
+    available_days: string[];
+}>;
+
+export type DoctorAppointmentSummary = {
+    appointment_id: string;
+    patient_id: string;
+    patient_name: string;
+    start_at: string;
+    end_at: string;
+    status: string;
+    consultation_id: string | null;
+    consultation_modality: string | null;
+};
+
+export type DoctorAppointmentsResponse = {
+    appointments: DoctorAppointmentSummary[];
+    total_count: number;
+    filtered_count: number;
+};
+
+export type DoctorAppointmentDetail = DoctorAppointmentSummary & {
+    patient_email: string | null;
+    patient_phone: string | null;
+    consultation_status: string | null;
+    created_at: string;
+};
+
+export type DoctorConsultationInQueue = {
+    consultation_id: string;
+    patient_id: string;
+    patient_name: string;
+    scheduled_time: string | null;
+    status: string;
+    priority: string | null;
+    waiting_duration_minutes: number | null;
+};
+
+export type DoctorWorkspaceResponse = {
+    consultations: DoctorConsultationInQueue[];
+    total_count: number;
+    filtered_count: number;
+};
+
+export type DoctorConsultationDetail = {
+    consultation_id: string;
+    patient_id: string;
+    patient_name: string;
+    patient_email: string | null;
+    patient_phone: string | null;
+    scheduled_time: string | null;
+    started_at: string | null;
+    ended_at: string | null;
+    status: string;
+    consultation_modality: string | null;
+    appointment_id: string | null;
+    video_session_id: string | null;
+};
+
+export type DoctorConsultationDetailResponse = {
+    consultation: DoctorConsultationDetail;
+    can_join_video: boolean;
+    can_complete: boolean;
+};
+
+export type DoctorPatient = {
+    patient_id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    age: number | null;
+    gender: string | null;
+    last_visit: string | null;
+    total_consultations: number;
+    status: "active" | "inactive";
+};
+
+export type DoctorPatientsResponse = {
+    patients: DoctorPatient[];
+    total_count: number;
+    filtered_count: number;
+};
+
+export async function getDoctorDashboard(): Promise<DoctorDashboardResponse> {
+    return apiGet<DoctorDashboardResponse>("/api/v1/doctor/dashboard");
+}
+
+export async function getDoctorProfile(): Promise<DoctorProfileResponse> {
+    return apiGet<DoctorProfileResponse>("/api/v1/doctor/profile");
+}
+
+export async function getDoctorSettings(): Promise<DoctorSettingsResponse> {
+    return apiGet<DoctorSettingsResponse>("/api/v1/doctor/settings");
+}
+
+export async function updateDoctorSettings(body: DoctorSettingsUpdate): Promise<DoctorSettingsResponse> {
+    return apiPut<DoctorSettingsResponse, DoctorSettingsUpdate>("/api/v1/doctor/settings", body);
+}
+
+export async function getDoctorAppointments(status?: string): Promise<DoctorAppointmentsResponse> {
+    const params = status ? `?status=${encodeURIComponent(status)}` : "";
+    return apiGet<DoctorAppointmentsResponse>(`/api/v1/doctor/appointments${params}`);
+}
+
+export async function getDoctorAppointment(appointmentId: string): Promise<DoctorAppointmentDetail> {
+    return apiGet<DoctorAppointmentDetail>(`/api/v1/doctor/appointments/${appointmentId}`);
+}
+
+export async function updateDoctorAppointmentStatus(
+    appointmentId: string,
+    status: string,
+): Promise<DoctorAppointmentDetail> {
+    return apiPut<DoctorAppointmentDetail, { status: string }>(`/api/v1/doctor/appointments/${appointmentId}/status`, {
+        status,
+    });
+}
+
+export async function getDoctorWorkspace(status?: string): Promise<DoctorWorkspaceResponse> {
+    const params = status ? `?status=${encodeURIComponent(status)}` : "";
+    return apiGet<DoctorWorkspaceResponse>(`/api/v1/doctor/workspace${params}`);
+}
+
+export async function getDoctorConsultation(consultationId: string): Promise<DoctorConsultationDetailResponse> {
+    return apiGet<DoctorConsultationDetailResponse>(`/api/v1/doctor/workspace/${consultationId}`);
+}
+
+export async function getDoctorPatients(status?: string): Promise<DoctorPatientsResponse> {
+    const params = status ? `?status=${encodeURIComponent(status)}` : "";
+    return apiGet<DoctorPatientsResponse>(`/api/v1/doctor/patients${params}`);
 }
 
 export async function verifyDoctorEmailCode(body: VerifyEmailCodeRequest): Promise<VerifyEmailCodeResponse> {
