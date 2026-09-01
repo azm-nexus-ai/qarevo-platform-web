@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useId } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { T, Sh, Glass } from '@/lib/tokens'
+import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { AuthTokenResponse, apiPost, storeAuthTokens } from '@/lib/api'
@@ -176,6 +176,7 @@ function LeftPanel() {
 // Main page
 export default function Doctor2FAPage() {
   const router = useRouter()
+  const verifyingRef = useRef(false)
   
   const [method, setMethod] = useState<'email' | 'phone'>('email')
   const [email, setEmail] = useState('')
@@ -193,21 +194,23 @@ export default function Doctor2FAPage() {
 
   // Load stored identifier on mount
   useEffect(() => {
-    const storedIdentifier = localStorage.getItem('doctor_identifier')
-    if (storedIdentifier) {
-      if (storedIdentifier.includes('@')) {
-        setEmail(storedIdentifier)
-        setMethod('email')
-      } else {
-        setPhone(storedIdentifier)
-        setMethod('phone')
+    const timer = window.setTimeout(() => {
+      const storedIdentifier = localStorage.getItem('doctor_identifier')
+      if (storedIdentifier) {
+        if (storedIdentifier.includes('@')) {
+          setEmail(storedIdentifier)
+          setMethod('email')
+        } else {
+          setPhone(storedIdentifier)
+          setMethod('phone')
+        }
       }
-    }
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [])
 
   const codeErr = touched.code && !code ? 'Verification code is required' : ''
   const emailErr = method === 'email' && !email ? 'Email is required' : ''
-  const phoneErr = method === 'phone' && !phone ? 'Phone number is required' : ''
 
   const handleSendCode = async () => {
     if (method === 'email' && !email) {
@@ -234,6 +237,7 @@ export default function Doctor2FAPage() {
   }
 
   const handleVerify = async () => {
+    if (verifyingRef.current || loading) return
     setTouched({ code: true })
     
     if (!code || code.length !== 6) {
@@ -253,6 +257,7 @@ export default function Doctor2FAPage() {
 
     setLoading(true)
     setAuthError('')
+    verifyingRef.current = true
 
     try {
       const tempToken = localStorage.getItem('doctor_temp_token')
@@ -276,6 +281,7 @@ export default function Doctor2FAPage() {
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'Verification failed. Please check your code and try again.')
     } finally {
+      verifyingRef.current = false
       setLoading(false)
     }
   }
@@ -496,7 +502,7 @@ export default function Doctor2FAPage() {
 
             {/* Help link */}
             <p style={{ textAlign: 'center', fontSize: '13px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
-              Didn't receive the code?{' '}
+              Didn&apos;t receive the code?{' '}
               <Link href="/support" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>
                 Contact Support
               </Link>
