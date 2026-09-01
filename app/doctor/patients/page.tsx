@@ -4,114 +4,58 @@ import { useEffect, useState } from 'react'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-
-interface Patient {
-  patient_id: string
-  name: string
-  email: string
-  phone: string
-  age: number
-  gender: string
-  last_visit: string
-  total_consultations: number
-  status: 'active' | 'inactive'
-}
-
-interface PatientsData {
-  patients: Patient[]
-  total_count: number
-  filtered_count: number
-}
-
-const dummyPatients: PatientsData = {
-  patients: [
-    {
-      patient_id: 'pat-001',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@email.com',
-      phone: '+1 555-0123',
-      age: 34,
-      gender: 'Female',
-      last_visit: '2026-08-19',
-      total_consultations: 5,
-      status: 'active'
-    },
-    {
-      patient_id: 'pat-002',
-      name: 'Michael Chen',
-      email: 'michael.chen@email.com',
-      phone: '+1 555-0124',
-      age: 45,
-      gender: 'Male',
-      last_visit: '2026-08-18',
-      total_consultations: 3,
-      status: 'active'
-    },
-    {
-      patient_id: 'pat-003',
-      name: 'Emily Davis',
-      email: 'emily.davis@email.com',
-      phone: '+1 555-0125',
-      age: 28,
-      gender: 'Female',
-      last_visit: '2026-08-15',
-      total_consultations: 2,
-      status: 'active'
-    },
-    {
-      patient_id: 'pat-004',
-      name: 'James Wilson',
-      email: 'james.wilson@email.com',
-      phone: '+1 555-0126',
-      age: 52,
-      gender: 'Male',
-      last_visit: '2026-08-10',
-      total_consultations: 8,
-      status: 'active'
-    },
-    {
-      patient_id: 'pat-005',
-      name: 'Lisa Anderson',
-      email: 'lisa.anderson@email.com',
-      phone: '+1 555-0127',
-      age: 39,
-      gender: 'Female',
-      last_visit: '2026-07-28',
-      total_consultations: 1,
-      status: 'inactive'
-    }
-  ],
-  total_count: 5,
-  filtered_count: 5
-}
+import { useRouter } from 'next/navigation'
+import {
+  clearAuthTokens,
+  getDoctorPatients,
+  isAuthError,
+  readAccessToken,
+  type DoctorPatient,
+  type DoctorPatientsResponse,
+} from '@/lib/api'
 
 export default function PatientsPage() {
-  const [patientsData, setPatientsData] = useState<PatientsData | null>(null)
+  const router = useRouter()
+  const [patientsData, setPatientsData] = useState<DoctorPatientsResponse | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!readAccessToken()) {
+      clearAuthTokens()
+      router.replace('/auth/sign-in')
+      return
+    }
+
+    let cancelled = false
+
     const fetchPatients = async () => {
       try {
-        // TODO: Replace with actual provider ID from auth
-        const providerId = 'mock-provider-id'
-        const response = await fetch(`/api/v1/doctor/patients?provider_id=${providerId}`)
-        if (response.ok) {
-          const data = await response.json()
+        const data = await getDoctorPatients()
+        if (!cancelled) {
           setPatientsData(data)
-        } else {
-          // Fall back to dummy data if API fails
-          setPatientsData(dummyPatients)
+          setError(null)
         }
-      } catch (error) {
-        // Fall back to dummy data on error
-        setPatientsData(dummyPatients)
+      } catch (err) {
+        if (isAuthError(err)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
+        console.error('Failed to load doctor patients', err)
+        if (!cancelled) setError('Unable to load patients right now.')
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     fetchPatients()
-  }, [])
+
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
   if (loading) {
     return (
@@ -121,7 +65,21 @@ export default function PatientsPage() {
     )
   }
 
+  if (error) {
+    return <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>{error}</div>
+  }
+
   if (!patientsData) return null
+
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const visiblePatients = normalizedQuery
+    ? patientsData.patients.filter((patient) =>
+        [patient.name, patient.email, patient.phone, patient.gender]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(normalizedQuery))
+      )
+    : patientsData.patients
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -152,6 +110,8 @@ export default function PatientsPage() {
             <input
               type="text"
               placeholder="Search patients..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               style={{
                 border: 'none',
                 background: 'transparent',
@@ -189,7 +149,7 @@ export default function PatientsPage() {
           padding: '20px',
         }}>
           <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Active</p>
-          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.green }}>{patientsData.patients.filter((p: Patient) => p.status === 'active').length}</p>
+          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.green }}>{patientsData.patients.filter((p: DoctorPatient) => p.status === 'active').length}</p>
         </div>
         <div style={{
           background: 'rgba(255,255,255,0.88)',
@@ -200,8 +160,8 @@ export default function PatientsPage() {
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>New This Month</p>
-          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.blue }}>2</p>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Visible Patients</p>
+          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.blue }}>{visiblePatients.length}</p>
         </div>
       </div>
 
@@ -220,7 +180,9 @@ export default function PatientsPage() {
         </div>
         <div style={{ padding: '16px 24px 24px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {patientsData.patients.map((patient: Patient) => (
+            {visiblePatients.length === 0 ? (
+              <p style={{ margin: 0, padding: '28px', textAlign: 'center', color: T.slate2, fontSize: '13px' }}>No patients found</p>
+            ) : visiblePatients.map((patient: DoctorPatient) => (
               <div key={patient.patient_id} style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -230,7 +192,7 @@ export default function PatientsPage() {
                 background: 'rgba(247,250,252,0.6)',
                 border: '1px solid rgba(4,53,77,0.04)',
                 transition: 'all 0.15s ease',
-                cursor: 'pointer'
+                cursor: 'default'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(32,181,223,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.blue, fontSize: '14px', fontWeight: 700 }}>
@@ -238,9 +200,9 @@ export default function PatientsPage() {
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{patient.name}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate2 }}>{patient.email} · {patient.phone}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate2 }}>{patient.email || 'No email'} · {patient.phone || 'No phone'}</p>
                     <p style={{ margin: '2px 0 0', fontSize: '11px', color: T.slate }}>
-                      {patient.gender}, {patient.age} years · Last visit: {formatDate(patient.last_visit)}
+                      {patient.gender || 'Unknown gender'}, {patient.age ?? 'Unknown'} years · Last visit: {patient.last_visit ? formatDate(patient.last_visit) : 'No visits yet'}
                     </p>
                   </div>
                 </div>
@@ -266,7 +228,7 @@ export default function PatientsPage() {
 
           {/* Pagination */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
-            <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Showing 1-{patientsData.patients.length} of {patientsData.patients.length} patients</p>
+            <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Showing {visiblePatients.length} of {patientsData.total_count} patients</p>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button disabled style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.9)', color: T.slate2, fontSize: '12px', fontWeight: 600, cursor: 'not-allowed', opacity: 0.5 }}>
                 Previous

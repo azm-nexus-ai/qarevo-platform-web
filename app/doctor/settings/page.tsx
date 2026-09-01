@@ -1,65 +1,112 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import {
+  clearAuthTokens,
+  getDoctorSettings,
+  isAuthError,
+  logoutCurrentUser,
+  readAccessToken,
+  updateDoctorSettings,
+  type DoctorSettingsResponse,
+  type DoctorSettingsUpdate,
+} from '@/lib/api'
 
-interface DoctorSettingsData {
-  user_id: string
-  email: string
-  phone: string | null
-  email_notifications: boolean
-  sms_notifications: boolean
-  push_notifications: boolean
-  weekly_reports: boolean
-  working_hours_start: string
-  working_hours_end: string
-  available_days: string[]
-  two_factor_enabled: boolean
-}
-
-const dummySettingsData: DoctorSettingsData = {
-  user_id: 'mock-doctor-id',
-  email: 'david.smith@qarevo.com',
-  phone: '+1 555-0199',
-  email_notifications: true,
-  sms_notifications: true,
-  push_notifications: false,
-  weekly_reports: true,
-  working_hours_start: '09:00',
-  working_hours_end: '17:00',
-  available_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-  two_factor_enabled: false
-}
+const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export default function DoctorSettingsPage() {
-  const [settingsData, setSettingsData] = useState<DoctorSettingsData | null>(null)
+  const router = useRouter()
+  const [settingsData, setSettingsData] = useState<DoctorSettingsResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!readAccessToken()) {
+      clearAuthTokens()
+      router.replace('/auth/sign-in')
+      return
+    }
+
+    let cancelled = false
+
     const fetchSettings = async () => {
       try {
-        // TODO: Replace with actual provider ID from auth
-        const providerId = 'mock-provider-id'
-        const response = await fetch(`/api/v1/doctor/settings?provider_id=${providerId}`)
-        if (response.ok) {
-          const data = await response.json()
+        const data = await getDoctorSettings()
+        if (!cancelled) {
           setSettingsData(data)
-        } else {
-          // Fall back to dummy data if API fails
-          setSettingsData(dummySettingsData)
+          setError(null)
         }
-      } catch (error) {
-        // Fall back to dummy data on error
-        setSettingsData(dummySettingsData)
+      } catch (err) {
+        if (isAuthError(err)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
+        console.error('Failed to load doctor settings', err)
+        if (!cancelled) setError('Unable to load settings right now.')
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     fetchSettings()
-  }, [])
+
+    return () => {
+      cancelled = true
+    }
+  }, [router])
+
+  const updateDraft = <K extends keyof DoctorSettingsResponse>(key: K, value: DoctorSettingsResponse[K]) => {
+    setSettingsData((current) => current ? { ...current, [key]: value } : current)
+    setMessage(null)
+    setError(null)
+  }
+
+  const saveSettings = async (payload: DoctorSettingsUpdate, successMessage: string) => {
+    setSaving(true)
+    try {
+      const saved = await updateDoctorSettings(payload)
+      setSettingsData(saved)
+      setMessage(successMessage)
+      setError(null)
+    } catch (err) {
+      if (isAuthError(err)) {
+        clearAuthTokens()
+        router.replace('/auth/sign-in')
+        return
+      }
+      console.error('Failed to save doctor settings', err)
+      setError('Unable to save settings right now.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleDay = (day: string) => {
+    if (!settingsData) return
+    const selected = settingsData.available_days.includes(day)
+    const nextDays = selected
+      ? settingsData.available_days.filter((item) => item !== day)
+      : [...settingsData.available_days, day]
+    updateDraft('available_days', WEEK_DAYS.filter((item) => nextDays.includes(item)))
+  }
+
+  const handleLogout = async () => {
+    setSaving(true)
+    try {
+      await logoutCurrentUser()
+    } catch (err) {
+      console.error('Logout failed before local cleanup', err)
+    } finally {
+      router.replace('/auth/sign-in')
+    }
+  }
 
   if (loading) {
     return (
@@ -69,13 +116,20 @@ export default function DoctorSettingsPage() {
     )
   }
 
+  if (error && !settingsData) {
+    return <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>{error}</div>
+  }
+
   if (!settingsData) return null
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
       <div>
         <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Settings</h1>
         <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage your account and preferences</p>
+        {message && <p style={{ margin: '8px 0 0', fontSize: '13px', fontWeight: 600, color: T.green }}>{message}</p>}
+        {error && <p style={{ margin: '8px 0 0', fontSize: '13px', fontWeight: 600, color: T.red }}>{error}</p>}
       </div>
 
       {/* Settings Sections */}
@@ -101,7 +155,8 @@ export default function DoctorSettingsPage() {
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>Email Address</label>
               <input
                 type="email"
-                defaultValue={settingsData.email}
+                value={settingsData.email || ''}
+                onChange={(event) => updateDraft('email', event.target.value)}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', fontSize: '13px', color: T.navy, outline: 'none' }}
               />
             </div>
@@ -109,12 +164,17 @@ export default function DoctorSettingsPage() {
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>Phone Number</label>
               <input
                 type="tel"
-                defaultValue={settingsData.phone || ''}
+                value={settingsData.phone || ''}
+                onChange={(event) => updateDraft('phone', event.target.value)}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', fontSize: '13px', color: T.navy, outline: 'none' }}
               />
             </div>
-            <button style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}>
-              Update Account
+            <button
+              disabled={saving}
+              onClick={() => saveSettings({ email: settingsData.email || '', phone: settingsData.phone || '' }, 'Account settings updated.')}
+              style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', marginTop: '8px', opacity: saving ? 0.7 : 1 }}
+            >
+              {saving ? 'Saving...' : 'Update Account'}
             </button>
           </div>
         </div>
@@ -136,19 +196,36 @@ export default function DoctorSettingsPage() {
             <h3 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Notifications</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {[
-              { label: 'Email notifications for new appointments', checked: settingsData.email_notifications },
-              { label: 'SMS reminders for scheduled consultations', checked: settingsData.sms_notifications },
-              { label: 'Push notifications for urgent messages', checked: settingsData.push_notifications },
-              { label: 'Weekly summary reports', checked: settingsData.weekly_reports },
-            ].map((item, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '13px', color: T.navy }}>{item.label}</span>
-                <div style={{ width: '44px', height: '24px', borderRadius: '12px', background: item.checked ? T.green : 'rgba(4,53,77,0.12)', position: 'relative', cursor: 'pointer', transition: 'all 0.15s' }}>
+              {[
+                { key: 'email_notifications' as const, label: 'Email notifications for new appointments', checked: settingsData.email_notifications },
+                { key: 'sms_notifications' as const, label: 'SMS reminders for scheduled consultations', checked: settingsData.sms_notifications },
+                { key: 'push_notifications' as const, label: 'Push notifications for urgent messages', checked: settingsData.push_notifications },
+                { key: 'weekly_reports' as const, label: 'Weekly summary reports', checked: settingsData.weekly_reports },
+              ].map((item, index) => (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '13px', color: T.navy }}>{item.label}</span>
+                <button
+                  type="button"
+                  onClick={() => updateDraft(item.key, !item.checked)}
+                  style={{ width: '44px', height: '24px', borderRadius: '12px', border: 'none', background: item.checked ? T.green : 'rgba(4,53,77,0.12)', position: 'relative', cursor: 'pointer', transition: 'all 0.15s' }}
+                  aria-label={item.label}
+                >
                   <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: item.checked ? '22px' : '2px', transition: 'all 0.15s', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
-                </div>
+                </button>
               </div>
             ))}
+            <button
+              disabled={saving}
+              onClick={() => saveSettings({
+                email_notifications: settingsData.email_notifications,
+                sms_notifications: settingsData.sms_notifications,
+                push_notifications: settingsData.push_notifications,
+                weekly_reports: settingsData.weekly_reports,
+              }, 'Notification preferences updated.')}
+              style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', marginTop: '8px', opacity: saving ? 0.7 : 1 }}
+            >
+              {saving ? 'Saving...' : 'Save Notifications'}
+            </button>
           </div>
         </div>
 
@@ -169,14 +246,14 @@ export default function DoctorSettingsPage() {
             <h3 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Security</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <button style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
+            <button onClick={() => router.push('/auth/forgot-password')} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
               Change Password
             </button>
-            <button style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
-              Enable Two-Factor Authentication
+            <button onClick={() => setMessage('Two-factor authentication is enforced during secure doctor login.')} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
+              {settingsData.two_factor_enabled ? 'Two-Factor Authentication Enabled' : 'Two-Factor Authentication'}
             </button>
-            <button style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(220,38,38,0.05)', color: T.red, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
-              Sign Out All Devices
+            <button disabled={saving} onClick={handleLogout} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(220,38,38,0.05)', color: T.red, fontSize: '13px', fontWeight: 600, cursor: saving ? 'wait' : 'pointer', textAlign: 'left', opacity: saving ? 0.7 : 1 }}>
+              Sign Out Current Device
             </button>
           </div>
         </div>
@@ -203,13 +280,15 @@ export default function DoctorSettingsPage() {
               <div style={{ display: 'flex', gap: '12px' }}>
                 <input
                   type="time"
-                  defaultValue={settingsData.working_hours_start}
+                  value={settingsData.working_hours_start}
+                  onChange={(event) => updateDraft('working_hours_start', event.target.value)}
                   style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', fontSize: '13px', color: T.navy, outline: 'none' }}
                 />
                 <span style={{ display: 'flex', alignItems: 'center', color: T.slate2 }}>to</span>
                 <input
                   type="time"
-                  defaultValue={settingsData.working_hours_end}
+                  value={settingsData.working_hours_end}
+                  onChange={(event) => updateDraft('working_hours_end', event.target.value)}
                   style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', fontSize: '13px', color: T.navy, outline: 'none' }}
                 />
               </div>
@@ -217,20 +296,31 @@ export default function DoctorSettingsPage() {
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>Available Days</label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {settingsData.available_days.map((day) => (
-                  <button key={day} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid T.blue', background: 'rgba(32,181,223,0.12)', color: T.blue, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                {WEEK_DAYS.map((day) => {
+                  const selected = settingsData.available_days.includes(day)
+                  return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleDay(day)}
+                    style={{ padding: '8px 14px', borderRadius: '8px', border: selected ? `1px solid ${T.blue}` : '1px solid rgba(4,53,77,0.12)', background: selected ? 'rgba(32,181,223,0.12)' : 'rgba(255,255,255,0.9)', color: selected ? T.blue : T.slate2, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                  >
                     {day}
                   </button>
-                ))}
-                {['Sat', 'Sun'].filter(day => !settingsData.available_days.includes(day)).map((day) => (
-                  <button key={day} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.slate2, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-                    {day}
-                  </button>
-                ))}
+                  )
+                })}
               </div>
             </div>
-            <button style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}>
-              Update Availability
+            <button
+              disabled={saving}
+              onClick={() => saveSettings({
+                working_hours_start: settingsData.working_hours_start,
+                working_hours_end: settingsData.working_hours_end,
+                available_days: settingsData.available_days,
+              }, 'Availability updated.')}
+              style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', marginTop: '8px', opacity: saving ? 0.7 : 1 }}
+            >
+              {saving ? 'Saving...' : 'Update Availability'}
             </button>
           </div>
         </div>

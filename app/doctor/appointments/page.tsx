@@ -1,89 +1,58 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
-
-interface AppointmentSummary {
-  appointment_id: string
-  patient_id: string
-  patient_name: string
-  start_at: string
-  end_at: string
-  status: string
-  consultation_id: string | null
-  consultation_modality: string | null
-}
-
-interface AppointmentsData {
-  appointments: AppointmentSummary[]
-  total_count: number
-  filtered_count: number
-}
-
-const dummyAppointmentsData: AppointmentsData = {
-  appointments: [
-    {
-      appointment_id: 'apt-001',
-      patient_id: 'pat-001',
-      patient_name: 'Sarah Johnson',
-      start_at: '2026-08-20T14:30:00',
-      end_at: '2026-08-20T15:00:00',
-      status: 'booked',
-      consultation_id: 'cons-001',
-      consultation_modality: 'video'
-    },
-    {
-      appointment_id: 'apt-002',
-      patient_id: 'pat-002',
-      patient_name: 'Michael Chen',
-      start_at: '2026-08-20T15:00:00',
-      end_at: '2026-08-20T15:45:00',
-      status: 'booked',
-      consultation_id: null,
-      consultation_modality: 'in-person'
-    },
-    {
-      appointment_id: 'apt-003',
-      patient_id: 'pat-003',
-      patient_name: 'Emily Davis',
-      start_at: '2026-08-20T16:30:00',
-      end_at: '2026-08-20T17:00:00',
-      status: 'booked',
-      consultation_id: null,
-      consultation_modality: 'video'
-    },
-    {
-      appointment_id: 'apt-004',
-      patient_id: 'pat-004',
-      patient_name: 'James Wilson',
-      start_at: '2026-08-21T09:00:00',
-      end_at: '2026-08-21T09:30:00',
-      status: 'booked',
-      consultation_id: null,
-      consultation_modality: 'video'
-    },
-    {
-      appointment_id: 'apt-005',
-      patient_id: 'pat-005',
-      patient_name: 'Lisa Anderson',
-      start_at: '2026-08-21T10:30:00',
-      end_at: '2026-08-21T11:00:00',
-      status: 'booked',
-      consultation_id: null,
-      consultation_modality: 'in-person'
-    }
-  ],
-  total_count: 5,
-  filtered_count: 5
-}
+import {
+  clearAuthTokens,
+  getDoctorAppointments,
+  isAuthError,
+  readAccessToken,
+  type DoctorAppointmentsResponse,
+} from '@/lib/api'
 
 export default function DoctorAppointments() {
   const router = useRouter()
-  const [appointmentsData] = useState<AppointmentsData>(dummyAppointmentsData)
+  const [appointmentsData, setAppointmentsData] = useState<DoctorAppointmentsResponse | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!readAccessToken()) {
+      clearAuthTokens()
+      router.replace('/auth/sign-in')
+      return
+    }
+
+    let cancelled = false
+
+    async function fetchAppointments() {
+      setLoading(true)
+      try {
+        const data = await getDoctorAppointments(statusFilter || undefined)
+        if (!cancelled) {
+          setAppointmentsData(data)
+          setError(null)
+        }
+      } catch (err) {
+        if (isAuthError(err)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
+        console.error('Failed to load doctor appointments', err)
+        if (!cancelled) setError('Unable to load appointments right now.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchAppointments()
+
+    return () => {
+      cancelled = true
+    }
+  }, [router, statusFilter])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -112,6 +81,14 @@ export default function DoctorAppointments() {
 
   const handleViewDetails = (appointmentId: string) => {
     router.push(`/doctor/appointments/${appointmentId}`)
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64 text-gray-500">Loading appointments...</div>
+  }
+
+  if (error) {
+    return <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">{error}</div>
   }
 
   if (!appointmentsData) return null

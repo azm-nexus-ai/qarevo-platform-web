@@ -2,50 +2,56 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-
-interface AppointmentDetail {
-  appointment_id: string
-  patient_id: string
-  patient_name: string
-  patient_email: string | null
-  patient_phone: string | null
-  start_at: string
-  end_at: string
-  status: string
-  consultation_id: string | null
-  consultation_modality: string | null
-  consultation_status: string | null
-  created_at: string
-}
+import {
+  clearAuthTokens,
+  getDoctorAppointment,
+  isAuthError,
+  readAccessToken,
+  updateDoctorAppointmentStatus,
+  type DoctorAppointmentDetail,
+} from '@/lib/api'
 
 export default function AppointmentDetailPage() {
   const router = useRouter()
   const params = useParams()
   const appointmentId = params.appointmentId as string
   
-  const [appointmentData, setAppointmentData] = useState<AppointmentDetail | null>(null)
+  const [appointmentData, setAppointmentData] = useState<DoctorAppointmentDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => {
-    // TODO: Replace with actual provider ID from auth
-    const providerId = 'mock-provider-id'
-    
-    fetch(`/api/v1/doctor/appointments/${appointmentId}?provider_id=${providerId}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch appointment details')
-        return res.json()
-      })
-      .then(data => {
-        setAppointmentData(data)
-        setLoading(false)
-      })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [appointmentId])
+    if (!readAccessToken()) {
+      clearAuthTokens()
+      router.replace('/auth/sign-in')
+      return
+    }
+
+    let cancelled = false
+
+    async function fetchAppointment() {
+      try {
+        const data = await getDoctorAppointment(appointmentId)
+        if (!cancelled) setAppointmentData(data)
+      } catch (err) {
+        if (isAuthError(err)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
+        setError(err instanceof Error ? err.message : 'Failed to fetch appointment details')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchAppointment()
+
+    return () => {
+      cancelled = true
+    }
+  }, [appointmentId, router])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -57,30 +63,22 @@ export default function AppointmentDetailPage() {
     })
   }
 
-  const handleStatusUpdate = (newStatus: string) => {
+  const handleStatusUpdate = async (newStatus: string) => {
     setUpdatingStatus(true)
-    // TODO: Replace with actual provider ID from auth
-    const providerId = 'mock-provider-id'
-    
-    fetch(`/api/v1/doctor/appointments/${appointmentId}/status?provider_id=${providerId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status: newStatus }),
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to update status')
-        return res.json()
-      })
-      .then(data => {
-        setAppointmentData(data)
-        setUpdatingStatus(false)
-      })
-      .catch(err => {
-        setError(err.message)
-        setUpdatingStatus(false)
-      })
+    try {
+      const data = await updateDoctorAppointmentStatus(appointmentId, newStatus)
+      setAppointmentData(data)
+      setError(null)
+    } catch (err) {
+      if (isAuthError(err)) {
+        clearAuthTokens()
+        router.replace('/auth/sign-in')
+        return
+      }
+      setError(err instanceof Error ? err.message : 'Failed to update status')
+    } finally {
+      setUpdatingStatus(false)
+    }
   }
 
   const handleBack = () => {

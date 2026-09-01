@@ -2,55 +2,54 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-
-interface ConsultationDetail {
-  consultation_id: string
-  patient_id: string
-  patient_name: string
-  patient_email: string | null
-  patient_phone: string | null
-  scheduled_time: string | null
-  started_at: string | null
-  ended_at: string | null
-  status: string
-  consultation_modality: string | null
-  appointment_id: string | null
-  video_session_id: string | null
-}
-
-interface ConsultationDetailData {
-  consultation: ConsultationDetail
-  can_join_video: boolean
-  can_complete: boolean
-}
+import {
+  clearAuthTokens,
+  getDoctorConsultation,
+  isAuthError,
+  readAccessToken,
+  type DoctorConsultationDetailResponse,
+} from '@/lib/api'
 
 export default function ConsultationDetailPage() {
   const router = useRouter()
   const params = useParams()
   const consultationId = params.consultationId as string
   
-  const [consultationData, setConsultationData] = useState<ConsultationDetailData | null>(null)
+  const [consultationData, setConsultationData] = useState<DoctorConsultationDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // TODO: Replace with actual provider ID from auth
-    const providerId = 'mock-provider-id'
-    
-    fetch(`/api/v1/doctor/workspace/${consultationId}?provider_id=${providerId}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch consultation details')
-        return res.json()
-      })
-      .then(data => {
-        setConsultationData(data)
-        setLoading(false)
-      })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [consultationId])
+    if (!readAccessToken()) {
+      clearAuthTokens()
+      router.replace('/auth/sign-in')
+      return
+    }
+
+    let cancelled = false
+
+    async function fetchConsultation() {
+      try {
+        const data = await getDoctorConsultation(consultationId)
+        if (!cancelled) setConsultationData(data)
+      } catch (err) {
+        if (isAuthError(err)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
+        setError(err instanceof Error ? err.message : 'Failed to fetch consultation details')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchConsultation()
+
+    return () => {
+      cancelled = true
+    }
+  }, [consultationId, router])
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Not set'

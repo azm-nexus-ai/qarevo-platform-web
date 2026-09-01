@@ -1,75 +1,57 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
-
-interface DoctorProfileData {
-  user_id: string
-  username: string
-  email: string
-  phone: string | null
-  specialty: string
-  experience_years: number
-  license_number: string
-  license_verified: boolean
-  is_independent: boolean
-  address: string | null
-  city: string | null
-  state: string | null
-  country: string | null
-  total_consultations: number
-  patient_rating: number
-  years_active: number
-}
-
-const dummyProfileData: DoctorProfileData = {
-  user_id: 'mock-doctor-id',
-  username: 'david.smith',
-  email: 'david.smith@qarevo.com',
-  phone: '+1 555-0199',
-  specialty: 'Cardiology',
-  experience_years: 15,
-  license_number: 'MD-12345-67890',
-  license_verified: true,
-  is_independent: true,
-  address: '123 Medical Center Dr',
-  city: 'New York',
-  state: 'NY',
-  country: 'USA',
-  total_consultations: 1247,
-  patient_rating: 4.9,
-  years_active: 15
-}
+import {
+  clearAuthTokens,
+  getDoctorProfile,
+  isAuthError,
+  readAccessToken,
+  type DoctorProfileResponse,
+} from '@/lib/api'
 
 export default function DoctorProfilePage() {
-  const [profileData, setProfileData] = useState<DoctorProfileData | null>(null)
+  const router = useRouter()
+  const [profileData, setProfileData] = useState<DoctorProfileResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!readAccessToken()) {
+      clearAuthTokens()
+      router.replace('/auth/sign-in')
+      return
+    }
+
+    let cancelled = false
+
     const fetchProfile = async () => {
       try {
-        // TODO: Replace with actual provider ID from auth
-        const providerId = 'mock-provider-id'
-        const response = await fetch(`/api/v1/doctor/profile?provider_id=${providerId}`)
-        if (response.ok) {
-          const data = await response.json()
+        const data = await getDoctorProfile()
+        if (!cancelled) {
           setProfileData(data)
-        } else {
-          // Fall back to dummy data if API fails
-          setProfileData(dummyProfileData)
+          setError(null)
         }
-      } catch (error) {
-        // Fall back to dummy data on error
-        setProfileData(dummyProfileData)
+      } catch (err) {
+        if (isAuthError(err)) {
+          clearAuthTokens()
+          router.replace('/auth/sign-in')
+          return
+        }
+        console.error('Failed to load doctor profile', err)
+        if (!cancelled) setError('Unable to load profile right now.')
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     fetchProfile()
-  }, [])
+
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
   if (loading) {
     return (
@@ -79,7 +61,16 @@ export default function DoctorProfilePage() {
     )
   }
 
+  if (error) {
+    return <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>{error}</div>
+  }
+
   if (!profileData) return null
+
+  const profileName = profileData.full_name || 'Doctor'
+  const profileInitials = profileName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'DR'
+  const displayName = profileName.toLowerCase().startsWith('dr.') ? profileName : `Dr. ${profileName}`
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
@@ -100,21 +91,21 @@ export default function DoctorProfilePage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
           <div style={{ width: '100px', height: '100px', borderRadius: '16px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 24px rgba(32,181,223,0.3)' }}>
-            {profileData.username.split('.').map((n: string) => n[0]).join('').toUpperCase()}
+            {profileInitials}
           </div>
           <div style={{ flex: 1 }}>
-            <h2 style={{ margin: '0 0 4px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Dr. {profileData.username.split('.').map((n: string) => n.charAt(0).toUpperCase() + n.slice(1)).join(' ')}</h2>
-            <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{profileData.specialty} · Qarevo Virtual Clinic</p>
+            <h2 style={{ margin: '0 0 4px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{displayName}</h2>
+            <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{profileData.specialty || 'General Practice'} · {profileData.hospital || 'Qarevo Virtual Clinic'}</p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <span style={{ padding: '6px 12px', borderRadius: '999px', background: 'rgba(15,158,119,0.12)', color: T.green, fontSize: '12px', fontWeight: 700 }}>
                 {profileData.license_verified ? 'VERIFIED' : 'UNVERIFIED'}
               </span>
               <span style={{ padding: '6px 12px', borderRadius: '999px', background: 'rgba(32,181,223,0.12)', color: T.blue, fontSize: '12px', fontWeight: 700 }}>
-                {profileData.experience_years} YEARS EXPERIENCE
+                {profileData.experience_years ?? 0} YEARS EXPERIENCE
               </span>
             </div>
           </div>
-          <button style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => router.push('/doctor/settings')} style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
             Edit Profile
           </button>
         </div>
@@ -123,11 +114,11 @@ export default function DoctorProfilePage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Specialty</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.specialty}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.specialty || 'Not provided'}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>License Number</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.license_number}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.license_number || 'Not provided'}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</p>
@@ -143,7 +134,7 @@ export default function DoctorProfilePage() {
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Languages</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>English, Spanish</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.languages || 'Not provided'}</p>
           </div>
         </div>
       </div>
