@@ -29,6 +29,7 @@ export const DOCTOR_SIDEBAR_ITEMS: DoctorNavItem[] = [
   { label: 'Profile', icon: ICONS.shield, href: DOCTOR_ROUTES.profile },
   { label: 'Settings', icon: ICONS.info, href: DOCTOR_ROUTES.settings },
   { label: 'Help & Support', icon: ICONS.shield, href: DOCTOR_ROUTES.support },
+  { label: 'Logout', icon: ICONS.logout, href: DOCTOR_ROUTES.logout },
 ]
 
 export function isDoctorNavActive(pathname: string, href: string) {

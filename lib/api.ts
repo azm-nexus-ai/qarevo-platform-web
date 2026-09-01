@@ -508,6 +508,7 @@ export type DoctorDashboardResponse = {
 export type DoctorProfileResponse = {
     user_id: string;
     provider_id: string;
+    full_name: string;
     username: string;
     email: string;
     phone: string | null;
