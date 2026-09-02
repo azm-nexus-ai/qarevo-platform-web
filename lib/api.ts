@@ -403,6 +403,11 @@ export type EpisodeResponse = {
 export type IntakeSubmitResponse = {
     success: boolean;
     message?: string;
+    ai_draft?: {
+        job_id?: string;
+        status?: string;
+        [key: string]: unknown;
+    } | null;
 };
 
 export type MedicalRecordUploadResponse = {
@@ -503,6 +508,52 @@ export type DoctorDashboardResponse = {
     recent_appointments: DoctorRecentAppointment[];
     recent_consultations: DoctorRecentConsultation[];
     current_date: string;
+};
+
+export type DoctorEpisodePatient = {
+    patient_id: string | null;
+    patient_user_id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+};
+
+export type DoctorEpisodeSummary = {
+    episode_id: string;
+    patient: DoctorEpisodePatient;
+    consultation_id: string | null;
+    status: string;
+    pack_id: string;
+    pack_version: string;
+    flow_type: string;
+    matching_mode: string;
+    verification_verified_count: number;
+    verification_total_count: number;
+    veo_ready: boolean;
+    doctor_notes_present: boolean;
+    intake_submitted_at: string | null;
+    chief_complaint: string | null;
+    latest_ai_job_id: string | null;
+    latest_ai_job_status: string | null;
+    ai_draft_ready: boolean;
+    created_at: string;
+    submitted_at: string | null;
+    expires_at: string | null;
+};
+
+export type DoctorEpisodeListResponse = {
+    episodes: DoctorEpisodeSummary[];
+    total_count: number;
+    filtered_count: number;
+};
+
+export type DoctorEpisodeClinicalContextResponse = {
+    episode: DoctorEpisodeSummary;
+    intake: Record<string, unknown> | null;
+    field_values: Array<Record<string, unknown>>;
+    ai_drafts: Array<Record<string, unknown>>;
+    ai_available: boolean;
+    ai_error: string | null;
 };
 
 export type DoctorProfileResponse = {
@@ -644,6 +695,21 @@ export type DoctorPatientsResponse = {
 
 export async function getDoctorDashboard(): Promise<DoctorDashboardResponse> {
     return apiGet<DoctorDashboardResponse>("/api/v1/doctor/dashboard");
+}
+
+export async function getDoctorEpisodes(status?: string, limit = 25): Promise<DoctorEpisodeListResponse> {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    params.set("limit", String(limit));
+    return apiGet<DoctorEpisodeListResponse>(`/api/v1/doctor/episodes?${params.toString()}`);
+}
+
+export async function getDoctorEpisodeClinicalContext(
+    episodeId: string,
+): Promise<DoctorEpisodeClinicalContextResponse> {
+    return apiGet<DoctorEpisodeClinicalContextResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/clinical-context`,
+    );
 }
 
 export async function getDoctorProfile(): Promise<DoctorProfileResponse> {

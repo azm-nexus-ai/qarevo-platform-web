@@ -4,15 +4,18 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   clearAuthTokens,
+  getDoctorEpisodes,
   getDoctorWorkspace,
   isAuthError,
   readAccessToken,
+  type DoctorEpisodeListResponse,
   type DoctorWorkspaceResponse,
 } from '@/lib/api'
 
 export default function PhysicianWorkspace() {
   const router = useRouter()
   const [workspaceData, setWorkspaceData] = useState<DoctorWorkspaceResponse | null>(null)
+  const [episodeData, setEpisodeData] = useState<DoctorEpisodeListResponse | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -29,9 +32,13 @@ export default function PhysicianWorkspace() {
     async function fetchWorkspace() {
       setLoading(true)
       try {
-        const data = await getDoctorWorkspace(statusFilter || undefined)
+        const [data, episodes] = await Promise.all([
+          getDoctorWorkspace(statusFilter || undefined),
+          getDoctorEpisodes(statusFilter || undefined),
+        ])
         if (!cancelled) {
           setWorkspaceData(data)
+          setEpisodeData(episodes)
           setError(null)
         }
       } catch (err) {
@@ -84,6 +91,10 @@ export default function PhysicianWorkspace() {
     router.push(`/doctor/workspace/${consultationId}`)
   }
 
+  const handleEpisodeClick = (episodeId: string) => {
+    router.push(`/doctor/episodes/${episodeId}`)
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-gray-500">Loading workspace...</div>
   }
@@ -118,7 +129,7 @@ export default function PhysicianWorkspace() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm font-medium text-gray-600">Total Consultations</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">{workspaceData.total_count}</p>
@@ -132,6 +143,10 @@ export default function PhysicianWorkspace() {
           <p className="text-3xl font-bold text-gray-900 mt-2">
             {workspaceData.consultations.filter(c => c.status === 'in_progress').length}
           </p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <p className="text-sm font-medium text-gray-600">Assigned Episodes</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">{episodeData?.total_count || 0}</p>
         </div>
       </div>
 
@@ -174,6 +189,54 @@ export default function PhysicianWorkspace() {
                     <span className="text-gray-400">→</span>
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Clinical Workflow Episodes */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Clinical Workflow Episodes</h3>
+          <p className="text-sm text-gray-500 mt-1">Assigned CWS episodes with intake and AI draft readiness.</p>
+        </div>
+        <div className="p-6">
+          {!episodeData || episodeData.episodes.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No assigned episodes found</p>
+          ) : (
+            <div className="space-y-4">
+              {episodeData.episodes.map((episode) => (
+                <button
+                  key={episode.episode_id}
+                  type="button"
+                  onClick={() => handleEpisodeClick(episode.episode_id)}
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors text-left"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center">
+                      <span className="text-cyan-700 font-semibold">
+                        {episode.patient.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{episode.patient.name}</p>
+                      <p className="text-sm text-gray-500">{episode.chief_complaint || episode.status.replaceAll('_', ' ')}</p>
+                      {episode.intake_submitted_at && (
+                        <p className="text-xs text-cyan-700 mt-1">Intake submitted: {formatDate(episode.intake_submitted_at)}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${episode.ai_draft_ready ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {episode.ai_draft_ready ? 'AI READY' : episode.latest_ai_job_status?.toUpperCase() || 'NO AI DRAFT'}
+                    </span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(episode.status)}`}>
+                      {episode.status.replaceAll('_', ' ').toUpperCase()}
+                    </span>
+                    <span className="text-gray-400">→</span>
+                  </div>
+                </button>
               ))}
             </div>
           )}

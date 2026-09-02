@@ -8,9 +8,12 @@ import Ico from '@/components/ui/Ico'
 import {
   clearAuthTokens,
   getDoctorDashboard,
+  getDoctorEpisodes,
   isAuthError,
   readAccessToken,
   type DoctorDashboardResponse,
+  type DoctorEpisodeListResponse,
+  type DoctorEpisodeSummary,
   type DoctorRecentAppointment,
   type DoctorRecentConsultation,
 } from '@/lib/api'
@@ -167,9 +170,74 @@ function ActivityCard({ title, items, type, onNavigate }: { title: string; items
   )
 }
 
+function ClinicalEpisodeCard({ episodes, onNavigate }: { episodes: DoctorEpisodeSummary[]; onNavigate: (href: string) => void }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.88)',
+      backdropFilter: 'blur(22px) saturate(175%)',
+      WebkitBackdropFilter: 'blur(22px) saturate(175%)',
+      borderRadius: '20px',
+      border: '1px solid rgba(255,255,255,0.88)',
+      boxShadow: Sh.card,
+      overflow: 'hidden',
+    }}>
+      <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Clinical Workflow Episodes</h3>
+          <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate2 }}>CWS intake and AI draft status for assigned patients</p>
+        </div>
+        <button type="button" onClick={() => onNavigate('/doctor/workspace')} style={{ border: 'none', background: 'transparent', color: T.blue, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+          Open Workspace →
+        </button>
+      </div>
+      <div style={{ padding: '16px 24px 24px' }}>
+        {episodes.length === 0 ? (
+          <div style={{ padding: '32px', textAlign: 'center', color: T.slate2, fontSize: '13px' }}>No assigned clinical workflow episodes</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {episodes.map((episode) => (
+              <button
+                key={episode.episode_id}
+                type="button"
+                onClick={() => onNavigate(`/doctor/episodes/${episode.episode_id}`)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 16px',
+                  borderRadius: '14px',
+                  background: 'rgba(247,250,252,0.6)',
+                  border: '1px solid rgba(4,53,77,0.04)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <div>
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{episode.patient.name}</p>
+                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: T.slate2 }}>
+                    {episode.chief_complaint || episode.status.replaceAll('_', ' ')}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: episode.ai_draft_ready ? 'rgba(15,158,119,0.12)' : 'rgba(32,181,223,0.12)', color: episode.ai_draft_ready ? T.green : T.blue }}>
+                    {episode.ai_draft_ready ? 'AI READY' : episode.latest_ai_job_status?.toUpperCase() || 'NO AI DRAFT'}
+                  </span>
+                  <span style={{ color: T.slate2 }}>→</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function DoctorDashboard() {
   const router = useRouter()
   const [dashboardData, setDashboardData] = useState<DoctorDashboardResponse | null>(null)
+  const [episodeData, setEpisodeData] = useState<DoctorEpisodeListResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -184,9 +252,13 @@ export default function DoctorDashboard() {
 
     async function fetchDashboard() {
       try {
-        const data = await getDoctorDashboard()
+        const [data, episodes] = await Promise.all([
+          getDoctorDashboard(),
+          getDoctorEpisodes(undefined, 5),
+        ])
         if (!cancelled) {
           setDashboardData(data)
+          setEpisodeData(episodes)
           setError(null)
         }
       } catch (err) {
@@ -242,6 +314,8 @@ export default function DoctorDashboard() {
         <ActivityCard title="Recent Appointments" items={dashboardData.recent_appointments} type="appointments" onNavigate={router.push} />
         <ActivityCard title="Recent Consultations" items={dashboardData.recent_consultations} type="consultations" onNavigate={router.push} />
       </div>
+
+      <ClinicalEpisodeCard episodes={episodeData?.episodes || []} onNavigate={router.push} />
     </div>
   )
 }
