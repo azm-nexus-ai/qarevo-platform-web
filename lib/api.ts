@@ -685,6 +685,15 @@ export async function getDoctorConsultation(consultationId: string): Promise<Doc
     return apiGet<DoctorConsultationDetailResponse>(`/api/v1/doctor/workspace/${consultationId}`);
 }
 
+export async function completeDoctorConsultation(
+    consultationId: string,
+): Promise<DoctorConsultationDetailResponse> {
+    return apiPut<DoctorConsultationDetailResponse, Record<string, never>>(
+        `/api/v1/doctor/workspace/${consultationId}/complete`,
+        {},
+    );
+}
+
 export async function getDoctorPatients(status?: string): Promise<DoctorPatientsResponse> {
     const params = status ? `?status=${encodeURIComponent(status)}` : "";
     return apiGet<DoctorPatientsResponse>(`/api/v1/doctor/patients${params}`);

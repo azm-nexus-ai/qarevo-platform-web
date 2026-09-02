@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import {
   clearAuthTokens,
+  completeDoctorConsultation,
   getDoctorConsultation,
   isAuthError,
   readAccessToken,
@@ -17,6 +18,7 @@ export default function ConsultationDetailPage() {
   
   const [consultationData, setConsultationData] = useState<DoctorConsultationDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [completing, setCompleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -67,9 +69,23 @@ export default function ConsultationDetailPage() {
     router.push(`/doctor/video-consultation/${consultationId}`)
   }
 
-  const handleComplete = () => {
-    // TODO: Implement consultation completion
-    alert('Consultation completion not yet implemented')
+  const handleComplete = async () => {
+    setCompleting(true)
+    setError(null)
+
+    try {
+      const data = await completeDoctorConsultation(consultationId)
+      setConsultationData(data)
+    } catch (err) {
+      if (isAuthError(err)) {
+        clearAuthTokens()
+        router.replace('/auth/sign-in')
+        return
+      }
+      setError(err instanceof Error ? err.message : 'Failed to complete consultation')
+    } finally {
+      setCompleting(false)
+    }
   }
 
   const handleBack = () => {
@@ -130,9 +146,10 @@ export default function ConsultationDetailPage() {
           {can_complete && (
             <button
               onClick={handleComplete}
+              disabled={completing}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
-              Complete Consultation
+              {completing ? 'Completing...' : 'Complete Consultation'}
             </button>
           )}
         </div>
