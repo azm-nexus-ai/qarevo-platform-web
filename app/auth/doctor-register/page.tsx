@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useId } from 'react'
+import { useEffect, useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { ApiError, getApiErrorDetail, registerDoctor, type DoctorRegisterRequest } from '@/lib/api'
+import { ApiError, checkDoctorUsernameAvailability, getApiErrorDetail, registerDoctor, type DoctorRegisterRequest } from '@/lib/api'
 
 // Page background
 const PAGE_BG = [
@@ -31,6 +31,11 @@ function getStrength(pw: string) {
   const colors = ['', T.red, T.amber, '#2563EB', T.green, T.green]
   return { checks, score, label: levels[score] ?? '', color: colors[score] ?? T.slate2 }
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const USERNAME_RE = /^[a-z0-9._-]+$/
+const COUNTRY_CODE_RE = /^\+\d{1,4}$/
+const PHONE_RE = /^\d+$/
 
 function getFriendlyDoctorRegisterError(error: unknown) {
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
@@ -204,6 +209,9 @@ export default function DoctorRegisterPage() {
   const [firstName, setFirstName] = useState('')
   const [middleName, setMiddleName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [username, setUsername] = useState('')
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [usernameChecking, setUsernameChecking] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -225,32 +233,85 @@ export default function DoctorRegisterPage() {
   const [touched, setTouched] = useState({
     firstName: false,
     lastName: false,
+    username: false,
     email: false,
     password: false,
+    countryCode: false,
     phone: false,
+    dateOfBirth: false,
+    gender: false,
     licenseNumber: false,
   })
   
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
 
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const normalizedUsername = username.trim().toLowerCase()
+  const usernameErr = touched.username && normalizedUsername && !USERNAME_RE.test(normalizedUsername)
+    ? 'Use letters, numbers, dots, underscores, or hyphens only'
+    : touched.username && normalizedUsername.length > 0 && normalizedUsername.length < 3
+    ? 'Username must be at least 3 characters'
+    : touched.username && usernameAvailable === false
+    ? 'This username is already taken'
+    : ''
   const emailErr = touched.email && !EMAIL_RE.test(email) ? 'Enter a valid email address' : ''
   const passErr = touched.password && password.length < 8 ? 'Password must be at least 8 characters' : ''
+  const countryCodeErr = touched.countryCode && !COUNTRY_CODE_RE.test(countryCode.trim()) ? 'Use a valid country code, like +49' : ''
+  const phoneErr = touched.phone && !PHONE_RE.test(phone.trim()) ? 'Phone number is required and must contain digits only' : ''
+  const dateOfBirthErr = touched.dateOfBirth && !dateOfBirth ? 'Date of birth is required' : ''
+  const genderErr = touched.gender && !gender.trim() ? 'Gender is required' : ''
   const passStrength = getStrength(password)
+
+  useEffect(() => {
+    if (!normalizedUsername || normalizedUsername.length < 3 || !USERNAME_RE.test(normalizedUsername)) {
+      return
+    }
+
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      setUsernameChecking(true)
+      try {
+        const result = await checkDoctorUsernameAvailability(normalizedUsername)
+        if (!cancelled) setUsernameAvailable(result.valid && result.available)
+      } catch {
+        if (!cancelled) setUsernameAvailable(null)
+      } finally {
+        if (!cancelled) setUsernameChecking(false)
+      }
+    }, 350)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [normalizedUsername])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setTouched({
       firstName: true,
       lastName: true,
+      username: true,
       email: true,
       password: true,
-      phone: false,
+      countryCode: true,
+      phone: true,
+      dateOfBirth: true,
+      gender: true,
       licenseNumber: false,
     })
     
-    if (!EMAIL_RE.test(email) || password.length < 8 || !firstName || !lastName) {
+    if (
+      !EMAIL_RE.test(email) ||
+      password.length < 8 ||
+      !firstName ||
+      !lastName ||
+      !COUNTRY_CODE_RE.test(countryCode.trim()) ||
+      !PHONE_RE.test(phone.trim()) ||
+      !dateOfBirth ||
+      !gender.trim() ||
+      (!!normalizedUsername && (!USERNAME_RE.test(normalizedUsername) || normalizedUsername.length < 3 || usernameAvailable === false))
+    ) {
       return
     }
     
@@ -267,12 +328,13 @@ export default function DoctorRegisterPage() {
         first_name: firstName,
         middle_name: middleName || undefined,
         last_name: lastName,
+        username: normalizedUsername || undefined,
         email: email.toLowerCase(),
         password,
-        phone: phone || undefined,
+        phone,
         country_code: countryCode,
-        date_of_birth: dateOfBirth || undefined,
-        gender: gender || undefined,
+        date_of_birth: dateOfBirth,
+        gender,
         specialty: specialty || undefined,
         experience_years: experienceYears ? parseInt(experienceYears) : undefined,
         license_number: licenseNumber || undefined,
@@ -429,6 +491,30 @@ export default function DoctorRegisterPage() {
               />
 
               <Field
+                label="Username"
+                placeholder="dr.john.doe"
+                value={username}
+                onChange={(value) => {
+                  setUsername(value.toLowerCase())
+                  setUsernameAvailable(null)
+                  setUsernameChecking(false)
+                }}
+                icon={ICONS.user}
+                error={usernameErr}
+                hint={
+                  usernameChecking
+                    ? 'Checking username...'
+                    : usernameAvailable
+                    ? 'Username is available'
+                    : 'Optional. Patients and staff can identify you by this handle.'
+                }
+                success={usernameAvailable === true && !usernameErr}
+                onBlur={() => setTouched({ ...touched, username: true })}
+                autoComplete="username"
+                optional
+              />
+
+              <Field
                 label="Email Address"
                 placeholder="doctor@example.com"
                 type="email"
@@ -470,14 +556,16 @@ export default function DoctorRegisterPage() {
                   placeholder="+49"
                   value={countryCode}
                   onChange={setCountryCode}
-                  optional
+                  error={countryCodeErr}
+                  onBlur={() => setTouched({ ...touched, countryCode: true })}
                 />
                 <Field
                   label="Phone Number"
                   placeholder="1234567890"
                   value={phone}
                   onChange={setPhone}
-                  optional
+                  error={phoneErr}
+                  onBlur={() => setTouched({ ...touched, phone: true })}
                 />
               </div>
 
@@ -489,7 +577,8 @@ export default function DoctorRegisterPage() {
                   type="date"
                   value={dateOfBirth}
                   onChange={setDateOfBirth}
-                  optional
+                  error={dateOfBirthErr}
+                  onBlur={() => setTouched({ ...touched, dateOfBirth: true })}
                 />
                 <Field
                   label="Gender"
@@ -497,7 +586,8 @@ export default function DoctorRegisterPage() {
                   type="text"
                   value={gender}
                   onChange={setGender}
-                  optional
+                  error={genderErr}
+                  onBlur={() => setTouched({ ...touched, gender: true })}
                 />
               </div>
 

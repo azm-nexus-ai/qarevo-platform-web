@@ -254,7 +254,7 @@ export default function DoctorDashboard() {
       try {
         const [data, episodes] = await Promise.all([
           getDoctorDashboard(),
-          getDoctorEpisodes(undefined, 5),
+          getDoctorEpisodes(undefined, { page: 1, page_size: 5 }),
         ])
         if (!cancelled) {
           setDashboardData(data)
@@ -305,8 +305,8 @@ export default function DoctorDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
         <StatCard title="Today's Appointments" value={dashboardData.stats.today_appointments} icon={ICONS.calendar} color={T.blue} href="/doctor/appointments" onNavigate={router.push} />
         <StatCard title="Pending Patients" value={dashboardData.stats.pending_patients} icon={ICONS.user} color={T.amber} href="/doctor/patients" onNavigate={router.push} />
-        <StatCard title="Upcoming This Week" value={dashboardData.stats.upcoming_consultations} icon={ICONS.activity} color={T.green} href="/doctor/workspace" onNavigate={router.push} />
-        <StatCard title="Completed This Month" value={dashboardData.stats.completed_consultations} icon={ICONS.check} color={T.purple} href="/doctor/workspace" onNavigate={router.push} />
+        <StatCard title="Assigned Episodes" value={dashboardData.stats.assigned_episodes} icon={ICONS.cpu} color={T.cyan} href="/doctor/workspace" onNavigate={router.push} />
+        <StatCard title="AI Drafts Ready" value={dashboardData.stats.episodes_with_ai_ready} icon={ICONS.zap} color={T.green} href="/doctor/workspace" onNavigate={router.push} />
       </div>
 
       {/* Recent Activity */}
