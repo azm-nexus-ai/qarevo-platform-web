@@ -535,6 +535,8 @@ export type DoctorDashboardStats = {
     pending_patients: number;
     upcoming_consultations: number;
     completed_consultations: number;
+    assigned_episodes: number;
+    episodes_with_ai_ready: number;
 };
 
 export type DoctorRecentAppointment = {
@@ -598,6 +600,7 @@ export type DoctorEpisodeListResponse = {
     page_size: number;
     has_next: boolean;
     has_previous: boolean;
+    episodes_with_ai_ready: number;
 };
 
 export type DoctorEpisodeClinicalContextResponse = {
@@ -804,6 +807,60 @@ export async function getDoctorEpisodeClinicalContext(
     return apiGet<DoctorEpisodeClinicalContextResponse>(
         `/api/v1/doctor/episodes/${episodeId}/clinical-context`,
     );
+}
+
+export type AIDraftActionRequest = {
+  action: 'accept' | 'reject';
+  draft_id: string;
+  reason?: string;
+};
+
+export type AIDraftActionResponse = {
+  message: string;
+  episode_id: string;
+  draft_id: string;
+  action: string;
+  updated_fields: number;
+  verification_status: string;
+};
+
+export async function performAIDraftAction(
+  episodeId: string,
+  actionData: AIDraftActionRequest,
+): Promise<AIDraftActionResponse> {
+  return apiPost<AIDraftActionResponse, AIDraftActionRequest>(
+    `/api/v1/doctor/episodes/${episodeId}/ai-draft-action`,
+    actionData,
+  );
+}
+
+export type EpisodeTimelineEvent = {
+  event_id: string;
+  event_type: string;
+  timestamp: string;
+  actor_id: string | null;
+  actor_role: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  description: string;
+  from_status: string | null;
+  to_status: string | null;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+};
+
+export type EpisodeTimelineResponse = {
+  episode_id: string;
+  events: EpisodeTimelineEvent[];
+  total_count: number;
+};
+
+export async function getEpisodeTimeline(
+  episodeId: string,
+): Promise<EpisodeTimelineResponse> {
+  return apiGet<EpisodeTimelineResponse>(
+    `/api/v1/doctor/episodes/${episodeId}/timeline`,
+  );
 }
 
 export async function getDoctorProfile(): Promise<DoctorProfileResponse> {
