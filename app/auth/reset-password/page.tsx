@@ -767,30 +767,30 @@ export default function ResetPasswordPage() {
                         <PasswordField
                           id={newId}
                           label='New Password'
-                          placeholder='Enter your new password'
                           value={newPassword}
                           onChange={setNewPassword}
                           show={showNew}
                           onToggle={() => setShowNew(!showNew)}
                           onBlur={() => setTouched({ ...touched, newPassword: true })}
                           error={newErr}
+                          success={strongEnough}
                           autoComplete='new-password'
                         />
 
                         <PasswordField
                           id={confirmId}
                           label='Confirm New Password'
-                          placeholder='Confirm your new password'
                           value={confirmPassword}
                           onChange={setConfirmPassword}
                           show={showConfirm}
                           onToggle={() => setShowConfirm(!showConfirm)}
                           onBlur={() => setTouched({ ...touched, confirmPassword: true })}
                           error={confirmErr}
+                          success={confirmPassword === newPassword && confirmPassword.length > 0}
                           autoComplete='new-password'
                         />
 
-                        <PasswordStrength password={newPassword} confirmPassword={confirmPassword} />
+                        <PasswordGuide password={newPassword} confirmPassword={confirmPassword} />
 
                         <button
                           type='submit'
