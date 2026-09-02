@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useId, Suspense } from 'react'
+import { useState, useId, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { T, Sh, Glass } from '@/lib/tokens'
+import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { apiPost } from '@/lib/api'
+import { ApiError, apiPost, getApiErrorDetail } from '@/lib/api'
 
 // Page background
 const PAGE_BG = [
@@ -25,6 +25,40 @@ const LEFT_BG = [
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
   T.navy,
 ].join(', ')
+
+function getFriendlyDoctorEmailVerificationError(error: unknown) {
+  const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+
+  if (detail.includes('invalid verification code')) {
+    return 'The verification code you entered is incorrect. Please check the code and try again.'
+  }
+  if (detail.includes('expired')) {
+    return 'The verification code has expired. Please request a new code.'
+  }
+  if (detail.includes('already used')) {
+    return 'This verification code has already been used. Please request a new code.'
+  }
+  if (detail.includes('replaced')) {
+    return 'This code has been replaced. Please request a new code.'
+  }
+  if (detail.includes('no verification code found')) {
+    return 'No verification code found. Please request a new code.'
+  }
+  if (detail.includes('user not found')) {
+    return 'User not found. Please register again.'
+  }
+  if (detail.includes('already verified')) {
+    return 'This email has already been verified. Please sign in.'
+  }
+  if (detail.includes('valid email')) {
+    return 'Enter a valid email address.'
+  }
+  if (error instanceof ApiError && error.status === 422) {
+    return 'Please check the verification details and try again.'
+  }
+
+  return 'We could not verify your email right now. Please try again.'
+}
 
 // Field component
 interface FieldProps {
@@ -200,26 +234,7 @@ function DoctorVerifyEmailPageContent() {
       }, 1500)
       return // Don't set loading to false yet
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Verification failed. Please try again.'
-      
-      // Improve error messages for better UX
-      if (errorMessage.includes('Invalid verification code')) {
-        setAuthError('The verification code you entered is incorrect. Please check the code and try again.')
-      } else if (errorMessage.includes('expired')) {
-        setAuthError('The verification code has expired. Please request a new code.')
-      } else if (errorMessage.includes('already used')) {
-        setAuthError('This verification code has already been used. Please request a new code.')
-      } else if (errorMessage.includes('replaced')) {
-        setAuthError('This code has been replaced. Please request a new code.')
-      } else if (errorMessage.includes('No verification code found')) {
-        setAuthError('No verification code found. Please request a new code.')
-      } else if (errorMessage.includes('User not found')) {
-        setAuthError('User not found. Please register again.')
-      } else if (errorMessage.includes('already verified')) {
-        setAuthError('This email has already been verified. Please sign in.')
-      } else {
-        setAuthError(errorMessage)
-      }
+      setAuthError(getFriendlyDoctorEmailVerificationError(error))
     } finally {
       setLoading(false)
     }
@@ -234,7 +249,7 @@ function DoctorVerifyEmailPageContent() {
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Failed to resend verification code')
+      setAuthError(getFriendlyDoctorEmailVerificationError(error))
     } finally {
       setLoading(false)
     }
@@ -374,7 +389,7 @@ function DoctorVerifyEmailPageContent() {
 
             {/* Help link */}
             <p style={{ textAlign: 'center', fontSize: '13px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
-              Didn't receive the code?{' '}
+              Didn&apos;t receive the code?{' '}
               <Link href="/support" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>
                 Contact Support
               </Link>

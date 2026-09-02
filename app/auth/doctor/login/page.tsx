@@ -4,10 +4,10 @@ import { useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { T, Sh, Glass } from '@/lib/tokens'
+import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { apiPost, type DoctorLoginRequest } from '@/lib/api'
+import { ApiError, apiPost, getApiErrorDetail, type DoctorLoginRequest } from '@/lib/api'
 
 // Page background
 const PAGE_BG = [
@@ -25,6 +25,37 @@ const LEFT_BG = [
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
   T.navy,
 ].join(', ')
+
+function getFriendlyDoctorLoginError(error: unknown) {
+  const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+
+  if (detail.includes('phone not verified')) {
+    return 'Phone verification is required. Please complete phone verification to continue.'
+  }
+  if (detail.includes('email_verification_pending') || detail.includes('email verification')) {
+    return 'Email verification is required. Please verify your email first.'
+  }
+  if (detail.includes('invalid identifier or password') || detail.includes('invalid') || detail.includes('password')) {
+    return 'Invalid email, username, phone, or password. Please check your credentials and try again.'
+  }
+  if (detail.includes('use patient login endpoint') || detail.includes('patient account')) {
+    return 'This is a patient account. Please use the patient login page instead.'
+  }
+  if (detail.includes('valid email')) {
+    return 'Enter a valid email, username, or phone number.'
+  }
+  if (error instanceof ApiError && error.status === 401) {
+    return 'Invalid email, username, phone, or password. Please check your credentials and try again.'
+  }
+  if (error instanceof ApiError && error.status === 422) {
+    return 'Please check your sign-in details and try again.'
+  }
+  if (error instanceof ApiError && error.status >= 500) {
+    return 'Doctor sign-in is temporarily unavailable. Please try again shortly.'
+  }
+
+  return 'We could not sign you in right now. Please try again.'
+}
 
 // Field component
 interface FieldProps {
@@ -89,7 +120,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
           autoComplete={autoComplete}
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onBlur={() => { setFocused(false); onBlur?.() }}
           style={{
             width: '100%',
             padding: `12px ${hasRight ? '40px' : '14px'} 12px ${hasLeft ? '38px' : '14px'}`,
@@ -252,20 +283,7 @@ export default function DoctorLoginPage() {
       // Redirect to 2FA verification page
       router.push('/auth/doctor/2fa')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please check your credentials.'
-      
-      // Improve error messages for better UX
-      if (errorMessage.includes('Phone not verified')) {
-        setAuthError('Phone verification required. A verification code has been sent to your phone. Please complete phone verification to continue.')
-      } else if (errorMessage.includes('EMAIL_VERIFICATION_PENDING')) {
-        setAuthError('Email verification required. A verification code has been sent to your email. Please verify your email first.')
-      } else if (errorMessage.includes('Invalid identifier or password')) {
-        setAuthError('Invalid email, username, phone, or password. Please check your credentials and try again.')
-      } else if (errorMessage.includes('Use patient login endpoint')) {
-        setAuthError('This is a patient account. Please use the patient login page instead.')
-      } else {
-        setAuthError(errorMessage)
-      }
+      setAuthError(getFriendlyDoctorLoginError(error))
     } finally {
       setLoading(false)
     }
@@ -410,7 +428,7 @@ export default function DoctorLoginPage() {
                     Two-Factor Authentication Required
                   </p>
                   <p style={{ margin: 0, fontSize: '11.5px', color: T.slate, lineHeight: 1.4 }}>
-                    For your security, you'll need to verify your identity with a code sent to your email or phone after entering your credentials.
+                    For your security, you&apos;ll need to verify your identity with a code sent to your email or phone after entering your credentials.
                   </p>
                 </div>
               </div>

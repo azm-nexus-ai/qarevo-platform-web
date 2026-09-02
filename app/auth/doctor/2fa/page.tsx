@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { AuthTokenResponse, apiPost, storeAuthTokens } from '@/lib/api'
+import { ApiError, AuthTokenResponse, apiPost, getApiErrorDetail, storeAuthTokens } from '@/lib/api'
 
 // Page background
 const PAGE_BG = [
@@ -25,6 +25,38 @@ const LEFT_BG = [
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
   T.navy,
 ].join(', ')
+
+function getFriendlyVerificationError(error: unknown, method: 'email' | 'phone') {
+  const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+  const deliveryTarget = method === 'email' ? 'email' : 'phone'
+
+  if (detail.includes('invalid verification code')) {
+    return 'The verification code you entered is incorrect. Please check the code and try again.'
+  }
+  if (detail.includes('expired')) {
+    return 'This verification code has expired. Please request a new code.'
+  }
+  if (detail.includes('already used')) {
+    return 'This verification code has already been used. Please request a new code.'
+  }
+  if (detail.includes('replaced')) {
+    return 'This code has been replaced. Please use the latest code or request a new one.'
+  }
+  if (detail.includes('no verification code found')) {
+    return `No active ${deliveryTarget} verification code was found. Please request a new code.`
+  }
+  if (detail.includes('not available for this account')) {
+    return `${method === 'email' ? 'Email' : 'Phone'} verification is not available for this account. Please contact support.`
+  }
+  if (error instanceof ApiError && error.status === 401) {
+    return 'Your secure login session has expired. Please sign in again.'
+  }
+  if (error instanceof ApiError && error.status === 429) {
+    return 'Too many attempts. Please wait a moment before trying again.'
+  }
+
+  return 'We could not verify the code right now. Please try again.'
+}
 
 // Field component
 interface FieldProps {
@@ -230,7 +262,7 @@ export default function Doctor2FAPage() {
       // For now, we'll just proceed to verification
       setSuccess(true)
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Failed to send verification code')
+      setAuthError(getFriendlyVerificationError(error, method))
     } finally {
       setLoading(false)
     }
@@ -279,7 +311,7 @@ export default function Doctor2FAPage() {
       // Redirect to doctor dashboard
       router.push('/doctor/dashboard')
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Verification failed. Please check your code and try again.')
+      setAuthError(getFriendlyVerificationError(error, method))
     } finally {
       verifyingRef.current = false
       setLoading(false)
@@ -440,7 +472,10 @@ export default function Doctor2FAPage() {
                 placeholder="Enter 6-digit code"
                 type="text"
                 value={code}
-                onChange={setCode}
+                onChange={(value) => {
+                  setCode(value.replace(/\D/g, '').slice(0, 6))
+                  setAuthError('')
+                }}
                 icon={ICONS.shield}
                 error={codeErr}
                 maxLength={6}

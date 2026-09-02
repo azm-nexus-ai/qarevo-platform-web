@@ -25,6 +25,7 @@ export default function DoctorSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   useEffect(() => {
     if (!readAccessToken()) {
@@ -97,13 +98,18 @@ export default function DoctorSettingsPage() {
     updateDraft('available_days', WEEK_DAYS.filter((item) => nextDays.includes(item)))
   }
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true)
+  }
+
+  const handleConfirmLogout = async () => {
     setSaving(true)
     try {
       await logoutCurrentUser()
     } catch (err) {
       console.error('Logout failed before local cleanup', err)
     } finally {
+      setShowLogoutConfirm(false)
       router.replace('/auth/sign-in')
     }
   }
@@ -252,7 +258,7 @@ export default function DoctorSettingsPage() {
             <button onClick={() => setMessage('Two-factor authentication is enforced during secure doctor login.')} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
               {settingsData.two_factor_enabled ? 'Two-Factor Authentication Enabled' : 'Two-Factor Authentication'}
             </button>
-            <button disabled={saving} onClick={handleLogout} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(220,38,38,0.05)', color: T.red, fontSize: '13px', fontWeight: 600, cursor: saving ? 'wait' : 'pointer', textAlign: 'left', opacity: saving ? 0.7 : 1 }}>
+            <button disabled={saving} onClick={handleLogoutClick} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(220,38,38,0.05)', color: T.red, fontSize: '13px', fontWeight: 600, cursor: saving ? 'wait' : 'pointer', textAlign: 'left', opacity: saving ? 0.7 : 1 }}>
               Sign Out Current Device
             </button>
           </div>
@@ -325,6 +331,65 @@ export default function DoctorSettingsPage() {
           </div>
         </div>
       </div>
+      {showLogoutConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-logout-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            background: 'rgba(4,53,77,0.32)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        >
+          <div style={{
+            width: '100%',
+            maxWidth: '380px',
+            borderRadius: '18px',
+            border: '1px solid rgba(255,255,255,0.88)',
+            background: 'rgba(255,255,255,0.96)',
+            boxShadow: '0 24px 64px rgba(4,53,77,0.2)',
+            padding: '24px',
+          }}>
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(220,38,38,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Ico p={ICONS.logout} size={20} sw={1.8} color={T.red} />
+              </div>
+              <div>
+                <h2 id="settings-logout-title" style={{ margin: '0 0 6px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Sign out?</h2>
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: T.slate }}>
+                  You will need to sign in again to access the doctor portal.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '24px' }}>
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                disabled={saving}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer' }}
+              >
+                No, stay
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                disabled={saving}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: T.red, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.7 : 1 }}
+              >
+                {saving ? 'Signing out...' : 'Yes, sign out'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,9 +4,9 @@ import { useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { T, Sh, Glass } from '@/lib/tokens'
+import { T, Sh } from '@/lib/tokens'
 import { getOnboardingRedirectPath, readAuthFlowState } from '@/lib/auth-flow'
-import { loginPatient, storeAuthTokens } from '@/lib/api'
+import { ApiError, getApiErrorDetail, loginPatient, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
@@ -288,6 +288,31 @@ function SocialBtn({ provider, onClick }: { provider: 'google' | 'apple'; onClic
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+function getFriendlySignInError(error: unknown) {
+  const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+
+  if (detail.includes('valid email') || detail.includes('email address')) {
+    return 'Enter a valid email address. Doctor accounts should use the doctor sign-in page.'
+  }
+  if (detail.includes('incorrect') || detail.includes('invalid') || detail.includes('password')) {
+    return 'Incorrect email or password. Please try again.'
+  }
+  if (detail.includes('verify') || detail.includes('verification')) {
+    return 'Please verify your account before signing in.'
+  }
+  if (error instanceof ApiError && error.status === 401) {
+    return 'Incorrect email or password. Please try again.'
+  }
+  if (error instanceof ApiError && error.status === 422) {
+    return 'Please check your email and password, then try again.'
+  }
+  if (error instanceof ApiError && error.status >= 500) {
+    return 'Sign in is temporarily unavailable. Please try again shortly.'
+  }
+
+  return 'We could not sign you in right now. Please try again.'
+}
+
 export default function SignInPage() {
   const router = useRouter()
 
@@ -324,7 +349,7 @@ export default function SignInPage() {
       const onboardingIncomplete = /new|incomplete|onboard/i.test(email)
       router.push(onboardingIncomplete ? '/auth/profile-setup' : '/patient/dashboard')
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Incorrect email or password. Please try again.')
+      setAuthError(getFriendlySignInError(error))
     } finally {
       setLoading(false)
     }

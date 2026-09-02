@@ -26,6 +26,7 @@ export default function DoctorLayout({
   const [mounted, setMounted] = useState(false)
   const [doctorProfile, setDoctorProfile] = useState<DoctorProfileResponse | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   useEffect(() => {
     const mountedTimer = window.setTimeout(() => setMounted(true), 0)
@@ -68,7 +69,12 @@ export default function DoctorLayout({
     router.push('/doctor/settings')
   }
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
+    if (loggingOut) return
+    setShowLogoutConfirm(true)
+  }
+
+  const handleConfirmLogout = async () => {
     if (loggingOut) return
     setLoggingOut(true)
     try {
@@ -76,6 +82,7 @@ export default function DoctorLayout({
     } catch (error) {
       console.error('Doctor logout failed before local cleanup', error)
     } finally {
+      setShowLogoutConfirm(false)
       router.replace('/auth/sign-in')
     }
   }
@@ -122,7 +129,7 @@ export default function DoctorLayout({
                     {isLogout ? (
                       <button
                         type="button"
-                        onClick={handleLogout}
+                        onClick={handleLogoutClick}
                         disabled={loggingOut}
                         style={{
                           display: 'flex',
@@ -246,6 +253,65 @@ export default function DoctorLayout({
           </div>
         </main>
       </div>
+      {showLogoutConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="doctor-logout-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            background: 'rgba(4,53,77,0.32)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        >
+          <div style={{
+            width: '100%',
+            maxWidth: '380px',
+            borderRadius: '18px',
+            border: '1px solid rgba(255,255,255,0.88)',
+            background: 'rgba(255,255,255,0.96)',
+            boxShadow: '0 24px 64px rgba(4,53,77,0.2)',
+            padding: '24px',
+          }}>
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(220,38,38,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Ico p={ICONS.logout} size={20} sw={1.8} color={T.red} />
+              </div>
+              <div>
+                <h2 id="doctor-logout-title" style={{ margin: '0 0 6px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Sign out?</h2>
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: T.slate }}>
+                  You will need to sign in again to access the doctor portal.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '24px' }}>
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                disabled={loggingOut}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer' }}
+              >
+                No, stay
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                disabled={loggingOut}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: T.red, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer', opacity: loggingOut ? 0.7 : 1 }}
+              >
+                {loggingOut ? 'Signing out...' : 'Yes, sign out'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

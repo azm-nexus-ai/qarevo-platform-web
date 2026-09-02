@@ -4,10 +4,10 @@ import { useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { T, Sh, Glass } from '@/lib/tokens'
+import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { registerDoctor, type DoctorRegisterRequest } from '@/lib/api'
+import { ApiError, getApiErrorDetail, registerDoctor, type DoctorRegisterRequest } from '@/lib/api'
 
 // Page background
 const PAGE_BG = [
@@ -16,13 +16,6 @@ const PAGE_BG = [
   'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(52,140,234,0.06) 0%, transparent 58%)',
   '#EDF2FA',
 ].join(', ')
-
-// Countries for phone country code
-const COUNTRIES = [
-  'Germany (+49)', 'Austria (+43)', 'Switzerland (+41)', 'France (+33)',
-  'Netherlands (+31)', 'Belgium (+32)', 'Spain (+34)', 'Italy (+39)',
-  'United Kingdom (+44)', 'Other',
-]
 
 // Password strength checker
 function getStrength(pw: string) {
@@ -37,6 +30,37 @@ function getStrength(pw: string) {
   const levels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent']
   const colors = ['', T.red, T.amber, '#2563EB', T.green, T.green]
   return { checks, score, label: levels[score] ?? '', color: colors[score] ?? T.slate2 }
+}
+
+function getFriendlyDoctorRegisterError(error: unknown) {
+  const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+
+  if (detail.includes('email already registered')) {
+    return 'This email is already registered. Please sign in or use a different email address.'
+  }
+  if (detail.includes('username already taken')) {
+    return 'This username is already taken. Please choose another one.'
+  }
+  if (detail.includes('password')) {
+    return 'Password does not meet requirements. Please use a stronger password.'
+  }
+  if (detail.includes('specialty')) {
+    return 'Invalid medical specialty. Please select a valid specialty.'
+  }
+  if (detail.includes('valid email') || detail.includes('email address')) {
+    return 'Enter a valid email address.'
+  }
+  if (detail.includes('phone')) {
+    return 'Please check the phone number and country code.'
+  }
+  if (error instanceof ApiError && error.status === 422) {
+    return 'Please check the highlighted registration details and try again.'
+  }
+  if (error instanceof ApiError && error.status >= 500) {
+    return 'Registration is temporarily unavailable. Please try again shortly.'
+  }
+
+  return 'We could not create the doctor account right now. Please try again.'
 }
 
 // Field component
@@ -256,23 +280,12 @@ export default function DoctorRegisterPage() {
         consents,
       }
 
-      const response = await registerDoctor(registerData)
+      await registerDoctor(registerData)
       
       // Redirect to doctor-specific email verification page with phone details
       router.push(`/auth/doctor-verify-email?email=${encodeURIComponent(email)}&country_code=${countryCode}&phone=${phone || ''}`)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.'
-      
-      // Improve error messages for better UX
-      if (errorMessage.includes('Email already registered')) {
-        setAuthError('This email is already registered. Please sign in or use a different email address.')
-      } else if (errorMessage.includes('Password')) {
-        setAuthError('Password does not meet requirements. Please use a stronger password.')
-      } else if (errorMessage.includes('specialty')) {
-        setAuthError('Invalid medical specialty. Please select a valid specialty.')
-      } else {
-        setAuthError(errorMessage)
-      }
+      setAuthError(getFriendlyDoctorRegisterError(error))
     } finally {
       setLoading(false)
     }

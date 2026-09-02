@@ -44,6 +44,35 @@ export class ApiError extends Error {
     }
 }
 
+export function getApiErrorDetail(error: unknown): string | null {
+    if (!(error instanceof ApiError)) {
+        return error instanceof Error ? error.message : null;
+    }
+
+    const body = error.body.trim();
+    if (!body) return null;
+
+    try {
+        const parsed = JSON.parse(body) as { detail?: unknown; message?: unknown; error?: unknown };
+        const detail = parsed.detail ?? parsed.message ?? parsed.error;
+
+        if (typeof detail === "string") return detail;
+        if (Array.isArray(detail)) {
+            const messages = detail
+                .map((item) => {
+                    if (item && typeof item === "object" && "msg" in item) return String(item.msg);
+                    return typeof item === "string" ? item : null;
+                })
+                .filter(Boolean);
+            return messages.length ? messages.join(" ") : null;
+        }
+    } catch {
+        return body;
+    }
+
+    return null;
+}
+
 export function isAuthError(error: unknown): boolean {
     return error instanceof ApiError && error.status === 401;
 }
@@ -587,6 +616,26 @@ export type DoctorProfileResponse = {
     updated_at?: string | null;
 };
 
+export type DoctorProfileUpdate = Partial<{
+    phone: string | null;
+    specialty: string | null;
+    experience_years: number | null;
+    license_number: string | null;
+    is_independent: boolean | null;
+    address: string | null;
+    address_line2: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    zip: string | null;
+    consultation_fee: number | null;
+    about: string | null;
+    education: string | null;
+    certifications: string | null;
+    languages: string | null;
+    hospital: string | null;
+}>;
+
 export type DoctorSettingsResponse = {
     user_id: string;
     provider_id: string;
@@ -714,6 +763,10 @@ export async function getDoctorEpisodeClinicalContext(
 
 export async function getDoctorProfile(): Promise<DoctorProfileResponse> {
     return apiGet<DoctorProfileResponse>("/api/v1/doctor/profile");
+}
+
+export async function updateDoctorProfile(body: DoctorProfileUpdate): Promise<DoctorProfileResponse> {
+    return apiPut<DoctorProfileResponse, DoctorProfileUpdate>("/api/v1/doctor/profile", body);
 }
 
 export async function getDoctorSettings(): Promise<DoctorSettingsResponse> {
