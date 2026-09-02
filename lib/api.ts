@@ -246,6 +246,7 @@ export type DoctorRegisterRequest = {
     first_name: string;
     middle_name?: string;
     last_name: string;
+    username?: string;
     email: string;
     password: string;
     phone?: string;
@@ -266,6 +267,13 @@ export type DoctorRegisterRequest = {
 export type DoctorRegisterResponse = {
     user_id: string;
     provider_id: string;
+    message: string;
+};
+
+export type DoctorUsernameAvailabilityResponse = {
+    username: string;
+    valid: boolean;
+    available: boolean;
     message: string;
 };
 
@@ -318,6 +326,12 @@ export type PatientDoctor = {
 export type DoctorSearchResponse = {
     doctors: PatientDoctor[];
     total: number;
+    total_count?: number;
+    filtered_count?: number;
+    page?: number;
+    page_size?: number;
+    has_next?: boolean;
+    has_previous?: boolean;
     filters: Record<string, unknown>;
 };
 
@@ -489,6 +503,12 @@ export async function registerDoctor(body: DoctorRegisterRequest): Promise<Docto
     return apiPost<DoctorRegisterResponse>("/api/v1/doctor/register", body);
 }
 
+export async function checkDoctorUsernameAvailability(username: string): Promise<DoctorUsernameAvailabilityResponse> {
+    return apiGet<DoctorUsernameAvailabilityResponse>(
+        `/api/v1/doctor/username-availability?username=${encodeURIComponent(username)}`,
+    );
+}
+
 export async function loginDoctor(body: DoctorLoginRequest): Promise<DoctorLoginResponse> {
     return apiPost<DoctorLoginResponse>("/api/v1/auth/doctor/login", body);
 }
@@ -574,6 +594,10 @@ export type DoctorEpisodeListResponse = {
     episodes: DoctorEpisodeSummary[];
     total_count: number;
     filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
 };
 
 export type DoctorEpisodeClinicalContextResponse = {
@@ -678,6 +702,10 @@ export type DoctorAppointmentsResponse = {
     appointments: DoctorAppointmentSummary[];
     total_count: number;
     filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
 };
 
 export type DoctorAppointmentDetail = DoctorAppointmentSummary & {
@@ -701,6 +729,10 @@ export type DoctorWorkspaceResponse = {
     consultations: DoctorConsultationInQueue[];
     total_count: number;
     filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
 };
 
 export type DoctorConsultationDetail = {
@@ -740,16 +772,29 @@ export type DoctorPatientsResponse = {
     patients: DoctorPatient[];
     total_count: number;
     filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
 };
 
 export async function getDoctorDashboard(): Promise<DoctorDashboardResponse> {
     return apiGet<DoctorDashboardResponse>("/api/v1/doctor/dashboard");
 }
 
-export async function getDoctorEpisodes(status?: string, limit = 25): Promise<DoctorEpisodeListResponse> {
+export type PaginationParams = {
+    page?: number;
+    page_size?: number;
+};
+
+export async function getDoctorEpisodes(
+    status?: string,
+    pagination: PaginationParams = {},
+): Promise<DoctorEpisodeListResponse> {
     const params = new URLSearchParams();
     if (status) params.set("status", status);
-    params.set("limit", String(limit));
+    params.set("page", String(pagination.page ?? 1));
+    params.set("page_size", String(pagination.page_size ?? 25));
     return apiGet<DoctorEpisodeListResponse>(`/api/v1/doctor/episodes?${params.toString()}`);
 }
 
@@ -777,9 +822,15 @@ export async function updateDoctorSettings(body: DoctorSettingsUpdate): Promise<
     return apiPut<DoctorSettingsResponse, DoctorSettingsUpdate>("/api/v1/doctor/settings", body);
 }
 
-export async function getDoctorAppointments(status?: string): Promise<DoctorAppointmentsResponse> {
-    const params = status ? `?status=${encodeURIComponent(status)}` : "";
-    return apiGet<DoctorAppointmentsResponse>(`/api/v1/doctor/appointments${params}`);
+export async function getDoctorAppointments(
+    status?: string,
+    pagination: PaginationParams = {},
+): Promise<DoctorAppointmentsResponse> {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    params.set("page", String(pagination.page ?? 1));
+    params.set("page_size", String(pagination.page_size ?? 25));
+    return apiGet<DoctorAppointmentsResponse>(`/api/v1/doctor/appointments?${params.toString()}`);
 }
 
 export async function getDoctorAppointment(appointmentId: string): Promise<DoctorAppointmentDetail> {
@@ -795,9 +846,15 @@ export async function updateDoctorAppointmentStatus(
     });
 }
 
-export async function getDoctorWorkspace(status?: string): Promise<DoctorWorkspaceResponse> {
-    const params = status ? `?status=${encodeURIComponent(status)}` : "";
-    return apiGet<DoctorWorkspaceResponse>(`/api/v1/doctor/workspace${params}`);
+export async function getDoctorWorkspace(
+    status?: string,
+    pagination: PaginationParams = {},
+): Promise<DoctorWorkspaceResponse> {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    params.set("page", String(pagination.page ?? 1));
+    params.set("page_size", String(pagination.page_size ?? 25));
+    return apiGet<DoctorWorkspaceResponse>(`/api/v1/doctor/workspace?${params.toString()}`);
 }
 
 export async function getDoctorConsultation(consultationId: string): Promise<DoctorConsultationDetailResponse> {
@@ -813,9 +870,17 @@ export async function completeDoctorConsultation(
     );
 }
 
-export async function getDoctorPatients(status?: string): Promise<DoctorPatientsResponse> {
-    const params = status ? `?status=${encodeURIComponent(status)}` : "";
-    return apiGet<DoctorPatientsResponse>(`/api/v1/doctor/patients${params}`);
+export async function getDoctorPatients(
+    status?: string,
+    pagination: PaginationParams = {},
+    query?: string,
+): Promise<DoctorPatientsResponse> {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (query?.trim()) params.set("q", query.trim());
+    params.set("page", String(pagination.page ?? 1));
+    params.set("page_size", String(pagination.page_size ?? 25));
+    return apiGet<DoctorPatientsResponse>(`/api/v1/doctor/patients?${params.toString()}`);
 }
 
 export async function verifyDoctorEmailCode(body: VerifyEmailCodeRequest): Promise<VerifyEmailCodeResponse> {
@@ -1099,4 +1164,30 @@ export type ReferralStatusUpdate = {
 
 export async function updateReferralStatus(body: ReferralStatusUpdate): Promise<{ message: string; new_status: string }> {
     return apiPatch<{ message: string; new_status: string }>("/api/v1/patient/referrals/status", body);
+}
+
+// Password Reset
+export type ForgotPasswordRequest = {
+    email: string;
+};
+
+export type ForgotPasswordResponse = {
+    message: string;
+};
+
+export type ResetPasswordRequest = {
+    token: string;
+    new_password: string;
+};
+
+export type ResetPasswordResponse = {
+    message: string;
+};
+
+export async function requestPasswordReset(email: string): Promise<ForgotPasswordResponse> {
+    return apiPost<ForgotPasswordResponse, ForgotPasswordRequest>("/api/v1/auth/forgot-password", { email });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<ResetPasswordResponse> {
+    return apiPost<ResetPasswordResponse, ResetPasswordRequest>("/api/v1/auth/reset-password", { token, new_password: newPassword });
 }

@@ -2,9 +2,11 @@
 
 import { useId, useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import { resetPassword, ApiError, getApiErrorDetail } from '@/lib/api'
 
 type ErrorKind = 'weak' | 'mismatch' | 'expiredToken' | 'invalidToken' | 'server' | 'network' | null
 
@@ -526,6 +528,10 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
 }
 
 export default function ResetPasswordPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const token = searchParams.get('token') || ''
+  
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showNew, setShowNew] = useState(false)
@@ -558,16 +564,7 @@ export default function ResetPasswordPage() {
 
   const showAlert = errorKind && !['mismatch', 'weak'].includes(errorKind)
 
-  const classifyError = (password: string): Exclude<ErrorKind, 'mismatch' | 'weak' | null> | null => {
-    const lower = password.toLowerCase()
-    if (lower.includes('token-expired')) return 'expiredToken'
-    if (lower.includes('token-invalid')) return 'invalidToken'
-    if (lower.includes('network-error')) return 'network'
-    if (lower.includes('server-error')) return 'server'
-    return null
-  }
-
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setTouched({ newPassword: true, confirmPassword: true })
 
@@ -581,19 +578,36 @@ export default function ResetPasswordPage() {
       return
     }
 
+    if (!token) {
+      setErrorKind('invalidToken')
+      return
+    }
+
     setErrorKind(null)
     setLoading(true)
 
-    setTimeout(() => {
-      setLoading(false)
-      const simulated = classifyError(newPassword)
-      if (simulated) {
-        setErrorKind(simulated)
-        return
-      }
+    try {
+      await resetPassword(token, newPassword)
       setUpdated(true)
       setErrorKind(null)
-    }, 1200)
+    } catch (error) {
+      setLoading(false)
+      const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+      
+      if (detail.includes('expired') || detail.includes('expir')) {
+        setErrorKind('expiredToken')
+      } else if (detail.includes('invalid') || detail.includes('used')) {
+        setErrorKind('invalidToken')
+      } else if (detail.includes('network') || detail.includes('fetch')) {
+        setErrorKind('network')
+      } else if (error instanceof ApiError && error.status >= 500) {
+        setErrorKind('server')
+      } else {
+        setErrorKind('invalidToken')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -648,8 +662,23 @@ export default function ResetPasswordPage() {
           >
             {!updated ? (
               <>
-                <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', gap: '14px' }}>
-                  <div>
+                {errorKind === 'invalidToken' && !token ? (
+                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <div
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '16px',
+                        margin: '0 auto 16px',
+                        background: 'rgba(220,38,38,0.1)',
+                        border: '1px solid rgba(220,38,38,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ico p={ICONS.info} size={22} sw={2} color={T.red} />
+                    </div>
                     <h1
                       style={{
                         fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -658,143 +687,175 @@ export default function ResetPasswordPage() {
                         color: T.navy,
                         letterSpacing: '-0.035em',
                         lineHeight: 1.2,
-                        margin: '0 0 7px',
+                        margin: '0 0 8px',
                       }}
                     >
-                      Create a New Password
+                      Invalid Reset Link
                     </h1>
-                    <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: 0, letterSpacing: '-0.01em' }}>
-                      Your identity has been verified. Create a strong new password to securely regain access to your Qarevo Health account.
+                    <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
+                      The password reset link is missing or invalid. Please request a new password reset link to continue.
                     </p>
-                  </div>
-                  <div
-                    aria-hidden
-                    style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '13px',
-                      background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
-                      boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Ico p={ICONS.shield} size={20} sw={1.35} color='#fff' />
-                  </div>
-                </header>
-
-                {showAlert ? <AlertBanner kind={errorKind as Exclude<ErrorKind, 'mismatch' | 'weak' | null>} /> : null}
-
-                <form onSubmit={onSubmit} noValidate>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <PasswordField
-                      id={newId}
-                      label='New Password'
-                      value={newPassword}
-                      onChange={(v) => {
-                        setNewPassword(v)
-                        setErrorKind(null)
-                      }}
-                      onBlur={() => setTouched((prev) => ({ ...prev, newPassword: true }))}
-                      error={newErr}
-                      success={newPassword.length > 0 && strongEnough}
-                      show={showNew}
-                      onToggle={() => setShowNew((prev) => !prev)}
-                      autoComplete='new-password'
-                      disabled={loading}
-                    />
-
-                    <PasswordField
-                      id={confirmId}
-                      label='Confirm New Password'
-                      value={confirmPassword}
-                      onChange={(v) => {
-                        setConfirmPassword(v)
-                        setErrorKind(null)
-                      }}
-                      onBlur={() => setTouched((prev) => ({ ...prev, confirmPassword: true }))}
-                      error={confirmErr}
-                      success={confirmPassword.length > 0 && confirmPassword === newPassword}
-                      show={showConfirm}
-                      onToggle={() => setShowConfirm((prev) => !prev)}
-                      autoComplete='new-password'
-                      disabled={loading}
-                    />
-
-                    <PasswordGuide password={newPassword} confirmPassword={confirmPassword} />
-
-                    {errorKind === 'weak' ? (
-                      <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>Please choose a stronger password that satisfies all requirements.</p>
-                    ) : null}
-
-                    {errorKind === 'mismatch' ? (
-                      <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>Passwords do not match. Please confirm your password again.</p>
-                    ) : null}
-
-                    <button
-                      type='submit'
-                      disabled={loading || !newPassword || !confirmPassword}
+                    <Link
+                      href='/auth/forgot-password'
                       style={{
                         width: '100%',
                         padding: '14px 20px',
                         borderRadius: '13px',
                         border: 'none',
-                        background:
-                          loading || !newPassword || !confirmPassword
-                            ? 'rgba(32,181,223,0.5)'
-                            : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                        background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
                         color: '#fff',
                         fontFamily: 'inherit',
                         fontSize: '15px',
                         fontWeight: 700,
                         letterSpacing: '-0.02em',
-                        cursor: loading || !newPassword || !confirmPassword ? 'not-allowed' : 'pointer',
-                        display: 'flex',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '8px',
-                        transition: 'all 0.15s ease',
-                        boxShadow:
-                          loading || !newPassword || !confirmPassword ? 'none' : '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)',
-                        marginTop: '4px',
-                        minHeight: '48px',
+                        boxShadow: '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)',
+                        textDecoration: 'none',
                       }}
                     >
-                      {loading ? (
-                        <>
-                          <span
-                            style={{
-                              width: '15px',
-                              height: '15px',
-                              border: '2px solid rgba(255,255,255,0.35)',
-                              borderTopColor: '#fff',
-                              borderRadius: '50%',
-                              animation: 'spin 0.7s linear infinite',
-                              display: 'inline-block',
-                            }}
-                          />
-                          Updating password…
-                        </>
-                      ) : (
-                        <>
-                          Update Password
-                          <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
-                        </>
-                      )}
-                    </button>
-
-                    <div style={{ textAlign: 'center', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <Link href='/auth/sign-in' style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                        Back to Sign In
-                      </Link>
-                      <Link href='/' style={{ color: T.blue, fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                        Return to Home
-                      </Link>
-                    </div>
+                      Request New Reset Link
+                      <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
+                    </Link>
                   </div>
-                </form>
+                ) : (
+                  <>
+                    <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', gap: '14px' }}>
+                      <div>
+                        <h1
+                          style={{
+                            fontFamily: "'Plus Jakarta Sans', sans-serif",
+                            fontSize: '24px',
+                            fontWeight: 800,
+                            color: T.navy,
+                            letterSpacing: '-0.035em',
+                            lineHeight: 1.2,
+                            margin: '0 0 7px',
+                          }}
+                        >
+                          Reset Your Password
+                        </h1>
+                        <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: 0, letterSpacing: '-0.01em' }}>
+                          Enter a secure new password for your Qarevo Health account.
+                        </p>
+                      </div>
+                      <div
+                        aria-hidden
+                        style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '13px',
+                          background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                          boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Ico p={ICONS.shield} size={20} sw={1.35} color='#fff' />
+                      </div>
+                    </header>
+
+                    {showAlert ? <AlertBanner kind={errorKind as Exclude<ErrorKind, 'mismatch' | 'weak' | null>} /> : null}
+
+                    <form onSubmit={onSubmit} noValidate>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <PasswordField
+                          id={newId}
+                          label='New Password'
+                          placeholder='Enter your new password'
+                          value={newPassword}
+                          onChange={setNewPassword}
+                          show={showNew}
+                          onToggle={() => setShowNew(!showNew)}
+                          onBlur={() => setTouched({ ...touched, newPassword: true })}
+                          error={newErr}
+                          autoComplete='new-password'
+                        />
+
+                        <PasswordField
+                          id={confirmId}
+                          label='Confirm New Password'
+                          placeholder='Confirm your new password'
+                          value={confirmPassword}
+                          onChange={setConfirmPassword}
+                          show={showConfirm}
+                          onToggle={() => setShowConfirm(!showConfirm)}
+                          onBlur={() => setTouched({ ...touched, confirmPassword: true })}
+                          error={confirmErr}
+                          autoComplete='new-password'
+                        />
+
+                        <PasswordStrength password={newPassword} confirmPassword={confirmPassword} />
+
+                        <button
+                          type='submit'
+                          disabled={loading || !newPassword || !confirmPassword}
+                          style={{
+                            width: '100%',
+                            padding: '14px 20px',
+                            borderRadius: '13px',
+                            border: 'none',
+                            background:
+                              loading || !newPassword || !confirmPassword
+                                ? 'rgba(32,181,223,0.5)'
+                                : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                            color: '#fff',
+                            fontFamily: 'inherit',
+                            fontSize: '15px',
+                            fontWeight: 700,
+                            letterSpacing: '-0.02em',
+                            cursor: loading || !newPassword || !confirmPassword ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            transition: 'all 0.15s ease',
+                            boxShadow:
+                              loading || !newPassword || !confirmPassword ? 'none' : '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)',
+                            marginTop: '4px',
+                            minHeight: '48px',
+                          }}
+                        >
+                          {loading ? (
+                            <>
+                              <span
+                                style={{
+                                  width: '15px',
+                                  height: '15px',
+                                  border: '2px solid rgba(255,255,255,0.35)',
+                                  borderTopColor: '#fff',
+                                  borderRadius: '50%',
+                                  animation: 'spin 0.7s linear infinite',
+                                  display: 'inline-block',
+                                }}
+                              />
+                              Updating password…
+                            </>
+                          ) : (
+                            <>
+                              Update Password
+                              <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
+                            </>
+                          )}
+                        </button>
+
+                        <div style={{ textAlign: 'center', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <Link href='/auth/sign-in' style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
+                            Back to Sign In
+                          </Link>
+                          <Link href='/' style={{ color: T.blue, fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', letterSpacing: '-0.01em' }}>
+                            Return to Home
+                          </Link>
+                        </div>
+                      </div>
+                    </form>
+                  </>
+                )}
               </>
             ) : (
               <div style={{ animation: 'fadeUp 0.3s ease', textAlign: 'center' }}>

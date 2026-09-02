@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import { requestPasswordReset, ApiError, getApiErrorDetail } from '@/lib/api'
 
 type ErrorKind = 'empty' | 'invalid' | 'network' | 'server' | 'rate' | 'expired' | null
 
@@ -410,7 +411,7 @@ export default function ForgotPasswordPage() {
     return null
   }
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const cleaned = email.trim()
     setTouched(true)
@@ -427,33 +428,58 @@ export default function ForgotPasswordPage() {
     setErrorKind(null)
     setLoading(true)
 
-    setTimeout(() => {
-      const simulated = classifyError(cleaned)
-      setLoading(false)
-
-      if (simulated) {
-        setErrorKind(simulated)
-        return
-      }
-
+    try {
+      await requestPasswordReset(cleaned)
       setSent(true)
       setSentTo(cleaned)
       setErrorKind(null)
-    }, 1200)
+    } catch (error) {
+      setLoading(false)
+      const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+      
+      if (error instanceof ApiError && error.status === 429) {
+        setErrorKind('rate')
+      } else if (detail.includes('network') || detail.includes('fetch')) {
+        setErrorKind('network')
+      } else if (error instanceof ApiError && error.status >= 500) {
+        setErrorKind('server')
+      } else {
+        // For security, always show success even if email doesn't exist
+        setSent(true)
+        setSentTo(cleaned)
+        setErrorKind(null)
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const resend = () => {
+  const resend = async () => {
     setLoading(true)
     setErrorKind(null)
-    setTimeout(() => {
-      setLoading(false)
-      const simulated = classifyError(sentTo)
-      if (simulated) {
-        setErrorKind(simulated)
-        return
-      }
+
+    try {
+      await requestPasswordReset(sentTo)
       setSent(true)
-    }, 1100)
+      setErrorKind(null)
+    } catch (error) {
+      setLoading(false)
+      const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+      
+      if (error instanceof ApiError && error.status === 429) {
+        setErrorKind('rate')
+      } else if (detail.includes('network') || detail.includes('fetch')) {
+        setErrorKind('network')
+      } else if (error instanceof ApiError && error.status >= 500) {
+        setErrorKind('server')
+      } else {
+        // For security, always show success even if email doesn't exist
+        setSent(true)
+        setErrorKind(null)
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
