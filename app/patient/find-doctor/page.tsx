@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { getOnboardingRedirectPath, readAuthFlowState } from '@/lib/auth-flow'
@@ -12,16 +12,16 @@ import {
   LANGUAGE_OPTIONS,
   PHYSICIANS,
   QUICK_SPECIALTIES,
-  type Physician,
 } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'
 import DoctorCard from '@/components/cards/DoctorCard'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import { searchPatientDoctors, type PatientDoctor } from '@/lib/api'
 
 function buildProfileHref(
-  physician: Physician,
+  physician: PatientDoctor,
   intent: 'view' | 'book',
   state: {
     q: string
@@ -66,12 +66,6 @@ function buildProfileHref(
   return `/patient/physicians/${physician.id}?${params.toString()}`
 }
 
-function mapExperienceBand(years: number) {
-  if (years <= 5) return '0-5'
-  if (years <= 10) return '6-10'
-  return '11+'
-}
-
 export default function FindDoctorPage() {
   const router = useRouter()
   const pathname = usePathname()
@@ -96,114 +90,40 @@ export default function FindDoctorPage() {
   const [distance, setDistance] = useState<'any' | 'under-5' | 'under-10' | 'under-25'>('any')
   const [sortBy, setSortBy] = useState<'highest-rated' | 'nearest' | 'most-experienced' | 'available-today'>('highest-rated')
 
+  const [physicians, setPhysicians] = useState<PatientDoctor[]>(PHYSICIANS)
+  const [totalDoctors, setTotalDoctors] = useState(PHYSICIANS.length)
+  const [page, setPage] = useState(1)
+  const [hasNextPage, setHasNextPage] = useState(false)
+  const [hasPreviousPage, setHasPreviousPage] = useState(false)
+  const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
   const [showAllSpecialties, setShowAllSpecialties] = useState(false)
   const [showFiltersMobile, setShowFiltersMobile] = useState(false)
   const [favorites, setFavorites] = useState<Record<string, boolean>>({})
+  const pageSize = 8
 
   const searchSuggestions = useMemo(() => {
     if (!q.trim()) return []
     const needle = q.toLowerCase()
-    return PHYSICIANS
+    return physicians
       .filter((p) => {
         const hay = `${p.name} ${p.specialty} ${p.hospital} ${p.conditions.join(' ')}`.toLowerCase()
         return hay.includes(needle)
       })
       .slice(0, 5)
       .map((p) => `${p.name} - ${p.specialty}`)
-  }, [q])
+  }, [physicians, q])
 
   const filteredPhysicians = useMemo(() => {
-    let next = [...PHYSICIANS]
-
-    const term = q.trim().toLowerCase()
-    if (term) {
-      next = next.filter((p) => {
-        const hay = `${p.name} ${p.specialty} ${p.hospital} ${p.conditions.join(' ')}`.toLowerCase()
-        return hay.includes(term)
-      })
-    }
-
-    if (specialty !== 'All') {
-      next = next.filter((p) => p.specialty === specialty)
-    }
-
-    if (gender !== 'any') {
-      next = next.filter((p) => p.gender === gender)
-    }
-
-    if (language !== 'Any') {
-      next = next.filter((p) => p.languages.includes(language))
-    }
-
-    if (experience !== 'any') {
-      next = next.filter((p) => mapExperienceBand(p.experienceYears) === experience)
-    }
-
-    if (consultationType !== 'any') {
-      next = next.filter((p) => p.consultationTypes.includes(consultationType))
-    }
-
-    if (insurance !== 'Any') {
-      next = next.filter((p) => p.insurance.includes(insurance))
-    }
-
-    if (rating !== 'any') {
-      next = next.filter((p) => p.rating >= Number(rating))
-    }
-
-    if (price === 'under-130') {
-      next = next.filter((p) => p.consultationFee < 130)
-    } else if (price === '130-180') {
-      next = next.filter((p) => p.consultationFee >= 130 && p.consultationFee <= 180)
-    } else if (price === '180+') {
-      next = next.filter((p) => p.consultationFee > 180)
-    }
-
-    if (distance === 'under-5') {
-      next = next.filter((p) => p.distanceKm < 5)
-    } else if (distance === 'under-10') {
-      next = next.filter((p) => p.distanceKm < 10)
-    } else if (distance === 'under-25') {
-      next = next.filter((p) => p.distanceKm < 25)
-    }
-
-    if (availability === 'today') {
-      next = next.filter((p) => p.nextAvailable.toLowerCase().includes('today'))
-    }
-
-    if (sortBy === 'highest-rated') {
-      next.sort((a, b) => b.rating - a.rating)
-    } else if (sortBy === 'nearest') {
-      next.sort((a, b) => a.distanceKm - b.distanceKm)
-    } else if (sortBy === 'most-experienced') {
-      next.sort((a, b) => b.experienceYears - a.experienceYears)
-    } else if (sortBy === 'available-today') {
-      next.sort((a, b) => (b.nextAvailable.toLowerCase().includes('today') ? 1 : 0) - (a.nextAvailable.toLowerCase().includes('today') ? 1 : 0))
-    }
-
-    return next
-  }, [
-    q,
-    specialty,
-    availability,
-    gender,
-    language,
-    experience,
-    consultationType,
-    insurance,
-    rating,
-    price,
-    distance,
-    sortBy,
-  ])
+    return physicians
+  }, [physicians])
 
   const recommended = useMemo(() => {
-    return [...PHYSICIANS]
+    return [...physicians]
       .sort((a, b) => b.rating - a.rating)
       .filter((p) => ['Cardiology', 'General Practice', 'Endocrinology', 'Pediatrics'].includes(p.specialty))
       .slice(0, 4)
-  }, [])
+  }, [physicians])
 
   useEffect(() => {
     const authFlowState = readAuthFlowState()
@@ -213,10 +133,53 @@ export default function FindDoctorPage() {
   }, [router])
 
   useEffect(() => {
-    queueMicrotask(() => setLoading(true))
-    const timer = window.setTimeout(() => setLoading(false), 600)
-    return () => window.clearTimeout(timer)
-  }, [filteredPhysicians.length, specialty, sortBy, rating, distance, consultationType, insurance, gender, language, experience, price, availability])
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      setLoading(true)
+      const params = new URLSearchParams()
+      if (q.trim()) params.set('q', q.trim())
+      if (specialty !== 'All') params.set('specialty', specialty)
+      if (availability !== 'any') params.set('availability', availability)
+      if (gender !== 'any') params.set('gender', gender)
+      if (language !== 'Any') params.set('language', language)
+      if (experience !== 'any') params.set('experience', experience)
+      if (consultationType !== 'any') params.set('consultation_type', consultationType)
+      if (insurance !== 'Any') params.set('insurance', insurance)
+      if (rating !== 'any') params.set('rating', rating)
+      if (price !== 'any') params.set('price', price)
+      if (distance !== 'any') params.set('distance', distance)
+      params.set('sort', sortBy)
+      params.set('page', String(page))
+      params.set('page_size', String(pageSize))
+
+      try {
+        const response = await searchPatientDoctors(params)
+        if (!cancelled) {
+          setPhysicians(response.doctors.length ? response.doctors : [])
+          setTotalDoctors(response.filtered_count ?? response.total)
+          setHasNextPage(Boolean(response.has_next))
+          setHasPreviousPage(Boolean(response.has_previous))
+          setLoadError('')
+        }
+      } catch (error) {
+        console.error('Failed to load doctors', error)
+        if (!cancelled) {
+          setPhysicians(PHYSICIANS)
+          setTotalDoctors(PHYSICIANS.length)
+          setHasNextPage(false)
+          setHasPreviousPage(false)
+          setLoadError('Live doctor search is temporarily unavailable, showing saved sample results.')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }, 250)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sortBy, page])
 
   function toggleFavorite(id: string) {
     setFavorites((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -225,6 +188,7 @@ export default function FindDoctorPage() {
   function applySearch(v: string) {
     const trimmed = v.trim()
     setQ(trimmed)
+    setPage(1)
     if (!trimmed) return
     setRecentSearches((prev) => [trimmed, ...prev.filter((item) => item !== trimmed)].slice(0, 5))
   }
@@ -242,6 +206,7 @@ export default function FindDoctorPage() {
     setPrice('any')
     setDistance('any')
     setSortBy('highest-rated')
+    setPage(1)
   }
 
   const navItems = PATIENT_SIDEBAR_ITEMS
@@ -377,7 +342,10 @@ export default function FindDoctorPage() {
                 value={q}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
-                onChange={(e) => setQ(e.target.value)}
+                onChange={(e) => {
+                  setQ(e.target.value)
+                  setPage(1)
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') applySearch(q)
                 }}
@@ -429,7 +397,10 @@ export default function FindDoctorPage() {
                   <button
                     key={item}
                     type='button'
-                    onClick={() => setSpecialty(item)}
+                    onClick={() => {
+                      setSpecialty(item)
+                      setPage(1)
+                    }}
                     style={{
                       border: active ? '1px solid rgba(32,181,223,0.45)' : '1px solid rgba(4,53,77,0.12)',
                       background: active ? 'rgba(32,181,223,0.16)' : 'rgba(255,255,255,0.8)',
@@ -459,7 +430,7 @@ export default function FindDoctorPage() {
                 <div style={{ display: 'grid', gap: '10px' }}>
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Availability
-                    <select value={availability} onChange={(e) => setAvailability(e.target.value as typeof availability)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={availability} onChange={(e) => { setAvailability(e.target.value as typeof availability); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       <option value='any'>Any</option>
                       <option value='today'>Available Today</option>
                       <option value='this-week'>This Week</option>
@@ -468,7 +439,7 @@ export default function FindDoctorPage() {
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Gender
-                    <select value={gender} onChange={(e) => setGender(e.target.value as typeof gender)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={gender} onChange={(e) => { setGender(e.target.value as typeof gender); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       <option value='any'>Any</option>
                       <option value='female'>Female</option>
                       <option value='male'>Male</option>
@@ -477,14 +448,14 @@ export default function FindDoctorPage() {
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Language
-                    <select value={language} onChange={(e) => setLanguage(e.target.value as typeof language)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={language} onChange={(e) => { setLanguage(e.target.value as typeof language); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       {LANGUAGE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
                     </select>
                   </label>
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Experience
-                    <select value={experience} onChange={(e) => setExperience(e.target.value as typeof experience)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={experience} onChange={(e) => { setExperience(e.target.value as typeof experience); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       <option value='any'>Any</option>
                       <option value='0-5'>0-5 years</option>
                       <option value='6-10'>6-10 years</option>
@@ -494,7 +465,7 @@ export default function FindDoctorPage() {
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Consultation Type
-                    <select value={consultationType} onChange={(e) => setConsultationType(e.target.value as typeof consultationType)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={consultationType} onChange={(e) => { setConsultationType(e.target.value as typeof consultationType); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       <option value='any'>Any</option>
                       <option value='video'>Video Consultation</option>
                       <option value='physical'>Physical Visit</option>
@@ -503,14 +474,14 @@ export default function FindDoctorPage() {
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Insurance Accepted
-                    <select value={insurance} onChange={(e) => setInsurance(e.target.value as typeof insurance)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={insurance} onChange={(e) => { setInsurance(e.target.value as typeof insurance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       {INSURANCE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
                     </select>
                   </label>
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Rating
-                    <select value={rating} onChange={(e) => setRating(e.target.value as typeof rating)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={rating} onChange={(e) => { setRating(e.target.value as typeof rating); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       <option value='any'>Any</option>
                       <option value='4.0'>4.0+</option>
                       <option value='4.5'>4.5+</option>
@@ -520,7 +491,7 @@ export default function FindDoctorPage() {
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Price Range
-                    <select value={price} onChange={(e) => setPrice(e.target.value as typeof price)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={price} onChange={(e) => { setPrice(e.target.value as typeof price); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       <option value='any'>Any</option>
                       <option value='under-130'>Under $130</option>
                       <option value='130-180'>$130 - $180</option>
@@ -530,7 +501,7 @@ export default function FindDoctorPage() {
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Distance
-                    <select value={distance} onChange={(e) => setDistance(e.target.value as typeof distance)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={distance} onChange={(e) => { setDistance(e.target.value as typeof distance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       <option value='any'>Any</option>
                       <option value='under-5'>Under 5 km</option>
                       <option value='under-10'>Under 10 km</option>
@@ -540,7 +511,7 @@ export default function FindDoctorPage() {
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Sort By
-                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       <option value='highest-rated'>Highest Rated</option>
                       <option value='nearest'>Nearest</option>
                       <option value='most-experienced'>Most Experienced</option>
@@ -554,8 +525,13 @@ export default function FindDoctorPage() {
             <section>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Featured Physicians</h2>
-                <span style={{ fontSize: '12px', color: T.slate2 }}>{filteredPhysicians.length} doctors</span>
+                <span style={{ fontSize: '12px', color: T.slate2 }}>{totalDoctors} doctors</span>
               </div>
+              {loadError && (
+                <div style={{ marginBottom: '10px', borderRadius: '12px', border: '1px solid rgba(217,119,6,0.22)', background: 'rgba(255,251,235,0.86)', color: T.slate, padding: '10px 12px', fontSize: '12.5px' }}>
+                  {loadError}
+                </div>
+              )}
 
               <div className='fd-results'>
                 {loading ? (
@@ -640,6 +616,28 @@ export default function FindDoctorPage() {
                 )}
               </div>
 
+              <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,255,255,0.84)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2 }}>Page {page} · Showing {filteredPhysicians.length} of {totalDoctors}</p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type='button'
+                    disabled={!hasPreviousPage || loading}
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    style={{ minHeight: '36px', padding: '0 12px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.88)', color: T.navy, fontSize: '12px', fontWeight: 700, cursor: hasPreviousPage && !loading ? 'pointer' : 'not-allowed', opacity: hasPreviousPage && !loading ? 1 : 0.5 }}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type='button'
+                    disabled={!hasNextPage || loading}
+                    onClick={() => setPage((current) => current + 1)}
+                    style={{ minHeight: '36px', padding: '0 12px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.88)', color: T.navy, fontSize: '12px', fontWeight: 700, cursor: hasNextPage && !loading ? 'pointer' : 'not-allowed', opacity: hasNextPage && !loading ? 1 : 0.5 }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+
               <div style={{ height: '14px' }} />
 
               <section style={{ background: 'rgba(255,255,255,0.84)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.card, padding: '16px' }}>
@@ -694,7 +692,7 @@ export default function FindDoctorPage() {
                 {Object.entries(favorites).filter(([, val]) => val).length === 0 ? (
                   <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Tap the heart icon on any doctor card to save favorites.</p>
                 ) : (
-                  PHYSICIANS.filter((p) => favorites[p.id]).map((p) => (
+                  physicians.filter((p) => favorites[p.id]).map((p) => (
                     <Link key={p.id} href={buildProfileHref(p, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ textDecoration: 'none', border: '1px solid rgba(4,53,77,0.08)', borderRadius: '11px', padding: '9px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: T.navy, fontSize: '12.5px', fontWeight: 600 }}>
                       {p.name}
                       <Ico p={ICONS.arrowSm} size={13} sw={1.8} color={T.slate2} />

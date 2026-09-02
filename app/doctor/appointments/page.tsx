@@ -14,8 +14,10 @@ export default function DoctorAppointments() {
   const router = useRouter()
   const [appointmentsData, setAppointmentsData] = useState<DoctorAppointmentsResponse | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const pageSize = 10
 
   useEffect(() => {
     if (!readAccessToken()) {
@@ -29,7 +31,7 @@ export default function DoctorAppointments() {
     async function fetchAppointments() {
       setLoading(true)
       try {
-        const data = await getDoctorAppointments(statusFilter || undefined)
+        const data = await getDoctorAppointments(statusFilter || undefined, { page, page_size: pageSize })
         if (!cancelled) {
           setAppointmentsData(data)
           setError(null)
@@ -52,7 +54,7 @@ export default function DoctorAppointments() {
     return () => {
       cancelled = true
     }
-  }, [router, statusFilter])
+  }, [router, statusFilter, page])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -104,7 +106,10 @@ export default function DoctorAppointments() {
         <div className="flex items-center space-x-4">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value)
+              setPage(1)
+            }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">All Statuses</option>
@@ -176,6 +181,29 @@ export default function DoctorAppointments() {
               ))}
             </div>
           )}
+          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+            <p className="text-sm text-gray-500">
+              Page {appointmentsData.page} · Showing {appointmentsData.appointments.length} of {appointmentsData.filtered_count}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!appointmentsData.has_previous || loading}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={!appointmentsData.has_next || loading}
+                onClick={() => setPage((current) => current + 1)}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -17,8 +17,11 @@ export default function PhysicianWorkspace() {
   const [workspaceData, setWorkspaceData] = useState<DoctorWorkspaceResponse | null>(null)
   const [episodeData, setEpisodeData] = useState<DoctorEpisodeListResponse | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [consultationPage, setConsultationPage] = useState(1)
+  const [episodePage, setEpisodePage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const pageSize = 10
 
   useEffect(() => {
     if (!readAccessToken()) {
@@ -33,8 +36,8 @@ export default function PhysicianWorkspace() {
       setLoading(true)
       try {
         const [data, episodes] = await Promise.all([
-          getDoctorWorkspace(statusFilter || undefined),
-          getDoctorEpisodes(statusFilter || undefined),
+          getDoctorWorkspace(statusFilter || undefined, { page: consultationPage, page_size: pageSize }),
+          getDoctorEpisodes(statusFilter || undefined, { page: episodePage, page_size: pageSize }),
         ])
         if (!cancelled) {
           setWorkspaceData(data)
@@ -59,7 +62,7 @@ export default function PhysicianWorkspace() {
     return () => {
       cancelled = true
     }
-  }, [router, statusFilter])
+  }, [router, statusFilter, consultationPage, episodePage])
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Not scheduled'
@@ -116,7 +119,11 @@ export default function PhysicianWorkspace() {
         <div className="flex items-center space-x-4">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value)
+              setConsultationPage(1)
+              setEpisodePage(1)
+            }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">All Statuses</option>
@@ -192,6 +199,29 @@ export default function PhysicianWorkspace() {
               ))}
             </div>
           )}
+          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+            <p className="text-sm text-gray-500">
+              Page {workspaceData.page} · Showing {workspaceData.consultations.length} of {workspaceData.filtered_count}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!workspaceData.has_previous || loading}
+                onClick={() => setConsultationPage((current) => Math.max(1, current - 1))}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={!workspaceData.has_next || loading}
+                onClick={() => setConsultationPage((current) => current + 1)}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -238,6 +268,31 @@ export default function PhysicianWorkspace() {
                   </div>
                 </button>
               ))}
+            </div>
+          )}
+          {episodeData && (
+            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+              <p className="text-sm text-gray-500">
+                Page {episodeData.page} · Showing {episodeData.episodes.length} of {episodeData.filtered_count}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!episodeData.has_previous || loading}
+                  onClick={() => setEpisodePage((current) => Math.max(1, current - 1))}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={!episodeData.has_next || loading}
+                  onClick={() => setEpisodePage((current) => current + 1)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

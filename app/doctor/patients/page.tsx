@@ -18,8 +18,10 @@ export default function PatientsPage() {
   const router = useRouter()
   const [patientsData, setPatientsData] = useState<DoctorPatientsResponse | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const pageSize = 10
 
   useEffect(() => {
     if (!readAccessToken()) {
@@ -29,10 +31,14 @@ export default function PatientsPage() {
     }
 
     let cancelled = false
+    const timer = window.setTimeout(() => {
+      void fetchPatients()
+    }, 250)
 
     const fetchPatients = async () => {
+      setLoading(true)
       try {
-        const data = await getDoctorPatients()
+        const data = await getDoctorPatients(undefined, { page, page_size: pageSize }, searchQuery)
         if (!cancelled) {
           setPatientsData(data)
           setError(null)
@@ -50,12 +56,11 @@ export default function PatientsPage() {
       }
     }
 
-    fetchPatients()
-
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
     }
-  }, [router])
+  }, [router, searchQuery, page])
 
   if (loading) {
     return (
@@ -71,14 +76,7 @@ export default function PatientsPage() {
 
   if (!patientsData) return null
 
-  const normalizedQuery = searchQuery.trim().toLowerCase()
-  const visiblePatients = normalizedQuery
-    ? patientsData.patients.filter((patient) =>
-        [patient.name, patient.email, patient.phone, patient.gender]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(normalizedQuery))
-      )
-    : patientsData.patients
+  const visiblePatients = patientsData.patients
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -111,7 +109,10 @@ export default function PatientsPage() {
               type="text"
               placeholder="Search patients..."
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) => {
+                setSearchQuery(event.target.value)
+                setPage(1)
+              }}
               style={{
                 border: 'none',
                 background: 'transparent',
@@ -228,12 +229,22 @@ export default function PatientsPage() {
 
           {/* Pagination */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
-            <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Showing {visiblePatients.length} of {patientsData.total_count} patients</p>
+            <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Page {patientsData.page} · Showing {visiblePatients.length} of {patientsData.filtered_count} patients</p>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button disabled style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.9)', color: T.slate2, fontSize: '12px', fontWeight: 600, cursor: 'not-allowed', opacity: 0.5 }}>
+              <button
+                type="button"
+                disabled={!patientsData.has_previous || loading}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.9)', color: T.slate2, fontSize: '12px', fontWeight: 600, cursor: patientsData.has_previous && !loading ? 'pointer' : 'not-allowed', opacity: patientsData.has_previous && !loading ? 1 : 0.5 }}
+              >
                 Previous
               </button>
-              <button disabled style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.9)', color: T.slate2, fontSize: '12px', fontWeight: 600, cursor: 'not-allowed', opacity: 0.5 }}>
+              <button
+                type="button"
+                disabled={!patientsData.has_next || loading}
+                onClick={() => setPage((current) => current + 1)}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.9)', color: T.slate2, fontSize: '12px', fontWeight: 600, cursor: patientsData.has_next && !loading ? 'pointer' : 'not-allowed', opacity: patientsData.has_next && !loading ? 1 : 0.5 }}
+              >
                 Next
               </button>
             </div>
