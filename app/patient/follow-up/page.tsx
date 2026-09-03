@@ -442,7 +442,7 @@ function FollowUpPageContent() {
               <div className='follow-chip'>Connected care path</div>
             </div>
             <div className='timeline'>
-              {timeline.map((item) => (
+              {timeline?.map((item) => (
                 <div key={item.title} className={`timeline-item ${item.state}`}>
                   <div className='dot' />
                   <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{item.title}</div>
