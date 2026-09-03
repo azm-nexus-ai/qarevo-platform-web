@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { Suspense, useId, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
@@ -527,7 +527,7 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
   )
 }
 
-export default function ResetPasswordPage() {
+function ResetPasswordPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token') || ''
@@ -951,5 +951,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordPageContent />
+    </Suspense>
   )
 }
