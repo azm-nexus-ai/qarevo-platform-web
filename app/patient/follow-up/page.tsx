@@ -276,7 +276,7 @@ function FollowUpPageContent() {
                         }}
                       >
                         View Details
-                        <Ico icon="arrowRight" size={14} color="#fff" />
+                        <Ico p={ICONS.arrowFwd} size={14} color="#fff" />
                       </Link>
                     )}
                   </div>
