@@ -95,7 +95,7 @@ const metrics: MetricItem[] = [
   { label: 'Sleep quality', value: 'Good', hint: '7.5 hrs average' },
 ]
 
-const timeline: TimelineItem[] = [
+const progressTimeline: TimelineItem[] = [
   { title: 'Initial consultation', state: 'done' },
   { title: 'Prescription', state: 'done' },
   { title: 'Lab tests', state: 'done' },
@@ -442,7 +442,7 @@ function FollowUpPageContent() {
               <div className='follow-chip'>Connected care path</div>
             </div>
             <div className='timeline'>
-              {timeline?.map((item) => (
+              {progressTimeline.map((item) => (
                 <div key={item.title} className={`timeline-item ${item.state}`}>
                   <div className='dot' />
                   <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{item.title}</div>
