@@ -1,14 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { Suspense, useMemo, useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
+import { 
+  getPatientEpisode, 
+  getPatientEpisodeTimeline,
+  type PatientEpisodeTimelineResponse,
+  type EpisodeResponse 
+} from '@/lib/api'
 
 
 type ProgressCardItem = {
@@ -109,6 +115,8 @@ const documents: DocumentItem[] = [
 
 function FollowUpPageContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const episodeId = searchParams.get('episodeId')
   const physicianId = searchParams.get('physicianId') ?? 'sophia-reed'
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const date = searchParams.get('date') ?? 'Today'
@@ -124,6 +132,31 @@ function FollowUpPageContent() {
   const [selectedTime, setSelectedTime] = useState('10:30')
   const [consultationType, setConsultationType] = useState('Video')
   const [selectedPhysician, setSelectedPhysician] = useState(physicianName)
+  const [episode, setEpisode] = useState<EpisodeResponse | null>(null)
+  const [timeline, setTimeline] = useState<PatientEpisodeTimelineResponse | null>(null)
+  const [loadingEpisode, setLoadingEpisode] = useState(false)
+
+  useEffect(() => {
+    async function loadEpisodeData() {
+      if (!episodeId) return
+      
+      try {
+        setLoadingEpisode(true)
+        const [episodeData, timelineData] = await Promise.all([
+          getPatientEpisode(episodeId),
+          getPatientEpisodeTimeline(episodeId),
+        ])
+        setEpisode(episodeData)
+        setTimeline(timelineData)
+      } catch (err) {
+        console.error('Failed to load episode data:', err)
+      } finally {
+        setLoadingEpisode(false)
+      }
+    }
+
+    loadEpisodeData()
+  }, [episodeId])
 
   const feedbackHref = useMemo(() => {
     const params = new URLSearchParams({
@@ -199,7 +232,7 @@ function FollowUpPageContent() {
                 <Link href={feedbackHref} className='action-btn primary'>Confirm follow-up appointment</Link>
                 <Link href={PATIENT_ROUTES.dashboard} className='action-btn secondary'>Skip for now</Link>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px', marginTop: '16px' }}>
+              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', marginTop: '16px' }}>
                 <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,255,255,0.76)', border: '1px solid rgba(255,255,255,0.84)' }}>
                   <div style={{ fontSize: '10px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Recommendation status</div>
                   <div style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>Recommended</div>
@@ -213,6 +246,42 @@ function FollowUpPageContent() {
                   <div style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{progressValue}% complete</div>
                 </div>
               </div>
+
+              {episodeId && (
+                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '14px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.2)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', color: T.blue, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                        Linked Episode
+                      </div>
+                      <div style={{ fontSize: '12px', color: T.navy, fontWeight: 600 }}>
+                        {loadingEpisode ? 'Loading...' : episode ? `Episode ${episode.id.slice(0, 8)}...` : 'Episode not found'}
+                      </div>
+                    </div>
+                    {episode && (
+                      <Link
+                        href={`/patient/episodes/${episodeId}`}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          background: T.blue,
+                          color: '#fff',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        View Details
+                        <Ico icon="arrowRight" size={14} color="#fff" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 

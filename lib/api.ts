@@ -999,12 +999,69 @@ export async function updatePatientEpisodeIntake(
     fieldValues: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
     return apiPatch<Record<string, unknown>>(`/api/v1/patient/episodes/${episodeId}/intake`, {
-        field_values: fieldValues,
-    });
+    field_values: fieldValues,
+  });
 }
 
 export async function submitPatientEpisodeIntake(episodeId: string): Promise<IntakeSubmitResponse> {
-    return apiPost<IntakeSubmitResponse>(`/api/v1/patient/episodes/${episodeId}/intake/submit`, {});
+  return apiPost<IntakeSubmitResponse>(`/api/v1/patient/episodes/${episodeId}/intake/submit`, {});
+}
+
+export async function getPatientEpisode(episodeId: string): Promise<EpisodeResponse> {
+  return apiGet<EpisodeResponse>(`/api/v1/patient/episodes/${episodeId}`);
+}
+
+export async function getPatientEpisodeIntake(episodeId: string): Promise<Record<string, unknown>> {
+  return apiGet<Record<string, unknown>>(`/api/v1/patient/episodes/${episodeId}/intake`);
+}
+
+export type PatientEpisodeTimelineEvent = {
+  event_id: string;
+  event_type: string;
+  timestamp: string;
+  actor_id: string | null;
+  actor_role: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  description: string;
+  from_status: string | null;
+  to_status: string | null;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+};
+
+export type PatientEpisodeTimelineResponse = {
+  episode_id: string;
+  events: PatientEpisodeTimelineEvent[];
+  total_count: number;
+};
+
+export async function getPatientEpisodeTimeline(episodeId: string): Promise<PatientEpisodeTimelineResponse> {
+  return apiGet<PatientEpisodeTimelineResponse>(`/api/v1/patient/episodes/${episodeId}/timeline`);
+}
+
+export type PatientEpisodeField = {
+  field_id: string;
+  field_name: string;
+  field_type: string;
+  original_value: string | null;
+  verified_value: string | null;
+  verification_status: string;
+  verified_by_id: string | null;
+  verified_at: string | null;
+  source: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PatientEpisodeFieldsResponse = {
+  episode_id: string;
+  fields: PatientEpisodeField[];
+  total_count: number;
+};
+
+export async function getPatientEpisodeFields(episodeId: string): Promise<PatientEpisodeFieldsResponse> {
+  return apiGet<PatientEpisodeFieldsResponse>(`/api/v1/patient/episodes/${episodeId}/fields`);
 }
 
 // Medical Records File Upload/Download
