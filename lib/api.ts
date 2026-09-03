@@ -280,6 +280,7 @@ export type DoctorUsernameAvailabilityResponse = {
 export type DoctorLoginRequest = {
     identifier: string; // email, username, or phone
     password: string;
+    remember_me?: boolean; // remember device for 30 days
 };
 
 export type DoctorLoginResponse = {

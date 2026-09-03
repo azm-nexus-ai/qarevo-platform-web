@@ -272,6 +272,7 @@ export default function DoctorLoginPage() {
       const loginData: DoctorLoginRequest = {
         identifier: identifier.trim(),
         password,
+        remember_me: remember,
       }
 
       const response = await apiPost('/api/v1/auth/doctor/login', loginData) as { temp_token: string }
