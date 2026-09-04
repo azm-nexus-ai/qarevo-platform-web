@@ -637,6 +637,9 @@ export type DoctorProfileResponse = {
     certifications?: string | null;
     languages?: string | null;
     hospital?: string | null;
+    insurance?: string | null;
+    consultation_types?: string | null;
+    avatar_url?: string | null;
     total_consultations: number;
     patient_rating: number;
     years_active: number;
@@ -657,11 +660,14 @@ export type DoctorProfileUpdate = Partial<{
     country: string | null;
     zip: string | null;
     consultation_fee: number | null;
+    hospital: string | null;
+    languages: string | null;
     about: string | null;
     education: string | null;
     certifications: string | null;
-    languages: string | null;
-    hospital: string | null;
+    insurance: string | null;
+    consultation_types: string | null;
+    avatar_url: string | null;
 }>;
 
 export type DoctorSettingsResponse = {

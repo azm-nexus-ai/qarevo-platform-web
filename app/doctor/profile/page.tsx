@@ -31,6 +31,9 @@ type ProfileDraft = {
   about: string
   education: string
   certifications: string
+  insurance: string
+  consultation_types: string
+  avatar_url: string
 }
 
 function createProfileDraft(profile: DoctorProfileResponse): ProfileDraft {
@@ -52,6 +55,9 @@ function createProfileDraft(profile: DoctorProfileResponse): ProfileDraft {
     about: profile.about || '',
     education: profile.education || '',
     certifications: profile.certifications || '',
+    insurance: profile.insurance || '',
+    consultation_types: profile.consultation_types || '',
+    avatar_url: profile.avatar_url || '',
   }
 }
 
@@ -223,8 +229,12 @@ export default function DoctorProfilePage() {
         padding: '32px',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
-          <div style={{ width: '100px', height: '100px', borderRadius: '16px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 24px rgba(32,181,223,0.3)' }}>
-            {profileInitials}
+          <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 24px rgba(32,181,223,0.3)' }}>
+            {profileData.avatar_url ? (
+              <img src={profileData.avatar_url} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              profileInitials
+            )}
           </div>
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: '0 0 4px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{displayName}</h2>
@@ -268,6 +278,14 @@ export default function DoctorProfilePage() {
           <div>
             <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Languages</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.languages || 'Not provided'}</p>
+          </div>
+          <div>
+            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Certifications</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.certifications || 'Not provided'}</p>
+          </div>
+          <div>
+            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Accepted</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.insurance || 'Not provided'}</p>
           </div>
         </div>
       </div>
@@ -383,6 +401,18 @@ export default function DoctorProfilePage() {
           <div>
             <label style={labelStyle}>Certifications</label>
             <textarea value={draft.certifications} onChange={(event) => updateDraft('certifications', event.target.value)} placeholder="Board certifications and credentials" rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+          </div>
+          <div>
+            <label style={labelStyle}>Insurance Accepted</label>
+            <textarea value={draft.insurance} onChange={(event) => updateDraft('insurance', event.target.value)} placeholder="Axa, Bupa, Cigna, etc." rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+          </div>
+          <div>
+            <label style={labelStyle}>Consultation Types</label>
+            <textarea value={draft.consultation_types} onChange={(event) => updateDraft('consultation_types', event.target.value)} placeholder="video, physical, etc." rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+          </div>
+          <div>
+            <label style={labelStyle}>Profile Picture URL</label>
+            <input value={draft.avatar_url} onChange={(event) => updateDraft('avatar_url', event.target.value)} placeholder="https://example.com/profile.jpg" style={inputStyle} />
           </div>
         </div>
       </div>
