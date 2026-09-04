@@ -7,7 +7,7 @@ import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/compone
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { T } from '@/lib/tokens'
-import { clearAuthTokens, getPatientHealthInfo, isAuthError, readAccessToken, updatePatientHealthInfo, type PatientHealthInfoUpdate } from '@/lib/api'
+import { clearAuthTokens, createEmergencyContact, createInsurance, deleteEmergencyContact, getPatientHealthInfo, getPatientSettings, isAuthError, readAccessToken, updateInsurance, updatePatientHealthInfo, updateProfile, type PatientHealthInfoUpdate, type EmergencyContact, type Insurance, type InsuranceCreate, type EmergencyContactCreate } from '@/lib/api'
 
 type ToggleKey =
   | 'emailNotifications'
@@ -22,13 +22,6 @@ type ToggleKey =
   | 'darkMode'
   | 'highContrast'
 
-type EmergencyContact = {
-  id: string
-  name: string
-  relationship: string
-  phone: string
-}
-
 type HealthInfo = {
   bloodPressure: string
   weight: string
@@ -38,13 +31,6 @@ type HealthInfo = {
   conditions: string
 }
 
-const ACCOUNT_ROWS = [
-  { label: 'Full Name', value: 'John Adewale' },
-  { label: 'Email', value: 'john.adewale@qarevo.test' },
-  { label: 'Phone Number', value: '+234 803 555 0148' },
-  { label: 'Date of Birth', value: '14 May 1991' },
-  { label: 'Gender', value: 'Male' },
-]
 
 const SECURITY_ITEMS = [
   { title: 'Change Password', body: 'Last updated 42 days ago', badge: 'Recommended', tone: 'warning' as const },
@@ -59,7 +45,13 @@ export default function PatientSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
-  const [editingProfile, setEditingProfile] = useState(false)
+  const [accountData, setAccountData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    dateOfBirth: '',
+    gender: '',
+  })
   const [toggles, setToggles] = useState<Record<ToggleKey, boolean>>({
     emailNotifications: true,
     smsNotifications: true,
@@ -76,10 +68,8 @@ export default function PatientSettingsPage() {
   const [fontSize, setFontSize] = useState('Medium')
   const [language, setLanguage] = useState('English')
   const [timeZone, setTimeZone] = useState('Africa/Lagos (GMT+1)')
-  const [contacts, setContacts] = useState<EmergencyContact[]>([
-    { id: 'ec-1', name: 'Mary Adewale', relationship: 'Spouse', phone: '+234 803 555 0101' },
-    { id: 'ec-2', name: 'Samuel Adewale', relationship: 'Sibling', phone: '+234 816 555 0192' },
-  ])
+  const [contacts, setContacts] = useState<EmergencyContact[]>([])
+  const [insurance, setInsurance] = useState<Insurance | null>(null)
   const [healthInfo, setHealthInfo] = useState<HealthInfo>({
     bloodPressure: '',
     weight: '',
@@ -87,6 +77,28 @@ export default function PatientSettingsPage() {
     bloodType: '',
     allergies: '',
     conditions: '',
+  })
+  const [showAddContactForm, setShowAddContactForm] = useState(false)
+  const [newContact, setNewContact] = useState<EmergencyContactCreate>({
+    name: '',
+    relationship: '',
+    phone: '',
+  })
+  const [showProfileEdit, setShowProfileEdit] = useState(false)
+  const [profileEdit, setProfileEdit] = useState({
+    first_name: '',
+    last_name: '',
+    date_of_birth: '',
+    gender: '',
+    phone: '',
+  })
+  const [showInsuranceEdit, setShowInsuranceEdit] = useState(false)
+  const [insuranceEdit, setInsuranceEdit] = useState({
+    insurance_provider_name: '',
+    insurance_number: '',
+    insured_status: '',
+    validity_start: '',
+    validity_end: '',
   })
 
   useEffect(() => {
@@ -97,17 +109,37 @@ export default function PatientSettingsPage() {
       return () => window.clearTimeout(timer)
     }
     
-    // Load health info from API
-    const loadHealthInfo = async () => {
+    // Load account data and health info from API
+    const loadData = async () => {
       try {
-        const data = await getPatientHealthInfo()
+        const [settingsData, healthData] = await Promise.all([
+          getPatientSettings(),
+          getPatientHealthInfo(),
+        ])
+        
+        const fullName = [settingsData.first_name, settingsData.last_name].filter(Boolean).join(' ')
+        const formattedDate = settingsData.date_of_birth 
+          ? new Date(settingsData.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+          : ''
+        
+        setAccountData({
+          fullName: fullName || 'Not set',
+          email: settingsData.email || '',
+          phone: settingsData.phone || 'Not set',
+          dateOfBirth: formattedDate || 'Not set',
+          gender: settingsData.gender || 'Not set',
+        })
+        
+        setContacts(settingsData.emergency_contacts || [])
+        setInsurance(settingsData.insurance || null)
+        
         setHealthInfo({
-          bloodPressure: data.blood_pressure || '',
-          weight: data.weight || '',
-          height: data.height || '',
-          bloodType: data.blood_type || '',
-          allergies: data.allergies || '',
-          conditions: data.medical_conditions || '',
+          bloodPressure: healthData.blood_pressure || '',
+          weight: healthData.weight || '',
+          height: healthData.height || '',
+          bloodType: healthData.blood_type || '',
+          allergies: healthData.allergies || '',
+          conditions: healthData.medical_conditions || '',
         })
       } catch (error) {
         if (isAuthError(error)) {
@@ -115,16 +147,102 @@ export default function PatientSettingsPage() {
           router.replace('/auth/sign-in')
           return
         }
-        console.error('Failed to load health info:', error)
+        console.error('Failed to load settings data:', error)
       }
     }
-    loadHealthInfo()
+    loadData()
     
     return () => window.clearTimeout(timer)
   }, [router])
 
   function toggleSetting(key: ToggleKey) {
     setToggles((current) => ({ ...current, [key]: !current[key] }))
+  }
+
+  async function handleDeleteContact(contactId: string) {
+    try {
+      await deleteEmergencyContact(contactId)
+      setContacts(contacts.filter(c => c.id !== contactId))
+    } catch (error) {
+      console.error('Failed to delete emergency contact:', error)
+    }
+  }
+
+  async function handleAddContact() {
+    try {
+      const created = await createEmergencyContact(newContact)
+      setContacts([...contacts, created])
+      setNewContact({ name: '', relationship: '', phone: '' })
+      setShowAddContactForm(false)
+    } catch (error) {
+      console.error('Failed to add emergency contact:', error)
+    }
+  }
+
+  async function handleProfileSave() {
+    try {
+      const updated = await updateProfile(profileEdit)
+      const fullName = [updated.first_name, updated.last_name].filter(Boolean).join(' ')
+      const formattedDate = updated.date_of_birth 
+        ? new Date(updated.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+        : ''
+      
+      setAccountData({
+        fullName: fullName || 'Not set',
+        email: updated.email || '',
+        phone: updated.phone || 'Not set',
+        dateOfBirth: formattedDate || 'Not set',
+        gender: updated.gender || 'Not set',
+      })
+      setShowProfileEdit(false)
+      setSaveMessage('Profile updated successfully')
+      setTimeout(() => setSaveMessage(''), 3000)
+    } catch (error) {
+      console.error('Failed to update profile:', error)
+      setSaveMessage('Failed to update profile')
+    }
+  }
+
+  function openProfileEdit() {
+    setProfileEdit({
+      first_name: accountData.fullName.split(' ')[0] || '',
+      last_name: accountData.fullName.split(' ').slice(1).join(' ') || '',
+      date_of_birth: accountData.dateOfBirth !== 'Not set' ? new Date(accountData.dateOfBirth).toISOString().split('T')[0] : '',
+      gender: accountData.gender !== 'Not set' ? accountData.gender : '',
+      phone: accountData.phone !== 'Not set' ? accountData.phone : '',
+    })
+    setShowProfileEdit(true)
+  }
+
+  async function handleInsuranceSave() {
+    try {
+      if (insurance) {
+        const updated = await updateInsurance(insuranceEdit)
+        setInsurance(updated)
+      } else {
+        const created = await createInsurance(insuranceEdit)
+        setInsurance(created)
+      }
+      setShowInsuranceEdit(false)
+      setSaveMessage('Insurance information saved successfully')
+      setTimeout(() => setSaveMessage(''), 3000)
+    } catch (error) {
+      console.error('Failed to save insurance:', error)
+      setSaveMessage('Failed to save insurance information')
+    }
+  }
+
+  function openInsuranceEdit() {
+    if (insurance) {
+      setInsuranceEdit({
+        insurance_provider_name: insurance.insurance_provider_name || '',
+        insurance_number: insurance.insurance_number || '',
+        insured_status: insurance.insured_status || '',
+        validity_start: insurance.validity_start ? insurance.validity_start.split('T')[0] : '',
+        validity_end: insurance.validity_end ? insurance.validity_end.split('T')[0] : '',
+      })
+    }
+    setShowInsuranceEdit(true)
   }
 
   async function handleSave() {
@@ -145,7 +263,6 @@ export default function PatientSettingsPage() {
       
       setSaving(false)
       setSaveMessage('Settings saved successfully.')
-      setEditingProfile(false)
     } catch (error) {
       if (isAuthError(error)) {
         setSaving(false)
@@ -161,10 +278,6 @@ export default function PatientSettingsPage() {
 
   function handleCancel() {
     setSaveMessage('Changes reverted to the last saved version.')
-  }
-
-  function handleDeleteContact(id: string) {
-    setContacts((current) => current.filter((contact) => contact.id !== id))
   }
 
   const headerActions = (
@@ -231,21 +344,102 @@ export default function PatientSettingsPage() {
                 <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Account Information</p>
                 <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Profile and contact identity</h2>
               </div>
-              <PortalButton tone='secondary' onClick={() => setEditingProfile(!editingProfile)}>
-                {editingProfile ? 'Cancel' : 'Edit'}
+              <PortalButton tone='secondary' onClick={() => { if (!showProfileEdit) openProfileEdit(); else setShowProfileEdit(false) }}>
+                {showProfileEdit ? 'Cancel' : 'Edit'}
               </PortalButton>
             </div>
             <div className='grid gap-4 md:grid-cols-[96px_minmax(0,1fr)]'>
               <div className='flex items-center justify-center md:justify-start'>
-                <div style={{ width: '88px', height: '88px', borderRadius: '24px', background: 'linear-gradient(135deg, rgba(32,181,223,0.18), rgba(52,140,234,0.22))', border: '1px solid rgba(4,53,77,0.1)', display: 'grid', placeItems: 'center', color: T.navy, fontSize: '26px', fontWeight: 800 }}>J</div>
+                <div style={{ width: '88px', height: '88px', borderRadius: '24px', background: 'linear-gradient(135deg, rgba(32,181,223,0.18), rgba(52,140,234,0.22))', border: '1px solid rgba(4,53,77,0.1)', display: 'grid', placeItems: 'center', color: T.navy, fontSize: '26px', fontWeight: 800 }}>
+                  {accountData.fullName.charAt(0).toUpperCase()}
+                </div>
               </div>
               <div className='grid gap-3 sm:grid-cols-2'>
-                {ACCOUNT_ROWS.map((item) => (
-                  <div key={item.label} style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{item.value}</p>
-                  </div>
-                ))}
+                {showProfileEdit ? (
+                  <>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>First Name</label>
+                      <input
+                        type='text'
+                        value={profileEdit.first_name}
+                        onChange={(e) => setProfileEdit({ ...profileEdit, first_name: e.target.value })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Last Name</label>
+                      <input
+                        type='text'
+                        value={profileEdit.last_name}
+                        onChange={(e) => setProfileEdit({ ...profileEdit, last_name: e.target.value })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</label>
+                      <input
+                        type='text'
+                        value={profileEdit.phone}
+                        onChange={(e) => setProfileEdit({ ...profileEdit, phone: e.target.value })}
+                        placeholder='+234 XXX XXX XXXX'
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</label>
+                      <input
+                        type='date'
+                        value={profileEdit.date_of_birth}
+                        onChange={(e) => setProfileEdit({ ...profileEdit, date_of_birth: e.target.value })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</label>
+                      <select
+                        value={profileEdit.gender}
+                        onChange={(e) => setProfileEdit({ ...profileEdit, gender: e.target.value })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      >
+                        <option value=''>Select</option>
+                        <option value='MALE'>Male</option>
+                        <option value='FEMALE'>Female</option>
+                        <option value='OTHER'>Other</option>
+                      </select>
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</label>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.email}</p>
+                    </div>
+                    <div className='flex gap-2' style={{ gridColumn: 'span 2' }}>
+                      <PortalButton tone='primary' onClick={handleProfileSave}>Save Changes</PortalButton>
+                      <PortalButton tone='secondary' onClick={() => setShowProfileEdit(false)}>Cancel</PortalButton>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Full Name</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.fullName}</p>
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.email}</p>
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.phone}</p>
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.dateOfBirth}</p>
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.gender}</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </PortalCard>
@@ -258,149 +452,72 @@ export default function PatientSettingsPage() {
               </div>
             </div>
             <div className='grid gap-3 sm:grid-cols-2'>
-              {editingProfile ? (
-                <>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: '#fff', border: '1px solid rgba(4,53,77,0.12)' }}>
-                    <p style={{ margin: '0 0 6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Pressure</p>
-                    <input
-                      type='text'
-                      value={healthInfo.bloodPressure}
-                      onChange={(e) => setHealthInfo({ ...healthInfo, bloodPressure: e.target.value })}
-                      placeholder='e.g., 120/80'
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
-                    />
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: '#fff', border: '1px solid rgba(4,53,77,0.12)' }}>
-                    <p style={{ margin: '0 0 6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Weight (kg)</p>
-                    <input
-                      type='text'
-                      value={healthInfo.weight}
-                      onChange={(e) => setHealthInfo({ ...healthInfo, weight: e.target.value })}
-                      placeholder='e.g., 75'
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
-                    />
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: '#fff', border: '1px solid rgba(4,53,77,0.12)' }}>
-                    <p style={{ margin: '0 0 6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Height (cm)</p>
-                    <input
-                      type='text'
-                      value={healthInfo.height}
-                      onChange={(e) => setHealthInfo({ ...healthInfo, height: e.target.value })}
-                      placeholder='e.g., 175'
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
-                    />
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: '#fff', border: '1px solid rgba(4,53,77,0.12)' }}>
-                    <p style={{ margin: '0 0 6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Type</p>
-                    <select
-                      value={healthInfo.bloodType}
-                      onChange={(e) => setHealthInfo({ ...healthInfo, bloodType: e.target.value })}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
-                    >
-                      <option value=''>Select</option>
-                      <option value='A+'>A+</option>
-                      <option value='A-'>A-</option>
-                      <option value='B+'>B+</option>
-                      <option value='B-'>B-</option>
-                      <option value='AB+'>AB+</option>
-                      <option value='AB-'>AB-</option>
-                      <option value='O+'>O+</option>
-                      <option value='O-'>O-</option>
-                    </select>
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: '#fff', border: '1px solid rgba(4,53,77,0.12)', gridColumn: 'span 2' }}>
-                    <p style={{ margin: '0 0 6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Allergies</p>
-                    <input
-                      type='text'
-                      value={healthInfo.allergies}
-                      onChange={(e) => setHealthInfo({ ...healthInfo, allergies: e.target.value })}
-                      placeholder='e.g., Penicillin, Peanuts'
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
-                    />
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: '#fff', border: '1px solid rgba(4,53,77,0.12)', gridColumn: 'span 2' }}>
-                    <p style={{ margin: '0 0 6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Medical Conditions</p>
-                    <input
-                      type='text'
-                      value={healthInfo.conditions}
-                      onChange={(e) => setHealthInfo({ ...healthInfo, conditions: e.target.value })}
-                      placeholder='e.g., Hypertension, Diabetes'
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Pressure</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodPressure || 'Not set'}</p>
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Weight</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.weight ? `${healthInfo.weight} kg` : 'Not set'}</p>
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Height</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.height ? `${healthInfo.height} cm` : 'Not set'}</p>
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Type</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodType || 'Not set'}</p>
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: 'span 2' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Allergies</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || 'None'}</p>
-                  </div>
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: 'span 2' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Medical Conditions</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || 'None'}</p>
-                  </div>
-                </>
-              )}
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Pressure</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodPressure ? `${healthInfo.bloodPressure} mmHg` : 'Not set'}</p>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Weight</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.weight ? `${healthInfo.weight} kg` : 'Not set'}</p>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Height</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.height ? `${healthInfo.height} cm` : 'Not set'}</p>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Type</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodType || 'Not set'}</p>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: 'span 2' }}>
+                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Allergies</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || 'None'}</p>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: 'span 2' }}>
+                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Medical Conditions</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || 'None'}</p>
+              </div>
             </div>
           </PortalCard>
 
-          <div className='grid gap-4 xl:grid-cols-2'>
-            <PortalCard>
-              <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Security</p>
-                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Secure access controls</h2>
-              </div>
-              <div className='grid gap-3'>
-                {SECURITY_ITEMS.map((item) => (
-                  <div key={item.title} style={{ padding: '14px', borderRadius: '16px', background: 'rgba(247,250,252,0.9)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <div className='flex flex-wrap items-start justify-between gap-2 mb-2'>
-                      <div>
-                        <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{item.title}</p>
-                        <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.55 }}>{item.body}</p>
-                      </div>
-                      <PortalBadge tone={item.tone}>{item.badge}</PortalBadge>
+          <PortalCard>
+            <div className='mb-4'>
+              <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Security</p>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Secure access controls</h2>
+            </div>
+            <div className='grid gap-3'>
+              {SECURITY_ITEMS.map((item) => (
+                <div key={item.title} style={{ padding: '14px', borderRadius: '16px', background: 'rgba(247,250,252,0.9)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                  <div className='flex flex-wrap items-start justify-between gap-2 mb-2'>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{item.title}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.55 }}>{item.body}</p>
                     </div>
+                    <PortalBadge tone={item.tone}>{item.badge}</PortalBadge>
                   </div>
-                ))}
-              </div>
-            </PortalCard>
+                </div>
+              ))}
+            </div>
+          </PortalCard>
 
-            <PortalCard>
-              <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Notification Preferences</p>
-                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Care communication and reminders</h2>
-              </div>
-              <div className='grid gap-3'>
-                {[
-                  ['Email Notifications', 'emailNotifications'],
-                  ['SMS Notifications', 'smsNotifications'],
-                  ['Push Notifications', 'pushNotifications'],
-                  ['Appointment Reminders', 'appointmentReminders'],
-                  ['Medication Reminders', 'medicationReminders'],
-                  ['Lab Result Alerts', 'labResultAlerts'],
-                  ['Marketing Emails', 'marketingEmails'],
-                ].map(([label, key]) => (
-                  <ToggleRow key={key} label={label} enabled={toggles[key as ToggleKey]} onToggle={() => toggleSetting(key as ToggleKey)} />
-                ))}
-              </div>
-            </PortalCard>
-          </div>
+          <PortalCard>
+            <div className='mb-4'>
+              <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Notification Preferences</p>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Care communication and reminders</h2>
+            </div>
+            <div className='grid gap-3'>
+              {[
+                ['Email Notifications', 'emailNotifications'],
+                ['SMS Notifications', 'smsNotifications'],
+                ['Push Notifications', 'pushNotifications'],
+                ['Appointment Reminders', 'appointmentReminders'],
+                ['Medication Reminders', 'medicationReminders'],
+                ['Lab Result Alerts', 'labResultAlerts'],
+                ['Marketing Emails', 'marketingEmails'],
+              ].map(([label, key]) => (
+                <ToggleRow key={key} label={label} enabled={toggles[key as ToggleKey]} onToggle={() => toggleSetting(key as ToggleKey)} />
+              ))}
+            </div>
+          </PortalCard>
 
           <div className='grid gap-4 xl:grid-cols-2'>
             <PortalCard>
@@ -442,8 +559,56 @@ export default function PatientSettingsPage() {
                   <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Emergency Contacts</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>People to contact quickly</h2>
                 </div>
-                <PortalButton tone='primary'>Add Contact</PortalButton>
+                <PortalButton tone='primary' onClick={() => setShowAddContactForm(!showAddContactForm)}>
+                  {showAddContactForm ? 'Cancel' : 'Add Contact'}
+                </PortalButton>
               </div>
+              
+              {showAddContactForm && (
+                <div style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.95)', padding: '16px', marginBottom: '16px' }}>
+                  <div className='grid gap-3'>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Name</label>
+                      <input
+                        type='text'
+                        value={newContact.name}
+                        onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                        placeholder='Contact name'
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Relationship</label>
+                      <input
+                        type='text'
+                        value={newContact.relationship}
+                        onChange={(e) => setNewContact({ ...newContact, relationship: e.target.value })}
+                        placeholder='e.g., Spouse, Parent, Sibling'
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Phone Number</label>
+                      <input
+                        type='text'
+                        value={newContact.phone}
+                        onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                        placeholder='+234 XXX XXX XXXX'
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div className='flex gap-2'>
+                      <PortalButton tone='primary' onClick={handleAddContact} disabled={!newContact.name || !newContact.relationship || !newContact.phone}>
+                        Add Contact
+                      </PortalButton>
+                      <PortalButton tone='secondary' onClick={() => setShowAddContactForm(false)}>
+                        Cancel
+                      </PortalButton>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className='grid gap-3'>
                 {contacts.length === 0 ? (
                   <div style={{ borderRadius: '18px', border: '1px dashed rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.82)', padding: '20px', textAlign: 'center' }}>
@@ -475,23 +640,109 @@ export default function PatientSettingsPage() {
                   <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Information</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Coverage and card upload</h2>
                 </div>
-                <PortalBadge tone='success'>Coverage Active</PortalBadge>
+                <div className='flex gap-2'>
+                  {insurance && <PortalBadge tone='success'>Coverage Active</PortalBadge>}
+                  <PortalButton tone='secondary' onClick={() => { if (!showInsuranceEdit) openInsuranceEdit(); else setShowInsuranceEdit(false) }}>
+                    {showInsuranceEdit ? 'Cancel' : insurance ? 'Edit' : 'Add Insurance'}
+                  </PortalButton>
+                </div>
               </div>
-              <div className='grid gap-3 sm:grid-cols-2'>
-                {[
-                  ['Insurance Provider', 'Axa Mansard'],
-                  ['Policy Number', 'QH-8892-4481'],
-                  ['Coverage Status', 'Verified'],
-                  ['Insurance Card', 'Front and back uploaded'],
-                ].map(([label, value]) => (
-                  <div key={label} style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{value}</p>
+              
+              {showInsuranceEdit && (
+                <div style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.95)', padding: '16px', marginBottom: '16px' }}>
+                  <div className='grid gap-3 sm:grid-cols-2'>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Insurance Provider</label>
+                      <input
+                        type='text'
+                        value={insuranceEdit.insurance_provider_name}
+                        onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_provider_name: e.target.value })}
+                        placeholder='e.g., Axa Mansard, HMO'
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Policy Number</label>
+                      <input
+                        type='text'
+                        value={insuranceEdit.insurance_number}
+                        onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_number: e.target.value })}
+                        placeholder='e.g., QH-8892-4481'
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Coverage Status</label>
+                      <select
+                        value={insuranceEdit.insured_status}
+                        onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insured_status: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      >
+                        <option value=''>Select</option>
+                        <option value='SELF_INSURED'>Self Insured</option>
+                        <option value='FAMILY_MEMBER'>Family Member</option>
+                        <option value='STUDENT'>Student</option>
+                        <option value='PENSIONER'>Pensioner</option>
+                        <option value='OTHER'>Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Valid From</label>
+                      <input
+                        type='date'
+                        value={insuranceEdit.validity_start}
+                        onChange={(e) => setInsuranceEdit({ ...insuranceEdit, validity_start: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Valid Until</label>
+                      <input
+                        type='date'
+                        value={insuranceEdit.validity_end}
+                        onChange={(e) => setInsuranceEdit({ ...insuranceEdit, validity_end: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      />
+                    </div>
+                    <div className='flex gap-2' style={{ gridColumn: 'span 2' }}>
+                      <PortalButton tone='primary' onClick={handleInsuranceSave}>Save Insurance</PortalButton>
+                      <PortalButton tone='secondary' onClick={() => setShowInsuranceEdit(false)}>Cancel</PortalButton>
+                    </div>
                   </div>
-                ))}
+                </div>
+              )}
+              
+              <div className='grid gap-3 sm:grid-cols-2'>
+                {insurance ? (
+                  <>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Provider</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_provider_name || 'Not set'}</p>
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Policy Number</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_number || 'Not set'}</p>
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coverage Status</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insured_status || 'Not set'}</p>
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Valid Until</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>
+                        {insurance.validity_end 
+                          ? new Date(insurance.validity_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                          : 'Not set'}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: '1 / -1' }}>
+                    <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>No insurance information on file</p>
+                  </div>
+                )}
               </div>
               <div className='flex gap-2 flex-wrap mt-4'>
-                <PortalButton tone='secondary'>Manage</PortalButton>
                 <PortalButton tone='secondary'>Upload Insurance Card</PortalButton>
               </div>
             </PortalCard>

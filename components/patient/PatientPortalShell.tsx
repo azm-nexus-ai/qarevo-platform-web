@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
@@ -8,6 +9,7 @@ import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import { ICONS } from '@/constants/icons'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
+import { getPatientSettings, isAuthError, clearAuthTokens, type PatientSettings } from '@/lib/api'
 
 type PatientPortalShellProps = {
   eyebrow?: string
@@ -21,7 +23,10 @@ type PatientPortalShellProps = {
 // ─── Shared Sidebar Content ──────────────────────────────────────────────────
 // Extracted so we can render it both inside the desktop aside and the mobile drawer.
 
-function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: string; onNavigate?: () => void; userSettings: PatientSettings | null }) {
+  const fullName = userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'
+  const initials = fullName ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'P'
+  
   return (
     <>
       {/* Logo */}
@@ -57,10 +62,10 @@ function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate
               fontSize: '16px',
             }}
           >
-            J
+            {initials}
           </div>
           <div>
-            <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>John Adewale</p>
+            <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{fullName}</p>
             <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: Active</p>
           </div>
         </div>
@@ -135,6 +140,24 @@ export default function PatientPortalShell({
   rightRail,
 }: PatientPortalShellProps) {
   const pathname = usePathname()
+  const [userSettings, setUserSettings] = useState<PatientSettings | null>(null)
+
+  useEffect(() => {
+    const loadUserSettings = async () => {
+      try {
+        const data = await getPatientSettings()
+        setUserSettings(data)
+      } catch (error) {
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          window.location.href = '/auth/sign-in'
+          return
+        }
+        console.error('Failed to load user settings:', error)
+      }
+    }
+    loadUserSettings()
+  }, [])
 
   return (
     <main className='min-h-screen relative' style={{ background: PAGE_BG }}>
@@ -193,7 +216,7 @@ export default function PatientPortalShell({
               flexDirection: 'column',
             }}
           >
-            <SidebarContent pathname={pathname} />
+            <SidebarContent pathname={pathname} userSettings={userSettings} />
           </div>
         </aside>
 

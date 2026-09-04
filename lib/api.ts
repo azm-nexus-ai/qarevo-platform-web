@@ -1147,12 +1147,113 @@ export type PatientHealthInfoUpdate = {
     medical_conditions?: string;
 };
 
+export type PatientSettings = {
+    user_id: string;
+    first_name?: string;
+    last_name?: string;
+    email: string;
+    phone?: string;
+    date_of_birth?: string;
+    gender?: string;
+    email_notifications: boolean;
+    sms_notifications: boolean;
+    push_notifications: boolean;
+    appointment_reminders: boolean;
+    medication_reminders: boolean;
+    lab_result_alerts: boolean;
+    marketing_emails: boolean;
+    data_sharing: boolean;
+    physician_access: boolean;
+    emergency_contacts: EmergencyContact[];
+    insurance?: Insurance;
+};
+
+export type EmergencyContact = {
+    id: string;
+    name: string;
+    relationship: string;
+    phone: string;
+};
+
+export type EmergencyContactCreate = {
+    name: string;
+    relationship: string;
+    phone: string;
+};
+
+export type EmergencyContactUpdate = {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+};
+
+export type Insurance = {
+    id: string;
+    insurance_provider_name?: string;
+    insurance_number?: string;
+    insured_status?: string;
+    validity_start?: string;
+    validity_end?: string;
+};
+
+export type InsuranceCreate = {
+    insurance_provider_name?: string;
+    insurance_number?: string;
+    insured_status?: string;
+    validity_start?: string;
+    validity_end?: string;
+};
+
+export type InsuranceUpdate = {
+    insurance_provider_name?: string;
+    insurance_number?: string;
+    insured_status?: string;
+    validity_start?: string;
+    validity_end?: string;
+};
+
+export type ProfileUpdate = {
+    first_name?: string;
+    last_name?: string;
+    date_of_birth?: string;
+    gender?: string;
+    phone?: string;
+};
+
+export async function getPatientSettings(): Promise<PatientSettings> {
+    return apiGet<PatientSettings>("/api/v1/patient/settings");
+}
+
 export async function getPatientHealthInfo(): Promise<PatientHealthInfo> {
     return apiGet<PatientHealthInfo>("/api/v1/patient/settings/health-info");
 }
 
 export async function updatePatientHealthInfo(body: PatientHealthInfoUpdate): Promise<PatientHealthInfo> {
     return apiPut<PatientHealthInfo>("/api/v1/patient/settings/health-info", body);
+}
+
+export async function createEmergencyContact(body: EmergencyContactCreate): Promise<EmergencyContact> {
+    return apiPost<EmergencyContact>("/api/v1/patient/settings/emergency-contacts", body);
+}
+
+export async function updateEmergencyContact(contactId: string, body: EmergencyContactUpdate): Promise<EmergencyContact> {
+    return apiPut<EmergencyContact>(`/api/v1/patient/settings/emergency-contacts/${contactId}`, body);
+}
+
+export async function deleteEmergencyContact(contactId: string): Promise<{ message: string }> {
+    return apiDelete<{ message: string }>(`/api/v1/patient/settings/emergency-contacts/${contactId}`);
+}
+
+export async function createInsurance(body: InsuranceCreate): Promise<Insurance> {
+    return apiPost<Insurance>("/api/v1/patient/settings/insurance", body);
+}
+
+export async function updateInsurance(body: InsuranceUpdate): Promise<Insurance> {
+    return apiPut<Insurance>("/api/v1/patient/settings/insurance", body);
+}
+
+export async function updateProfile(body: ProfileUpdate): Promise<PatientSettings> {
+    return apiPut<PatientSettings>("/api/v1/patient/settings/profile", body);
 }
 
 // Timeline Events
