@@ -113,8 +113,8 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
       name,
       price: parseInt(price, 10),
       duration: parseInt(duration, 10),
-      availability: availability || null,
-      description: description || null,
+      availability: availability || undefined,
+      description: description || undefined,
     }
     onSave(data)
   }
