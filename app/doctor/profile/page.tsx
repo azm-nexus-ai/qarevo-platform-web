@@ -250,6 +250,7 @@ export default function DoctorProfilePage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [editingService, setEditingService] = useState<ConsultationService | null>(null)
   const [showServiceForm, setShowServiceForm] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   useEffect(() => {
     if (!readAccessToken()) {
@@ -315,6 +316,7 @@ export default function DoctorProfilePage() {
     setDraft((current) => current ? { ...current, [key]: value } : current)
     setSaveMessage(null)
     setSaveError(null)
+    setHasUnsavedChanges(true)
   }
 
   const saveProfile = async () => {
@@ -375,6 +377,9 @@ export default function DoctorProfilePage() {
       setProfileData(saved)
       setDraft(createProfileDraft(saved))
       setSaveMessage('Professional profile updated.')
+      setHasUnsavedChanges(false)
+      // Auto-dismiss success message after 4 seconds
+      setTimeout(() => setSaveMessage(null), 4000)
     } catch (err) {
       if (isAuthError(err)) {
         clearAuthTokens()
@@ -383,6 +388,8 @@ export default function DoctorProfilePage() {
       }
       console.error('Failed to save doctor profile', err)
       setSaveError('Unable to save professional profile right now.')
+      // Auto-dismiss error message after 6 seconds
+      setTimeout(() => setSaveError(null), 6000)
     } finally {
       setSaving(false)
     }
@@ -412,6 +419,12 @@ export default function DoctorProfilePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateY(100px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
       {/* Header */}
       <div>
         <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Profile</h1>
@@ -517,6 +530,35 @@ export default function DoctorProfilePage() {
 
         {saveMessage && <p style={{ margin: '0 0 16px', fontSize: '13px', fontWeight: 700, color: T.green }}>{saveMessage}</p>}
         {saveError && <p style={{ margin: '0 0 16px', fontSize: '13px', fontWeight: 700, color: T.red }}>{saveError}</p>}
+
+        {hasUnsavedChanges && (
+          <div style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            background: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(4,53,77,0.12)',
+            boxShadow: '0 8px 32px rgba(4,53,77,0.15)',
+            animation: 'slideIn 0.3s ease'
+          }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: T.navy }}>You have unsaved changes</span>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={saveProfile}
+              style={{ minHeight: '36px', padding: '0 16px', borderRadius: '8px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '12px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.72 : 1, whiteSpace: 'nowrap' }}
+            >
+              {saving ? 'Saving...' : 'Save Now'}
+            </button>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <div>
