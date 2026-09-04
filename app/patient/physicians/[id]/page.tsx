@@ -12,8 +12,44 @@ import type { Physician, PhysicianProfileContent } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import DoctorCard from '@/components/cards/DoctorCard'
+import dynamic from 'next/dynamic'
+
+// Dynamically import Leaflet to avoid SSR issues
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+)
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+)
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+)
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+)
 
 type ReviewSort = 'recent' | 'highest' | 'helpful'
+
+// Geocoding function to convert address to coordinates
+async function geocodeAddress(address: string): Promise<[number, number] | null> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
+      { headers: { 'User-Agent': 'Qarevo-Platform' } }
+    )
+    const data = await response.json()
+    if (data && data.length > 0) {
+      return [parseFloat(data[0].lat), parseFloat(data[0].lon)]
+    }
+  } catch (error) {
+    console.error('Geocoding error:', error)
+  }
+  return null
+}
 
 const DEFAULT_PROFILE = {
   subSpecialties: ['Preventive Care', 'Chronic Care'],
@@ -132,13 +168,31 @@ function PhysicianProfilePageContent() {
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
   const [loadingRemoteDoctor, setLoadingRemoteDoctor] = useState(true)
   const [remoteDoctorError, setRemoteDoctorError] = useState('')
+  const [mapCoordinates, setMapCoordinates] = useState<[number, number] | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
     getPatientDoctor(physicianId)
-      .then((doctor) => {
-        if (!cancelled) setRemoteDoctor(doctor)
+      .then(async (doctor) => {
+        if (!cancelled) {
+          setRemoteDoctor(doctor)
+          // Geocode the address for the map
+          const locationAddress = (doctor.profile as any)?.location?.address
+          const profileAddress = (doctor.profile as any)?.address
+          const profileCity = (doctor.profile as any)?.city
+          const profileCountry = (doctor.profile as any)?.country
+          
+          const address = locationAddress || 
+            `${profileAddress || ''}, ${profileCity || ''}, ${profileCountry || ''}`
+          
+          if (address && address.trim()) {
+            const coords = await geocodeAddress(address)
+            if (!cancelled && coords) {
+              setMapCoordinates(coords)
+            }
+          }
+        }
       })
       .catch((error) => {
         console.error('Failed to load physician profile:', error)
@@ -425,9 +479,32 @@ function PhysicianProfilePageContent() {
 
             <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
               <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Location</h3>
-              <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: '12px', marginBottom: '10px' }}>
-                Interactive map placeholder
-              </div>
+              {mapCoordinates ? (
+                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', overflow: 'hidden', marginBottom: '10px', height: '200px' }}>
+                  <MapContainer
+                    center={mapCoordinates as [number, number]}
+                    zoom={15}
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    <Marker position={mapCoordinates as [number, number]}>
+                      <Popup>
+                        <div style={{ fontSize: '12px', fontWeight: 600 }}>
+                          {physician.name}<br />
+                          {profile.location.address}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </MapContainer>
+                </div>
+              ) : (
+                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: '12px', marginBottom: '10px' }}>
+                  Loading map...
+                </div>
+              )}
               <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Address:</strong> {profile.location.address}</p>
               <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Directions:</strong> {profile.location.directions}</p>
               <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Parking:</strong> {profile.location.parking}</p>
