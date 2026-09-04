@@ -947,10 +947,6 @@ export default function PatientDashboardPage() {
             </nav>
 
             <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${T.borderFaint}` }}>
-              <Link href='/support' style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '11px', textDecoration: 'none', color: T.slate, fontSize: '13px', fontWeight: 500 }}>
-                <Ico p={ICONS.help} size={15} sw={1.7} color={T.slate2} />
-                Help & Support
-              </Link>
               <button
                 onClick={() => setShowLogoutModal(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '11px', border: 'none', background: 'transparent', color: '#348CEA', fontSize: '13px', fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}
