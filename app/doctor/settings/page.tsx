@@ -30,7 +30,7 @@ export default function DoctorSettingsPage() {
   useEffect(() => {
     if (!readAccessToken()) {
       clearAuthTokens()
-      router.replace('/auth/sign-in')
+      router.replace('/auth/doctor/login')
       return
     }
 

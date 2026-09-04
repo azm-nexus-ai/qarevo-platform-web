@@ -33,7 +33,7 @@ export default function DoctorLayout({
 
     if (!readAccessToken()) {
       clearAuthTokens()
-      router.replace('/auth/sign-in')
+      router.replace('/auth/doctor/login')
       return () => window.clearTimeout(mountedTimer)
     }
 

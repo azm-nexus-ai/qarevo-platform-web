@@ -26,7 +26,7 @@ export default function PatientsPage() {
   useEffect(() => {
     if (!readAccessToken()) {
       clearAuthTokens()
-      router.replace('/auth/sign-in')
+      router.replace('/auth/doctor/login')
       return
     }
 
