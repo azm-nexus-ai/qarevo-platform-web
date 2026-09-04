@@ -9,8 +9,15 @@ import {
   isAuthError,
   readAccessToken,
   updateDoctorProfile,
+  getDoctorConsultationServices,
+  createDoctorConsultationService,
+  updateDoctorConsultationService,
+  deleteDoctorConsultationService,
   type DoctorProfileUpdate,
   type DoctorProfileResponse,
+  type ConsultationService,
+  type ConsultationServiceCreate,
+  type ConsultationServiceUpdate,
 } from '@/lib/api'
 
 type ProfileDraft = {
@@ -85,15 +92,158 @@ function toOptionalString(value: string): string | null {
   return trimmed || null
 }
 
+interface ConsultationServiceFormProps {
+  service: ConsultationService | null
+  onSave: (data: ConsultationServiceCreate | ConsultationServiceUpdate) => void
+  onCancel: () => void
+}
+
+function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServiceFormProps) {
+  const [serviceType, setServiceType] = useState(service?.service_type || 'video')
+  const [name, setName] = useState(service?.name || '')
+  const [price, setPrice] = useState(service?.price?.toString() || '')
+  const [duration, setDuration] = useState(service?.duration?.toString() || '30')
+  const [availability, setAvailability] = useState(service?.availability || '')
+  const [description, setDescription] = useState(service?.description || '')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const data: ConsultationServiceCreate | ConsultationServiceUpdate = {
+      service_type: serviceType,
+      name,
+      price: parseInt(price, 10),
+      duration: parseInt(duration, 10),
+      availability: availability || null,
+      description: description || null,
+    }
+    onSave(data)
+  }
+
+  const inputStyle = {
+    width: '100%',
+    minHeight: '42px',
+    padding: '10px 12px',
+    borderRadius: '10px',
+    border: '1px solid rgba(4,53,77,0.12)',
+    background: 'rgba(255,255,255,0.92)',
+    color: T.navy,
+    fontSize: '13px',
+    outline: 'none',
+  }
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '6px',
+    fontSize: '12px',
+    fontWeight: 700,
+    color: T.slate2,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase' as const,
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+        <div>
+          <label style={labelStyle}>Service Type</label>
+          <select
+            value={serviceType}
+            onChange={(e) => setServiceType(e.target.value)}
+            style={inputStyle}
+          >
+            <option value="video">Video Consultation</option>
+            <option value="physical">In-Person Consultation</option>
+            <option value="phone">Phone Consultation</option>
+            <option value="chat">Chat Consultation</option>
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>Service Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., General Video Consultation"
+            style={inputStyle}
+            required
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Price ($)</label>
+          <input
+            type="number"
+            min="0"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="140"
+            style={inputStyle}
+            required
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Duration (min)</label>
+          <input
+            type="number"
+            min="5"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            placeholder="30"
+            style={inputStyle}
+            required
+          />
+        </div>
+      </div>
+      <div>
+        <label style={labelStyle}>Availability</label>
+        <input
+          type="text"
+          value={availability}
+          onChange={(e) => setAvailability(e.target.value)}
+          placeholder="e.g., Today, Tomorrow, Mon-Fri"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label style={labelStyle}>Description</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Brief description of this service"
+          rows={3}
+          style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+        />
+      </div>
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+        >
+          {service ? 'Update Service' : 'Add Service'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 export default function DoctorProfilePage() {
   const router = useRouter()
   const [profileData, setProfileData] = useState<DoctorProfileResponse | null>(null)
   const [draft, setDraft] = useState<ProfileDraft | null>(null)
+  const [consultationServices, setConsultationServices] = useState<ConsultationService[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [editingService, setEditingService] = useState<ConsultationService | null>(null)
+  const [showServiceForm, setShowServiceForm] = useState(false)
 
   useEffect(() => {
     if (!readAccessToken()) {
@@ -106,10 +256,14 @@ export default function DoctorProfilePage() {
 
     const fetchProfile = async () => {
       try {
-        const data = await getDoctorProfile()
+        const [profile, services] = await Promise.all([
+          getDoctorProfile(),
+          getDoctorConsultationServices(),
+        ])
         if (!cancelled) {
-          setProfileData(data)
-          setDraft(createProfileDraft(data))
+          setProfileData(profile)
+          setDraft(createProfileDraft(profile))
+          setConsultationServices(services)
           setError(null)
         }
       } catch (err) {
@@ -450,8 +604,8 @@ export default function DoctorProfilePage() {
           </div>
           <div>
             <label style={labelStyle}>Consultation Types</label>
-            <textarea value={draft.consultation_types} onChange={(event) => updateDraft('consultation_types', event.target.value)} placeholder="video, physical (comma-separated types only, no pricing)" rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
-            <p style={{ margin: '4px 0 0', fontSize: '11px', color: T.slate2 }}>Enter the types of consultations you offer (e.g., video, physical). Pricing is set in Consultation Fee above.</p>
+            <textarea value={draft.consultation_types} onChange={(event) => updateDraft('consultation_types', event.target.value)} placeholder="video, physical (comma-separated types)" rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+            <p style={{ margin: '4px 0 0', fontSize: '11px', color: T.slate2 }}>Enter the types of consultations you offer (e.g., video, physical).</p>
           </div>
           <div>
             <label style={labelStyle}>Profile Picture</label>
@@ -526,6 +680,136 @@ export default function DoctorProfilePage() {
             <input value={draft.appointment_duration} onChange={(event) => updateDraft('appointment_duration', event.target.value)} placeholder="30" style={inputStyle} />
           </div>
         </div>
+      </div>
+
+      <div style={{
+        background: 'rgba(255,255,255,0.88)',
+        backdropFilter: 'blur(22px) saturate(175%)',
+        WebkitBackdropFilter: 'blur(22px) saturate(175%)',
+        borderRadius: '20px',
+        border: '1px solid rgba(255,255,255,0.88)',
+        boxShadow: Sh.card,
+        padding: '32px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '20px' }}>
+          <div>
+            <h3 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Consultation Services</h3>
+            <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate2 }}>Manage individual pricing, duration, and availability for each consultation type.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingService(null)
+              setShowServiceForm(true)
+            }}
+            style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+          >
+            Add Service
+          </button>
+        </div>
+
+        {showServiceForm && (
+          <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '14px', border: '1px solid rgba(4,53,77,0.12)', padding: '20px', marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 700, color: T.navy }}>
+              {editingService ? 'Edit Service' : 'Add New Service'}
+            </h4>
+            <ConsultationServiceForm
+              service={editingService}
+              onSave={async (data) => {
+                try {
+                  if (editingService) {
+                    const updated = await updateDoctorConsultationService(editingService.id, data)
+                    setConsultationServices(services => services.map(s => s.id === updated.id ? updated : s))
+                  } else {
+                    const created = await createDoctorConsultationService(data)
+                    setConsultationServices(services => [...services, created])
+                  }
+                  setShowServiceForm(false)
+                  setEditingService(null)
+                  setSaveMessage(editingService ? 'Service updated.' : 'Service added.')
+                } catch (err) {
+                  console.error('Failed to save service', err)
+                  setSaveError('Unable to save service.')
+                }
+              }}
+              onCancel={() => {
+                setShowServiceForm(false)
+                setEditingService(null)
+              }}
+            />
+          </div>
+        )}
+
+        {consultationServices.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: T.slate2, fontSize: '14px' }}>
+            No consultation services configured yet. Click "Add Service" to create one.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {consultationServices.map((service) => (
+              <div
+                key={service.id}
+                style={{
+                  background: 'rgba(255,255,255,0.86)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(4,53,77,0.1)',
+                  padding: '16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: T.navy }}>{service.name}</p>
+                  <p style={{ margin: '0 0 2px', fontSize: '13px', color: T.slate }}>
+                    Type: <span style={{ fontWeight: 600 }}>{service.service_type}</span>
+                  </p>
+                  <p style={{ margin: '0 0 2px', fontSize: '13px', color: T.slate }}>
+                    Price: <span style={{ fontWeight: 600 }}>${service.price}</span> · Duration: <span style={{ fontWeight: 600 }}>{service.duration} min</span>
+                  </p>
+                  {service.availability && (
+                    <p style={{ margin: '0 0 2px', fontSize: '13px', color: T.slate }}>
+                      Availability: <span style={{ fontWeight: 600 }}>{service.availability}</span>
+                    </p>
+                  )}
+                  {service.description && (
+                    <p style={{ margin: '0', fontSize: '12px', color: T.slate2 }}>{service.description}</p>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingService(service)
+                      setShowServiceForm(true)
+                    }}
+                    style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to delete this service?')) {
+                        try {
+                          await deleteDoctorConsultationService(service.id)
+                          setConsultationServices(services => services.filter(s => s.id !== service.id))
+                          setSaveMessage('Service deleted.')
+                        } catch (err) {
+                          console.error('Failed to delete service', err)
+                          setSaveError('Unable to delete service.')
+                        }
+                      }
+                    }}
+                    style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(255,255,255,0.9)', color: T.red, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Stats */}

@@ -935,6 +935,59 @@ export async function getDoctorConsultation(consultationId: string): Promise<Doc
     return apiGet<DoctorConsultationDetailResponse>(`/api/v1/doctor/workspace/${consultationId}`);
 }
 
+export type ConsultationService = {
+    id: string;
+    service_type: string;
+    name: string;
+    price: number;
+    duration: number;
+    availability: string | null;
+    description: string | null;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ConsultationServiceCreate = {
+    service_type: string;
+    name: string;
+    price: number;
+    duration: number;
+    availability?: string;
+    description?: string;
+};
+
+export type ConsultationServiceUpdate = Partial<{
+    name: string;
+    price: number;
+    duration: number;
+    availability: string;
+    description: string;
+    is_active: boolean;
+}>;
+
+export async function getDoctorConsultationServices(): Promise<ConsultationService[]> {
+    return apiGet<ConsultationService[]>("/api/v1/doctor/consultation-services");
+}
+
+export async function createDoctorConsultationService(body: ConsultationServiceCreate): Promise<ConsultationService> {
+    return apiPost<ConsultationService, ConsultationServiceCreate>("/api/v1/doctor/consultation-services", body);
+}
+
+export async function updateDoctorConsultationService(
+    serviceId: string,
+    body: ConsultationServiceUpdate
+): Promise<ConsultationService> {
+    return apiPut<ConsultationService, ConsultationServiceUpdate>(
+        `/api/v1/doctor/consultation-services/${serviceId}`,
+        body
+    );
+}
+
+export async function deleteDoctorConsultationService(serviceId: string): Promise<void> {
+    return apiDelete<void>(`/api/v1/doctor/consultation-services/${serviceId}`);
+}
+
 export async function completeDoctorConsultation(
     consultationId: string,
 ): Promise<DoctorConsultationDetailResponse> {
