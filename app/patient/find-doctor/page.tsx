@@ -18,7 +18,7 @@ import DoctorCard from '@/components/cards/DoctorCard'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
-import { searchPatientDoctors, type PatientDoctor } from '@/lib/api'
+import { searchPatientDoctors, getPatientSettings, isAuthError, clearAuthTokens, type PatientSettings } from '@/lib/api'
 
 function buildProfileHref(
   physician: PatientDoctor,
@@ -100,6 +100,7 @@ export default function FindDoctorPage() {
   const [showAllSpecialties, setShowAllSpecialties] = useState(false)
   const [showFiltersMobile, setShowFiltersMobile] = useState(false)
   const [favorites, setFavorites] = useState<Record<string, boolean>>({})
+  const [userSettings, setUserSettings] = useState<PatientSettings | null>(null)
   const pageSize = 8
 
   const searchSuggestions = useMemo(() => {
@@ -131,6 +132,23 @@ export default function FindDoctorPage() {
       router.replace(getOnboardingRedirectPath(authFlowState))
     }
   }, [router])
+
+  useEffect(() => {
+    const loadUserSettings = async () => {
+      try {
+        const data = await getPatientSettings()
+        setUserSettings(data)
+      } catch (error) {
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          window.location.href = '/auth/sign-in'
+          return
+        }
+        console.error('Failed to load user settings:', error)
+      }
+    }
+    loadUserSettings()
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -261,9 +279,13 @@ export default function FindDoctorPage() {
 
             <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: '1px solid rgba(4,53,77,0.11)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>J</div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: '1px solid rgba(4,53,77,0.11)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>
+                  {userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'P'}
+                </div>
                 <div>
-                  <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>John Adewale</p>
+                  <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>
+                    {userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'}
+                  </p>
                   <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: Active</p>
                 </div>
               </div>
