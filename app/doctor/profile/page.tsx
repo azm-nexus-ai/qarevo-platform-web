@@ -450,7 +450,8 @@ export default function DoctorProfilePage() {
           </div>
           <div>
             <label style={labelStyle}>Consultation Types</label>
-            <textarea value={draft.consultation_types} onChange={(event) => updateDraft('consultation_types', event.target.value)} placeholder="video, physical, etc." rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+            <textarea value={draft.consultation_types} onChange={(event) => updateDraft('consultation_types', event.target.value)} placeholder="video, physical (comma-separated types only, no pricing)" rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+            <p style={{ margin: '4px 0 0', fontSize: '11px', color: T.slate2 }}>Enter the types of consultations you offer (e.g., video, physical). Pricing is set in Consultation Fee above.</p>
           </div>
           <div>
             <label style={labelStyle}>Profile Picture</label>
