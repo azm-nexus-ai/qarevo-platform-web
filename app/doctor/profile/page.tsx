@@ -34,6 +34,7 @@ type ProfileDraft = {
   insurance: string
   consultation_types: string
   avatar_url: string
+  avatar_file: File | null
 }
 
 function createProfileDraft(profile: DoctorProfileResponse): ProfileDraft {
@@ -58,6 +59,7 @@ function createProfileDraft(profile: DoctorProfileResponse): ProfileDraft {
     insurance: profile.insurance || '',
     consultation_types: profile.consultation_types || '',
     avatar_url: profile.avatar_url || '',
+    avatar_file: null,
   }
 }
 
@@ -150,6 +152,28 @@ export default function DoctorProfilePage() {
     setSaveMessage(null)
     setSaveError(null)
 
+    let avatarUrl = draft.avatar_url
+
+    // Handle file upload by converting to base64
+    if (draft.avatar_file) {
+      try {
+        const reader = new FileReader()
+        avatarUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const result = reader.result as string
+            resolve(result)
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(draft.avatar_file!)
+        })
+      } catch (err) {
+        console.error('Failed to read avatar file', err)
+        setSaveError('Unable to process profile picture.')
+        setSaving(false)
+        return
+      }
+    }
+
     const payload: DoctorProfileUpdate = {
       phone: toOptionalString(draft.phone),
       specialty: toOptionalString(draft.specialty),
@@ -168,6 +192,9 @@ export default function DoctorProfilePage() {
       about: toOptionalString(draft.about),
       education: toOptionalString(draft.education),
       certifications: toOptionalString(draft.certifications),
+      insurance: toOptionalString(draft.insurance),
+      consultation_types: toOptionalString(draft.consultation_types),
+      avatar_url: toOptionalString(avatarUrl),
     }
 
     try {
@@ -411,8 +438,42 @@ export default function DoctorProfilePage() {
             <textarea value={draft.consultation_types} onChange={(event) => updateDraft('consultation_types', event.target.value)} placeholder="video, physical, etc." rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </div>
           <div>
-            <label style={labelStyle}>Profile Picture URL</label>
-            <input value={draft.avatar_url} onChange={(event) => updateDraft('avatar_url', event.target.value)} placeholder="https://example.com/profile.jpg" style={inputStyle} />
+            <label style={labelStyle}>Profile Picture</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] || null
+                  setDraft((current) => current ? { ...current, avatar_file: file } : current)
+                  setSaveMessage(null)
+                  setSaveError(null)
+                }}
+                style={{ display: 'none' }}
+                id="avatar-upload"
+              />
+              <label
+                htmlFor="avatar-upload"
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(4,53,77,0.12)',
+                  background: 'rgba(255,255,255,0.9)',
+                  color: T.navy,
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                {draft.avatar_file ? 'Change Profile Picture' : 'Upload Profile Picture'}
+              </label>
+              {draft.avatar_file && (
+                <span style={{ fontSize: '12px', color: T.slate2 }}>{draft.avatar_file.name}</span>
+              )}
+            </div>
           </div>
         </div>
       </div>

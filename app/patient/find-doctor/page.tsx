@@ -90,8 +90,8 @@ export default function FindDoctorPage() {
   const [distance, setDistance] = useState<'any' | 'under-5' | 'under-10' | 'under-25'>('any')
   const [sortBy, setSortBy] = useState<'highest-rated' | 'nearest' | 'most-experienced' | 'available-today'>('highest-rated')
 
-  const [physicians, setPhysicians] = useState<PatientDoctor[]>(PHYSICIANS)
-  const [totalDoctors, setTotalDoctors] = useState(PHYSICIANS.length)
+  const [physicians, setPhysicians] = useState<PatientDoctor[]>([])
+  const [totalDoctors, setTotalDoctors] = useState(0)
   const [page, setPage] = useState(1)
   const [hasNextPage, setHasNextPage] = useState(false)
   const [hasPreviousPage, setHasPreviousPage] = useState(false)
@@ -181,12 +181,17 @@ export default function FindDoctorPage() {
         }
       } catch (error) {
         console.error('Failed to load doctors', error)
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          window.location.href = '/auth/sign-in'
+          return
+        }
         if (!cancelled) {
-          setPhysicians(PHYSICIANS)
-          setTotalDoctors(PHYSICIANS.length)
+          setPhysicians([])
+          setTotalDoctors(0)
           setHasNextPage(false)
           setHasPreviousPage(false)
-          setLoadError('Live doctor search is temporarily unavailable, showing saved sample results.')
+          setLoadError('Failed to load doctors. Please try again.')
         }
       } finally {
         if (!cancelled) setLoading(false)

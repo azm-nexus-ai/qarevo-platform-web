@@ -8,7 +8,6 @@ import { buildBookingQueryParams } from '@/lib/booking'
 import { getPatientDoctor } from '@/lib/api'
 import type { PatientDoctor } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
-import { PHYSICIANS, PHYSICIAN_PROFILES } from '@/constants/physicians'
 import type { Physician, PhysicianProfileContent } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
@@ -130,14 +129,11 @@ function PhysicianProfilePageContent() {
   const params = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const physicianId = params.id
-  const staticPhysician = PHYSICIANS.find((item) => item.id === physicianId)
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
-  const [loadingRemoteDoctor, setLoadingRemoteDoctor] = useState(!staticPhysician)
+  const [loadingRemoteDoctor, setLoadingRemoteDoctor] = useState(true)
   const [remoteDoctorError, setRemoteDoctorError] = useState('')
 
   useEffect(() => {
-    if (staticPhysician) return
-
     let cancelled = false
 
     getPatientDoctor(physicianId)
@@ -155,14 +151,10 @@ function PhysicianProfilePageContent() {
     return () => {
       cancelled = true
     }
-  }, [physicianId, staticPhysician])
+  }, [physicianId])
 
-  const physician = staticPhysician ?? (remoteDoctor ? toPhysician(remoteDoctor) : loadingPhysician(physicianId))
-  const profile = staticPhysician
-    ? PHYSICIAN_PROFILES[staticPhysician.id] ?? DEFAULT_PROFILE
-    : remoteDoctor
-    ? toProfile(remoteDoctor)
-    : DEFAULT_PROFILE
+  const physician = remoteDoctor ? toPhysician(remoteDoctor) : loadingPhysician(physicianId)
+  const profile = remoteDoctor ? toProfile(remoteDoctor) : DEFAULT_PROFILE
 
   const preselectedService = searchParams.get('svc') ?? ''
   const validPreselectedService = profile.services.some((service) => service.type === preselectedService)
@@ -198,13 +190,11 @@ function PhysicianProfilePageContent() {
     sortedReviews.sort((a, b) => b.helpful - a.helpful)
   }
 
-  const relatedPhysicians = PHYSICIANS.filter((item) => item.id !== physician.id)
-    .filter((item) => item.specialty === physician.specialty || item.tags.some((tag) => physician.tags.includes(tag)))
-    .slice(0, 4)
+  const relatedPhysicians: Physician[] = []
 
   const activeService = profile.services.find((service) => service.type === effectiveSelectedService) ?? profile.services[0]
 
-  if (loadingRemoteDoctor && !staticPhysician && !remoteDoctor) {
+  if (loadingRemoteDoctor && !remoteDoctor) {
     return (
       <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center', padding: '24px' }}>
         <section style={{ ...Glass.nav, maxWidth: '460px', borderRadius: '18px', padding: '22px', textAlign: 'center' }}>
@@ -215,7 +205,7 @@ function PhysicianProfilePageContent() {
     )
   }
 
-  if (remoteDoctorError && !staticPhysician && !remoteDoctor) {
+  if (remoteDoctorError && !remoteDoctor) {
     return (
       <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center', padding: '24px' }}>
         <section style={{ ...Glass.nav, maxWidth: '460px', borderRadius: '18px', padding: '22px', textAlign: 'center' }}>
