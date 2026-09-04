@@ -721,7 +721,7 @@ export default function DoctorProfilePage() {
                     const updated = await updateDoctorConsultationService(editingService.id, data)
                     setConsultationServices(services => services.map(s => s.id === updated.id ? updated : s))
                   } else {
-                    const created = await createDoctorConsultationService(data)
+                    const created = await createDoctorConsultationService(data as ConsultationServiceCreate)
                     setConsultationServices(services => [...services, created])
                   }
                   setShowServiceForm(false)
