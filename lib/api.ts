@@ -958,6 +958,7 @@ export type ConsultationServiceCreate = {
 };
 
 export type ConsultationServiceUpdate = Partial<{
+    service_type: string;
     name: string;
     price: number;
     duration: number;
