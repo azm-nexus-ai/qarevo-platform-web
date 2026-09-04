@@ -18,7 +18,7 @@ import DoctorCard from '@/components/cards/DoctorCard'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
-import { searchPatientDoctors, getPatientSettings, isAuthError, clearAuthTokens, type PatientSettings } from '@/lib/api'
+import { searchPatientDoctors, getPatientSettings, isAuthError, clearAuthTokens, type PatientSettings, type PatientDoctor } from '@/lib/api'
 
 function buildProfileHref(
   physician: PatientDoctor,
