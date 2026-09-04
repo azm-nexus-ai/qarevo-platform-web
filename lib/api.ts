@@ -640,6 +640,11 @@ export type DoctorProfileResponse = {
     insurance?: string | null;
     consultation_types?: string | null;
     avatar_url?: string | null;
+    working_hours_start?: string | null;
+    working_hours_end?: string | null;
+    available_days?: string | null;
+    timezone?: string | null;
+    appointment_duration?: number | null;
     total_consultations: number;
     patient_rating: number;
     years_active: number;
@@ -668,6 +673,11 @@ export type DoctorProfileUpdate = Partial<{
     insurance: string | null;
     consultation_types: string | null;
     avatar_url: string | null;
+    working_hours_start: string | null;
+    working_hours_end: string | null;
+    available_days: string | null;
+    timezone: string | null;
+    appointment_duration: number | null;
 }>;
 
 export type DoctorSettingsResponse = {

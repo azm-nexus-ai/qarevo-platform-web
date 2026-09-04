@@ -35,6 +35,11 @@ type ProfileDraft = {
   consultation_types: string
   avatar_url: string
   avatar_file: File | null
+  working_hours_start: string
+  working_hours_end: string
+  available_days: string
+  timezone: string
+  appointment_duration: string
 }
 
 function createProfileDraft(profile: DoctorProfileResponse): ProfileDraft {
@@ -60,6 +65,11 @@ function createProfileDraft(profile: DoctorProfileResponse): ProfileDraft {
     consultation_types: profile.consultation_types || '',
     avatar_url: profile.avatar_url || '',
     avatar_file: null,
+    working_hours_start: profile.working_hours_start || '09:00',
+    working_hours_end: profile.working_hours_end || '17:00',
+    available_days: profile.available_days || 'MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY',
+    timezone: profile.timezone || 'UTC',
+    appointment_duration: profile.appointment_duration == null ? '30' : String(profile.appointment_duration),
   }
 }
 
@@ -195,6 +205,11 @@ export default function DoctorProfilePage() {
       insurance: toOptionalString(draft.insurance),
       consultation_types: toOptionalString(draft.consultation_types),
       avatar_url: toOptionalString(avatarUrl),
+      working_hours_start: toOptionalString(draft.working_hours_start),
+      working_hours_end: toOptionalString(draft.working_hours_end),
+      available_days: toOptionalString(draft.available_days),
+      timezone: toOptionalString(draft.timezone),
+      appointment_duration: toOptionalNumber(draft.appointment_duration),
     }
 
     try {
@@ -474,6 +489,40 @@ export default function DoctorProfilePage() {
                 <span style={{ fontSize: '12px', color: T.slate2 }}>{draft.avatar_file.name}</span>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{
+        background: 'rgba(255,255,255,0.88)',
+        backdropFilter: 'blur(22px) saturate(175%)',
+        WebkitBackdropFilter: 'blur(22px) saturate(175%)',
+        borderRadius: '20px',
+        border: '1px solid rgba(255,255,255,0.88)',
+        boxShadow: Sh.card,
+        padding: '32px',
+      }}>
+        <h3 style={{ margin: '0 0 20px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Availability Settings</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div>
+            <label style={labelStyle}>Working Hours Start</label>
+            <input value={draft.working_hours_start} onChange={(event) => updateDraft('working_hours_start', event.target.value)} placeholder="09:00" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Working Hours End</label>
+            <input value={draft.working_hours_end} onChange={(event) => updateDraft('working_hours_end', event.target.value)} placeholder="17:00" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Available Days</label>
+            <textarea value={draft.available_days} onChange={(event) => updateDraft('available_days', event.target.value)} placeholder="MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY" rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+          </div>
+          <div>
+            <label style={labelStyle}>Timezone</label>
+            <input value={draft.timezone} onChange={(event) => updateDraft('timezone', event.target.value)} placeholder="UTC" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Appointment Duration (min)</label>
+            <input value={draft.appointment_duration} onChange={(event) => updateDraft('appointment_duration', event.target.value)} placeholder="30" style={inputStyle} />
           </div>
         </div>
       </div>
