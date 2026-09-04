@@ -32,14 +32,12 @@ type ProfileDraft = {
   state: string
   country: string
   zip: string
-  consultation_fee: string
   hospital: string
   languages: string
   about: string
   education: string
   certifications: string
   insurance: string
-  consultation_types: string
   avatar_url: string
   avatar_file: File | null
   working_hours_start: string
@@ -48,6 +46,16 @@ type ProfileDraft = {
   timezone: string
   appointment_duration: string
 }
+
+const DAYS_OF_WEEK = [
+  { value: 'MONDAY', label: 'Monday' },
+  { value: 'TUESDAY', label: 'Tuesday' },
+  { value: 'WEDNESDAY', label: 'Wednesday' },
+  { value: 'THURSDAY', label: 'Thursday' },
+  { value: 'FRIDAY', label: 'Friday' },
+  { value: 'SATURDAY', label: 'Saturday' },
+  { value: 'SUNDAY', label: 'Sunday' },
+]
 
 function createProfileDraft(profile: DoctorProfileResponse): ProfileDraft {
   return {
@@ -62,14 +70,12 @@ function createProfileDraft(profile: DoctorProfileResponse): ProfileDraft {
     state: profile.state || '',
     country: profile.country || '',
     zip: profile.zip || '',
-    consultation_fee: profile.consultation_fee == null ? '' : String(profile.consultation_fee),
     hospital: profile.hospital || '',
     languages: profile.languages || '',
     about: profile.about || '',
     education: profile.education || '',
     certifications: profile.certifications || '',
     insurance: profile.insurance || '',
-    consultation_types: profile.consultation_types || '',
     avatar_url: profile.avatar_url || '',
     avatar_file: null,
     working_hours_start: profile.working_hours_start || '09:00',
@@ -350,14 +356,12 @@ export default function DoctorProfilePage() {
       state: toOptionalString(draft.state),
       country: toOptionalString(draft.country),
       zip: toOptionalString(draft.zip),
-      consultation_fee: toOptionalNumber(draft.consultation_fee),
       hospital: toOptionalString(draft.hospital),
       languages: toOptionalString(draft.languages),
       about: toOptionalString(draft.about),
       education: toOptionalString(draft.education),
       certifications: toOptionalString(draft.certifications),
       insurance: toOptionalString(draft.insurance),
-      consultation_types: toOptionalString(draft.consultation_types),
       avatar_url: toOptionalString(avatarUrl),
       working_hours_start: toOptionalString(draft.working_hours_start),
       working_hours_end: toOptionalString(draft.working_hours_end),
@@ -528,10 +532,6 @@ export default function DoctorProfilePage() {
             <input type="number" min="0" value={draft.experience_years} onChange={(event) => updateDraft('experience_years', event.target.value)} placeholder="5" style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Consultation Fee</label>
-            <input type="number" min="0" value={draft.consultation_fee} onChange={(event) => updateDraft('consultation_fee', event.target.value)} placeholder="140" style={inputStyle} />
-          </div>
-          <div>
             <label style={labelStyle}>Hospital or Practice</label>
             <input value={draft.hospital} onChange={(event) => updateDraft('hospital', event.target.value)} placeholder="Qarevo Virtual Clinic" style={inputStyle} />
           </div>
@@ -603,11 +603,6 @@ export default function DoctorProfilePage() {
             <textarea value={draft.insurance} onChange={(event) => updateDraft('insurance', event.target.value)} placeholder="Axa, Bupa, Cigna, etc." rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </div>
           <div>
-            <label style={labelStyle}>Consultation Types</label>
-            <textarea value={draft.consultation_types} onChange={(event) => updateDraft('consultation_types', event.target.value)} placeholder="video, physical (comma-separated types)" rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
-            <p style={{ margin: '4px 0 0', fontSize: '11px', color: T.slate2 }}>Enter the types of consultations you offer (e.g., video, physical).</p>
-          </div>
-          <div>
             <label style={labelStyle}>Profile Picture</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <input
@@ -669,7 +664,45 @@ export default function DoctorProfilePage() {
           </div>
           <div>
             <label style={labelStyle}>Available Days</label>
-            <textarea value={draft.available_days} onChange={(event) => updateDraft('available_days', event.target.value)} placeholder="MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY" rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px', marginTop: '8px' }}>
+              {DAYS_OF_WEEK.map((day) => {
+                const isSelected = draft.available_days.split(',').includes(day.value)
+                return (
+                  <label
+                    key={day.value}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: isSelected ? `2px solid ${T.blue}` : '1px solid rgba(4,53,77,0.12)',
+                      background: isSelected ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.9)',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: isSelected ? 600 : 400,
+                      color: T.navy,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const currentDays = draft.available_days.split(',').filter(d => d)
+                        if (e.target.checked) {
+                          updateDraft('available_days', [...currentDays, day.value].join(','))
+                        } else {
+                          updateDraft('available_days', currentDays.filter(d => d !== day.value).join(','))
+                        }
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                    {day.label}
+                  </label>
+                )
+              })}
+            </div>
           </div>
           <div>
             <label style={labelStyle}>Timezone</label>
