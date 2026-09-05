@@ -10,9 +10,10 @@ interface HoverBtnProps {
   onClick?: () => void
   ariaLabel?: string
   title?: string
+  disabled?: boolean
 }
 
-export default function HoverBtn({ base, on, children, onClick, ariaLabel, title }: HoverBtnProps) {
+export default function HoverBtn({ base, on, children, onClick, ariaLabel, title, disabled }: HoverBtnProps) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -20,6 +21,7 @@ export default function HoverBtn({ base, on, children, onClick, ariaLabel, title
       onClick={onClick}
       aria-label={ariaLabel}
       title={title}
+      disabled={disabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{ transition: 'all 0.15s ease', ...base, ...(hovered ? on : {}) }}

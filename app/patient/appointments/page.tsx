@@ -10,6 +10,7 @@ import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
+import ReviewModal from '@/components/patient/ReviewModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ type Appointment = {
   hasSummary?: boolean
   hasPrescription?: boolean
   hasLabRequest?: boolean
+  hasReviewed?: boolean
 }
 
 type Tab = 'upcoming' | 'past' | 'cancelled'
@@ -386,9 +388,7 @@ function UpcomingCard({ appt, onJoin, onDetails, onReschedule, onCancel }: {
   )
 }
 
-// ─── Past card ─────────────────────────────────────────────────────────────────
-
-function PastCard({ appt }: { appt: Appointment }) {
+function PastCard({ appt, onReview }: { appt: Appointment; onReview: (appt: Appointment) => void }) {
   const router = useRouter()
   return (
     <SCard style={{ padding: '18px' }}>
@@ -399,7 +399,7 @@ function PastCard({ appt }: { appt: Appointment }) {
           width={72}
           height={72}
           loading="lazy"
-          style={{ width: '72px', height: '72px', borderRadius: '14px', objectFit: 'cover', border: '1px solid rgba(4,53,77,0.1)', boxShadow: '0 4px 12px rgba(4,53,77,0.1)', flexShrink: 0 }}
+          style={{ width: '72px', height: '72px', borderRadius: '14px', objectFit: 'cover', border: '1px solid rgba(4,53,77,0.1)', boxShadow: '0 4px 12px rgba(4,53,77,0.08)', flexShrink: 0 }}
         />
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
@@ -407,42 +407,44 @@ function PastCard({ appt }: { appt: Appointment }) {
               <h3 style={{ margin: '0 0 2px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{appt.physician}</h3>
               <p style={{ margin: '0 0 8px', fontSize: '12.5px', color: T.slate2 }}>{appt.specialty} · {appt.hospital}</p>
             </div>
-            <StatusBadge status={appt.status} />
+            <StatusBadge status="Completed" />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
             <TypeBadge type={appt.consultationType} />
             <span style={{ fontSize: '12.5px', color: T.slate, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <Ico p={ICONS.calendar} size={12} sw={1.8} color={T.slate2} />
               {appt.date} · {appt.time}
             </span>
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.5 }}>{appt.reason}</p>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {appt.hasSummary && (
-              <span style={{ padding: '3px 9px', borderRadius: '999px', background: 'rgba(15,158,119,0.1)', color: T.green, fontSize: '11px', fontWeight: 700 }}>
-                Summary available
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '999px', background: 'rgba(15,158,119,0.1)', color: T.green, fontSize: '11px', fontWeight: 600 }}>
+                <Ico p={ICONS.check} size={10} sw={1.8} color={T.green} />
+                Summary
               </span>
             )}
             {appt.hasPrescription && (
-              <span style={{ padding: '3px 9px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '11px', fontWeight: 700 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '11px', fontWeight: 600 }}>
+                <Ico p={ICONS.pill} size={10} sw={1.8} color={T.blue} />
                 Prescription
               </span>
             )}
             {appt.hasLabRequest && (
-              <span style={{ padding: '3px 9px', borderRadius: '999px', background: 'rgba(52,140,234,0.1)', color: '#348CEA', fontSize: '11px', fontWeight: 700 }}>
-                Lab request
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '999px', background: 'rgba(52,140,234,0.1)', color: '#348CEA', fontSize: '11px', fontWeight: 600 }}>
+                <Ico p={ICONS.activity} size={10} sw={1.8} color='#348CEA' />
+                Lab Request
               </span>
             )}
           </div>
         </div>
         <div className='appt-card-actions' style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-          {appt.hasSummary && (
-            <Link
-              href={PATIENT_ROUTES.appointmentDetails}
-              style={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(32,181,223,0.24)', textDecoration: 'none' }}
-            >
-              View Summary
-            </Link>
-          )}
+          <Link
+            href={PATIENT_ROUTES.appointmentDetails}
+            style={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap', textDecoration: 'none' }}
+          >
+            View Details
+          </Link>
           {appt.hasPrescription && (
             <Link
               href={PATIENT_ROUTES.prescriptions}
@@ -450,6 +452,15 @@ function PastCard({ appt }: { appt: Appointment }) {
             >
               View Prescription
             </Link>
+          )}
+          {!appt.hasReviewed && (
+            <HoverBtn
+              onClick={() => onReview(appt)}
+              base={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(32,181,223,0.24)' }}
+              on={{ transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(52,140,234,0.3)' }}
+            >
+              Write Review
+            </HoverBtn>
           )}
           <HoverBtn
             onClick={() => router.push(PATIENT_ROUTES.findDoctor)}
@@ -750,6 +761,7 @@ function AppointmentsPageInner() {
   const [rescheduleTarget, setRescheduleTarget] = useState<Appointment | null>(null)
   const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [reviewTarget, setReviewTarget] = useState<Appointment | null>(null)
 
   const todayAppt = upcoming.find(a => a.date === 'Today')
 
@@ -775,6 +787,36 @@ function AppointmentsPageInner() {
     setToast('Appointment cancelled. A refund has been initiated.')
     if (upcoming.filter(a => a.id !== cancelTarget.id).length === 0) {
       setActiveTab('cancelled')
+    }
+  }
+
+  const handleReviewSubmit = async (rating: number, comment: string) => {
+    if (!reviewTarget) return
+    
+    try {
+      const response = await fetch('/api/v1/patient/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify({
+          rating,
+          comment,
+          appointment_id: reviewTarget.id,
+        }),
+      })
+
+      if (response.ok) {
+        setToast('Review submitted successfully!')
+        // Mark the appointment as reviewed
+        setReviewTarget(null)
+      } else {
+        const error = await response.json()
+        setToast(error.detail || 'Failed to submit review')
+      }
+    } catch (error) {
+      setToast('Failed to submit review. Please try again.')
     }
   }
 
@@ -909,7 +951,7 @@ function AppointmentsPageInner() {
                 <SCard>
                   <h2 style={{ margin: '0 0 14px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Completed Appointments</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {PAST.map(appt => <PastCard key={appt.id} appt={appt} />)}
+                    {PAST.map(appt => <PastCard key={appt.id} appt={appt} onReview={setReviewTarget} />)}
                   </div>
                 </SCard>
               ) : (
@@ -951,6 +993,17 @@ function AppointmentsPageInner() {
           appt={cancelTarget}
           onClose={() => setCancelTarget(null)}
           onConfirm={handleCancelConfirm}
+        />
+      )}
+
+      {/* Review modal */}
+      {reviewTarget && (
+        <ReviewModal
+          isOpen={!!reviewTarget}
+          onClose={() => setReviewTarget(null)}
+          onSubmit={handleReviewSubmit}
+          physicianName={reviewTarget.physician}
+          appointmentId={reviewTarget.id}
         />
       )}
 
