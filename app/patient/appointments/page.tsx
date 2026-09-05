@@ -756,12 +756,68 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 function AppointmentsPageInner() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('upcoming')
-  const [upcoming, setUpcoming] = useState<Appointment[]>(UPCOMING)
-  const [cancelled, setCancelled] = useState<Appointment[]>(CANCELLED)
+  const [upcoming, setUpcoming] = useState<Appointment[]>([])
+  const [cancelled, setCancelled] = useState<Appointment[]>([])
+  const [past, setPast] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
   const [rescheduleTarget, setRescheduleTarget] = useState<Appointment | null>(null)
   const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [reviewTarget, setReviewTarget] = useState<Appointment | null>(null)
+
+  useEffect(() => {
+    async function fetchAppointments() {
+      try {
+        const response = await fetch('/api/v1/patient/appointments', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          },
+        })
+        if (response.ok) {
+          const data = await response.json()
+          const appointments = data.appointments || []
+          // Transform API data to match Appointment type
+          const transformed = appointments.map((apt: any) => ({
+            id: apt.id,
+            physician: 'Dr. Sophia Reed', // Would need to fetch from provider data
+            specialty: 'Cardiology',
+            hospital: 'Qarevo Virtual Clinic',
+            imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120&h=120&fit=crop&auto=format&q=80',
+            consultationType: apt.consultation_modality === 'video' ? 'Video Consultation' : 'In-Person',
+            date: new Date(apt.start_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            time: new Date(apt.start_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+            duration: '30 min',
+            status: apt.status === 'BOOKED' ? 'Confirmed' : apt.status,
+            bookingRef: `QRV-${apt.id.slice(0, 8)}`,
+            reason: 'Consultation',
+            paymentStatus: 'Paid',
+          }))
+          
+          // Separate by status
+          const now = new Date()
+          const upcomingApts = transformed.filter((apt: Appointment) => 
+            apt.status !== 'Cancelled' && apt.status !== 'Completed' && new Date(apt.date + ' ' + apt.time) > now
+          )
+          const cancelledApts = transformed.filter((apt: Appointment) => apt.status === 'Cancelled')
+          const pastApts = transformed.filter((apt: Appointment) => 
+            apt.status === 'Completed' || new Date(apt.date + ' ' + apt.time) <= now
+          )
+          
+          setUpcoming(upcomingApts)
+          setCancelled(cancelledApts)
+          setPast(pastApts)
+        }
+      } catch (error) {
+        console.error('Failed to fetch appointments:', error)
+        // Fall back to mock data on error
+        setUpcoming(UPCOMING)
+        setCancelled(CANCELLED)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAppointments()
+  }, [])
 
   const todayAppt = upcoming.find(a => a.date === 'Today')
 
@@ -778,15 +834,34 @@ function AppointmentsPageInner() {
     setToast('Appointment rescheduled successfully.')
   }
 
-  const handleCancelConfirm = () => {
+  const handleCancelConfirm = async () => {
     if (!cancelTarget) return
-    const appt: Appointment = { ...cancelTarget, status: 'Cancelled', cancellationDate: 'Today', cancellationReason: 'Patient requested cancellation', paymentStatus: 'Refunded' }
-    setUpcoming(prev => prev.filter(a => a.id !== cancelTarget.id))
-    setCancelled(prev => [appt, ...prev])
-    setCancelTarget(null)
-    setToast('Appointment cancelled. A refund has been initiated.')
-    if (upcoming.filter(a => a.id !== cancelTarget.id).length === 0) {
-      setActiveTab('cancelled')
+    
+    try {
+      const response = await fetch(`/api/v1/endpoints/appointments/${cancelTarget.id}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify({ reason: 'Patient requested cancellation' }),
+      })
+
+      if (response.ok) {
+        const appt: Appointment = { ...cancelTarget, status: 'Cancelled', cancellationDate: 'Today', cancellationReason: 'Patient requested cancellation', paymentStatus: 'Refunded' }
+        setUpcoming(prev => prev.filter(a => a.id !== cancelTarget.id))
+        setCancelled(prev => [appt, ...prev])
+        setCancelTarget(null)
+        setToast('Appointment cancelled. A refund has been initiated.')
+        if (upcoming.filter(a => a.id !== cancelTarget.id).length === 0) {
+          setActiveTab('cancelled')
+        }
+      } else {
+        const error = await response.json()
+        setToast(error.detail || 'Failed to cancel appointment')
+      }
+    } catch (error) {
+      setToast('Failed to cancel appointment. Please try again.')
     }
   }
 
@@ -822,7 +897,7 @@ function AppointmentsPageInner() {
 
   const TABS: { key: Tab; label: string; count: number }[] = [
     { key: 'upcoming', label: 'Upcoming', count: upcoming.length },
-    { key: 'past', label: 'Past', count: PAST.length },
+    { key: 'past', label: 'Past', count: past.length },
     { key: 'cancelled', label: 'Cancelled', count: cancelled.length },
   ]
 
@@ -836,6 +911,21 @@ function AppointmentsPageInner() {
       + Book Consultation
     </HoverBtn>
   )
+
+  if (loading) {
+    return (
+      <PatientPortalShell
+        eyebrow="Patient Platform"
+        title="Appointments"
+        description="Manage your upcoming consultations, view past appointments, and keep track of your healthcare schedule."
+        headerActions={bookButton}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '280px', color: T.slate2 }}>
+          Loading your appointments...
+        </div>
+      </PatientPortalShell>
+    )
+  }
 
   return (
     <>

@@ -261,8 +261,8 @@ function DateTimeSelectionPageContent() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: '8px' }}>
-                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label) => (
-                    <div key={label} style={{ textAlign: 'center', fontSize: '11px', fontWeight: 700, color: T.slate2, textTransform: 'uppercase' }}>{label}</div>
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, index) => (
+                    <div key={`day-${index}`} style={{ textAlign: 'center', fontSize: '11px', fontWeight: 700, color: T.slate2, textTransform: 'uppercase' }}>{label}</div>
                   ))}
                   {monthGrid.map((cell) => {
                     const status = getAvailabilityStatus(cell.date)
