@@ -528,9 +528,6 @@ function PhysicianProfilePageContent() {
                 </div>
               )}
               <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Address:</strong> {profile.location.address}</p>
-              <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Directions:</strong> {profile.location.directions}</p>
-              <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Parking:</strong> {profile.location.parking}</p>
-              <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Accessibility:</strong> {profile.location.accessibility}</p>
             </article>
           </section>
 
