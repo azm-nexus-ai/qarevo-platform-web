@@ -169,6 +169,8 @@ function PhysicianProfilePageContent() {
   const [loadingRemoteDoctor, setLoadingRemoteDoctor] = useState(true)
   const [remoteDoctorError, setRemoteDoctorError] = useState('')
   const [mapCoordinates, setMapCoordinates] = useState<[number, number] | null>(null)
+  const [mapLoading, setMapLoading] = useState(true)
+  const [mapError, setMapError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -187,10 +189,26 @@ function PhysicianProfilePageContent() {
             `${profileAddress || ''}, ${profileCity || ''}, ${profileCountry || ''}`
           
           if (address && address.trim()) {
-            const coords = await geocodeAddress(address)
-            if (!cancelled && coords) {
-              setMapCoordinates(coords)
+            try {
+              const coords = await geocodeAddress(address)
+              if (!cancelled && coords) {
+                setMapCoordinates(coords)
+                setMapLoading(false)
+              } else {
+                // Geocoding failed, show placeholder
+                setMapCoordinates(null)
+                setMapLoading(false)
+                setMapError(true)
+              }
+            } catch (error) {
+              console.error('Geocoding error:', error)
+              setMapCoordinates(null)
+              setMapLoading(false)
+              setMapError(true)
             }
+          } else {
+            setMapLoading(false)
+            setMapError(true)
           }
         }
       })
@@ -479,7 +497,11 @@ function PhysicianProfilePageContent() {
 
             <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
               <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Location</h3>
-              {mapCoordinates ? (
+              {mapLoading ? (
+                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: '12px', marginBottom: '10px' }}>
+                  Loading map...
+                </div>
+              ) : mapCoordinates ? (
                 <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', overflow: 'hidden', marginBottom: '10px', height: '200px' }}>
                   <MapContainer
                     center={mapCoordinates as [number, number]}
@@ -502,7 +524,7 @@ function PhysicianProfilePageContent() {
                 </div>
               ) : (
                 <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: '12px', marginBottom: '10px' }}>
-                  Loading map...
+                  Map unavailable
                 </div>
               )}
               <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Address:</strong> {profile.location.address}</p>
