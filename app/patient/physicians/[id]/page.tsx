@@ -372,7 +372,10 @@ function PhysicianProfilePageContent() {
 
           <section className='pp-overview-grid'>
             {[
-              { label: 'Rating', value: `${physician.rating.toFixed(1)} ★` },
+              { 
+                label: 'Rating', 
+                value: physician.rating ? `${physician.rating.toFixed(1)} ★` : 'Not rated' 
+              },
               { label: 'Patients Treated', value: profile.patientsTreated },
               { label: 'Years Experience', value: `${physician.experienceYears}` },
               { label: 'Consultations', value: profile.consultationsDone },
