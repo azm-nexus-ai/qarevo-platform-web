@@ -40,11 +40,7 @@ type ActionItem = {
 
 
 const timelineItems: TimelineItem[] = [
-  { title: 'Today', sub: 'Appointment confirmed', time: 'Just now', active: true },
-  { title: '24 Hours Before', sub: 'Reminder notification', time: 'Tomorrow morning' },
-  { title: '1 Hour Before', sub: 'Join link available', time: 'Before your visit' },
-  { title: 'Appointment Time', sub: 'Video consultation begins', time: 'At your scheduled slot' },
-  { title: 'After Consultation', sub: 'Follow-up and prescription', time: 'Within 24 hours' },
+  { title: '24 Hours Before', sub: 'Reminder notification', time: 'Tomorrow morning', active: true },
 ]
 
 const checklistItems: ChecklistItem[] = [
@@ -194,7 +190,7 @@ function SuccessPageContent() {
       `}</style>
       <PatientPortalShell
         eyebrow="Booking Complete"
-        title="Appointment Confirmed"
+        title="Booking Confirmed"
         description="Your consultation has been successfully scheduled. Details have been sent to your email and added to your care dashboard."
         rightRail={rightRailContent}
       >
@@ -205,16 +201,13 @@ function SuccessPageContent() {
                   <Ico p={ICONS.check} size={10} sw={2.2} color={T.blue} />
                   Appointment secured
                 </div>
-                <h1 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '30px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your Appointment is Confirmed!</h1>
+                <h1 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '30px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your Booking is Confirmed!</h1>
                 <p style={{ margin: '0 0 16px', maxWidth: '720px', fontSize: '14px', color: T.slate, lineHeight: 1.75 }}>
                   Your consultation has been successfully scheduled. We have shared the appointment details with your email and updated your care dashboard for a smooth, confident start.
                 </p>
                 <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '10px' }}>
-                  <Link href='/patient/appointment-details' style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 16px', borderRadius: '12px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 8px 22px rgba(32,181,223,0.26)' }}>
-                    View Appointment Details
-                  </Link>
-                  <Link href={PATIENT_ROUTES.dashboard} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
-                    Return to Dashboard
+                  <Link href='#' style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 16px', borderRadius: '12px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 8px 22px rgba(32,181,223,0.26)' }}>
+                    Add to Calendar
                   </Link>
                 </div>
               </div>

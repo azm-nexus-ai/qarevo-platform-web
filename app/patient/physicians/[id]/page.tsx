@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useMemo } from 'react'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams } from '@/lib/booking'
 import { getPatientDoctor } from '@/lib/api'
@@ -49,6 +49,37 @@ async function geocodeAddress(address: string): Promise<[number, number] | null>
     console.error('Geocoding error:', error)
   }
   return null
+}
+
+// Helper functions for physician profile logic
+function getEffectiveSelectedService(services: PhysicianProfileContent['services'], selectedService: string): string {
+  return services.some((service) => service.type === selectedService)
+    ? selectedService
+    : services[0]?.type ?? 'video'
+}
+
+function getEffectiveSelectedDay(slots: PhysicianProfileContent['availabilitySlots'], selectedDay: string): string {
+  return slots.some((item) => item.day === selectedDay)
+    ? selectedDay
+    : slots[0]?.day ?? 'Mon'
+}
+
+function getSlotsForDay(slots: PhysicianProfileContent['availabilitySlots'], day: string): string[] {
+  return slots.find((item) => item.day === day)?.slots ?? []
+}
+
+function getEffectiveSelectedSlot(daySlots: string[], selectedSlot: string): string {
+  return daySlots.includes(selectedSlot) ? selectedSlot : daySlots[0] ?? ''
+}
+
+function sortReviews(reviews: PhysicianProfileContent['reviews'], sort: ReviewSort): PhysicianProfileContent['reviews'] {
+  const sorted = [...reviews]
+  if (sort === 'highest') {
+    sorted.sort((a, b) => b.rating - a.rating)
+  } else if (sort === 'helpful') {
+    sorted.sort((a, b) => b.helpful - a.helpful)
+  }
+  return sorted
 }
 
 const DEFAULT_PROFILE = {
@@ -135,7 +166,7 @@ function toProfile(doctor: PatientDoctor): PhysicianProfileContent {
 
 function toBookingHref(physician: Physician, serviceType: string, preservedParams: URLSearchParams) {
   const params = buildBookingQueryParams(preservedParams, physician, serviceType)
-  return `/patient/consultation-booking?${params.toString()}`
+  return `/patient/consultation-booking/date-time?provider_id=${physician.id}&service_type=${serviceType || 'video'}&from=profile`
 }
 
 function loadingPhysician(id: string): Physician {
@@ -168,8 +199,16 @@ function PhysicianProfilePageContent() {
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
   const [loadingRemoteDoctor, setLoadingRemoteDoctor] = useState(true)
   const [remoteDoctorError, setRemoteDoctorError] = useState('')
-  const [mapCoordinates, setMapCoordinates] = useState<[number, number] | null>(null)
+  const [selectedService, setSelectedService] = useState<string>('')
+  const [selectedDay, setSelectedDay] = useState<string>('')
+  const [selectedSlot, setSelectedSlot] = useState<string>('')
+  const [expandedReviewId, setExpandedReviewId] = useState<string>('')
+  const [openFaq, setOpenFaq] = useState<string>('')
   const [mapLoading, setMapLoading] = useState(true)
+  const [mapCoordinates, setMapCoordinates] = useState<[number, number] | null>(null)
+  const [expandedBiography, setExpandedBiography] = useState(false)
+  const [expandedEducation, setExpandedEducation] = useState(false)
+  const [expandedExperience, setExpandedExperience] = useState(false)
   const [mapError, setMapError] = useState(false)
 
   useEffect(() => {
@@ -184,10 +223,10 @@ function PhysicianProfilePageContent() {
           const profileAddress = (doctor.profile as any)?.address
           const profileCity = (doctor.profile as any)?.city
           const profileCountry = (doctor.profile as any)?.country
-          
-          const address = locationAddress || 
+
+          const address = locationAddress ||
             `${profileAddress || ''}, ${profileCity || ''}, ${profileCountry || ''}`
-          
+
           if (address && address.trim()) {
             try {
               const coords = await geocodeAddress(address)
@@ -233,12 +272,20 @@ function PhysicianProfilePageContent() {
     ? preselectedService
     : profile.services[0]?.type ?? 'video'
 
-  const [selectedService, setSelectedService] = useState(validPreselectedService)
-  const [selectedDay, setSelectedDay] = useState(profile.availabilitySlots[0]?.day ?? 'Mon')
-  const [selectedSlot, setSelectedSlot] = useState(profile.availabilitySlots[0]?.slots[0] ?? '')
   const [reviewSort, setReviewSort] = useState<ReviewSort>('recent')
-  const [expandedReviewId, setExpandedReviewId] = useState(profile.reviews[0]?.id ?? '')
-  const [openFaq, setOpenFaq] = useState(profile.faq[0]?.q ?? '')
+  const [reviewsLoaded, setReviewsLoaded] = useState(false)
+  const [faqLoaded, setFaqLoaded] = useState(false)
+
+  // Initialize state with profile data when available
+  useEffect(() => {
+    if (remoteDoctor) {
+      setSelectedService(validPreselectedService)
+      setSelectedDay(profile.availabilitySlots[0]?.day ?? 'Mon')
+      setSelectedSlot(profile.availabilitySlots[0]?.slots[0] ?? '')
+      setExpandedReviewId(profile.reviews[0]?.id ?? '')
+      setOpenFaq(profile.faq[0]?.q ?? '')
+    }
+  }, [remoteDoctor, validPreselectedService, profile.availabilitySlots, profile.reviews, profile.faq])
 
   const preservedQuery = new URLSearchParams(searchParams.toString())
   preservedQuery.delete('intent')
@@ -246,21 +293,21 @@ function PhysicianProfilePageContent() {
   preservedQuery.delete('service')
 
   const backToDiscovery = `/patient/find-doctor${preservedQuery.toString() ? `?${preservedQuery.toString()}` : ''}`
-  const effectiveSelectedService = profile.services.some((service) => service.type === selectedService)
-    ? selectedService
-    : profile.services[0]?.type ?? 'video'
-  const effectiveSelectedDay = profile.availabilitySlots.some((item) => item.day === selectedDay)
-    ? selectedDay
-    : profile.availabilitySlots[0]?.day ?? 'Mon'
-  const selectedDaySlots = profile.availabilitySlots.find((item) => item.day === effectiveSelectedDay)?.slots ?? []
-  const effectiveSelectedSlot = selectedDaySlots.includes(selectedSlot) ? selectedSlot : selectedDaySlots[0] ?? ''
 
-  const sortedReviews = [...profile.reviews]
-  if (reviewSort === 'highest') {
-    sortedReviews.sort((a, b) => b.rating - a.rating)
-  } else if (reviewSort === 'helpful') {
-    sortedReviews.sort((a, b) => b.helpful - a.helpful)
-  }
+  // Helper: Get effective selected service with fallback
+  const effectiveSelectedService = getEffectiveSelectedService(profile.services, selectedService)
+
+  // Helper: Get effective selected day with fallback
+  const effectiveSelectedDay = getEffectiveSelectedDay(profile.availabilitySlots, selectedDay)
+
+  // Helper: Get slots for selected day
+  const selectedDaySlots = getSlotsForDay(profile.availabilitySlots, effectiveSelectedDay)
+
+  // Helper: Get effective selected slot with fallback
+  const effectiveSelectedSlot = getEffectiveSelectedSlot(selectedDaySlots, selectedSlot)
+
+  // Helper: Sort reviews based on sort option
+  const sortedReviews = sortReviews(profile.reviews, reviewSort)
 
   const relatedPhysicians: Physician[] = []
 
@@ -330,7 +377,7 @@ function PhysicianProfilePageContent() {
 
       <div className='pp-shell'>
         <section className='pp-main'>
-          <header style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.84)', padding: '14px' }}>
+          <header style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.84)', padding: '14px', position: 'sticky', top: '16px', zIndex: 10, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
               <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: '#348CEA', fontSize: '13px', fontWeight: 700 }}>
                 <Ico p={ICONS.arrowBack} size={14} sw={1.8} color='#348CEA' />
@@ -356,14 +403,31 @@ function PhysicianProfilePageContent() {
                 <p style={{ margin: '0 0 4px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>
                   {physician.specialty} · {profile.subSpecialties.join(' · ')}
                 </p>
-                <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>
+                <p style={{ margin: '0 0 4px', fontSize: '13px', color: T.slate2 }}>
                   {physician.hospital} · {physician.experienceYears} years experience · {physician.languages.join(', ')}
                 </p>
+                {profile.availabilitySlots.length > 0 && profile.availabilitySlots[0].slots.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                    <span style={{ fontSize: '11px', color: T.slate2 }}>Next Available:</span>
+                    {profile.availabilitySlots.slice(0, 1).map((day) => (
+                      <div key={day.day} style={{ display: 'flex', gap: '4px' }}>
+                        {day.slots.slice(0, 3).map((slot) => (
+                          <span key={slot} style={{ ...Glass.chip, fontSize: '11px', color: T.blue, fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
+                            {day.day} {slot}
+                          </span>
+                        ))}
+                      </div>
+                    ))}
+                    <Link href="#availability" style={{ fontSize: '11px', color: '#348CEA', fontWeight: 700, textDecoration: 'none' }}>
+                      View All
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gap: '8px' }}>
                 <Link href={toBookingHref(physician, effectiveSelectedService, preservedQuery)} style={{ minHeight: '44px', borderRadius: '12px', background: '#20B5DF', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 5px 14px rgba(32,181,223,0.32)' }}>
-                  Book Consultation
+                  Book Now
                 </Link>
                 <span style={{ fontSize: '11px', color: T.slate2, textAlign: 'center' }}>Response Time: {profile.responseTime}</span>
               </div>
@@ -372,9 +436,9 @@ function PhysicianProfilePageContent() {
 
           <section className='pp-overview-grid'>
             {[
-              { 
-                label: 'Rating', 
-                value: physician.rating ? `${physician.rating.toFixed(1)} ★` : 'Not rated' 
+              {
+                label: 'Rating',
+                value: physician.rating ? `${physician.rating.toFixed(1)} ★` : 'Not rated'
               },
               { label: 'Patients Treated', value: profile.patientsTreated },
               { label: 'Years Experience', value: `${physician.experienceYears}` },
@@ -390,7 +454,18 @@ function PhysicianProfilePageContent() {
 
           <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
             <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>About Dr. {physician.name.replace('Dr. ', '')}</h2>
-            <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>{profile.biography}</p>
+            <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>
+              {expandedBiography ? profile.biography : `${profile.biography.slice(0, 150)}${profile.biography.length > 150 ? '...' : ''}`}
+            </p>
+            {profile.biography.length > 150 && (
+              <button
+                type='button'
+                onClick={() => setExpandedBiography(!expandedBiography)}
+                style={{ border: 'none', background: 'transparent', color: '#348CEA', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px', padding: 0 }}
+              >
+                {expandedBiography ? 'Read Less' : 'Read More'}
+              </button>
+            )}
           </section>
 
           <section className='pp-two-col'>
@@ -417,7 +492,7 @@ function PhysicianProfilePageContent() {
             <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
               <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Education</h3>
               <div className='pp-timeline'>
-                {profile.education.map((item) => (
+                {(expandedEducation ? profile.education : profile.education.slice(0, 1)).map((item) => (
                   <div key={`${item.title}-${item.period}`} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '10px 11px' }}>
                     <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{item.title}</p>
                     <p style={{ margin: '0 0 2px', fontSize: '12px', color: T.slate }}>{item.org}</p>
@@ -425,12 +500,21 @@ function PhysicianProfilePageContent() {
                   </div>
                 ))}
               </div>
+              {profile.education.length > 1 && (
+                <button
+                  type='button'
+                  onClick={() => setExpandedEducation(!expandedEducation)}
+                  style={{ border: 'none', background: 'transparent', color: '#348CEA', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px', padding: 0 }}
+                >
+                  {expandedEducation ? 'Show Less' : `View All (${profile.education.length})`}
+                </button>
+              )}
             </article>
 
             <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
               <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Professional Experience</h3>
               <div className='pp-timeline'>
-                {profile.experienceTimeline.map((item) => (
+                {(expandedExperience ? profile.experienceTimeline : profile.experienceTimeline.slice(0, 1)).map((item) => (
                   <div key={`${item.title}-${item.period}`} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '10px 11px' }}>
                     <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{item.title}</p>
                     <p style={{ margin: '0 0 2px', fontSize: '12px', color: T.slate }}>{item.org}</p>
@@ -438,6 +522,15 @@ function PhysicianProfilePageContent() {
                   </div>
                 ))}
               </div>
+              {profile.experienceTimeline.length > 1 && (
+                <button
+                  type='button'
+                  onClick={() => setExpandedExperience(!expandedExperience)}
+                  style={{ border: 'none', background: 'transparent', color: '#348CEA', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px', padding: 0 }}
+                >
+                  {expandedExperience ? 'Show Less' : `View All (${profile.experienceTimeline.length})`}
+                </button>
+              )}
             </article>
           </section>
 
@@ -447,17 +540,16 @@ function PhysicianProfilePageContent() {
               {profile.services.map((service) => {
                 const active = effectiveSelectedService === service.type
                 return (
-                  <button
+                  <Link
                     key={service.type}
-                    type='button'
-                    onClick={() => setSelectedService(service.type)}
-                    style={{ textAlign: 'left', borderRadius: '14px', border: active ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: active ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.84)', padding: '12px', cursor: 'pointer' }}
+                    href={`/patient/consultation-booking/date-time?provider_id=${physicianId}&service_type=${service.type}&from=profile`}
+                    style={{ textAlign: 'left', borderRadius: '14px', border: active ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: active ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.84)', padding: '12px', cursor: 'pointer', textDecoration: 'none', display: 'block' }}
                   >
                     <p style={{ margin: '0 0 4px', fontSize: '13px', color: T.navy, fontWeight: 700 }}>{service.label}</p>
                     <p style={{ margin: '0 0 2px', fontSize: '12px', color: T.slate }}>Price: ${service.price}</p>
                     <p style={{ margin: '0 0 2px', fontSize: '12px', color: T.slate }}>Duration: {service.duration}</p>
                     <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>Availability: {service.availability}</p>
-                  </button>
+                  </Link>
                 )
               })}
             </div>
@@ -536,7 +628,7 @@ function PhysicianProfilePageContent() {
 
           <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Patient Reviews</h3>
+              <h3 style={{ margin: 0, fontFamily: '"Plus Jakarta Sans", sans-serif', fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Patient Reviews</h3>
               <div style={{ display: 'flex', gap: '6px' }}>
                 {[
                   { id: 'recent', label: 'Most Recent' },
@@ -546,7 +638,10 @@ function PhysicianProfilePageContent() {
                   <button
                     key={item.id}
                     type='button'
-                    onClick={() => setReviewSort(item.id as ReviewSort)}
+                    onClick={() => {
+                      setReviewSort(item.id as ReviewSort)
+                      setReviewsLoaded(true)
+                    }}
                     style={{ borderRadius: '999px', border: reviewSort === item.id ? '1px solid rgba(32,181,223,0.45)' : '1px solid rgba(4,53,77,0.1)', background: reviewSort === item.id ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.84)', color: reviewSort === item.id ? T.blue : T.slate, fontSize: '11px', fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
                   >
                     {item.label}
@@ -554,51 +649,77 @@ function PhysicianProfilePageContent() {
                 ))}
               </div>
             </div>
-            <div style={{ display: 'grid', gap: '8px' }}>
-              {sortedReviews.map((review) => {
-                const expanded = expandedReviewId === review.id
-                return (
-                  <article key={review.id} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '10px' }}>
-                    <button
-                      type='button'
-                      onClick={() => setExpandedReviewId(expanded ? '' : review.id)}
-                      style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                        <p style={{ margin: 0, fontSize: '13px', color: T.navy, fontWeight: 700 }}>{review.patient} · {review.rating.toFixed(1)} ★</p>
-                        <span style={{ ...Glass.chip, fontSize: '10.5px', color: T.blue, fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>Verified Patient</span>
-                      </div>
-                      <p style={{ margin: '4px 0 0', fontSize: '11px', color: T.slate2 }}>{review.date} · Helpful {review.helpful}</p>
-                      <p style={{ margin: '7px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.55 }}>
-                        {expanded ? review.body : `${review.body.slice(0, 90)}${review.body.length > 90 ? '...' : ''}`}
-                      </p>
-                    </button>
-                  </article>
-                )
-              })}
-            </div>
+            {!reviewsLoaded ? (
+              <button
+                type='button'
+                onClick={() => setReviewsLoaded(true)}
+                style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.84)', color: T.blue, fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Load {profile.reviews.length} Reviews
+              </button>
+            ) : (
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {sortedReviews.map((review) => {
+                  const expanded = expandedReviewId === review.id
+                  return (
+                    <article key={review.id} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '10px' }}>
+                      <button
+                        type='button'
+                        onClick={() => setExpandedReviewId(expanded ? '' : review.id)}
+                        style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: T.navy, fontWeight: 700 }}>{review.patient} · {review.rating.toFixed(1)} ★</p>
+                          <span style={{ ...Glass.chip, fontSize: '10.5px', color: T.blue, fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>Verified Patient</span>
+                        </div>
+                        <p style={{ margin: '4px 0 0', fontSize: '11px', color: T.slate2 }}>{review.date} · Helpful {review.helpful}</p>
+                        <p style={{ margin: '7px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.55 }}>
+                          {expanded ? review.body : `${review.body.slice(0, 90)}${review.body.length > 90 ? '...' : ''}`}
+                        </p>
+                      </button>
+                    </article>
+                  )
+                })}
+              </div>
+            )}
           </section>
 
           <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
             <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Frequently Asked Questions</h3>
-            <div style={{ display: 'grid', gap: '8px' }}>
-              {profile.faq.map((item) => {
-                const open = openFaq === item.q
-                return (
-                  <article key={item.q} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: open ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.84)', overflow: 'hidden' }}>
-                    <button
-                      type='button'
-                      onClick={() => setOpenFaq(open ? '' : item.q)}
-                      style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', padding: '11px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
-                    >
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{item.q}</span>
-                      <Ico p={ICONS.arrowSm} size={14} sw={1.8} color={open ? T.blue : T.slate2} />
-                    </button>
-                    {open && <p style={{ margin: '0 12px 11px', fontSize: '12.5px', color: T.slate, lineHeight: 1.6 }}>{item.a}</p>}
-                  </article>
-                )
-              })}
-            </div>
+            {!faqLoaded ? (
+              <button
+                type='button'
+                onClick={() => setFaqLoaded(true)}
+                style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.84)', color: T.blue, fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Load {profile.faq.length} FAQs
+              </button>
+            ) : (
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {profile.faq.map((item) => {
+                  const open = openFaq === item.q
+                  return (
+                    <article key={item.q} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: open ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.84)', overflow: 'hidden' }}>
+                      <button
+                        type='button'
+                        onClick={() => setOpenFaq(open ? '' : item.q)}
+                        style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', padding: '12px' }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: T.navy, fontWeight: 700 }}>{item.q}</p>
+                          <span style={{ fontSize: '16px', color: T.slate }}>{open ? '−' : '+'}</span>
+                        </div>
+                        {open && (
+                          <p style={{ margin: '8px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.55 }}>
+                            {item.a}
+                          </p>
+                        )}
+                      </button>
+                    </article>
+                  )
+                })}
+              </div>
+            )}
           </section>
 
           <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
@@ -621,40 +742,15 @@ function PhysicianProfilePageContent() {
 
         <aside className='pp-side'>
           <section style={{ background: 'rgba(255,255,255,0.9)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.float, padding: '14px' }}>
-            <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Book Instantly</h3>
+            <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>About This Physician</h3>
             <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Doctor:</strong> {physician.name}</p>
-            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Service:</strong> {activeService?.label}</p>
-            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {effectiveSelectedDay} {effectiveSelectedSlot ? `at ${effectiveSelectedSlot}` : ''}</p>
-            <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Fee:</strong> ${activeService?.price}</p>
-
-            <Link href={toBookingHref(physician, effectiveSelectedService, preservedQuery)} style={{ minHeight: '42px', borderRadius: '11px', background: '#20B5DF', color: '#fff', textDecoration: 'none', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', marginBottom: '8px' }}>
-              Book Consultation
-            </Link>
-
-            <HoverBtn
-              base={{
-                width: '100%',
-                minHeight: '42px',
-                borderRadius: '11px',
-                border: '1px solid rgba(4,53,77,0.14)',
-                background: 'rgba(255,255,255,0.88)',
-                color: T.navy,
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-              on={{ background: 'rgba(255,255,255,0.98)' }}
-            >
-              Message Physician
-            </HoverBtn>
+            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Specialty:</strong> {physician.specialty}</p>
+            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {physician.experienceYears} years</p>
+            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {physician.rating.toFixed(1)} ★</p>
+            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Languages:</strong> {physician.languages.join(', ')}</p>
+            <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {physician.hospital}</p>
           </section>
         </aside>
-      </div>
-
-      <div className='pp-mobile-book' style={{ display: 'none', position: 'fixed', left: '0', right: '0', bottom: '0', zIndex: 50, padding: '10px', background: 'rgba(247,250,252,0.92)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', borderTop: '1px solid rgba(255,255,255,0.84)', boxShadow: '0 -8px 20px rgba(4,53,77,0.1)' }}>
-        <Link href={toBookingHref(physician, effectiveSelectedService, preservedQuery)} style={{ minHeight: '46px', width: '100%', borderRadius: '12px', background: '#20B5DF', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.32)' }}>
-          Book Consultation - ${activeService?.price}
-        </Link>
       </div>
     </main>
   )

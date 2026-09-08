@@ -7,6 +7,8 @@ export const ICONS = {
   arrowBack: 'M20 12H4M13 5l-7 7 7 7',
   arrowFwd: 'M5 12h14M12 5l7 7-7 7',
   zap:      'M13 2 3 14h9l-1 8 10-12h-9l1-8z',
+  lightning: 'M13 2 3 14h9l-1 8 10-12h-9l1-8z',
+  chevronDown: 'M6 9l6 6 6-6',
   cpu:      ['M9 3H5a2 2 0 0 0-2 2v4', 'M9 3h10a2 2 0 0 1 2 2v4', 'M3 9v10a2 2 0 0 0 2 2h4', 'M9 21h10a2 2 0 0 0 2-2V9', 'M9 9h6v6H9z'],
   user:     ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
   message:  ['M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z', 'M8 9h8', 'M8 13h5'],

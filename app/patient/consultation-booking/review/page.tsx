@@ -51,15 +51,11 @@ function ReviewPageContent() {
   const emergencyContact = 'M. Bamidele · +234 810 123 4567'
   const medicalConcern = 'Cardiovascular review and medication follow-up'
 
-  const [agreements, setAgreements] = useState<Record<AgreementKey, boolean>>({
-    info: false,
-    terms: false,
-    privacy: false,
-    policy: false,
-  })
+  const [agreed, setAgreed] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [showPolicy, setShowPolicy] = useState(false)
+  const [editableNotes, setEditableNotes] = useState(notes)
 
   const appointmentEnd = useMemo(() => {
     const parts = duration.match(/(\d+)/)
@@ -69,15 +65,15 @@ function ReviewPageContent() {
     return start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })
   }, [duration])
 
-  const allAgreed = agreements.info && agreements.terms && agreements.privacy && agreements.policy
+  const allAgreed = agreed
 
   const successHref = useMemo(() => {
     const next = buildBookingQueryParams(searchParams, physicianData, service)
     next.set('date', date)
     next.set('slot', slot)
-    next.set('notes', notes)
+    next.set('notes', editableNotes)
     return `/patient/consultation-booking/success?${next.toString()}`
-  }, [date, notes, searchParams, physicianData, service, slot])
+  }, [date, editableNotes, searchParams, physicianData, service, slot])
 
   const backHref = useMemo(() => {
     const next = buildBookingQueryParams(searchParams, physicianData, service)
@@ -104,7 +100,7 @@ function ReviewPageContent() {
         flow_type: service === 'follow-up' ? 'follow_up' : 'consultation',
         matching_mode: physicianData.id ? 'patient_selects' : 'matching_required',
         insurance_provider: insurance,
-        consent_data_processing: agreements.privacy,
+        consent_data_processing: agreed,
         consent_ai_assistance: true,
         recipient_email: email,
         recipient_phone_e164: phone.replace(/\s/g, ''),
@@ -112,7 +108,7 @@ function ReviewPageContent() {
       })
 
       await updatePatientEpisodeIntake(episode.id, {
-        raw_text: notes || medicalConcern,
+        raw_text: editableNotes || medicalConcern,
         reported_duration: duration,
         reported_location: physicianData.hospital,
         reported_onset: `${date} ${slot}`,
@@ -146,7 +142,13 @@ function ReviewPageContent() {
         <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: '280px minmax(0, 1fr) 340px', alignItems: 'start' }}>
           <aside style={{ display: 'grid', gap: '12px' }}>
             <section style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.84)', padding: '18px' }}>
-              <p style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Booking Progress</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Booking Progress</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.blue }}>80%</p>
+              </div>
+              <div style={{ width: '100%', height: '6px', borderRadius: '999px', background: 'rgba(4,53,77,0.08)', marginBottom: '12px', overflow: 'hidden' }}>
+                <div style={{ width: '80%', height: '100%', background: 'linear-gradient(90deg, #20B5DF 0%, #348CEA 100%)', borderRadius: '999px', transition: 'width 0.3s ease' }} />
+              </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {['Doctor Selected', 'Consultation Type', 'Date & Time', 'Review', 'Confirmation'].map((step, index) => {
                   const completed = index < 3
@@ -181,29 +183,20 @@ function ReviewPageContent() {
 
           <section style={{ display: 'grid', gap: '14px' }}>
             <header style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.float, padding: '22px 24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <div>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    <Ico p={ICONS.check} size={11} sw={2.2} color={T.blue} />
-                    Final review
-                  </div>
-                  <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '28px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Review Your Appointment</h1>
-                  <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7, maxWidth: '760px' }}>Please review every detail before confirming your booking. This final step is designed to give you complete clarity, confidence, and reassurance.</p>
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  <Ico p={ICONS.check} size={11} sw={2.2} color={T.blue} />
+                  Final review
                 </div>
-                <Link href={editHref} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: T.blue, fontSize: '13px', fontWeight: 700 }}>
-                  <Ico p={ICONS.arrowSm} size={14} sw={1.8} color={T.blue} />
-                  Edit Booking
-                </Link>
+                <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '28px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Review Your Appointment</h1>
+                <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7, maxWidth: '760px' }}>Please review every detail before confirming your booking. This final step is designed to give you complete clarity, confidence, and reassurance.</p>
               </div>
             </header>
 
             <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Physician Summary</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your care team at a glance</h2>
-                </div>
-                <Link href={editHref} style={{ fontSize: '12px', fontWeight: 700, color: T.blue, textDecoration: 'none' }}>Edit</Link>
+              <div style={{ marginBottom: '12px' }}>
+                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Physician Summary</p>
+                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your care team at a glance</h2>
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ width: '84px', height: '84px', borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(4,53,77,0.12)', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', display: 'grid', placeItems: 'center' }}>
@@ -230,12 +223,9 @@ function ReviewPageContent() {
             </section>
 
             <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment Details</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your selected consultation details</h2>
-                </div>
-                <Link href={editHref} style={{ fontSize: '12px', fontWeight: 700, color: T.blue, textDecoration: 'none' }}>Edit</Link>
+              <div style={{ marginBottom: '12px' }}>
+                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment Details</p>
+                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your selected consultation details</h2>
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
                 {[
@@ -257,12 +247,9 @@ function ReviewPageContent() {
             </section>
 
             <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Information</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your details are ready for review</h2>
-                </div>
-                <Link href={editHref} style={{ fontSize: '12px', fontWeight: 700, color: T.blue, textDecoration: 'none' }}>Edit</Link>
+              <div style={{ marginBottom: '12px' }}>
+                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Information</p>
+                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your details are ready for review</h2>
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
                 {[
@@ -271,37 +258,27 @@ function ReviewPageContent() {
                   ['Phone Number', phone],
                   ['Emergency Contact', emergencyContact],
                   ['Primary Medical Concern', medicalConcern],
-                  ['Patient Notes', notes || 'No additional notes provided'],
                 ].map(([label, value]) => (
                   <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
                     <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{value}</p>
                   </div>
                 ))}
-              </div>
-            </section>
-
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Payment Summary</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Everything is transparent before payment</h2>
-                </div>
-                <button type='button' style={{ fontSize: '12px', fontWeight: 700, color: T.blue, textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer' }}>Change Payment Method</button>
-              </div>
-              <div style={{ display: 'grid', gap: '8px' }}>
-                {[
-                  ['Consultation Fee', formatFee(fee)],
-                  ['Insurance Contribution', formatFee(Math.max(0, fee - 40))],
-                  ['Additional Charges', '$0'],
-                  ['Estimated Total', formatFee(fee)],
-                  ['Payment Method', 'Card ending in 4821'],
-                ].map(([label, value]) => (
-                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: '1px solid rgba(4,53,77,0.06)' }}>
-                    <span style={{ fontSize: '12px', color: T.slate2 }}>{label}</span>
-                    <span style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{value}</span>
+                <div style={{ gridColumn: '1 / -1', padding: '12px 13px', borderRadius: '14px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Notes</p>
+                  <textarea
+                    value={editableNotes}
+                    onChange={(event) => setEditableNotes(event.target.value.slice(0, 500))}
+                    maxLength={500}
+                    rows={4}
+                    placeholder='Describe your symptoms, concerns, or anything you would like your physician to know before the consultation.'
+                    style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', padding: '10px 12px', fontFamily: 'inherit', fontSize: '13px', color: T.navy, resize: 'vertical', outline: 'none', background: 'rgba(255,255,255,0.9)' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: '6px', fontSize: '12px', color: T.slate2 }}>
+                    <span>Optional and private to your booking.</span>
+                    <span>{editableNotes.length}/500</span>
                   </div>
-                ))}
+                </div>
               </div>
             </section>
 
@@ -355,24 +332,15 @@ function ReviewPageContent() {
                   <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consent & Agreements</p>
                   <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Please confirm the final terms</h2>
                 </div>
-                <div style={{ display: 'grid', gap: '8px' }}>
-                  {[
-                    ['info', 'I confirm that the information provided is accurate.'],
-                    ['terms', 'I agree to the Terms & Conditions.'],
-                    ['privacy', 'I consent to the Privacy Policy.'],
-                    ['policy', 'I understand the consultation and cancellation policy.'],
-                  ].map(([key, label]) => (
-                    <label key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)', cursor: 'pointer' }}>
-                      <input
-                        type='checkbox'
-                        checked={agreements[key as AgreementKey]}
-                        onChange={() => setAgreements((value) => ({ ...value, [key]: !value[key as AgreementKey] }))}
-                        style={{ marginTop: '2px', accentColor: T.blue }}
-                      />
-                      <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{label}</span>
-                    </label>
-                  ))}
-                </div>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)', cursor: 'pointer' }}>
+                  <input
+                    type='checkbox'
+                    checked={agreed}
+                    onChange={() => setAgreed((value) => !value)}
+                    style={{ marginTop: '2px', accentColor: T.blue }}
+                  />
+                  <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>I confirm that the information provided is accurate, agree to the Terms & Conditions, consent to the Privacy Policy, and understand the consultation and cancellation policy.</span>
+                </label>
               </div>
             </section>
           </section>

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useMemo, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
@@ -9,6 +9,7 @@ import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
+import { useBookingContext } from '@/contexts/BookingContext'
 
 function readLabel(service: string | null) {
   switch (service) {
@@ -42,62 +43,19 @@ function addDays(date: Date, days: number) {
   return next
 }
 
-function getMonthGrid(date: Date) {
-  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1)
-  const startOffset = firstDay.getDay()
-  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
-  const cells: Array<{ date: Date; inMonth: boolean }> = []
-
-  for (let i = 0; i < startOffset; i += 1) {
-    const previousMonth = new Date(firstDay)
-    previousMonth.setDate(firstDay.getDate() - (startOffset - i))
-    cells.push({ date: previousMonth, inMonth: false })
-  }
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    cells.push({ date: new Date(date.getFullYear(), date.getMonth(), day), inMonth: true })
-  }
-
-  while (cells.length % 7 !== 0) {
-    const last = cells[cells.length - 1]?.date ?? new Date(date)
-    const next = new Date(last)
-    next.setDate(last.getDate() + 1)
-    cells.push({ date: next, inMonth: false })
-  }
-
-  return cells
-}
-
-type DayStatus = 'available' | 'limited' | 'booked' | 'selected'
-
-function getAvailabilityStatus(date: Date): DayStatus {
-  const today = new Date()
-  const tomorrow = addDays(today, 1)
-  const key = formatDateKey(date)
-  const todayKey = formatDateKey(today)
-  const tomorrowKey = formatDateKey(tomorrow)
-  const nextWeekend = addDays(today, 5)
-  const nextWeekendKey = formatDateKey(nextWeekend)
-
-  if (key === todayKey) return 'limited'
-  if (key === tomorrowKey) return 'available'
-  if (key === nextWeekendKey) return 'available'
-  if (date.getDate() % 4 === 0) return 'booked'
-  if (date.getDate() % 3 === 0) return 'limited'
-  return 'available'
-}
-
 function DateTimeSelectionPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? ''
+  const { bookingState, updateBookingState, setBookingStep } = useBookingContext()
+
+  const physicianId = searchParams.get('physicianId') ?? bookingState.physicianId ?? ''
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const physicianData = useMemo(() => getBookingPhysician(searchParams, physician), [searchParams, physician])
-  const service = searchParams.get('service') ?? 'video'
+  const service = bookingState.service ?? searchParams.get('service') ?? 'video'
   const fee = Number(searchParams.get('fee') ?? physician?.consultationFee ?? 140)
   const duration = searchParams.get('duration') ?? '30 min'
   const insurance = searchParams.get('insurance') ?? 'Axa'
-  const initialDateParam = searchParams.get('date')
+  const initialDateParam = searchParams.get('date') ?? bookingState.date
   const initialDate = useMemo(() => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(initialDateParam ?? '')) {
       const parsed = new Date(`${initialDateParam}T00:00:00`)
@@ -109,9 +67,8 @@ function DateTimeSelectionPageContent() {
   }, [initialDateParam])
 
   const [selectedDate, setSelectedDate] = useState(initialDate)
-  const [visibleMonth, setVisibleMonth] = useState(new Date(initialDate.getFullYear(), initialDate.getMonth(), 1))
-  const [selectedSlot, setSelectedSlot] = useState(searchParams.get('slot') ?? '09:00 AM')
-  const [notes, setNotes] = useState(searchParams.get('notes') ?? '')
+  const [selectedSlot, setSelectedSlot] = useState(bookingState.slot ?? searchParams.get('slot') ?? '09:00 AM')
+  const [showTimeSheet, setShowTimeSheet] = useState(false)
   const preservedParams = useMemo(() => {
     const next = buildBookingQueryParams(searchParams, physicianData, service)
     return next.toString()
@@ -121,16 +78,11 @@ function DateTimeSelectionPageContent() {
     ? `/patient/physicians/${physicianData.id}${preservedParams ? `?${preservedParams}` : ''}`
     : '/patient/find-doctor'
 
-  const monthGrid = useMemo(() => getMonthGrid(visibleMonth), [visibleMonth])
   const selectedDateKey = formatDateKey(selectedDate)
   const quickShortcuts = [
-    { label: 'Earliest Available', date: addDays(new Date(), 0) },
     { label: 'Today', date: new Date() },
     { label: 'Tomorrow', date: addDays(new Date(), 1) },
-    { label: 'This Weekend', date: addDays(new Date(), 5) },
-    { label: 'Next Available Morning', date: addDays(new Date(), 0) },
-    { label: 'Next Available Afternoon', date: addDays(new Date(), 1) },
-    { label: 'Next Available Evening', date: addDays(new Date(), 2) },
+    { label: 'Next Week', date: addDays(new Date(), 7) },
   ]
 
   const slotGroups = [
@@ -152,9 +104,22 @@ function DateTimeSelectionPageContent() {
     const next = buildBookingQueryParams(searchParams, physicianData, service)
     next.set('date', formatDateLabel(selectedDate))
     next.set('slot', selectedSlot)
-    next.set('notes', notes)
     return `/patient/consultation-booking/review?${next.toString()}`
-  }, [notes, searchParams, physicianData, selectedDate, selectedSlot, service])
+  }, [searchParams, physicianData, selectedDate, selectedSlot, service])
+
+  // Save booking state to context when selections change
+  useEffect(() => {
+    if (physicianData.id) {
+      updateBookingState({
+        physicianId: physicianData.id,
+        physicianName: physicianData.name,
+        service,
+        date: formatDateLabel(selectedDate),
+        slot: selectedSlot,
+        step: 'datetime',
+      })
+    }
+  }, [physicianData.id, physicianData.name, service, selectedDate, selectedSlot, updateBookingState])
 
   const appointmentEnd = useMemo(() => {
     const parts = duration.match(/(\d+)/)
@@ -164,12 +129,7 @@ function DateTimeSelectionPageContent() {
     return `${start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}`
   }, [duration])
 
-  const primaryStatus = getAvailabilityStatus(selectedDate)
-  const availableTimes = slotGroups.flatMap((group) => group.slots.filter((slot) => {
-    if (primaryStatus === 'booked') return false
-    if (primaryStatus === 'limited' && ['09:00 AM', '10:00 AM', '02:00 PM', '05:00 PM'].includes(slot)) return false
-    return true
-  }))
+  const availableTimes = slotGroups.flatMap((group) => group.slots)
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG }}>
@@ -177,7 +137,13 @@ function DateTimeSelectionPageContent() {
         <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: '280px minmax(0, 1fr) 340px', alignItems: 'start' }}>
           <aside style={{ display: 'grid', gap: '12px' }}>
             <section style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.84)', padding: '18px' }}>
-              <p style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Booking Progress</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Booking Progress</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.blue }}>60%</p>
+              </div>
+              <div style={{ width: '100%', height: '6px', borderRadius: '999px', background: 'rgba(4,53,77,0.08)', marginBottom: '12px', overflow: 'hidden' }}>
+                <div style={{ width: '60%', height: '100%', background: 'linear-gradient(90deg, #20B5DF 0%, #348CEA 100%)', borderRadius: '999px', transition: 'width 0.3s ease' }} />
+              </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {['Doctor Selected', 'Consultation Type', 'Date & Time', 'Review', 'Confirmation'].map((step, index) => {
                   const completed = index < 2
@@ -230,6 +196,18 @@ function DateTimeSelectionPageContent() {
 
             <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                <button
+                  type='button'
+                  onClick={() => {
+                    const firstAvailable = new Date()
+                    setSelectedDate(firstAvailable)
+                    setSelectedSlot('09:00 AM')
+                  }}
+                  style={{ borderRadius: '999px', border: '1px solid rgba(32,181,223,0.34)', background: 'linear-gradient(135deg, rgba(32,181,223,0.12) 0%, rgba(52,140,234,0.12) 100%)', color: T.blue, fontSize: '14px', fontWeight: 700, padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px' }}
+                >
+                  <Ico p={ICONS.check} size={12} sw={2.2} color={T.blue} />
+                  First Available
+                </button>
                 {quickShortcuts.map((shortcut) => {
                   const active = selectedDateKey === formatDateKey(shortcut.date)
                   return (
@@ -238,9 +216,8 @@ function DateTimeSelectionPageContent() {
                       type='button'
                       onClick={() => {
                         setSelectedDate(shortcut.date)
-                        setVisibleMonth(new Date(shortcut.date.getFullYear(), shortcut.date.getMonth(), 1))
                       }}
-                      style={{ borderRadius: '999px', border: active ? '1px solid rgba(32,181,223,0.34)' : '1px solid rgba(4,53,77,0.1)', background: active ? 'rgba(32,181,223,0.1)' : 'rgba(255,255,255,0.8)', color: active ? T.blue : T.slate, fontSize: '12px', fontWeight: 700, padding: '8px 12px', cursor: 'pointer' }}
+                      style={{ borderRadius: '999px', border: active ? '1px solid rgba(32,181,223,0.34)' : '1px solid rgba(4,53,77,0.1)', background: active ? 'rgba(32,181,223,0.1)' : 'rgba(255,255,255,0.8)', color: active ? T.blue : T.slate, fontSize: '14px', fontWeight: 700, padding: '12px 16px', cursor: 'pointer', minHeight: '44px' }}
                     >
                       {shortcut.label}
                     </button>
@@ -249,66 +226,41 @@ function DateTimeSelectionPageContent() {
               </div>
 
               <div style={{ display: 'grid', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <div>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Availability Calendar</p>
-                    <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{visibleMonth.toLocaleDateString('en', { month: 'long', year: 'numeric' })}</h2>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button type='button' onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1))} style={{ borderRadius: '10px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.9)', width: '38px', height: '38px', cursor: 'pointer', display: 'grid', placeItems: 'center' }} aria-label='Previous month'>←</button>
-                    <button type='button' onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1))} style={{ borderRadius: '10px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.9)', width: '38px', height: '38px', cursor: 'pointer', display: 'grid', placeItems: 'center' }} aria-label='Next month'>→</button>
-                  </div>
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Select Date</p>
+                  <h2 style={{ margin: 0, fontFamily: '"Plus Jakarta Sans", sans-serif', fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose your preferred appointment date</h2>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: '8px' }}>
-                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, index) => (
-                    <div key={`day-${index}`} style={{ textAlign: 'center', fontSize: '11px', fontWeight: 700, color: T.slate2, textTransform: 'uppercase' }}>{label}</div>
-                  ))}
-                  {monthGrid.map((cell) => {
-                    const status = getAvailabilityStatus(cell.date)
-                    const isSelected = formatDateKey(cell.date) === selectedDateKey
-                    const disabled = status === 'booked'
-                    const base = {
-                      borderRadius: '12px',
-                      minHeight: '44px',
-                      border: isSelected ? '1px solid rgba(32,181,223,0.34)' : '1px solid rgba(4,53,77,0.08)',
-                      background: isSelected ? 'linear-gradient(135deg, rgba(232,248,252,0.95) 0%, rgba(255,255,255,0.95) 100%)' : 'rgba(255,255,255,0.8)',
-                      color: cell.inMonth ? T.navy : T.slate2,
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      cursor: disabled ? 'not-allowed' : 'pointer',
-                      opacity: cell.inMonth ? 1 : 0.7,
-                      position: 'relative' as const,
-                      display: 'grid',
-                      placeItems: 'center',
-                      boxShadow: isSelected ? Sh.glow : 'none',
+                <input
+                  type='date'
+                  value={formatDateKey(selectedDate)}
+                  onChange={(event) => {
+                    const newDate = new Date(event.target.value)
+                    if (!isNaN(newDate.getTime())) {
+                      setSelectedDate(newDate)
                     }
-                    return (
-                      <button
-                        key={formatDateKey(cell.date)}
-                        type='button'
-                        disabled={disabled}
-                        onClick={() => {
-                          setSelectedDate(cell.date)
-                          setVisibleMonth(new Date(cell.date.getFullYear(), cell.date.getMonth(), 1))
-                        }}
-                        style={base}
-                      >
-                        <span>{cell.date.getDate()}</span>
-                        {!disabled && (
-                          <span style={{ position: 'absolute', bottom: '6px', width: '6px', height: '6px', borderRadius: '50%', background: status === 'limited' ? T.amber : T.green }} />
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
+                  }}
+                  min={new Date().toISOString().split('T')[0]}
+                  style={{
+                    width: '100%',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(4,53,77,0.12)',
+                    padding: '16px', // 44px minimum touch target
+                    fontSize: '16px', // Prevent iOS zoom
+                    fontWeight: 600,
+                    color: T.navy,
+                    background: 'rgba(255,255,255,0.95)',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    minHeight: '48px',
+                  }}
+                />
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', paddingTop: '2px' }}>
                   {[
-                    ['Available', T.green],
-                    ['Limited', T.amber],
-                    ['Fully Booked', T.slate2],
-                    ['Selected', T.blue],
+                    ['Selected Date', T.blue],
+                    ['Today', T.green],
                   ].map(([label, color]) => (
                     <div key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: T.slate, fontWeight: 600 }}>
                       <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
@@ -323,10 +275,31 @@ function DateTimeSelectionPageContent() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Time Slots</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose a premium appointment window</h2>
+                  <h2 style={{ margin: 0, fontFamily: '"Plus Jakarta Sans", sans-serif', fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose a premium appointment window</h2>
                 </div>
                 <div style={{ padding: '8px 12px', borderRadius: '999px', background: 'rgba(165,224,218,0.24)', color: T.teal, fontSize: '12px', fontWeight: 700 }}>Timezone: Africa/Lagos (GMT+1)</div>
               </div>
+
+              {/* Mobile bottom sheet trigger */}
+              <button
+                type='button'
+                onClick={() => setShowTimeSheet(true)}
+                style={{
+                  width: '100%',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(32,181,223,0.34)',
+                  background: 'linear-gradient(135deg, rgba(32,181,223,0.12) 0%, rgba(52,140,234,0.12) 100%)',
+                  color: T.blue,
+                  padding: '16px',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  minHeight: '48px',
+                  marginBottom: '12px',
+                }}
+              >
+                Select Time Slot: {selectedSlot}
+              </button>
 
               <div style={{ display: 'grid', gap: '12px' }}>
                 {slotGroups.map((group) => (
@@ -342,7 +315,7 @@ function DateTimeSelectionPageContent() {
                             type='button'
                             disabled={disabled}
                             onClick={() => setSelectedSlot(slot)}
-                            style={{ textAlign: 'left', borderRadius: '14px', border: active ? '1px solid rgba(32,181,223,0.34)' : '1px solid rgba(4,53,77,0.08)', background: active ? 'linear-gradient(135deg, rgba(232,248,252,0.95) 0%, rgba(255,255,255,0.95) 100%)' : disabled ? 'rgba(247,250,252,0.82)' : 'rgba(255,255,255,0.9)', color: disabled ? T.slate2 : T.navy, padding: '12px 13px', cursor: disabled ? 'not-allowed' : 'pointer', boxShadow: active ? Sh.glow : 'none', transition: 'transform 0.16s ease, box-shadow 0.16s ease' }}
+                            style={{ textAlign: 'left', borderRadius: '14px', border: active ? '1px solid rgba(32,181,223,0.34)' : '1px solid rgba(4,53,77,0.08)', background: active ? 'linear-gradient(135deg, rgba(232,248,252,0.95) 0%, rgba(255,255,255,0.95) 100%)' : disabled ? 'rgba(247,250,252,0.82)' : 'rgba(255,255,255,0.9)', color: disabled ? T.slate2 : T.navy, padding: '14px 16px', cursor: disabled ? 'not-allowed' : 'pointer', boxShadow: active ? Sh.glow : 'none', transition: 'transform 0.16s ease, box-shadow 0.16s ease', minHeight: '48px', fontSize: '16px' }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                               <span style={{ fontSize: '13px', fontWeight: 700 }}>{slot}</span>
@@ -356,6 +329,89 @@ function DateTimeSelectionPageContent() {
                 ))}
               </div>
             </section>
+
+            {/* Mobile Bottom Sheet */}
+            {showTimeSheet && (
+              <div
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 1000,
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  animation: 'fadeIn 0.2s ease',
+                }}
+                onClick={() => setShowTimeSheet(false)}
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    maxWidth: '600px',
+                    backgroundColor: 'rgba(255,255,255,0.98)',
+                    borderRadius: '24px 24px 0 0',
+                    padding: '20px',
+                    maxHeight: '80vh',
+                    overflowY: 'auto',
+                    animation: 'slideUp 0.3s ease',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.navy }}>Select Time Slot</h3>
+                    <button
+                      type='button'
+                      onClick={() => setShowTimeSheet(false)}
+                      style={{ border: 'none', background: 'transparent', fontSize: '24px', cursor: 'pointer', color: T.slate, padding: '8px' }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {slotGroups.map((group) => (
+                      <div key={group.label}>
+                        <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{group.label}</p>
+                        <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                          {group.slots.map((slot) => {
+                            const disabled = !availableTimes.includes(slot)
+                            const active = selectedSlot === slot
+                            return (
+                              <button
+                                key={slot}
+                                type='button'
+                                disabled={disabled}
+                                onClick={() => {
+                                  setSelectedSlot(slot)
+                                  setShowTimeSheet(false)
+                                }}
+                                style={{ textAlign: 'left', borderRadius: '14px', border: active ? '1px solid rgba(32,181,223,0.34)' : '1px solid rgba(4,53,77,0.08)', background: active ? 'linear-gradient(135deg, rgba(232,248,252,0.95) 0%, rgba(255,255,255,0.95) 100%)' : disabled ? 'rgba(247,250,252,0.82)' : 'rgba(255,255,255,0.9)', color: disabled ? T.slate2 : T.navy, padding: '16px', cursor: disabled ? 'not-allowed' : 'pointer', boxShadow: active ? Sh.glow : 'none', minHeight: '52px', fontSize: '16px' }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '15px', fontWeight: 700 }}>{slot}</span>
+                                  {active ? <span style={{ padding: '6px 10px', borderRadius: '999px', background: T.blueLight, color: T.blue, fontSize: '12px', fontWeight: 700 }}>Selected</span> : disabled ? <span style={{ fontSize: '12px', fontWeight: 700, color: T.slate2 }}>Booked</span> : <span style={{ fontSize: '12px', fontWeight: 700, color: T.green }}>Available</span>}
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <style jsx>{`
+              @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes slideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+              }
+            `}</style>
 
             <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'grid', gap: '14px' }}>
@@ -381,27 +437,6 @@ function DateTimeSelectionPageContent() {
                       <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{value}</p>
                     </div>
                   ))}
-                </div>
-              </div>
-            </section>
-
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
-              <div style={{ display: 'grid', gap: '12px' }}>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Notes</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Notes for your physician</h2>
-                </div>
-                <textarea
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value.slice(0, 500))}
-                  maxLength={500}
-                  rows={5}
-                  placeholder='Describe your symptoms, concerns, or anything you would like your physician to know before the consultation.'
-                  style={{ width: '100%', borderRadius: '14px', border: '1px solid rgba(4,53,77,0.12)', padding: '12px 13px', fontFamily: 'inherit', fontSize: '13px', color: T.navy, resize: 'vertical', outline: 'none' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '12px', color: T.slate2 }}>
-                  <span>Optional and private to your booking.</span>
-                  <span>{notes.length}/500</span>
                 </div>
               </div>
             </section>

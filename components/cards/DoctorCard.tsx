@@ -3,6 +3,7 @@
 import { T, Sh, Glass } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import { useState } from 'react'
 
 interface DoctorCardProps {
   name: string
@@ -13,6 +14,8 @@ interface DoctorCardProps {
 }
 
 export default function DoctorCard({ name, specialty, verification, tags, imageUrl }: DoctorCardProps) {
+  const [imageError, setImageError] = useState(false)
+
   return (
     <div
       style={{
@@ -26,21 +29,38 @@ export default function DoctorCard({ name, specialty, verification, tags, imageU
       }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
-        <img
-          src={imageUrl}
-          alt={name}
-          width={52}
-          height={52}
-          style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: '50%',
-            objectFit: 'cover',
-            display: 'block',
-            background: T.blueLight,
-            boxShadow: `0 0 0 3px rgba(255,255,255,0.95), 0 0 0 4.5px ${T.blueMid}`,
-          }}
-        />
+        {imageError || !imageUrl ? (
+          <div
+            style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(32,181,223,0.15), rgba(52,140,234,0.2))',
+              display: 'grid',
+              placeItems: 'center',
+              boxShadow: `0 0 0 3px rgba(255,255,255,0.95), 0 0 0 4.5px ${T.blueMid}`,
+            }}
+          >
+            <Ico p={ICONS.steth} size={22} sw={1.5} color={T.navy} />
+          </div>
+        ) : (
+          <img
+            src={imageUrl}
+            alt={name}
+            width={52}
+            height={52}
+            onError={() => setImageError(true)}
+            style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              display: 'block',
+              background: T.blueLight,
+              boxShadow: `0 0 0 3px rgba(255,255,255,0.95), 0 0 0 4.5px ${T.blueMid}`,
+            }}
+          />
+        )}
         <span
           aria-label="Verified physician"
           style={{

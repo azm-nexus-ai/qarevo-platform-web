@@ -415,6 +415,8 @@ export default function PatientDashboardPage() {
   const [carePlanStatus, setCarePlanStatus] = useState('Loading')
   const [dashboardData, setDashboardData] = useState<PatientDashboardResponse | null>(null)
   const [recommendedDoctors, setRecommendedDoctors] = useState<PatientDoctor[] | null>(null)
+  const [recentDoctors, setRecentDoctors] = useState<PatientDoctor[] | null>(null)
+  const [selectedSpecialty, setSelectedSpecialty] = useState('')
   const [healthInfo, setHealthInfo] = useState<{ blood_pressure?: string; weight?: string; height?: string; blood_type?: string }>({})
   const [greeting, setGreeting] = useState('')
   const router = useRouter()
@@ -432,6 +434,41 @@ export default function PatientDashboardPage() {
     localStorage.removeItem('qarevo_role')
     setShowLogoutModal(false)
     router.push('/auth/sign-in')
+  }
+
+  const handleBookNextAvailable = async () => {
+    try {
+      const token = readAccessToken()
+      if (!token) {
+        router.push('/auth/sign-in')
+        return
+      }
+
+      const response = await fetch('/api/v1/patient/doctors/next-available?consultation_type=video', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const doctorId = data.doctor.id
+        const recommendedSlot = data.booking.recommendedSlot
+
+        router.push(`/patient/physicians/${doctorId}?from=dashboard&intent=book&slot=${encodeURIComponent(recommendedSlot)}`)
+      } else {
+        console.error('Failed to fetch next available doctor')
+        router.push(PATIENT_ROUTES.findDoctor)
+      }
+    } catch (error) {
+      console.error('Error booking next available:', error)
+      router.push(PATIENT_ROUTES.findDoctor)
+    }
+  }
+
+  const handleBookBySpecialty = (specialty: string) => {
+    if (!specialty) return
+    router.push(`${PATIENT_ROUTES.findDoctor}?specialty=${encodeURIComponent(specialty)}`)
   }
 
   useEffect(() => {
@@ -499,14 +536,35 @@ export default function PatientDashboardPage() {
       } catch (error) {
         if (isAuthError(error)) {
           clearAuthTokens()
-          router.replace('/auth/sign-in')
-          return
+          router.push('/patient/login')
         }
-        console.error('Failed to fetch recommended doctors:', error)
+      }
+    }
+
+    const fetchRecentDoctors = async () => {
+      try {
+        const token = readAccessToken()
+        if (!token) return
+
+        const response = await fetch('/api/v1/patient/doctors/recent', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (!cancelled) {
+            setRecentDoctors(data.recent_doctors || [])
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch recent doctors:', error)
       }
     }
 
     fetchRecommendedDoctors()
+    fetchRecentDoctors()
     return () => {
       cancelled = true
     }
@@ -731,7 +789,7 @@ export default function PatientDashboardPage() {
       const systolic = parseInt(bp.split('/')[0]) || 120
       const trend = systolic < 120 ? 'Normal' : systolic < 140 ? 'Elevated' : 'High'
       const color = systolic < 120 ? '#10B981' : systolic < 140 ? '#F59E0B' : '#EF4444'
-      
+
       return [
         {
           label: 'Blood Pressure',
@@ -741,7 +799,7 @@ export default function PatientDashboardPage() {
         }
       ]
     }
-    
+
     // Fallback to dashboard data if no health info
     const source = dashboardArray(dashboardData, 'metrics')
     if (!source.length && !dashboardHasKey(dashboardData, 'metrics')) return []
@@ -1111,8 +1169,8 @@ export default function PatientDashboardPage() {
               <HoverBtn
                 onClick={() => router.push(PATIENT_ROUTES.findDoctor)}
                 base={{
-                  minHeight: '44px',
-                  padding: '0 16px',
+                  minHeight: '38px',
+                  padding: '0 14px',
                   borderRadius: '12px',
                   border: 'none',
                   background: 'linear-gradient(135deg, #20B5DF 0%, #348CEA 100%)',
@@ -1138,8 +1196,8 @@ export default function PatientDashboardPage() {
               <HoverBtn
                 onClick={() => router.push(PATIENT_ROUTES.findDoctor)}
                 base={{
-                  minHeight: '44px',
-                  padding: '0 16px',
+                  minHeight: '38px',
+                  padding: '0 14px',
                   borderRadius: '12px',
                   border: '1px solid rgba(4,53,77,0.14)',
                   background: 'rgba(255,255,255,0.86)',
@@ -1162,6 +1220,68 @@ export default function PatientDashboardPage() {
                 <Ico p={ICONS.calendar} size={15} sw={1.8} color='#348CEA' />
                 Book Consultation
               </HoverBtn>
+
+              <HoverBtn
+                onClick={handleBookNextAvailable}
+                base={{
+                  minHeight: '38px',
+                  padding: '0 14px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(32,181,223,0.34)',
+                  background: 'linear-gradient(135deg, rgba(32,181,223,0.12) 0%, rgba(52,140,234,0.12) 100%)',
+                  color: '#348CEA',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '13.5px',
+                  fontWeight: 700,
+                  letterSpacing: '-0.015em',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 2px 8px rgba(52,140,234,0.15)',
+                  cursor: 'pointer',
+                }}
+                on={{
+                  background: 'linear-gradient(135deg, rgba(32,181,223,0.18) 0%, rgba(52,140,234,0.18) 100%)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 8px 20px rgba(52,140,234,0.25)',
+                }}
+              >
+                <Ico p={ICONS.lightning} size={15} sw={1.8} color='#348CEA' />
+                Book Next Available
+              </HoverBtn>
+
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={selectedSpecialty}
+                  onChange={(e) => handleBookBySpecialty(e.target.value)}
+                  style={{
+                    minHeight: '44px',
+                    padding: '0 16px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(4,53,77,0.14)',
+                    background: 'rgba(255,255,255,0.86)',
+                    color: T.navy,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.015em',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 2px 8px rgba(4,53,77,0.08)',
+                    cursor: 'pointer',
+                    appearance: 'none',
+                    paddingRight: '32px',
+                  }}
+                >
+                  <option value="">Book by Specialty ▾</option>
+                  <option value="Cardiology">Cardiology</option>
+                  <option value="Dermatology">Dermatology</option>
+                  <option value="General Practice">General Practice</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                  <option value="Psychiatry">Psychiatry</option>
+                  <option value="Orthopedics">Orthopedics</option>
+                </select>
+                <Ico p={ICONS.chevronDown} size={12} sw={1.8} color={T.slate} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              </div>
             </div>
           </section>
 
@@ -1336,7 +1456,7 @@ export default function PatientDashboardPage() {
                 const bp = healthInfo.blood_pressure
                 const systolic = bp ? parseInt(bp.split('/')[0]) || 120 : 120
                 const progress = Math.min((systolic / 180) * 100, 100)
-                
+
                 return (
                   <div key={item.label} style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.82)', padding: '12px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
@@ -1476,6 +1596,31 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
+          <SectionCard title='Quick Re-Booking' sub='Book with doctors you have seen before for faster care.' action={<Link href='/patient/find-doctor' style={{ fontSize: '12.5px', color: '#348CEA', fontWeight: 600, textDecoration: 'none' }}>Find new doctor →</Link>}>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <div style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(320px, 1fr)', gap: '12px', overflowX: 'auto', paddingBottom: '2px' }}>
+                {(recentDoctors ?? []).length === 0 && (
+                  <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: '12px', fontWeight: 700 }}>Find a Doctor</Link>}>
+                    No recent bookings yet. Book your first consultation to see quick re-booking options here.
+                  </EmptyState>
+                )}
+                {(recentDoctors ?? []).map((doc) => (
+                  <div key={doc.id} style={{ display: 'grid', gap: '8px' }}>
+                    <DoctorCard name={doc.name} specialty={doc.specialty} verification={doc.verification} tags={doc.tags} imageUrl={doc.imageUrl} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '0 6px' }}>
+                      <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>⭐ {doc.rating} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <Link href={`/patient/physicians/${doc.id}?from=dashboard&intent=book`} style={{ fontSize: '12px', color: '#348CEA', textDecoration: 'none', fontWeight: 700 }}>Book Now</Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </SectionCard>
+
+          <div style={{ height: '14px' }} />
+
           <SectionCard title='Recommended Physicians' sub='Continue your care journey by discovering the right specialist.' action={<Link href='/patient/find-doctor' style={{ fontSize: '12.5px', color: '#348CEA', fontWeight: 600, textDecoration: 'none' }}>Open discovery →</Link>}>
             <div style={{ display: 'grid', gap: '10px' }}>
               <div style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(320px, 1fr)', gap: '12px', overflowX: 'auto', paddingBottom: '2px' }}>
@@ -1563,9 +1708,9 @@ export default function PatientDashboardPage() {
 
             <SectionCard title='Primary Actions' sub='Jump directly into the services you use most.'>
               <div style={{ display: 'grid', gap: '8px' }}>
-                <Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '42px', borderRadius: '11px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.28)' }}>Book New Appointment</Link>
-                <Link href={PATIENT_ROUTES.messages} style={{ textDecoration: 'none', minHeight: '42px', borderRadius: '11px', background: 'rgba(255,255,255,0.9)', color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: '1px solid rgba(4,53,77,0.12)' }}>Contact Care Team</Link>
-                <Link href={PATIENT_ROUTES.medicalRecords} style={{ textDecoration: 'none', minHeight: '42px', borderRadius: '11px', background: 'rgba(255,255,255,0.9)', color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: '1px solid rgba(4,53,77,0.12)' }}>View Medical Records</Link>
+                <Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.28)' }}>Book New Appointment</Link>
+                <Link href={PATIENT_ROUTES.messages} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: 'rgba(255,255,255,0.9)', color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: '1px solid rgba(4,53,77,0.12)' }}>Contact Care Team</Link>
+                <Link href={PATIENT_ROUTES.medicalRecords} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: 'rgba(255,255,255,0.9)', color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: '1px solid rgba(4,53,77,0.12)' }}>View Medical Records</Link>
               </div>
             </SectionCard>
           </div>

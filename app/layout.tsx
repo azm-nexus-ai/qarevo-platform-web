@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Plus_Jakarta_Sans, Inter } from 'next/font/google'
 import './globals.css'
+import { BookingProvider } from '@/contexts/BookingContext'
 
 const inter = Inter({
   variable: '--font-inter',
@@ -33,7 +34,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
-      <body>{children}</body>
+      <body>
+        <BookingProvider>{children}</BookingProvider>
+      </body>
     </html>
   )
 }

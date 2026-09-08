@@ -18,7 +18,20 @@ import DoctorCard from '@/components/cards/DoctorCard'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
-import { searchPatientDoctors, getPatientSettings, isAuthError, clearAuthTokens, type PatientSettings, type PatientDoctor } from '@/lib/api'
+import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuthError, clearAuthTokens, type PatientSettings, type PatientDoctor } from '@/lib/api'
+
+function getQuickBookServiceType(
+  consultationType: string,
+  doctorConsultationTypes: string[]
+): string {
+  if (consultationType !== 'any') {
+    return consultationType
+  }
+  if (doctorConsultationTypes.includes('video')) {
+    return 'video'
+  }
+  return doctorConsultationTypes[0] || 'video'
+}
 
 function buildProfileHref(
   physician: PatientDoctor,
@@ -99,8 +112,11 @@ export default function FindDoctorPage() {
   const [loading, setLoading] = useState(true)
   const [showAllSpecialties, setShowAllSpecialties] = useState(false)
   const [showFiltersMobile, setShowFiltersMobile] = useState(false)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [favorites, setFavorites] = useState<Record<string, boolean>>({})
   const [userSettings, setUserSettings] = useState<PatientSettings | null>(null)
+  const [recommendedDoctors, setRecommendedDoctors] = useState<PatientDoctor[]>([])
+  const [recommendedLoading, setRecommendedLoading] = useState(true)
   const pageSize = 8
 
   const searchSuggestions = useMemo(() => {
@@ -117,13 +133,6 @@ export default function FindDoctorPage() {
 
   const filteredPhysicians = useMemo(() => {
     return physicians
-  }, [physicians])
-
-  const recommended = useMemo(() => {
-    return [...physicians]
-      .sort((a, b) => b.rating - a.rating)
-      .filter((p) => ['Cardiology', 'General Practice', 'Endocrinology', 'Pediatrics'].includes(p.specialty))
-      .slice(0, 4)
   }, [physicians])
 
   useEffect(() => {
@@ -148,6 +157,27 @@ export default function FindDoctorPage() {
       }
     }
     loadUserSettings()
+  }, [])
+
+  useEffect(() => {
+    const loadRecommendedDoctors = async () => {
+      try {
+        setRecommendedLoading(true)
+        const response = await getRecommendedDoctors()
+        setRecommendedDoctors(response.doctors || [])
+      } catch (error) {
+        if (isAuthError(error)) {
+          clearAuthTokens()
+          window.location.href = '/auth/sign-in'
+          return
+        }
+        console.error('Failed to load recommended doctors:', error)
+        setRecommendedDoctors([])
+      } finally {
+        setRecommendedLoading(false)
+      }
+    }
+    loadRecommendedDoctors()
   }, [])
 
   useEffect(() => {
@@ -465,32 +495,6 @@ export default function FindDoctorPage() {
                   </label>
 
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
-                    Gender
-                    <select value={gender} onChange={(e) => { setGender(e.target.value as typeof gender); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
-                      <option value='any'>Any</option>
-                      <option value='female'>Female</option>
-                      <option value='male'>Male</option>
-                    </select>
-                  </label>
-
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
-                    Language
-                    <select value={language} onChange={(e) => { setLanguage(e.target.value as typeof language); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
-                      {LANGUAGE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
-                    </select>
-                  </label>
-
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
-                    Experience
-                    <select value={experience} onChange={(e) => { setExperience(e.target.value as typeof experience); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
-                      <option value='any'>Any</option>
-                      <option value='0-5'>0-5 years</option>
-                      <option value='6-10'>6-10 years</option>
-                      <option value='11+'>11+ years</option>
-                    </select>
-                  </label>
-
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Consultation Type
                     <select value={consultationType} onChange={(e) => { setConsultationType(e.target.value as typeof consultationType); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
                       <option value='any'>Any</option>
@@ -499,57 +503,138 @@ export default function FindDoctorPage() {
                     </select>
                   </label>
 
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
-                    Insurance Accepted
-                    <select value={insurance} onChange={(e) => { setInsurance(e.target.value as typeof insurance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
-                      {INSURANCE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
-                    </select>
-                  </label>
+                  <button
+                    type='button'
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    style={{
+                      width: '100%',
+                      minHeight: '36px',
+                      borderRadius: '9px',
+                      border: '1px solid rgba(4,53,77,0.13)',
+                      background: showAdvancedFilters ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.9)',
+                      color: showAdvancedFilters ? '#348CEA' : T.navy,
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      marginTop: '4px',
+                    }}
+                  >
+                    <Ico p={showAdvancedFilters ? ICONS.arrowSm : ICONS.arrowSm} size={12} sw={1.8} color={showAdvancedFilters ? '#348CEA' : T.slate2} style={{ transform: showAdvancedFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+                    {showAdvancedFilters ? 'Hide Advanced Filters' : 'Show Advanced Filters'}
+                  </button>
 
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
-                    Rating
-                    <select value={rating} onChange={(e) => { setRating(e.target.value as typeof rating); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
-                      <option value='any'>Any</option>
-                      <option value='4.0'>4.0+</option>
-                      <option value='4.5'>4.5+</option>
-                      <option value='4.8'>4.8+</option>
-                    </select>
-                  </label>
+                  {showAdvancedFilters && (
+                    <div style={{ display: 'grid', gap: '10px', marginTop: '8px', paddingTop: '8px', borderTop: `1px solid ${T.borderFaint}` }}>
+                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                        Gender
+                        <select value={gender} onChange={(e) => { setGender(e.target.value as typeof gender); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                          <option value='any'>Any</option>
+                          <option value='female'>Female</option>
+                          <option value='male'>Male</option>
+                        </select>
+                      </label>
 
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
-                    Price Range
-                    <select value={price} onChange={(e) => { setPrice(e.target.value as typeof price); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
-                      <option value='any'>Any</option>
-                      <option value='under-130'>Under $130</option>
-                      <option value='130-180'>$130 - $180</option>
-                      <option value='180+'>$180+</option>
-                    </select>
-                  </label>
+                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                        Language
+                        <select value={language} onChange={(e) => { setLanguage(e.target.value as typeof language); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                          {LANGUAGE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                      </label>
 
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
-                    Distance
-                    <select value={distance} onChange={(e) => { setDistance(e.target.value as typeof distance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
-                      <option value='any'>Any</option>
-                      <option value='under-5'>Under 5 km</option>
-                      <option value='under-10'>Under 10 km</option>
-                      <option value='under-25'>Under 25 km</option>
-                    </select>
-                  </label>
+                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                        Experience
+                        <select value={experience} onChange={(e) => { setExperience(e.target.value as typeof experience); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                          <option value='any'>Any</option>
+                          <option value='0-5'>0-5 years</option>
+                          <option value='6-10'>6-10 years</option>
+                          <option value='11+'>11+ years</option>
+                        </select>
+                      </label>
 
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
-                    Sort By
-                    <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
-                      <option value='highest-rated'>Highest Rated</option>
-                      <option value='nearest'>Nearest</option>
-                      <option value='most-experienced'>Most Experienced</option>
-                      <option value='available-today'>Available Today</option>
-                    </select>
-                  </label>
+                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                        Insurance Accepted
+                        <select value={insurance} onChange={(e) => { setInsurance(e.target.value as typeof insurance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                          {INSURANCE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                      </label>
+
+                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                        Rating
+                        <select value={rating} onChange={(e) => { setRating(e.target.value as typeof rating); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                          <option value='any'>Any</option>
+                          <option value='4.0'>4.0+</option>
+                          <option value='4.5'>4.5+</option>
+                          <option value='4.8'>4.8+</option>
+                        </select>
+                      </label>
+
+                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                        Price Range
+                        <select value={price} onChange={(e) => { setPrice(e.target.value as typeof price); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                          <option value='any'>Any</option>
+                          <option value='under-130'>Under $130</option>
+                          <option value='130-180'>$130 - $180</option>
+                          <option value='180+'>$180+</option>
+                        </select>
+                      </label>
+
+                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                        Distance
+                        <select value={distance} onChange={(e) => { setDistance(e.target.value as typeof distance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                          <option value='any'>Any</option>
+                          <option value='under-5'>Under 5 km</option>
+                          <option value='under-10'>Under 10 km</option>
+                          <option value='under-25'>Under 25 km</option>
+                        </select>
+                      </label>
+
+                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                        Sort By
+                        <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                          <option value='highest-rated'>Highest Rated</option>
+                          <option value='nearest'>Nearest</option>
+                          <option value='most-experienced'>Most Experienced</option>
+                          <option value='available-today'>Available Today</option>
+                        </select>
+                      </label>
+                    </div>
+                  )}
                 </div>
               </section>
             </aside>
 
             <section>
+              {!recommendedLoading && recommendedDoctors.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>
+                      <span style={{ color: '#348CEA' }}>Recommended for You</span>
+                    </h2>
+                    <span style={{ fontSize: '12px', color: T.slate2 }}>Based on your preferences</span>
+                  </div>
+                  <div className='fd-results' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                    {recommendedDoctors.slice(0, 3).map((physician) => (
+                      <div key={physician.id} style={{ position: 'relative' }}>
+                        <div style={{ position: 'absolute', top: '-8px', left: '-8px', background: 'linear-gradient(135deg, #348CEA 0%, #20B5DF 100%)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px', boxShadow: '0 2px 8px rgba(52,140,234,0.3)' }}>
+                          Recommended
+                        </div>
+                        <DoctorCard
+                          name={physician.name}
+                          specialty={physician.specialty}
+                          verification={physician.verification}
+                          tags={physician.tags}
+                          imageUrl={physician.imageUrl}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Featured Physicians</h2>
                 <span style={{ fontSize: '12px', color: T.slate2 }}>{totalDoctors} doctors</span>
@@ -637,6 +722,12 @@ export default function FindDoctorPage() {
                         <Link href={buildProfileHref(doctor, 'book', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', display: 'inline-flex', alignItems: 'center' }}>
                           Book Now
                         </Link>
+                        <Link
+                          href={`/patient/consultation-booking/date-time?provider_id=${doctor.id}&service_type=${getQuickBookServiceType(consultationType, doctor.consultationTypes)}&from=find-doctor`}
+                          style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: '1px solid rgba(52,140,234,0.3)', background: 'rgba(52,140,234,0.08)', color: '#348CEA', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}
+                        >
+                          Quick Book
+                        </Link>
                       </div>
                     </article>
                   ))
@@ -664,31 +755,6 @@ export default function FindDoctorPage() {
                   </button>
                 </div>
               </div>
-
-              <div style={{ height: '14px' }} />
-
-              <section style={{ background: 'rgba(255,255,255,0.84)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.card, padding: '16px' }}>
-                <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Recommended For You</h3>
-                <p style={{ margin: '6px 0 12px', fontSize: '13px', color: T.slate }}>Based on your health profile and previous activities.</p>
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  {recommended.map((doctor) => (
-                    <div key={doctor.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.86)' }}>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', minWidth: 0 }}>
-                        <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'rgba(165,224,218,0.34)', color: T.blue, display: 'grid', placeItems: 'center' }}>
-                          <Ico p={ICONS.steth} size={15} sw={1.8} />
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doctor.name}</p>
-                          <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>{doctor.specialty} - {doctor.rating.toFixed(1)} rating</p>
-                        </div>
-                      </div>
-                      <Link href={buildProfileHref(doctor, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ fontSize: '12px', textDecoration: 'none', color: '#348CEA', fontWeight: 700 }}>
-                        View
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </section>
 
               <div style={{ height: '14px' }} />
 
