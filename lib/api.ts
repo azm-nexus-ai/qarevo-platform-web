@@ -241,6 +241,29 @@ export async function getProviders(consultationId: string): Promise<Provider[]> 
     return apiGet<Provider[]>(`/api/v1/consultations/${consultationId}/providers`);
 }
 
+export type PatientRegisterRequest = {
+    first_name?: string;
+    last_name?: string;
+    email: string;
+    password: string;
+    phone?: string;
+    country_code?: string;
+    consents: {
+        terms_privacy: boolean;
+        telehealth: boolean;
+        marketing: boolean;
+    };
+};
+
+export type PatientRegisterResponse = {
+    user_id: string;
+    message: string;
+};
+
+export async function registerPatient(body: PatientRegisterRequest): Promise<PatientRegisterResponse> {
+    return apiPost<PatientRegisterResponse>("/api/v1/patient/register", body);
+}
+
 // Doctor Authentication Types
 export type DoctorRegisterRequest = {
     first_name: string;
@@ -486,6 +509,22 @@ export type VerifyEmailCodeRequest = {
 };
 
 export type VerifyEmailCodeResponse = {
+    message: string;
+    access_token?: string;
+    refresh_token?: string;
+    token_type?: string;
+    expires_in?: number;
+    email_verified?: boolean;
+    phone_verified?: boolean;
+    user_id?: string;
+    role?: string;
+};
+
+export type ResendVerificationEmailRequest = {
+    email: string;
+};
+
+export type ResendVerificationEmailResponse = {
     message: string;
 };
 
@@ -1015,6 +1054,16 @@ export async function verifyDoctorEmailCode(body: VerifyEmailCodeRequest): Promi
     return apiPost<VerifyEmailCodeResponse>("/api/v1/auth/verify-email-code", body);
 }
 
+export async function verifyEmailCode(body: VerifyEmailCodeRequest): Promise<VerifyEmailCodeResponse> {
+    return apiPost<VerifyEmailCodeResponse>("/api/v1/auth/verify-email-code", body);
+}
+
+export async function resendVerificationEmail(
+    body: ResendVerificationEmailRequest,
+): Promise<ResendVerificationEmailResponse> {
+    return apiPost<ResendVerificationEmailResponse>("/api/v1/auth/resend-verification-email", body);
+}
+
 export async function verifyDoctorPhoneCode(body: VerifyPhoneCodeRequest): Promise<VerifyPhoneCodeResponse> {
     return apiPost<VerifyPhoneCodeResponse>("/api/v1/auth/verify-phone-code", body);
 }
@@ -1022,6 +1071,10 @@ export async function verifyDoctorPhoneCode(body: VerifyPhoneCodeRequest): Promi
 export async function searchPatientDoctors(params: URLSearchParams): Promise<DoctorSearchResponse> {
     const query = params.toString();
     return apiGet<DoctorSearchResponse>(`/api/v1/patient/doctors${query ? `?${query}` : ""}`);
+}
+
+export async function getRecommendedDoctors(): Promise<DoctorSearchResponse> {
+    return apiGet<DoctorSearchResponse>("/api/v1/patient/doctors/recommended");
 }
 
 export async function getPatientDashboard(userId?: string | null): Promise<PatientDashboardResponse> {

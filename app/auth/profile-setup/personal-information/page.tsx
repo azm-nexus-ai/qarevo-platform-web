@@ -8,6 +8,7 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
+import { getApiErrorDetail, updateProfile } from '@/lib/api'
 
 const LEFT_BG = [
   'radial-gradient(ellipse 80% 60% at 18% 12%,  rgba(32,181,223,0.32) 0%, transparent 52%)',
@@ -288,6 +289,13 @@ function isPastDate(dateValue: string) {
   return selected <= now
 }
 
+function splitFullName(fullName: string) {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+  const firstName = parts.shift() || ''
+  const lastName = parts.join(' ')
+  return { firstName, lastName }
+}
+
 export default function PersonalInformationPage() {
   const router = useRouter()
   const filePickerRef = useRef<HTMLInputElement | null>(null)
@@ -297,6 +305,7 @@ export default function PersonalInformationPage() {
   const [savedTick, setSavedTick] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
   const [saveMessage, setSaveMessage] = useState('Progress autosaves as you type')
+  const [submitError, setSubmitError] = useState('')
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [form, setForm] = useState<PersonalInfoForm>(INITIAL_FORM)
 
@@ -340,8 +349,6 @@ export default function PersonalInformationPage() {
 
     return () => window.clearTimeout(id)
   }, [form])
-
-  const progress = 33
 
   const requiredFilled =
     form.fullName.trim().length > 1 &&
@@ -392,8 +399,9 @@ export default function PersonalInformationPage() {
     return Object.keys(nextErrors).length === 0
   }
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError('')
     setTouched({
       fullName: true,
       preferredName: true,
@@ -407,11 +415,21 @@ export default function PersonalInformationPage() {
     if (!validate()) return
 
     setSubmitting(true)
-    setTimeout(() => {
+    try {
+      const { firstName, lastName } = splitFullName(form.fullName)
+      await updateProfile({
+        first_name: firstName,
+        last_name: lastName || undefined,
+        date_of_birth: form.dateOfBirth,
+        gender: form.gender || undefined,
+      })
       setSubmitting(false)
       setOnboardingStage('contact-information')
       router.push('/auth/profile-setup/contact-information')
-    }, 900)
+    } catch (error) {
+      setSubmitError(getApiErrorDetail(error) || 'We could not save your personal information. Please try again.')
+      setSubmitting(false)
+    }
   }
 
   const fieldBorder = (name: keyof PersonalInfoForm) => {
@@ -512,6 +530,12 @@ export default function PersonalInformationPage() {
               <Ico p={savedTick ? ICONS.check : ICONS.activity} size={11} sw={2} color={savedTick ? T.green : T.slate2} />
               <span style={{ fontSize: '11.5px', fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
             </div>
+
+            {submitError ? (
+              <div role='alert' style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
+                {submitError}
+              </div>
+            ) : null}
 
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

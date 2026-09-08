@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { T, Sh, Glass } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { useStore } from '@/store/useStore'
+import { getApiErrorDetail, registerPatient } from '@/lib/api'
 
 // ─── Page background ──────────────────────────────────────────────────────────
 
@@ -425,10 +425,7 @@ export default function SignUpPage() {
   const [marketing, setMarketing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-
-  const signup = useStore((state) => state.signup)
-  const isLoading = useStore((state) => state.isLoading)
-  const error = useStore((state) => state.error)
+  const [submitError, setSubmitError] = useState('')
 
   const set = (k: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [k]: v }))
   const touch = (k: keyof typeof form) => setTouched(t => ({ ...t, [k]: true }))
@@ -446,31 +443,78 @@ export default function SignUpPage() {
 
   const strength = getStrength(form.password)
   const isValid = !Object.values(errors).some(Boolean)
-    && form.firstName && form.lastName && EMAIL_RE.test(form.email)
+    && EMAIL_RE.test(form.email)
     && strength.score >= 3 && form.confirmPassword === form.password
-    && form.country && terms && privacy
+    && terms && privacy
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setTouched({ firstName: true, lastName: true, email: true, password: true, confirmPassword: true, country: true, phone: !!form.phone })
-    if (!isValid) return
-    try {
-      window.localStorage.setItem(
-        SIGNUP_STORAGE_KEY,
-        JSON.stringify({
-          fullName: `${form.firstName} ${form.lastName}`.trim(),
-          firstName: form.firstName,
-          lastName: form.lastName,
-          email: form.email,
-          country: form.country,
-          phone: form.phone,
-        }),
-      )
-    } catch {
-      // Ignore prototype-only storage failures.
+    setSubmitted(true)
+    setSubmitError('')
+    setTouched({ email: true, password: true, confirmPassword: true })
+    if (!isValid) {
+      setSubmitError('Please complete the required fields before creating your account.')
+      return
     }
+
     setLoading(true)
-    setTimeout(() => { setLoading(false); router.push('/auth/verify-email') }, 1400)
+    const email = form.email.trim().toLowerCase()
+    try {
+      await registerPatient({
+        email,
+        password: form.password,
+        consents: {
+          terms_privacy: terms,
+          telehealth: privacy,
+          marketing,
+        },
+      })
+
+      try {
+        window.localStorage.setItem(
+          SIGNUP_STORAGE_KEY,
+          JSON.stringify({
+            fullName: 'Patient',
+            email,
+          }),
+        )
+      } catch {
+        // Continue to verification even if local storage is unavailable.
+      }
+      router.push('/auth/verify-email')
+    } catch (error) {
+      setSubmitError(getApiErrorDetail(error) || 'We could not create your account right now. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const agreementError = submitted && (!terms || !privacy)
+
+  const submitMessage = submitError || (agreementError ? 'Please accept the Terms of Service and Privacy Policy to continue.' : '')
+
+  const clearSubmitError = () => {
+    if (submitError) setSubmitError('')
+  }
+
+  const update = (k: keyof typeof form) => (v: string) => {
+    clearSubmitError()
+    set(k)(v)
+  }
+
+  const toggleTerms = () => {
+    clearSubmitError()
+    setTerms(t => !t)
+  }
+
+  const togglePrivacy = () => {
+    clearSubmitError()
+    setPrivacy(p => !p)
+  }
+
+  const toggleMarketing = () => {
+    clearSubmitError()
+    setMarketing(m => !m)
   }
 
   return (
@@ -527,7 +571,7 @@ export default function SignUpPage() {
                   placeholder="emma@example.com"
                   type="email"
                   value={form.email}
-                  onChange={set('email')}
+                  onChange={update('email')}
                   error={errors.email}
                   success={EMAIL_RE.test(form.email)}
                   icon={ICONS.ema}
@@ -540,7 +584,7 @@ export default function SignUpPage() {
                   <PasswordField
                     label="Password"
                     value={form.password}
-                    onChange={set('password')}
+                    onChange={update('password')}
                     error={errors.password}
                     showStrength
                   />
@@ -551,30 +595,51 @@ export default function SignUpPage() {
                   <PasswordField
                     label="Confirm Password"
                     value={form.confirmPassword}
-                    onChange={set('confirmPassword')}
+                    onChange={update('confirmPassword')}
                     error={errors.confirmPassword}
                     confirm={form.password}
                   />
                 </div>
 
                 {/* Agreements */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: `1px solid ${submitted && !terms ? 'rgba(220,38,38,0.3)' : T.borderFaint}` }}>
-                  <Checkbox checked={terms} onChange={() => setTerms(t => !t)} error={submitted && !terms}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: `1px solid ${agreementError ? 'rgba(220,38,38,0.3)' : T.borderFaint}` }}>
+                  <Checkbox checked={terms} onChange={toggleTerms} error={submitted && !terms}>
                     I agree to the{' '}
                     <Link href="/terms" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>Terms of Service</Link>
                   </Checkbox>
-                  <Checkbox checked={privacy} onChange={() => setPrivacy(p => !p)} error={submitted && !privacy}>
+                  <Checkbox checked={privacy} onChange={togglePrivacy} error={submitted && !privacy}>
                     I agree to the{' '}
                     <Link href="/privacy" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>Privacy Policy</Link>
                     {' '}and data processing under GDPR
                   </Checkbox>
-                  <Checkbox checked={marketing} onChange={() => setMarketing(m => !m)} error={submitted && !marketing}>
+                  <Checkbox checked={marketing} onChange={toggleMarketing} error={false}>
                     I agree to receive marketing communications from Qarevo Health
                   </Checkbox>
                 </div>
 
+                {submitMessage && (
+                  <div
+                    role="alert"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      padding: '11px 12px',
+                      borderRadius: '12px',
+                      background: 'rgba(254,242,242,0.9)',
+                      border: '1px solid rgba(220,38,38,0.22)',
+                      color: T.red,
+                      fontSize: '13px',
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    <Ico p={ICONS.info} size={14} sw={1.9} color={T.red} style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <span>{submitMessage}</span>
+                  </div>
+                )}
+
                 {/* Submit */}
-                <SubmitButton loading={loading} disabled={false} onClick={logConsole} />
+                <SubmitButton loading={loading} disabled={false} />
 
                 {/* Sign-in link */}
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '4px 0 0', letterSpacing: '-0.01em' }}>
@@ -679,9 +744,4 @@ function SubmitButton({ loading, disabled, onClick }: { loading: boolean; disabl
         : <>Create Account <Ico p={ICONS.arrowFwd} size={15} sw={2.2} /></>}
     </button>
   )
-}
-
-
-function logConsole () {
-  console.log(`console logged`)
 }

@@ -8,6 +8,7 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
+import { createEmergencyContact, getApiErrorDetail, getPatientSettings, updateProfile } from '@/lib/api'
 
 const LEFT_BG = [
   'radial-gradient(ellipse 80% 60% at 18% 12%,  rgba(32,181,223,0.32) 0%, transparent 52%)',
@@ -247,6 +248,7 @@ export default function ContactInformationPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [savedTick, setSavedTick] = useState(false)
   const [saveMessage, setSaveMessage] = useState('Progress autosaves as you type')
+  const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
   const [showOptionalPhones, setShowOptionalPhones] = useState(false)
@@ -355,8 +357,9 @@ export default function ContactInformationPage() {
     return '1.5px solid rgba(4,53,77,0.1)'
   }
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError('')
     setTouched({
       primaryPhone: true,
       alternativePhone: true,
@@ -375,11 +378,29 @@ export default function ContactInformationPage() {
     })
     if (!validate()) return
     setSubmitting(true)
-    setTimeout(() => {
+    try {
+      await updateProfile({ phone: form.primaryPhone.trim() })
+
+      const settings = await getPatientSettings()
+      const contactExists = settings.emergency_contacts.some((contact) => (
+        contact.name.trim().toLowerCase() === form.emergencyName.trim().toLowerCase()
+        && contact.phone.replace(/\D/g, '') === form.emergencyPhone.replace(/\D/g, '')
+      ))
+      if (!contactExists) {
+        await createEmergencyContact({
+          name: form.emergencyName.trim(),
+          relationship: form.emergencyRelationship,
+          phone: form.emergencyPhone.trim(),
+        })
+      }
+
       setSubmitting(false)
       setOnboardingStage('health-profile')
       router.push('/auth/profile-setup/medical-history-allergies')
-    }, 900)
+    } catch (error) {
+      setSubmitError(getApiErrorDetail(error) || 'We could not save your contact information. Please try again.')
+      setSubmitting(false)
+    }
   }
 
   const canContinue = !submitting && Object.keys(collectErrors(form)).length === 0
@@ -448,6 +469,12 @@ export default function ContactInformationPage() {
               <Ico p={savedTick ? ICONS.check : ICONS.activity} size={11} sw={2} color={savedTick ? T.green : T.slate2} />
               <span style={{ fontSize: '11.5px', fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
             </div>
+
+            {submitError ? (
+              <div role='alert' style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
+                {submitError}
+              </div>
+            ) : null}
 
             <div style={{ marginBottom: '18px' }}>
               <SectionHeader title='Contact Information' body='Your preferred contact details help us coordinate care updates, reminders, and healthcare communication.' />

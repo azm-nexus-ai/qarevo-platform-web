@@ -1,15 +1,27 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import { getApiErrorDetail, resendVerificationEmail, storeAuthTokens, verifyEmailCode } from '@/lib/api'
+import { setOnboardingStage } from '@/lib/auth-flow'
 
-// ─── Demo email ────────────────────────────────────────────────────────────────
-const DEMO_EMAIL = 'emma.harrison@example.com'
+const SIGNUP_STORAGE_KEY = 'qarevo.auth.signup.v1'
 const masked = (e: string) => e.replace(/(.{2}).+(@.+)/, '$1•••$2')
+
+function readSignupEmail() {
+  if (typeof window === 'undefined') return ''
+  try {
+    const raw = window.localStorage.getItem(SIGNUP_STORAGE_KEY)
+    const stored = raw ? (JSON.parse(raw) as { email?: string }) : null
+    return stored?.email?.trim().toLowerCase() || ''
+  } catch {
+    return ''
+  }
+}
 
 // ─── Countdown ─────────────────────────────────────────────────────────────────
 function useCountdown(initial: number) {
@@ -162,26 +174,50 @@ function EnvelopeScene({ verified }: { verified: boolean }) {
 }
 
 // ─── OTP input ─────────────────────────────────────────────────────────────────
-const OTP_DEMO = '482719'
-
-function OtpInput({ onComplete }: { onComplete: () => void }) {
+function OtpInput({ email, onComplete }: { email: string; onComplete: () => void }) {
   const [values, setValues] = useState(['', '', '', '', '', ''])
   const refs = useRef<(HTMLInputElement | null)[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const verifyCode = async (code: string) => {
+    setLoading(true)
+    setError('')
+    try {
+      const response = await verifyEmailCode({ email, code })
+      if (response.access_token && response.refresh_token) {
+        storeAuthTokens({
+          access_token: response.access_token,
+          refresh_token: response.refresh_token,
+          token_type: response.token_type,
+          expires_in: response.expires_in,
+          user_id: response.user_id,
+          role: response.role || 'patient',
+        })
+      }
+      setSuccess(true)
+      setOnboardingStage('account-created')
+      setTimeout(onComplete, 900)
+    } catch (error) {
+      setValues(['', '', '', '', '', ''])
+      refs.current[0]?.focus()
+      setError(getApiErrorDetail(error) || 'Incorrect code. Please check your email and try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleChange = (i: number, val: string) => {
+    if (loading || success) return
     const digit = val.replace(/\D/g, '').slice(-1)
     const next = [...values]
     next[i] = digit
     setValues(next)
     setError('')
     if (digit && i < 5) refs.current[i + 1]?.focus()
-    if (next.every(v => v !== '') && next.join('') === OTP_DEMO) {
-      setSuccess(true)
-      setTimeout(onComplete, 900)
-    } else if (next.every(v => v !== '')) {
-      setError('Incorrect code. Please check your email and try again.')
+    if (next.every(v => v !== '')) {
+      void verifyCode(next.join(''))
     }
   }
 
@@ -193,26 +229,22 @@ function OtpInput({ onComplete }: { onComplete: () => void }) {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
+    if (loading || success) return
     const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
     const next = [...values]
     text.split('').forEach((d, i) => { next[i] = d })
     setValues(next)
     refs.current[Math.min(text.length, 5)]?.focus()
-    if (text.length === 6 && text === OTP_DEMO) {
-      setSuccess(true)
-      setTimeout(onComplete, 900)
-    } else if (text.length === 6) {
-      setError('Incorrect code. Please check your email and try again.')
+    setError('')
+    if (text.length === 6) {
+      void verifyCode(text)
     }
   }
-
-  const isActive = (i: number) => values[i] !== '' || (i === values.findIndex(v => v === '') && values.slice(0, i).every(v => v !== ''))
 
   return (
     <div>
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '10px' }}>
         {values.map((v, i) => {
-          const focused = isActive(i)
           const filled = v !== ''
           return (
             <input
@@ -224,6 +256,7 @@ function OtpInput({ onComplete }: { onComplete: () => void }) {
               onChange={e => handleChange(i, e.target.value)}
               onKeyDown={e => handleKeyDown(i, e)}
               onPaste={handlePaste}
+              disabled={loading || success}
               style={{
                 width: '48px', height: '56px', textAlign: 'center',
                 fontSize: '22px', fontWeight: 700, color: T.navy,
@@ -253,10 +286,11 @@ function OtpInput({ onComplete }: { onComplete: () => void }) {
           <span style={{ fontSize: '12.5px', color: T.teal, fontWeight: 600, letterSpacing: '-0.005em' }}>Code verified — activating your account…</span>
         </div>
       )}
-      <p style={{ textAlign: 'center', fontSize: '11.5px', color: T.slate2, margin: '8px 0 0', letterSpacing: '-0.005em' }}>
-        {'Demo code: '}
-        <strong style={{ color: T.blue, letterSpacing: '0.06em' }}>{OTP_DEMO}</strong>
-      </p>
+      {loading && (
+        <p style={{ textAlign: 'center', fontSize: '11.5px', color: T.slate2, margin: '8px 0 0', letterSpacing: '-0.005em' }}>
+          Verifying code...
+        </p>
+      )}
     </div>
   )
 }
@@ -327,17 +361,30 @@ export default function VerifyEmailPage() {
   const { secs, done: canResend, restart } = useCountdown(60)
   const [verified,   setVerified]   = useState(false)
   const [resendOk,   setResendOk]   = useState(false)
+  const [resendError, setResendError] = useState('')
   const [emailModal, setEmailModal] = useState(false)
   const [tab,        setTab]        = useState<'link' | 'code'>('link')
+  const [email] = useState(readSignupEmail)
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!canResend) return
-    setResendOk(true)
-    restart(90)
-    setTimeout(() => setResendOk(false), 4000)
+    setResendOk(false)
+    setResendError('')
+    if (!email) {
+      setResendError('Enter your email again to resend the verification code.')
+      return
+    }
+    try {
+      await resendVerificationEmail({ email })
+      setResendOk(true)
+      restart(90)
+      setTimeout(() => setResendOk(false), 4000)
+    } catch (error) {
+      setResendError(getApiErrorDetail(error) || 'We could not resend the verification email right now.')
+    }
   }
 
-  const m = masked(DEMO_EMAIL)
+  const m = email ? masked(email) : 'your email address'
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px 56px' }}>
@@ -403,6 +450,12 @@ export default function VerifyEmailPage() {
               </div>
             </div>
 
+            {!email && (
+              <div role="alert" style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
+                We could not find the email from your sign-up session. Please return to sign up and enter your email again.
+              </div>
+            )}
+
             {/* Tab switcher: link vs code */}
             <div style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '13px', background: 'rgba(4,53,77,0.05)', marginBottom: '24px' }}>
               {(['link', 'code'] as const).map(t => (
@@ -413,7 +466,7 @@ export default function VerifyEmailPage() {
                   fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
                   color: tab === t ? T.navy : T.slate2, letterSpacing: '-0.01em',
                 }}>
-                  {t === 'link' ? '↗ Verify via link' : '# Enter code manually'}
+                  {t === 'link' ? 'Verify via link' : 'Enter code manually'}
                 </button>
               ))}
             </div>
@@ -441,7 +494,7 @@ export default function VerifyEmailPage() {
                   <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
                 </button>
 
-                <Link href="/auth/otp" style={{
+                <button type="button" onClick={() => setTab('code')} style={{
                   width: '100%', padding: '12px 20px', borderRadius: '13px',
                   border: `1.5px solid ${T.border}`,
                   background: 'rgba(4,53,77,0.03)',
@@ -450,8 +503,8 @@ export default function VerifyEmailPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}>
                   <Ico p={ICONS.lock} size={13} sw={1.75} color={T.blue} />
-                  Continue to OTP Verification
-                </Link>
+                  Enter Verification Code
+                </button>
               </div>
             )}
 
@@ -461,7 +514,20 @@ export default function VerifyEmailPage() {
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, lineHeight: 1.65, margin: '0 0 20px', letterSpacing: '-0.01em' }}>
                   Enter the 6-digit code from your verification email.
                 </p>
-                <OtpInput onComplete={() => setVerified(true)} />
+                {email ? (
+                  <OtpInput email={email} onComplete={() => setVerified(true)} />
+                ) : (
+                  <Link href="/auth/sign-up" style={{
+                    width: '100%', padding: '12px 20px', borderRadius: '13px',
+                    border: `1.5px solid ${T.border}`,
+                    background: 'rgba(4,53,77,0.03)',
+                    color: T.navy, fontFamily: 'inherit', fontSize: '14px', fontWeight: 600,
+                    letterSpacing: '-0.015em', cursor: 'pointer', textDecoration: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  }}>
+                    Return to Sign Up
+                  </Link>
+                )}
               </div>
             )}
 
@@ -470,6 +536,13 @@ export default function VerifyEmailPage() {
               <div style={{ padding: '10px 14px', borderRadius: '10px', background: T.greenLight, border: `1px solid rgba(9,173,112,0.25)`, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', animation: 'slideToast 0.28s ease both', overflow: 'hidden' }}>
                 <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
                 <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>New verification email sent. Check your inbox.</span>
+              </div>
+            )}
+
+            {resendError && (
+              <div role="alert" style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: T.red, fontSize: '13px', lineHeight: 1.45 }}>
+                <Ico p={ICONS.info} size={12} sw={1.75} color={T.red} />
+                <span>{resendError}</span>
               </div>
             )}
 
@@ -499,18 +572,6 @@ export default function VerifyEmailPage() {
               </Link>
             </div>
 
-            {/* Demo shortcut */}
-            <div style={{ marginTop: '20px', paddingTop: '18px', borderTop: '1px solid rgba(4,53,77,0.055)', textAlign: 'center' }}>
-              <button onClick={() => setVerified(true)} style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '12px', fontWeight: 600, color: T.slate2, fontFamily: 'inherit',
-                letterSpacing: '-0.01em', padding: '4px 8px', borderRadius: '7px',
-                textDecoration: 'underline', textUnderlineOffset: '2px',
-                textDecorationColor: 'rgba(130,152,175,0.35)',
-              }}>
-                Simulate email verified →
-              </button>
-            </div>
           </div>
 
           {/* Help accordion */}
@@ -525,7 +586,7 @@ export default function VerifyEmailPage() {
               <TipRow
                 icon={ICONS.ema}
                 title="Is the email address correct?"
-                body={`Your link was sent to ${m}. If this is wrong, click Change Email above and re-enter your address.`}
+                body={email ? `Your link was sent to ${m}. If this is wrong, click Change Email above and re-enter your address.` : 'Return to sign up and enter your email again.'}
               />
               <TipRow
                 icon={ICONS.info}

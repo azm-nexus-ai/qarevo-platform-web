@@ -9,6 +9,7 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
+import { ApiError, createInsurance, getApiErrorDetail, updateInsurance } from '@/lib/api'
 
 const LEFT_BG = [
   'radial-gradient(ellipse 80% 60% at 18% 12%,  rgba(32,181,223,0.32) 0%, transparent 52%)',
@@ -526,6 +527,7 @@ export default function InsurancePrivacyConsentPage() {
   const [submitting, setSubmitting] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [errors, setErrors] = useState<InsuranceErrors>({})
 
   useEffect(() => {
@@ -593,19 +595,39 @@ export default function InsurancePrivacyConsentPage() {
     setErrors((previous) => ({ ...previous, [key]: '' }))
   }
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setSubmitted(true)
+    setSubmitError('')
     const nextErrors = validateForm(form)
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
     setSubmitting(true)
-    window.setTimeout(() => {
+    try {
+      if (form.insuranceStatus === 'yes') {
+        const payload = {
+          insurance_provider_name: form.provider.trim(),
+          insurance_number: form.policyNumber.trim(),
+          insured_status: form.memberId.trim(),
+        }
+        try {
+          await createInsurance(payload)
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 400) {
+            await updateInsurance(payload)
+          } else {
+            throw error
+          }
+        }
+      }
       setSubmitting(false)
       setOnboardingStage('profile-completed')
       router.push(NEXT_ROUTE)
-    }, 900)
+    } catch (error) {
+      setSubmitError(getApiErrorDetail(error) || 'We could not save your insurance information. Please try again.')
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -657,6 +679,12 @@ export default function InsurancePrivacyConsentPage() {
               <Ico p={savedTick ? ICONS.check : ICONS.activity} size={11} sw={2} color={savedTick ? T.green : T.slate2} />
               <span style={{ fontSize: '11.5px', fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
             </div>
+
+            {submitError ? (
+              <div role='alert' style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
+                {submitError}
+              </div>
+            ) : null}
 
             <section style={{ marginBottom: '18px' }}>
               <div style={{ marginBottom: '12px' }}>

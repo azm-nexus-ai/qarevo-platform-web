@@ -10,6 +10,7 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
+import { getApiErrorDetail, updatePatientHealthInfo } from '@/lib/api'
 
 const LEFT_BG = [
   'radial-gradient(ellipse 80% 60% at 18% 12%,  rgba(32,181,223,0.32) 0%, transparent 52%)',
@@ -122,6 +123,38 @@ function validateForm(form: HealthProfileForm): HealthProfileErrors {
   }
 
   return nextErrors
+}
+
+function summarizeList(label: string, values: string[]) {
+  const filtered = values.filter(Boolean)
+  return filtered.length ? `${label}: ${filtered.join(', ')}` : ''
+}
+
+function buildAllergySummary(form: HealthProfileForm) {
+  if (form.allergies.includes('No Known Allergies')) return 'No Known Allergies'
+  return form.allergies
+    .map((allergy) => {
+      const detail = form.allergyDetails[allergy]?.trim()
+      return detail ? `${allergy} (${detail})` : allergy
+    })
+    .join('; ')
+}
+
+function buildMedicalConditionSummary(form: HealthProfileForm) {
+  const sections = [
+    summarizeList('Medical history', form.medicalHistory.filter((item) => item !== 'Other')),
+    form.medicalHistory.includes('Other') && form.medicalHistoryOther.trim()
+      ? `Other condition: ${form.medicalHistoryOther.trim()}`
+      : '',
+    form.surgeriesStatus === 'yes'
+      ? `Past surgeries: ${form.surgeries.map((entry) => `${entry.procedureName} at ${entry.hospital} (${entry.year})`).join('; ')}`
+      : 'Past surgeries: None reported',
+    form.currentMedicationsMode === 'taking'
+      ? `Current medications: ${form.medications.map((entry) => `${entry.medicationName} ${entry.dosage} ${entry.frequency}${entry.purpose ? ` for ${entry.purpose}` : ''}`).join('; ')}`
+      : 'Current medications: None reported',
+    summarizeList('Family history', form.familyHistory),
+  ].filter(Boolean)
+  return sections.join('\n')
 }
 
 function HealthVisual() {
@@ -392,6 +425,7 @@ export default function MedicalHistoryAllergiesPage() {
   const [submitting, setSubmitting] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [errors, setErrors] = useState<HealthProfileErrors>({})
 
   useEffect(() => {
@@ -489,19 +523,27 @@ export default function MedicalHistoryAllergiesPage() {
     }))
   }
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setSubmitted(true)
+    setSubmitError('')
     const nextErrors = validateForm(form)
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
     setSubmitting(true)
-    window.setTimeout(() => {
+    try {
+      await updatePatientHealthInfo({
+        allergies: buildAllergySummary(form),
+        medical_conditions: buildMedicalConditionSummary(form),
+      })
       setSubmitting(false)
       setOnboardingStage('insurance-consent')
       router.push(NEXT_ROUTE)
-    }, 900)
+    } catch (error) {
+      setSubmitError(getApiErrorDetail(error) || 'We could not save your health profile. Please try again.')
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -553,6 +595,12 @@ export default function MedicalHistoryAllergiesPage() {
               <Ico p={savedTick ? ICONS.check : ICONS.activity} size={11} sw={2} color={savedTick ? T.green : T.slate2} />
               <span style={{ fontSize: '11.5px', fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
             </div>
+
+            {submitError ? (
+              <div role='alert' style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
+                {submitError}
+              </div>
+            ) : null}
 
             <div style={{ marginBottom: '18px' }}>
               <SectionHeader title='Medical History' body='Select the conditions that best describe your health background. You can choose more than one.' />
