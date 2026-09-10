@@ -107,7 +107,7 @@ export default function PatientMobileNavigation() {
           display: none;
           position: sticky;
           top: 0;
-          z-index: 60;
+          z-index: 900;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
@@ -145,10 +145,10 @@ export default function PatientMobileNavigation() {
           display: none;
           position: fixed;
           inset: 0;
-          z-index: 80;
-          background: rgba(4,53,77,0.25);
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
+          z-index: 1000;
+          background: rgba(4,53,77,0.38);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           transition: opacity 0.28s ease;
         }
         .pmn-drawer {
@@ -156,14 +156,12 @@ export default function PatientMobileNavigation() {
           top: 0;
           left: 0;
           bottom: 0;
-          width: 280px;
-          max-width: 86vw;
-          z-index: 90;
-          background: rgba(247,250,252,0.97);
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          width: 320px;
+          max-width: min(88vw, 360px);
+          z-index: 1001;
+          background: #f8fbfd;
           border-right: 1px solid rgba(255,255,255,0.8);
-          box-shadow: 8px 0 40px rgba(4,53,77,0.15);
+          box-shadow: 14px 0 44px rgba(4,53,77,0.2);
           padding: 20px 16px;
           display: flex;
           flex-direction: column;
@@ -178,6 +176,7 @@ export default function PatientMobileNavigation() {
           position: absolute;
           top: 16px;
           right: 14px;
+          z-index: 1;
           width: 34px;
           height: 34px;
           border-radius: 8px;
@@ -268,7 +267,7 @@ export default function PatientMobileNavigation() {
               fontSize: '15px',
             }}
           >
-            J
+            {patientInitials}
           </button>
         </div>
       </div>
