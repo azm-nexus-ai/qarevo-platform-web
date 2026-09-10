@@ -1523,7 +1523,7 @@ export default function PatientDashboardPage() {
                 <EmptyState>Your care timeline will start after your first appointment, document, or clinical update.</EmptyState>
               )}
               {displayTimelineItems.map((item, index) => (
-                <li key={item.title} style={{ display: 'grid', gridTemplateColumns: '18px minmax(0, 1fr)', gap: '10px', alignItems: 'start' }}>
+                <li key={`${item.title}-${item.sub}-${item.time}-${index}`} style={{ display: 'grid', gridTemplateColumns: '18px minmax(0, 1fr)', gap: '10px', alignItems: 'start' }}>
                   <span aria-hidden='true' style={{ width: '18px', display: 'grid', placeItems: 'center', marginTop: '1px' }}>
                     <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: index === 0 ? '#20B5DF' : 'rgba(4,53,77,0.22)', boxShadow: index === 0 ? '0 0 0 4px rgba(32,181,223,0.12)' : 'none' }} />
                   </span>
@@ -1669,8 +1669,8 @@ export default function PatientDashboardPage() {
                 <SkeletonRow />
               ) : (
                 <div style={{ display: 'grid', gap: '8px' }}>
-                  {displayNotifications.map((item) => (
-                    <button key={item.title} type='button' style={{ width: '100%', textAlign: 'left', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.82)', borderRadius: '12px', padding: '10px 11px', cursor: 'pointer' }}>
+                  {displayNotifications.map((item, index) => (
+                    <button key={`${item.title}-${item.body}-${item.time}-${index}`} type='button' style={{ width: '100%', textAlign: 'left', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.82)', borderRadius: '12px', padding: '10px 11px', cursor: 'pointer' }}>
                       <p style={{ margin: '0 0 3px', fontSize: '12.5px', fontWeight: 700, color: T.navy }}>{item.title}</p>
                       <p style={{ margin: '0 0 4px', fontSize: '12px', color: T.slate, lineHeight: 1.45 }}>{item.body}</p>
                       <p style={{ margin: 0, fontSize: '11px', color: T.slate2 }}>{item.time}</p>
