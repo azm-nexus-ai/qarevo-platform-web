@@ -9,11 +9,11 @@ interface DoctorCardProps {
   name: string
   specialty: string
   verification: string
-  tags: string[]
-  imageUrl: string
+  tags?: string[]
+  imageUrl?: string
 }
 
-export default function DoctorCard({ name, specialty, verification, tags, imageUrl }: DoctorCardProps) {
+export default function DoctorCard({ name, specialty, verification, tags = [], imageUrl }: DoctorCardProps) {
   const [imageError, setImageError] = useState(false)
 
   return (
@@ -110,9 +110,9 @@ export default function DoctorCard({ name, specialty, verification, tags, imageU
           Clinical Focus
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {tags.map((tag) => (
+          {tags.map((tag, index) => (
             <span
-              key={tag}
+              key={`${tag}-${index}`}
               style={{
                 padding: '4px 11px',
                 borderRadius: '100px',
