@@ -96,6 +96,35 @@ export function storeAuthTokens(payload: {
     if (payload.role) window.localStorage.setItem("qarevo_role", payload.role);
 }
 
+async function refreshAuthToken(): Promise<boolean> {
+    const refreshToken = readRefreshToken();
+    if (!refreshToken) return false;
+
+    const res = await fetch(`${getBaseUrl()}/api/v1/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        cache: "no-store",
+    });
+
+    if (!res.ok) {
+        clearAuthTokens();
+        return false;
+    }
+
+    const payload = (await res.json()) as {
+        access_token: string;
+        refresh_token: string;
+        token_type?: string;
+        expires_in?: number;
+        user_id?: string;
+        provider_id?: string;
+        role?: string;
+    };
+    storeAuthTokens(payload);
+    return true;
+}
+
 function authHeaders(headers?: Record<string, string>): Record<string, string> {
     const token = readAccessToken();
     return {
@@ -104,8 +133,21 @@ function authHeaders(headers?: Record<string, string>): Record<string, string> {
     };
 }
 
+async function fetchWithAuthRetry(input: string, init: RequestInit): Promise<Response> {
+    const res = await fetch(input, init);
+    if (res.status !== 401 || !readRefreshToken()) return res;
+
+    const refreshed = await refreshAuthToken().catch(() => false);
+    if (!refreshed) return res;
+
+    return fetch(input, {
+        ...init,
+        headers: authHeaders(init.headers as Record<string, string> | undefined),
+    });
+}
+
 export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
-    const res = await fetch(`${getBaseUrl()}${path}`, {
+    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         headers: authHeaders(headers),
         cache: "no-store",
     });
@@ -119,7 +161,7 @@ export async function apiGet<T>(path: string, headers?: Record<string, string>):
 }
 
 export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
-    const res = await fetch(`${getBaseUrl()}${path}`, {
+    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -138,7 +180,7 @@ export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: 
 }
 
 export async function apiPut<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
-    const res = await fetch(`${getBaseUrl()}${path}`, {
+    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json",
@@ -157,7 +199,7 @@ export async function apiPut<T, B = unknown>(path: string, body?: B, headers?: R
 }
 
 export async function apiPatch<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
-    const res = await fetch(`${getBaseUrl()}${path}`, {
+    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",
@@ -176,7 +218,7 @@ export async function apiPatch<T, B = unknown>(path: string, body?: B, headers?:
 }
 
 export async function apiDelete<T>(path: string, headers?: Record<string, string>): Promise<T> {
-    const res = await fetch(`${getBaseUrl()}${path}`, {
+    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "DELETE",
         headers: authHeaders(headers),
         cache: "no-store",
@@ -191,7 +233,7 @@ export async function apiDelete<T>(path: string, headers?: Record<string, string
 }
 
 export async function apiUpload<T>(path: string, formData: FormData, headers?: Record<string, string>): Promise<T> {
-    const res = await fetch(`${getBaseUrl()}${path}`, {
+    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "POST",
         headers: authHeaders(headers),
         body: formData,
