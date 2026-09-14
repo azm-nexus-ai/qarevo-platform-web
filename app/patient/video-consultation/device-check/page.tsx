@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass } from '@/lib/tokens'
 import { PHYSICIANS } from '@/constants/physicians'
@@ -46,14 +46,6 @@ const INITIAL_STEPS: TestStep[] = [
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function readLabel(service: string | null) {
-  switch (service) {
-    case 'physical':  return 'In-person Consultation'
-    case 'follow-up': return 'Follow-up Consultation'
-    default:          return 'Video Consultation'
-  }
-}
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 

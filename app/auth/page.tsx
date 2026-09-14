@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { T, Sh, Glass } from '@/lib/tokens'
+import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
@@ -174,62 +173,9 @@ function LeftPanel() {
   )
 }
 
-// ─── Social button ─────────────────────────────────────────────────────────────
-
-function SocialBtn({ provider, onClick }: { provider: 'google' | 'microsoft'; onClick?: () => void }) {
-  const [hovered, setHovered] = useState(false)
-  const cfg = {
-    google: {
-      label: 'Continue with Google',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
-          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908C16.658 14.075 17.64 11.767 17.64 9.2z" fill="#4285F4"/>
-          <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-          <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-        </svg>
-      ),
-    },
-    microsoft: {
-      label: 'Continue with Microsoft',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 21 21" style={{ flexShrink: 0 }}>
-          <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-          <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-          <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-        </svg>
-      ),
-    },
-  }[provider]
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        width: '100%', padding: '13px 18px', borderRadius: '13px',
-        border: `1.5px solid ${hovered ? 'rgba(4,53,77,0.14)' : T.border}`,
-        background: hovered ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.78)',
-        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: '11px', fontFamily: 'inherit', fontSize: '14px', fontWeight: 600,
-        color: T.navy, letterSpacing: '-0.015em', transition: 'all 0.15s ease',
-        boxShadow: hovered ? '0 2px 8px rgba(4,53,77,0.1), inset 0 1px 0 #fff' : 'inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 3px rgba(4,53,77,0.06)',
-      }}
-    >
-      {cfg.icon}
-      {cfg.label}
-    </button>
-  )
-}
-
 // ─── Right panel ───────────────────────────────────────────────────────────────
 
 function RightPanel() {
-  const router = useRouter()
   const [primaryHov, setPrimaryHov] = useState(false)
   const [secondaryHov, setSecondaryHov] = useState(false)
 

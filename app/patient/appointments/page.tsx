@@ -47,6 +47,27 @@ type Appointment = {
   hasReviewed?: boolean
 }
 
+type ApiAppointment = {
+  id: string
+  consultation_modality?: string | null
+  start_at: string
+  status?: string | null
+  payment_status?: string | null
+}
+
+function normalizeAppointmentStatus(status?: string | null): AppointmentStatus {
+  if (status === 'CANCELLED') return 'Cancelled'
+  if (status === 'COMPLETED') return 'Completed'
+  if (status === 'RESCHEDULED') return 'Rescheduled'
+  return 'Confirmed'
+}
+
+function normalizePaymentStatus(status?: string | null): Appointment['paymentStatus'] {
+  if (status === 'REFUNDED') return 'Refunded'
+  if (status === 'PENDING') return 'Pending'
+  return 'Paid'
+}
+
 type Tab = 'upcoming' | 'past' | 'cancelled'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -775,9 +796,9 @@ function AppointmentsPageInner() {
         })
         if (response.ok) {
           const data = await response.json()
-          const appointments = data.appointments || []
+          const appointments: ApiAppointment[] = data.appointments || []
           // Transform API data to match Appointment type
-          const transformed = appointments.map((apt: any) => ({
+          const transformed: Appointment[] = appointments.map((apt) => ({
             id: apt.id,
             physician: 'Dr. Sophia Reed', // Would need to fetch from provider data
             specialty: 'Cardiology',
@@ -787,19 +808,19 @@ function AppointmentsPageInner() {
             date: new Date(apt.start_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             time: new Date(apt.start_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
             duration: '30 min',
-            status: apt.status === 'BOOKED' ? 'Confirmed' : apt.status,
+            status: normalizeAppointmentStatus(apt.status),
             bookingRef: `QRV-${apt.id.slice(0, 8)}`,
             reason: 'Consultation',
-            paymentStatus: 'Paid',
+            paymentStatus: normalizePaymentStatus(apt.payment_status),
           }))
           
           // Separate by status
           const now = new Date()
-          const upcomingApts = transformed.filter((apt: Appointment) => 
+          const upcomingApts = transformed.filter((apt) =>
             apt.status !== 'Cancelled' && apt.status !== 'Completed' && new Date(apt.date + ' ' + apt.time) > now
           )
-          const cancelledApts = transformed.filter((apt: Appointment) => apt.status === 'Cancelled')
-          const pastApts = transformed.filter((apt: Appointment) => 
+          const cancelledApts = transformed.filter((apt) => apt.status === 'Cancelled')
+          const pastApts = transformed.filter((apt) =>
             apt.status === 'Completed' || new Date(apt.date + ' ' + apt.time) <= now
           )
           
@@ -860,7 +881,7 @@ function AppointmentsPageInner() {
         const error = await response.json()
         setToast(error.detail || 'Failed to cancel appointment')
       }
-    } catch (error) {
+    } catch {
       setToast('Failed to cancel appointment. Please try again.')
     }
   }
@@ -890,7 +911,7 @@ function AppointmentsPageInner() {
         const error = await response.json()
         setToast(error.detail || 'Failed to submit review')
       }
-    } catch (error) {
+    } catch {
       setToast('Failed to submit review. Please try again.')
     }
   }
@@ -973,7 +994,6 @@ function AppointmentsPageInner() {
             <button
               key={key}
               type="button"
-              aria-selected={activeTab === key}
               onClick={() => setActiveTab(key)}
               style={{ flex: 1, minHeight: '38px', padding: '0 12px', borderRadius: '9px', border: 'none', background: activeTab === key ? '#fff' : 'transparent', color: activeTab === key ? T.navy : T.slate2, fontSize: '13px', fontWeight: activeTab === key ? 700 : 500, cursor: 'pointer', transition: 'all 0.14s', boxShadow: activeTab === key ? '0 1px 4px rgba(4,53,77,0.12), inset 0 1px 0 rgba(255,255,255,0.9)' : 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >

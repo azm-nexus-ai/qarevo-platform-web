@@ -2,7 +2,7 @@
 
 import { Suspense, useId, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -528,7 +528,6 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
 }
 
 function ResetPasswordPageContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token') || ''
   

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { T, Sh } from '@/lib/tokens'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
@@ -169,7 +169,6 @@ function FeedbackPageContent() {
   const [technicalComment, setTechnicalComment] = useState('')
   const [nps, setNps] = useState(8)
   const [followUp, setFollowUp] = useState('Yes')
-  const [submitted, setSubmitted] = useState(false)
 
   const feedbackLabel = getRatingLabel(overallRating)
   const charCount = feedbackText.length
@@ -209,7 +208,7 @@ function FeedbackPageContent() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setSubmitted(true)
+    router.push(dashboardHref)
   }
 
 

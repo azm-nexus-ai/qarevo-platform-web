@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { T, Sh, Glass } from '@/lib/tokens'
+import { T, Glass } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
@@ -244,7 +244,7 @@ export default function PhysicianSection() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <Ico p={ICONS.activity} size={14} sw={1.6} color={T.blue} />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                    Today's Schedule
+                    Today&apos;s Schedule
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

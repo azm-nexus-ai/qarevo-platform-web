@@ -3,11 +3,9 @@
 import Link from 'next/link'
 import { Suspense, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { T, Sh } from '@/lib/tokens'
 import { PHYSICIANS } from '@/constants/physicians'
-import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
-import Ico from '@/components/ui/Ico'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 
 

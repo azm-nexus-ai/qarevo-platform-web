@@ -4,7 +4,7 @@ import { useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { T, Sh, Glass } from '@/lib/tokens'
+import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { getApiErrorDetail, registerPatient } from '@/lib/api'
@@ -17,16 +17,6 @@ const PAGE_BG = [
   'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(52,140,234,0.06) 0%, transparent 58%)',
   '#EDF2FA',
 ].join(', ')
-
-// ─── COUNTRIES ────────────────────────────────────────────────────────────────
-
-const COUNTRIES = [
-  'Austria', 'Belgium', 'Croatia', 'Czech Republic', 'Denmark', 'Estonia',
-  'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Ireland', 'Italy',
-  'Latvia', 'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Norway',
-  'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia', 'Spain',
-  'Sweden', 'Switzerland', 'United Kingdom', 'Other',
-]
 
 // ─── Password strength ────────────────────────────────────────────────────────
 
@@ -251,59 +241,6 @@ function Checkbox({ checked, onChange, children, error }: { checked: boolean; on
       </div>
       <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{children}</span>
     </label>
-  )
-}
-
-// ─── Social button ─────────────────────────────────────────────────────────────
-
-function SocialBtn({ provider, onClick }: { provider: 'google' | 'microsoft'; onClick?: () => void }) {
-  const [h, setH] = useState(false)
-  const cfg = {
-    google: {
-      label: 'Continue with Google',
-      icon: (
-        <svg width="17" height="17" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
-          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908C16.658 14.075 17.64 11.767 17.64 9.2z" fill="#4285F4" />
-          <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853" />
-          <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
-          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335" />
-        </svg>
-      ),
-    },
-    microsoft: {
-      label: 'Continue with Microsoft',
-      icon: (
-        <svg width="17" height="17" viewBox="0 0 21 21" style={{ flexShrink: 0 }}>
-          <rect x="1" y="1" width="9" height="9" fill="#F25022" />
-          <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
-          <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
-          <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
-        </svg>
-      ),
-    },
-  }[provider]
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
-      style={{
-        flex: 1, padding: '11px 14px', borderRadius: '11px',
-        border: `1.5px solid ${h ? 'rgba(4,53,77,0.13)' : T.border}`,
-        background: h ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.75)',
-        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: '9px', fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 600,
-        color: T.navy, letterSpacing: '-0.01em', transition: 'all 0.14s ease',
-        boxShadow: h ? '0 2px 8px rgba(4,53,77,0.09)' : 'inset 0 1px 0 rgba(255,255,255,0.85)',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {cfg.icon}
-      {cfg.label}
-    </button>
   )
 }
 
@@ -666,47 +603,6 @@ export default function SignUpPage() {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ─── Country select ────────────────────────────────────────────────────────────
-
-function CountrySelect({ value, onChange, error, onBlur }: { value: string; onChange: (v: string) => void; error?: string; onBlur?: () => void }) {
-  const [focused, setFocused] = useState(false)
-  const id = useId()
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Country</label>
-      <div style={{ position: 'relative' }}>
-        <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.blue : T.slate2, pointerEvents: 'none', display: 'flex' }}>
-          <Ico p={ICONS.search} size={14} sw={1.75} />
-        </span>
-        <select
-          id={id}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => { setFocused(false); onBlur?.() }}
-          style={{
-            width: '100%', padding: '11px 36px 11px 38px', borderRadius: '11px',
-            border: `1.5px solid ${error ? 'rgba(220,38,38,0.55)' : value ? 'rgba(9,173,112,0.5)' : focused ? 'rgba(32,181,223,0.45)' : 'rgba(4,53,77,0.1)'}`,
-            background: error ? '#FFF5F5' : value ? '#F0FDF8' : focused ? '#fff' : 'rgba(255,255,255,0.7)',
-            color: value ? T.navy : 'rgba(4,53,77,0.3)', fontSize: '14px', fontFamily: 'inherit', outline: 'none',
-            boxShadow: focused ? '0 0 0 3px rgba(32,181,223,0.09)' : 'none',
-            transition: 'all 0.15s ease', appearance: 'none', cursor: 'pointer',
-          }}
-        >
-          <option value="" disabled>Select your country</option>
-          {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <span style={{ position: 'absolute', right: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.slate2 }}>
-          {value
-            ? <Ico p={ICONS.check} size={13} sw={2.5} color={T.green} />
-            : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-        </span>
-      </div>
-      {error && <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{error}</p>}
     </div>
   )
 }

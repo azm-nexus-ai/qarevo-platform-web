@@ -487,36 +487,6 @@ function SecurityPill({ icon, title }: { icon: string | readonly string[]; title
   )
 }
 
-function LeftBackdropIllustration() {
-  return (
-    <div style={{ position: 'relative', width: '268px', height: '268px', margin: '0 auto', flexShrink: 0 }}>
-      {[0, 28, 58].map((inset, index) => (
-        <div key={index} style={{ position: 'absolute', inset, borderRadius: '50%', border: `1px solid rgba(255,255,255,${0.06 + index * 0.04})`, animation: `floatRing 5s ease-in-out ${index * 0.18}s infinite` }} />
-      ))}
-      <div style={{ position: 'absolute', inset: '84px', borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, rgba(52,140,234,0.34) 0%, rgba(32,181,223,0.16) 55%, transparent 78%)', border: '1px solid rgba(52,140,234,0.26)', boxShadow: '0 0 56px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Ico p={ICONS.shield} size={30} sw={1.35} color='rgba(255,255,255,0.92)' />
-      </div>
-      {[
-        { angle: 0, icon: ICONS.lock, bg: 'rgba(9,173,112,0.26)', border: 'rgba(165,224,218,0.3)' },
-        { angle: 90, icon: ICONS.check, bg: 'rgba(32,181,223,0.28)', border: 'rgba(52,140,234,0.3)' },
-        { angle: 180, icon: ICONS.info, bg: 'rgba(52,140,234,0.28)', border: 'rgba(52,140,234,0.3)' },
-        { angle: 270, icon: ICONS.user, bg: 'rgba(32,181,223,0.28)', border: 'rgba(165,224,218,0.3)' },
-      ].map(({ angle, icon, bg, border }, index) => {
-        const radius = 102
-        const radians = ((angle - 90) * Math.PI) / 180
-        const x = 134 + radius * Math.cos(radians)
-        const y = 134 + radius * Math.sin(radians)
-
-        return (
-          <div key={angle} style={{ position: 'absolute', left: `${x - 19}px`, top: `${y - 19}px`, width: '38px', height: '38px', borderRadius: '12px', background: bg, border: `1px solid ${border}`, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 4px 12px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: `floatNode 4.6s ease-in-out ${index * 0.2}s infinite` }}>
-            <Ico p={icon} size={15} sw={1.5} color='rgba(255,255,255,0.88)' />
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 export default function InsurancePrivacyConsentPage() {
   const router = useRouter()
   const insuranceFrontRef = useRef<HTMLInputElement | null>(null)

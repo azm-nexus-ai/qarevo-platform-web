@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
 import {
   clearAuthTokens,
   getDoctorPatients,
@@ -51,7 +49,6 @@ export default function DoctorPrescriptionsPage() {
     refill: '',
     episode_id: '',
   })
-  const [selectedEpisodeId, setSelectedEpisodeId] = useState('')
 
   useEffect(() => {
     if (!readAccessToken()) {

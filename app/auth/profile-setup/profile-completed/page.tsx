@@ -29,7 +29,7 @@ function CompletionVisual() {
         { angle: 90, icon: ICONS.brain, bg: 'rgba(32,181,223,0.28)', border: 'rgba(52,140,234,0.3)' },
         { angle: 180, icon: ICONS.shield, bg: 'rgba(52,140,234,0.28)', border: 'rgba(52,140,234,0.3)' },
         { angle: 270, icon: ICONS.activity, bg: 'rgba(32,181,223,0.28)', border: 'rgba(165,224,218,0.3)' },
-      ].map(({ angle, icon, bg, border }, index) => {
+      ].map(({ angle, icon, bg, border }) => {
         const radius = 102
         const radians = ((angle - 90) * Math.PI) / 180
         const x = 134 + radius * Math.cos(radians)

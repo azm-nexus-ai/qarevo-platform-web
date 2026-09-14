@@ -177,7 +177,7 @@ function LiveConsultationPageContent() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [raiseHand, setRaiseHand] = useState(false)
   const [reaction, setReaction] = useState<'spark' | 'thumbs' | null>(null)
-  const [recordingOn, setRecordingOn] = useState(true)
+  const [recordingOn] = useState(true)
   const [confirmEndOpen, setConfirmEndOpen] = useState(false)
   const [panelCollapsed, setPanelCollapsed] = useState(false)
   const [typing, setTyping] = useState(true)

@@ -1,48 +1,83 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
 import {
   clearAuthTokens,
+  createDoctorLabOrder,
+  deleteDoctorLabOrder,
+  getApiErrorDetail,
+  getDoctorLabOrders,
   getDoctorPatients,
   isAuthError,
   readAccessToken,
+  updateDoctorLabOrder,
+  uploadDoctorLabResult,
+  type DoctorLabOrderPayload,
   type DoctorPatient,
+  type PatientLabRequest,
 } from '@/lib/api'
 
-type LabTest = {
-  id: string
-  title: string
-  category: string
-  test: string
-  status: string
-  scheduled_for: string
-  detail: string
-  created_at: string
-  created_by: string
+const emptyForm: DoctorLabOrderPayload = {
+  patient_id: '',
+  episode_id: '',
+  title: '',
+  category: '',
+  test: '',
+  status: 'Pending',
+  scheduled_for: '',
+  recommended_date: '',
+  recommended_lab_name: '',
+  recommended_lab_address: '',
+  description: '',
+  reason: '',
+  priority: 'Routine',
+  processing_time: '',
+  preparation_instructions: '',
+}
+
+const inputStyle = {
+  width: '100%',
+  minHeight: '44px',
+  padding: '12px 14px',
+  borderRadius: '12px',
+  border: '1px solid rgba(4,53,77,0.1)',
+  background: 'rgba(255,255,255,0.95)',
+  color: T.navy,
+  fontSize: '14px',
+  fontWeight: 600,
+  outline: 'none',
+} as const
+
+function toIso(value?: string) {
+  if (!value) return ''
+  return new Date(value).toISOString()
+}
+
+function fromIso(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString().slice(0, 16)
 }
 
 export default function DoctorLabOrdersPage() {
   const router = useRouter()
   const [patients, setPatients] = useState<DoctorPatient[]>([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
-  const [labTests, setLabTests] = useState<LabTest[]>([])
+  const [labTests, setLabTests] = useState<PatientLabRequest[]>([])
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newTest, setNewTest] = useState({
-    title: '',
-    category: '',
-    test: '',
-    status: 'Pending',
-    scheduled_for: '',
-    detail: '',
-    episode_id: '',
-  })
-  const [selectedEpisodeId, setSelectedEpisodeId] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<DoctorLabOrderPayload>(emptyForm)
+
+  const selectedPatient = useMemo(
+    () => patients.find((patient) => patient.patient_id === selectedPatientId),
+    [patients, selectedPatientId],
+  )
 
   useEffect(() => {
     if (!readAccessToken()) {
@@ -61,31 +96,19 @@ export default function DoctorLabOrdersPage() {
           router.replace('/auth/doctor/login')
           return
         }
-        console.error('Failed to load patients', err)
+        setError(getApiErrorDetail(err) ?? 'Unable to load your patients.')
       }
     }
 
     fetchPatients()
   }, [router])
 
-  const fetchLabTests = async () => {
-    if (!selectedPatientId) return
-    
+  const fetchLabTests = async (patientId = selectedPatientId) => {
+    if (!patientId) return
     setLoading(true)
     setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/lab-orders/${selectedPatientId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch lab tests')
-      }
-      
-      const data = await response.json()
+      const data = await getDoctorLabOrders(patientId)
       setLabTests(data.test_requests || [])
     } catch (err) {
       if (isAuthError(err)) {
@@ -93,387 +116,276 @@ export default function DoctorLabOrdersPage() {
         router.replace('/auth/doctor/login')
         return
       }
-      console.error('Failed to load lab tests', err)
-      setError('Unable to load lab tests')
+      setError(getApiErrorDetail(err) ?? 'Unable to load lab orders.')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddLabTest = async () => {
-    if (!selectedPatientId || !newTest.title) return
-    
-    setLoading(true)
+  const handlePatientChange = (patientId: string) => {
+    setSelectedPatientId(patientId)
+    setLabTests([])
+    setShowAddForm(false)
+    setEditingId(null)
+    setForm({ ...emptyForm, patient_id: patientId })
+    if (patientId) fetchLabTests(patientId)
+  }
+
+  const beginEdit = (test: PatientLabRequest) => {
+    setEditingId(test.id)
+    setShowAddForm(true)
+    setForm({
+      patient_id: selectedPatientId,
+      episode_id: test.episode_id ?? '',
+      title: test.title,
+      category: test.category ?? '',
+      test: test.test ?? '',
+      status: test.status || 'Pending',
+      scheduled_for: fromIso(test.scheduled_for),
+      recommended_date: fromIso(test.recommended_date),
+      recommended_lab_name: test.recommended_lab_name ?? '',
+      recommended_lab_address: test.recommended_lab_address ?? '',
+      description: test.description ?? '',
+      reason: test.reason ?? '',
+      priority: test.priority ?? 'Routine',
+      processing_time: test.processing_time ?? '',
+      preparation_instructions: test.preparation_instructions ?? '',
+    })
+  }
+
+  const resetForm = () => {
+    setEditingId(null)
+    setShowAddForm(false)
+    setForm({ ...emptyForm, patient_id: selectedPatientId })
+  }
+
+  const handleSave = async () => {
+    if (!selectedPatientId || !form.title.trim()) return
+    setSaving(true)
+    setError(null)
+    const payload = {
+      ...form,
+      patient_id: selectedPatientId,
+      title: form.title.trim(),
+      scheduled_for: toIso(form.scheduled_for),
+      recommended_date: toIso(form.recommended_date),
+    }
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/lab-orders`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          patient_id: selectedPatientId,
-          ...newTest,
-        }),
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to order lab test')
-      }
-      
-      const data = await response.json()
-      setLabTests(data.test_requests || [])
-      setNewTest({
-        title: '',
-        category: '',
-        test: '',
-        status: 'Pending',
-        scheduled_for: '',
-        detail: '',
-        episode_id: '',
-      })
-      setShowAddForm(false)
+      const response = editingId
+        ? await updateDoctorLabOrder({ ...payload, test_id: editingId })
+        : await createDoctorLabOrder(payload)
+      setLabTests(response.test_requests || [])
+      resetForm()
     } catch (err) {
-      console.error('Failed to order lab test', err)
-      setError('Failed to order lab test')
+      setError(getApiErrorDetail(err) ?? 'Unable to save this lab order.')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
-  const handleDeleteLabTest = async (testId: string) => {
+  const handleStatusChange = async (test: PatientLabRequest, status: string) => {
     if (!selectedPatientId) return
-    
-    setLoading(true)
+    setSaving(true)
+    setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/lab-orders/${selectedPatientId}/${testId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const response = await updateDoctorLabOrder({
+        patient_id: selectedPatientId,
+        test_id: test.id,
+        status,
       })
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete lab test')
-      }
-      
-      const data = await response.json()
-      setLabTests(data.test_requests || [])
+      setLabTests(response.test_requests || [])
     } catch (err) {
-      console.error('Failed to delete lab test', err)
-      setError('Failed to delete lab test')
+      setError(getApiErrorDetail(err) ?? 'Unable to update lab order status.')
     } finally {
-      setLoading(false)
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (testId: string) => {
+    if (!selectedPatientId) return
+    setSaving(true)
+    setError(null)
+    try {
+      const response = await deleteDoctorLabOrder(selectedPatientId, testId)
+      setLabTests(response.test_requests || [])
+      if (editingId === testId) resetForm()
+    } catch (err) {
+      setError(getApiErrorDetail(err) ?? 'Unable to delete this lab order.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleUploadResult = async (test: PatientLabRequest, file?: File) => {
+    if (!selectedPatientId || !file) return
+    setSaving(true)
+    setError(null)
+    const formData = new FormData()
+    formData.set('file', file)
+    formData.set('note', `${test.title} result uploaded by doctor`)
+    try {
+      const response = await uploadDoctorLabResult(selectedPatientId, test.id, formData)
+      setLabTests(response.test_requests || [])
+    } catch (err) {
+      setError(getApiErrorDetail(err) ?? 'Unable to upload this lab result.')
+    } finally {
+      setSaving(false)
     }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className='doctor-lab-page'>
+      <style>{`
+        .doctor-lab-page { display: grid; gap: 18px; }
+        .dl-card { background: rgba(255,255,255,0.9); backdrop-filter: blur(22px) saturate(175%); -webkit-backdrop-filter: blur(22px) saturate(175%); border: 1px solid rgba(255,255,255,0.9); border-radius: 20px; box-shadow: ${Sh.card}; padding: 22px; }
+        .dl-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+        .dl-btn { min-height: 42px; border-radius: 12px; border: 1px solid rgba(4,53,77,0.12); background: white; color: ${T.navy}; padding: 0 14px; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .dl-btn:hover, .dl-btn:focus-visible { transform: translateY(-1px); box-shadow: ${Sh.glow}; outline: none; }
+        .dl-btn.primary { border: none; background: linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%); color: white; }
+        .dl-btn.danger { color: ${T.red}; border-color: rgba(220,38,38,0.18); background: rgba(220,38,38,0.06); }
+        .dl-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+        .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        .dl-field { display: grid; gap: 6px; }
+        .dl-field span, .dl-eyebrow { font-size: 11px; font-weight: 800; color: ${T.slate2}; letter-spacing: 0.06em; text-transform: uppercase; }
+        .dl-order { border-radius: 18px; border: 1px solid rgba(4,53,77,0.08); background: rgba(247,250,252,0.92); padding: 16px; display: grid; gap: 12px; }
+        .dl-meta { display: flex; gap: 10px; flex-wrap: wrap; color: ${T.slate2}; font-size: 12px; font-weight: 700; }
+        .dl-empty { padding: 28px; border-radius: 18px; background: rgba(32,181,223,0.08); color: ${T.blue}; text-align: center; font-weight: 800; }
+        @media (max-width: 700px) { .dl-card { padding: 16px; border-radius: 18px; } .dl-btn { width: 100%; } .dl-header { display: grid; } }
+      `}</style>
+
+      <div className='dl-header'>
         <div>
-          <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Lab Orders</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage patient lab test orders</p>
+          <p className='dl-eyebrow' style={{ margin: 0 }}>Doctor workspace</p>
+          <h1 style={{ margin: '6px 0 4px', fontSize: '28px', fontWeight: 800, color: T.navy }}>Lab Orders</h1>
+          <p style={{ margin: 0, fontSize: '14px', color: T.slate }}>Create, update, and track patient lab requests that appear in the patient portal.</p>
         </div>
+        <button className='dl-btn primary' type='button' onClick={() => setShowAddForm(true)} disabled={!selectedPatientId}>Order Lab Test</button>
       </div>
 
-      {/* Patient Selection */}
-      <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
-        <select
-          value={selectedPatientId}
-          onChange={(e) => setSelectedPatientId(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '14px 16px',
-            borderRadius: '12px',
-            border: '1px solid rgba(0,0,0,0.1)',
-            fontSize: '15px',
-            outline: 'none',
-            background: 'white',
-            color: T.navy,
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-        >
-          <option value="" style={{ color: T.slate2 }}>-- Choose a patient --</option>
-          {patients.map((patient) => (
-            <option key={patient.patient_id} value={patient.patient_id} style={{ color: T.navy }}>
-              {patient.name || patient.email} {patient.email && patient.name ? `(${patient.email})` : ''}
-            </option>
-          ))}
-        </select>
-        {selectedPatientId && (
-          <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(32,181,223,0.08)', borderRadius: '8px', border: '1px solid rgba(32,181,223,0.2)' }}>
-            <p style={{ margin: 0, fontSize: '13px', color: T.navy, fontWeight: 600 }}>
-              {patients.find(p => p.patient_id === selectedPatientId)?.name || 'Patient selected'}
-            </p>
+      {error && <div className='dl-card' style={{ color: T.red, border: '1px solid rgba(220,38,38,0.2)' }}>{error}</div>}
+
+      <section className='dl-card'>
+        <label className='dl-field'>
+          <span>Select patient</span>
+          <select style={inputStyle} value={selectedPatientId} onChange={(event) => handlePatientChange(event.target.value)}>
+            <option value=''>Choose a patient</option>
+            {patients.map((patient) => (
+              <option key={patient.patient_id} value={patient.patient_id}>
+                {patient.name || patient.email || patient.patient_id}
+              </option>
+            ))}
+          </select>
+        </label>
+        {selectedPatient && (
+          <div style={{ marginTop: '12px', padding: '12px', borderRadius: '14px', background: 'rgba(32,181,223,0.08)', color: T.navy, fontWeight: 800 }}>
+            {selectedPatient.name || selectedPatient.email} selected
           </div>
         )}
-        <button
-          onClick={fetchLabTests}
-          disabled={loading || !selectedPatientId}
-          style={{
-            marginTop: '16px',
-            padding: '12px 24px',
-            borderRadius: '12px',
-            border: 'none',
-            background: loading || !selectedPatientId ? 'rgba(32,181,223,0.5)' : 'rgba(32,181,223,1)',
-            color: 'white',
-            fontSize: '15px',
-            fontWeight: 700,
-            cursor: loading || !selectedPatientId ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s',
-          }}
-        >
-          {loading ? 'Loading...' : 'Load Lab Tests'}
-        </button>
-      </div>
+      </section>
 
-      {error && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
-      )}
-
-      {/* Add Lab Test Button */}
-      {selectedPatientId && (
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          style={{
-            padding: '12px 24px',
-            borderRadius: '12px',
-            border: 'none',
-            background: 'rgba(32,181,223,1)',
-            color: 'white',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          {showAddForm ? 'Cancel' : 'Order Lab Test'}
-        </button>
-      )}
-
-      {/* Add Lab Test Form */}
-      {showAddForm && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 700, color: T.navy }}>New Lab Test Order</h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {showAddForm && selectedPatientId && (
+        <section className='dl-card'>
+          <div className='dl-header' style={{ marginBottom: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Episode ID (Optional)</label>
-              <input
-                type="text"
-                value={newTest.episode_id}
-                onChange={(e) => setNewTest({ ...newTest, episode_id: e.target.value })}
-                placeholder="CWS Episode ID"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  fontSize: '14px',
-                  outline: 'none',
-                }}
-              />
+              <p className='dl-eyebrow' style={{ margin: 0 }}>{editingId ? 'Edit request' : 'New request'}</p>
+              <h2 style={{ margin: '5px 0 0', color: T.navy }}>{editingId ? 'Update lab order' : 'Order a lab test'}</h2>
             </div>
-            
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Test Title *</label>
-              <input
-                type="text"
-                value={newTest.title}
-                onChange={(e) => setNewTest({ ...newTest, title: e.target.value })}
-                placeholder="e.g., CBC"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  fontSize: '14px',
-                  outline: 'none',
-                }}
-              />
-            </div>
-            
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Category</label>
-              <input
-                type="text"
-                value={newTest.category}
-                onChange={(e) => setNewTest({ ...newTest, category: e.target.value })}
-                placeholder="e.g., Blood work"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  fontSize: '14px',
-                  outline: 'none',
-                }}
-              />
-            </div>
-            
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Specific Test</label>
-              <input
-                type="text"
-                value={newTest.test}
-                onChange={(e) => setNewTest({ ...newTest, test: e.target.value })}
-                placeholder="e.g., Complete Blood Count"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  fontSize: '14px',
-                  outline: 'none',
-                }}
-              />
-            </div>
-            
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Status</label>
-              <select
-                value={newTest.status}
-                onChange={(e) => setNewTest({ ...newTest, status: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  fontSize: '14px',
-                  outline: 'none',
-                }}
-              >
-                <option value="Pending">Pending</option>
-                <option value="Scheduled">Scheduled</option>
-                <option value="Collection Booked">Collection Booked</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
-            </div>
-            
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Scheduled For</label>
-              <input
-                type="text"
-                value={newTest.scheduled_for}
-                onChange={(e) => setNewTest({ ...newTest, scheduled_for: e.target.value })}
-                placeholder="e.g., Tomorrow, Friday, or specific date"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  fontSize: '14px',
-                  outline: 'none',
-                }}
-              />
-            </div>
-            
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Additional Details</label>
-              <textarea
-                value={newTest.detail}
-                onChange={(e) => setNewTest({ ...newTest, detail: e.target.value })}
-                placeholder="Any additional instructions or notes"
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  fontSize: '14px',
-                  outline: 'none',
-                  resize: 'vertical',
-                }}
-              />
-            </div>
-            
-            <button
-              onClick={handleAddLabTest}
-              disabled={loading || !newTest.title}
-              style={{
-                padding: '12px 24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: loading || !newTest.title ? 'rgba(32,181,223,0.5)' : 'rgba(32,181,223,1)',
-                color: 'white',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: loading || !newTest.title ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {loading ? 'Ordering...' : 'Order Lab Test'}
-            </button>
+            <button className='dl-btn' type='button' onClick={resetForm}>Cancel</button>
           </div>
-        </div>
+          <div className='dl-grid'>
+            <label className='dl-field'><span>Test title</span><input style={inputStyle} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder='Complete Blood Count' /></label>
+            <label className='dl-field'><span>Category</span><input style={inputStyle} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder='Blood Test' /></label>
+            <label className='dl-field'><span>Specific test</span><input style={inputStyle} value={form.test} onChange={(event) => setForm({ ...form, test: event.target.value })} placeholder='CBC' /></label>
+            <label className='dl-field'><span>Priority</span><select style={inputStyle} value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })}><option>Routine</option><option>Urgent</option><option>High</option></select></label>
+            <label className='dl-field'><span>Status</span><select style={inputStyle} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option>Pending</option><option>Booked</option><option>Collected</option><option>Processing</option><option>Results Available</option><option>Completed</option></select></label>
+            <label className='dl-field'><span>Recommended by</span><input style={inputStyle} type='datetime-local' value={form.recommended_date} onChange={(event) => setForm({ ...form, recommended_date: event.target.value })} /></label>
+            <label className='dl-field'><span>Known appointment time</span><input style={inputStyle} type='datetime-local' value={form.scheduled_for} onChange={(event) => setForm({ ...form, scheduled_for: event.target.value })} /></label>
+            <label className='dl-field'><span>Processing time</span><input style={inputStyle} value={form.processing_time} onChange={(event) => setForm({ ...form, processing_time: event.target.value })} placeholder='24 hrs' /></label>
+            <label className='dl-field'><span>Recommended lab</span><input style={inputStyle} value={form.recommended_lab_name} onChange={(event) => setForm({ ...form, recommended_lab_name: event.target.value })} placeholder='Any accredited laboratory' /></label>
+            <label className='dl-field'><span>Recommended lab details</span><input style={inputStyle} value={form.recommended_lab_address} onChange={(event) => setForm({ ...form, recommended_lab_address: event.target.value })} placeholder='Optional address, branch, or instruction' /></label>
+          </div>
+          <div className='dl-grid' style={{ marginTop: '12px' }}>
+            <label className='dl-field'><span>Patient-facing description</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+            <label className='dl-field'><span>Reason for test</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} /></label>
+            <label className='dl-field'><span>Preparation instructions</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.preparation_instructions} onChange={(event) => setForm({ ...form, preparation_instructions: event.target.value })} /></label>
+          </div>
+          <button className='dl-btn primary' type='button' onClick={handleSave} disabled={saving || !form.title.trim()} style={{ marginTop: '14px' }}>
+            {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Lab Request'}
+          </button>
+        </section>
       )}
 
-      {/* Lab Tests List */}
-      {labTests.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: T.navy }}>Lab Test Orders</h2>
+      <section className='dl-card'>
+        <div className='dl-header' style={{ marginBottom: '14px' }}>
+          <div>
+            <p className='dl-eyebrow' style={{ margin: 0 }}>Patient requests</p>
+            <h2 style={{ margin: '5px 0 0', color: T.navy }}>Lab test orders</h2>
+          </div>
+          <button className='dl-btn' type='button' onClick={() => fetchLabTests()} disabled={!selectedPatientId || loading}>{loading ? 'Loading...' : 'Refresh'}</button>
+        </div>
+        {!selectedPatientId && <div className='dl-empty'>Choose a patient to view or create lab requests.</div>}
+        {selectedPatientId && !loading && labTests.length === 0 && <div className='dl-empty'>No lab requests yet for this patient.</div>}
+        <div style={{ display: 'grid', gap: '12px' }}>
           {labTests.map((test) => (
-            <div
-              key={test.id}
-              style={{
-                background: 'rgba(255,255,255,0.88)',
-                backdropFilter: 'blur(22px) saturate(175%)',
-                WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-                borderRadius: '16px',
-                border: '1px solid rgba(255,255,255,0.88)',
-                boxShadow: Sh.card,
-                padding: '20px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700, color: T.navy }}>{test.title}</h3>
-                  {test.test && (
-                    <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{test.test}</p>
-                  )}
-                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Status: {test.status}</span>
-                    {test.category && (
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Category: {test.category}</span>
-                    )}
-                    {test.scheduled_for && (
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: T.blue }}>Scheduled: {test.scheduled_for}</span>
-                    )}
-                  </div>
-                  {test.detail && (
-                    <p style={{ margin: '8px 0 0', fontSize: '13px', color: T.slate2 }}>{test.detail}</p>
-                  )}
+            <article className='dl-order' key={test.id}>
+              <div className='dl-header'>
+                <div>
+                  <h3 style={{ margin: '0 0 4px', color: T.navy }}>{test.title}</h3>
+                  <p style={{ margin: 0, color: T.slate }}>{test.description || test.test || 'No description added.'}</p>
                 </div>
-                <button
-                  onClick={() => handleDeleteLabTest(test.id)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: 'rgba(220,38,38,0.1)',
-                    color: T.red,
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                <select
+                  style={{ ...inputStyle, width: '190px' }}
+                  value={test.status}
+                  onChange={(event) => handleStatusChange(test, event.target.value)}
+                  disabled={saving}
                 >
-                  Delete
-                </button>
+                  <option>Pending</option>
+                  <option>Booked</option>
+                  <option>Collected</option>
+                  <option>Processing</option>
+                  <option>Results Available</option>
+                  <option>Completed</option>
+                </select>
               </div>
-            </div>
+              <div className='dl-meta'>
+                <span>Category: {test.category || 'Diagnostic Test'}</span>
+                <span>Priority: {test.priority || 'Routine'}</span>
+                <span>Recommended: {test.completionDate || test.recommended_date || 'Not set'}</span>
+                <span>Recommended lab: {test.recommended_lab_name || 'Any accredited lab'}</span>
+                {test.result_filename && <span>Result: {test.result_filename}</span>}
+              </div>
+              <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                <div style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(4,53,77,0.06)' }}>
+                  <div className='dl-eyebrow'>Doctor lab guidance</div>
+                  <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.recommended_lab_name || 'Any accredited laboratory'}</div>
+                  {test.recommended_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: '12px' }}>{test.recommended_lab_address}</div>}
+                </div>
+                <div style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(4,53,77,0.06)' }}>
+                  <div className='dl-eyebrow'>Patient recorded appointment</div>
+                  <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.selected_lab_name || 'Not recorded yet'}</div>
+                  <div style={{ marginTop: '2px', color: T.slate, fontSize: '12px' }}>{test.scheduledForLabel || test.scheduled_for || 'No date recorded'}{test.home_collection ? ' - home collection' : ''}</div>
+                  {test.selected_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: '12px' }}>{test.selected_lab_address}</div>}
+                </div>
+              </div>
+              {test.reason && <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>Reason: {test.reason}</p>}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button className='dl-btn' type='button' onClick={() => beginEdit(test)}>Edit</button>
+                <input
+                  id={`lab-result-${test.id}`}
+                  type='file'
+                  accept='.pdf,image/png,image/jpeg,image/webp'
+                  style={{ display: 'none' }}
+                  onChange={(event) => handleUploadResult(test, event.target.files?.[0])}
+                />
+                <label className='dl-btn primary' htmlFor={`lab-result-${test.id}`} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  Upload Result
+                </label>
+                <button className='dl-btn danger' type='button' onClick={() => handleDelete(test.id)} disabled={saving}>Delete</button>
+              </div>
+            </article>
           ))}
         </div>
-      )}
-
-      {labTests.length === 0 && selectedPatientId && !loading && (
-        <div style={{ textAlign: 'center', padding: '40px', color: T.slate2 }}>
-          <p>No lab test orders found for this patient</p>
-        </div>
-      )}
+      </section>
     </div>
   )
 }

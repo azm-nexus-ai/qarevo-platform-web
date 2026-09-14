@@ -1,6 +1,6 @@
 'use client'
 
-import { T, Glass } from '@/lib/tokens'
+import { T } from '@/lib/tokens'
 import HoverBtn from '@/components/buttons/HoverBtn'
 
 interface LogoutModalProps {

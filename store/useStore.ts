@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import { createAuthSlice } from '@/store/slices/authSlice'
+import { createAuthSlice, type StoreState } from '@/store/slices/authSlice'
 
   
-export const useStore = create<any>()((...a) => ({
+export const useStore = create<StoreState>()((...a) => ({
   ...createAuthSlice(...a),
 }))

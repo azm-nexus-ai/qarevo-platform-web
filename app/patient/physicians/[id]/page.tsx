@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
-import { useEffect, useState, Suspense, useMemo } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams } from '@/lib/booking'
 import { getPatientDoctor } from '@/lib/api'
@@ -10,7 +10,6 @@ import type { PatientDoctor } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import type { Physician, PhysicianProfileContent } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'
-import HoverBtn from '@/components/buttons/HoverBtn'
 import DoctorCard from '@/components/cards/DoctorCard'
 import dynamic from 'next/dynamic'
 
@@ -127,6 +126,11 @@ function isPhysicianProfileContent(value: unknown): value is PhysicianProfileCon
   return Array.isArray(profile.services) && Array.isArray(profile.availabilitySlots)
 }
 
+function profileText(profile: Record<string, unknown> | undefined, key: string): string {
+  const value = profile?.[key]
+  return typeof value === 'string' ? value : ''
+}
+
 function toPhysician(doctor: PatientDoctor): Physician {
   return {
     id: doctor.id,
@@ -166,7 +170,8 @@ function toProfile(doctor: PatientDoctor): PhysicianProfileContent {
 
 function toBookingHref(physician: Physician, serviceType: string, preservedParams: URLSearchParams) {
   const params = buildBookingQueryParams(preservedParams, physician, serviceType)
-  return `/patient/consultation-booking/date-time?provider_id=${physician.id}&service_type=${serviceType || 'video'}&from=profile`
+  params.set('from', 'profile')
+  return `/patient/consultation-booking/date-time?${params.toString()}`
 }
 
 function loadingPhysician(id: string): Physician {
@@ -209,7 +214,8 @@ function PhysicianProfilePageContent() {
   const [expandedBiography, setExpandedBiography] = useState(false)
   const [expandedEducation, setExpandedEducation] = useState(false)
   const [expandedExperience, setExpandedExperience] = useState(false)
-  const [mapError, setMapError] = useState(false)
+  const preselectedService = searchParams.get('svc') ?? ''
+  const preselectedSlot = searchParams.get('slot') ?? ''
 
   useEffect(() => {
     let cancelled = false
@@ -217,12 +223,27 @@ function PhysicianProfilePageContent() {
     getPatientDoctor(physicianId)
       .then(async (doctor) => {
         if (!cancelled) {
+          const loadedProfile = toProfile(doctor)
+          const initialService = loadedProfile.services.some((service) => service.type === preselectedService)
+            ? preselectedService
+            : loadedProfile.services[0]?.type ?? 'video'
+          const firstAvailableSlot = loadedProfile.availabilitySlots[0]?.slots[0] ?? ''
+
           setRemoteDoctor(doctor)
-          // Geocode the address for the map
-          const locationAddress = (doctor.profile as any)?.location?.address
-          const profileAddress = (doctor.profile as any)?.address
-          const profileCity = (doctor.profile as any)?.city
-          const profileCountry = (doctor.profile as any)?.country
+          setSelectedService(initialService)
+          setSelectedDay(loadedProfile.availabilitySlots[0]?.day ?? 'Mon')
+          setSelectedSlot(preselectedSlot || firstAvailableSlot)
+          setExpandedReviewId(loadedProfile.reviews[0]?.id ?? '')
+          setOpenFaq(loadedProfile.faq[0]?.q ?? '')
+
+          const profileRecord = doctor.profile
+          const location = profileRecord?.location
+          const locationAddress = location && typeof location === 'object' && !Array.isArray(location)
+            ? profileText(location as Record<string, unknown>, 'address')
+            : ''
+          const profileAddress = profileText(profileRecord, 'address')
+          const profileCity = profileText(profileRecord, 'city')
+          const profileCountry = profileText(profileRecord, 'country')
 
           const address = locationAddress ||
             `${profileAddress || ''}, ${profileCity || ''}, ${profileCountry || ''}`
@@ -237,17 +258,14 @@ function PhysicianProfilePageContent() {
                 // Geocoding failed, show placeholder
                 setMapCoordinates(null)
                 setMapLoading(false)
-                setMapError(true)
               }
             } catch (error) {
               console.error('Geocoding error:', error)
               setMapCoordinates(null)
               setMapLoading(false)
-              setMapError(true)
             }
           } else {
             setMapLoading(false)
-            setMapError(true)
           }
         }
       })
@@ -262,30 +280,14 @@ function PhysicianProfilePageContent() {
     return () => {
       cancelled = true
     }
-  }, [physicianId])
+  }, [physicianId, preselectedService, preselectedSlot])
 
   const physician = remoteDoctor ? toPhysician(remoteDoctor) : loadingPhysician(physicianId)
   const profile = remoteDoctor ? toProfile(remoteDoctor) : DEFAULT_PROFILE
 
-  const preselectedService = searchParams.get('svc') ?? ''
-  const validPreselectedService = profile.services.some((service) => service.type === preselectedService)
-    ? preselectedService
-    : profile.services[0]?.type ?? 'video'
-
   const [reviewSort, setReviewSort] = useState<ReviewSort>('recent')
   const [reviewsLoaded, setReviewsLoaded] = useState(false)
   const [faqLoaded, setFaqLoaded] = useState(false)
-
-  // Initialize state with profile data when available
-  useEffect(() => {
-    if (remoteDoctor) {
-      setSelectedService(validPreselectedService)
-      setSelectedDay(profile.availabilitySlots[0]?.day ?? 'Mon')
-      setSelectedSlot(profile.availabilitySlots[0]?.slots[0] ?? '')
-      setExpandedReviewId(profile.reviews[0]?.id ?? '')
-      setOpenFaq(profile.faq[0]?.q ?? '')
-    }
-  }, [remoteDoctor, validPreselectedService, profile.availabilitySlots, profile.reviews, profile.faq])
 
   const preservedQuery = new URLSearchParams(searchParams.toString())
   preservedQuery.delete('intent')
@@ -310,8 +312,6 @@ function PhysicianProfilePageContent() {
   const sortedReviews = sortReviews(profile.reviews, reviewSort)
 
   const relatedPhysicians: Physician[] = []
-
-  const activeService = profile.services.find((service) => service.type === effectiveSelectedService) ?? profile.services[0]
 
   if (loadingRemoteDoctor && !remoteDoctor) {
     return (
@@ -542,7 +542,7 @@ function PhysicianProfilePageContent() {
                 return (
                   <Link
                     key={service.type}
-                    href={`/patient/consultation-booking/date-time?provider_id=${physicianId}&service_type=${service.type}&from=profile`}
+                    href={toBookingHref(physician, service.type, preservedQuery)}
                     style={{ textAlign: 'left', borderRadius: '14px', border: active ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: active ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.84)', padding: '12px', cursor: 'pointer', textDecoration: 'none', display: 'block' }}
                   >
                     <p style={{ margin: '0 0 4px', fontSize: '13px', color: T.navy, fontWeight: 700 }}>{service.label}</p>

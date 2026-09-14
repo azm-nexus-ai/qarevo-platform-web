@@ -10,7 +10,6 @@ import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/con
 import {
   INSURANCE_OPTIONS,
   LANGUAGE_OPTIONS,
-  PHYSICIANS,
   QUICK_SPECIALTIES,
 } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'

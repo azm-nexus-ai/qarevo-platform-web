@@ -18,6 +18,11 @@ type PatientPortalShellProps = {
   children: ReactNode
   headerActions?: ReactNode
   rightRail?: ReactNode
+  appearance?: {
+    darkMode?: boolean
+    highContrast?: boolean
+    fontSize?: string
+  }
 }
 
 // ─── Shared Sidebar Content ──────────────────────────────────────────────────
@@ -138,9 +143,13 @@ export default function PatientPortalShell({
   children,
   headerActions,
   rightRail,
+  appearance,
 }: PatientPortalShellProps) {
   const pathname = usePathname()
   const [userSettings, setUserSettings] = useState<PatientSettings | null>(null)
+  const darkMode = appearance?.darkMode ?? userSettings?.dark_mode ?? false
+  const highContrast = appearance?.highContrast ?? userSettings?.high_contrast ?? false
+  const fontSize = (appearance?.fontSize ?? userSettings?.font_size ?? 'Medium').toLowerCase()
 
   useEffect(() => {
     const loadUserSettings = async () => {
@@ -160,28 +169,142 @@ export default function PatientPortalShell({
   }, [])
 
   return (
-    <main className='min-h-screen relative' style={{ background: PAGE_BG }}>
+    <main
+      className={`min-h-screen relative patient-portal-shell ${darkMode ? 'pps-theme-dark' : ''} ${highContrast ? 'pps-theme-contrast' : ''} pps-font-${fontSize}`}
+      style={{ background: darkMode ? '#071723' : PAGE_BG }}
+    >
       <style>{`
         /* ── Grid ── */
         .pps-shell {
           display: grid;
-          grid-template-columns: 260px minmax(0, 1fr) 320px;
+          grid-template-columns: 260px minmax(0, 1fr);
           gap: 18px;
           max-width: 1460px;
           margin: 0 auto;
           padding: 18px;
         }
+        .pps-shell-has-rail {
+          grid-template-columns: 260px minmax(0, 1fr) 320px;
+        }
         .pps-left, .pps-main, .pps-right { min-width: 0; }
         .pps-sidebar, .pps-right-rail { position: sticky; top: 18px; }
+        .patient-portal-shell.pps-font-small { font-size: 14px; }
+        .patient-portal-shell.pps-font-large { font-size: 16.5px; }
+        .patient-portal-shell.pps-theme-dark {
+          color-scheme: dark;
+        }
+        .patient-portal-shell.pps-theme-dark .pps-sidebar,
+        .patient-portal-shell.pps-theme-dark .pps-main > header,
+        .patient-portal-shell.pps-theme-dark .pps-right-rail > *,
+        .patient-portal-shell.pps-theme-dark .portal-card,
+        .patient-portal-shell.pps-theme-dark .portal-empty-state {
+          background: rgba(11, 32, 48, 0.94) !important;
+          border-color: rgba(125, 211, 252, 0.2) !important;
+          color: #E6F6FF !important;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 54px rgba(0,0,0,0.28) !important;
+        }
+        .patient-portal-shell.pps-theme-dark .pps-main > header h1,
+        .patient-portal-shell.pps-theme-dark .pps-main > header p,
+        .patient-portal-shell.pps-theme-dark .pps-right-rail h2,
+        .patient-portal-shell.pps-theme-dark .pps-right-rail p,
+        .patient-portal-shell.pps-theme-dark .pps-right-rail span,
+        .patient-portal-shell.pps-theme-dark .pps-right-rail strong,
+        .patient-portal-shell.pps-theme-dark .portal-card h1,
+        .patient-portal-shell.pps-theme-dark .portal-card h2,
+        .patient-portal-shell.pps-theme-dark .portal-card h3,
+        .patient-portal-shell.pps-theme-dark .portal-card p,
+        .patient-portal-shell.pps-theme-dark .portal-card span,
+        .patient-portal-shell.pps-theme-dark .portal-card strong,
+        .patient-portal-shell.pps-theme-dark .portal-card label,
+        .patient-portal-shell.pps-theme-dark .portal-empty-state p {
+          color: #E6F6FF !important;
+        }
+        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]),
+        .patient-portal-shell.pps-theme-dark .pps-main > div > section,
+        .patient-portal-shell.pps-theme-dark .pps-main article {
+          background: rgba(11, 32, 48, 0.88) !important;
+          border-color: rgba(125, 211, 252, 0.18) !important;
+        }
+        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) h1,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) h2,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) h3,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) p,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) span,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) label,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > section h1,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > section h2,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > section h3,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > section p,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > section span,
+        .patient-portal-shell.pps-theme-dark .pps-main > div > section label {
+          color: #E6F6FF !important;
+        }
+        .patient-portal-shell.pps-theme-dark .pps-main input,
+        .patient-portal-shell.pps-theme-dark .pps-main select,
+        .patient-portal-shell.pps-theme-dark .pps-main textarea,
+        .patient-portal-shell.pps-theme-dark .portal-card input,
+        .patient-portal-shell.pps-theme-dark .portal-card select,
+        .patient-portal-shell.pps-theme-dark .portal-card textarea {
+          background: rgba(7, 23, 35, 0.92) !important;
+          border-color: rgba(125, 211, 252, 0.22) !important;
+          color: #E6F6FF !important;
+        }
+        .patient-portal-shell.pps-theme-dark .pps-main input::placeholder,
+        .patient-portal-shell.pps-theme-dark .pps-main textarea::placeholder {
+          color: rgba(230,246,255,0.56) !important;
+        }
+        .patient-portal-shell.pps-theme-dark .portal-button-secondary,
+        .patient-portal-shell.pps-theme-dark .portal-card button:not(.portal-button-primary):not([style*="linear-gradient"]) {
+          background: rgba(7, 23, 35, 0.88) !important;
+          border-color: rgba(125, 211, 252, 0.22) !important;
+          color: #E6F6FF !important;
+        }
+        .patient-portal-shell.pps-theme-dark .portal-button-danger {
+          background: rgba(127, 29, 29, 0.34) !important;
+          border-color: rgba(248, 113, 113, 0.34) !important;
+          color: #FCA5A5 !important;
+        }
+        .patient-portal-shell.pps-theme-dark .portal-badge-neutral {
+          background: rgba(125, 211, 252, 0.12) !important;
+          color: #BAE6FD !important;
+        }
+        .patient-portal-shell.pps-theme-dark .portal-badge-info {
+          background: rgba(32,181,223,0.18) !important;
+          color: #67E8F9 !important;
+        }
+        .patient-portal-shell.pps-theme-dark .portal-badge-success {
+          background: rgba(15,158,119,0.22) !important;
+          color: #86EFAC !important;
+        }
+        .patient-portal-shell.pps-theme-dark .portal-badge-warning {
+          background: rgba(217,119,6,0.22) !important;
+          color: #FDBA74 !important;
+        }
+        .patient-portal-shell.pps-theme-dark .portal-badge-danger {
+          background: rgba(220,38,38,0.2) !important;
+          color: #FCA5A5 !important;
+        }
+        .patient-portal-shell.pps-theme-contrast .pps-main,
+        .patient-portal-shell.pps-theme-contrast .pps-sidebar {
+          filter: contrast(1.08) saturate(1.08);
+        }
         /* ── Responsive ── */
         @media (max-width: 1280px) {
-          .pps-shell { grid-template-columns: 240px minmax(0, 1fr); }
+          .pps-shell,
+          .pps-shell-has-rail { grid-template-columns: 240px minmax(0, 1fr); }
           .pps-right { display: none; }
         }
         @media (max-width: 920px) {
-          .pps-shell { grid-template-columns: 1fr; padding: 0 14px 14px; padding-top: 14px; }
+          .pps-shell { grid-template-columns: 1fr; padding: 0 12px 14px; padding-top: 14px; gap: 12px; }
           .pps-left { display: none; }
           .pps-head-row { flex-direction: column; align-items: stretch !important; }
+          .pps-main > header { padding: 16px !important; border-radius: 20px !important; }
+          .pps-main > header h1 { font-size: 26px !important; letter-spacing: 0 !important; }
+        }
+        @media (max-width: 560px) {
+          .pps-shell { padding-left: 10px; padding-right: 10px; }
+          .pps-head-row > div:last-child,
+          .pps-head-row > div:last-child button { width: 100%; }
         }
       `}</style>
 
@@ -199,7 +322,7 @@ export default function PatientPortalShell({
         }}
       />
 
-      <div className='pps-shell'>
+      <div className={`pps-shell ${rightRail ? 'pps-shell-has-rail' : ''}`}>
         {/* Desktop Sidebar */}
         <aside className='pps-left'>
           <div
@@ -241,7 +364,7 @@ export default function PatientPortalShell({
                 <p style={{ margin: 0, maxWidth: '760px', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>{description}</p>
               </div>
               {headerActions ? (
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>{headerActions}</div>
+                <div className='pps-header-actions' style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>{headerActions}</div>
               ) : null}
             </div>
           </header>

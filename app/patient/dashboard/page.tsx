@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
@@ -199,6 +199,15 @@ const notifications = [
   { title: 'Payment Confirmation', body: 'Consultation fee payment was successful.', time: 'Yesterday' },
 ]
 
+const bookingSpecialties = [
+  'Cardiology',
+  'Dermatology',
+  'General Practice',
+  'Pediatrics',
+  'Psychiatry',
+  'Orthopedics',
+]
+
 function getGreeting(): string {
   const hour = new Date().getHours()
   if (hour < 12) return 'Good Morning'
@@ -288,12 +297,12 @@ function SectionCard({ title, sub, action, children }: { title: string; sub?: st
         padding: '20px',
       }}
     >
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
-        <div>
-          <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.028em', color: T.navy }}>{title}</h2>
+      <header className='pd-section-header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
+        <div className='pd-section-copy'>
+          <h2 className='pd-section-title' style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.028em', color: T.navy }}>{title}</h2>
           {sub && <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>{sub}</p>}
         </div>
-        {action}
+        {action ? <div className='pd-section-action'>{action}</div> : null}
       </header>
       {children}
     </section>
@@ -417,10 +426,12 @@ export default function PatientDashboardPage() {
   const [recommendedDoctors, setRecommendedDoctors] = useState<PatientDoctor[] | null>(null)
   const [recentDoctors, setRecentDoctors] = useState<PatientDoctor[] | null>(null)
   const [selectedSpecialty, setSelectedSpecialty] = useState('')
+  const [specialtyMenuOpen, setSpecialtyMenuOpen] = useState(false)
   const [healthInfo, setHealthInfo] = useState<{ blood_pressure?: string; weight?: string; height?: string; blood_type?: string }>({})
   const [greeting, setGreeting] = useState('')
   const router = useRouter()
   const pathname = usePathname()
+  const specialtyMenuRef = useRef<HTMLDivElement>(null)
   const displayPatientName = patientName || 'Patient'
   const patientInitials = getInitials(displayPatientName)
 
@@ -452,8 +463,13 @@ export default function PatientDashboardPage() {
 
       if (response.ok) {
         const data = await response.json()
-        const doctorId = data.doctor.id
-        const recommendedSlot = data.booking.recommendedSlot
+        const doctorId = text(data?.doctor?.id)
+        const recommendedSlot = text(data?.booking?.recommendedSlot ?? data?.doctor?.nextAvailable)
+
+        if (!doctorId || !recommendedSlot || recommendedSlot.toLowerCase() === 'not available') {
+          router.push(PATIENT_ROUTES.findDoctor)
+          return
+        }
 
         router.push(`/patient/physicians/${doctorId}?from=dashboard&intent=book&slot=${encodeURIComponent(recommendedSlot)}`)
       } else {
@@ -468,8 +484,33 @@ export default function PatientDashboardPage() {
 
   const handleBookBySpecialty = (specialty: string) => {
     if (!specialty) return
+    setSelectedSpecialty(specialty)
+    setSpecialtyMenuOpen(false)
     router.push(`${PATIENT_ROUTES.findDoctor}?specialty=${encodeURIComponent(specialty)}`)
   }
+
+  useEffect(() => {
+    if (!specialtyMenuOpen) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Node && specialtyMenuRef.current?.contains(target)) return
+      setSpecialtyMenuOpen(false)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSpecialtyMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [specialtyMenuOpen])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setGreeting(getGreeting()), 0)
@@ -904,10 +945,37 @@ export default function PatientDashboardPage() {
         .pd-left, .pd-main, .pd-right { min-width: 0; }
         .pd-sidebar { position: sticky; top: 18px; max-height: calc(100vh - 36px); overflow: auto; }
         .pd-head-row { display: flex; gap: 12px; align-items: center; }
+        .pd-dashboard-header-row { display: grid; grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr); gap: 16px; align-items: center; }
+        .pd-greeting-block { min-width: 0; }
+        .pd-greeting-title { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; line-height: 1.14; font-weight: 800; color: ${T.navy}; }
+        .pd-greeting-kicker, .pd-greeting-name { display: block; }
+        .pd-greeting-name { overflow-wrap: anywhere; }
+        .pd-section-header, .pd-section-copy { min-width: 0; }
+        .pd-section-title { font-size: 18px !important; line-height: 1.2 !important; letter-spacing: 0 !important; }
+        .pd-section-action { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: flex-end; }
+        .pd-section-action a { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; border-radius: 11px; padding: 0 10px; background: rgba(255,255,255,0.8); border: 1px solid rgba(4,53,77,0.09); box-shadow: inset 0 1px 0 rgba(255,255,255,0.9); line-height: 1.2; white-space: nowrap; }
+        .pd-toolbar { display: grid; grid-template-columns: minmax(170px, 1fr) 38px 38px 42px; justify-content: flex-end; min-width: 0; width: 100%; max-width: 560px; margin-left: auto; }
+        .pd-profile-avatar { width: 42px !important; height: 42px !important; min-width: 42px !important; min-height: 42px !important; aspect-ratio: 1 / 1; border-radius: 50% !important; display: inline-grid !important; place-items: center !important; line-height: 1 !important; padding: 0 !important; overflow: hidden; flex: 0 0 auto; }
         .pd-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
         .pd-actions-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+        .pd-hero-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; align-items: center; width: 100%; min-width: 0; }
+        .pd-hero-actions > * { min-width: 0; }
+        .pd-primary-cta, .pd-secondary-cta, .pd-specialty-trigger { width: 100%; justify-content: center !important; min-width: 0; }
+        .pd-specialty-wrap { min-width: 0; width: 100%; }
+        .pd-specialty-trigger span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pd-specialty-menu { position: absolute; left: 0; top: calc(100% + 8px); z-index: 320; width: 230px; border-radius: 14px; border: 1px solid rgba(4,53,77,0.12); background: rgba(255,255,255,0.98); box-shadow: 0 18px 34px rgba(4,53,77,0.14), inset 0 1px 0 rgba(255,255,255,0.96); padding: 7px; }
+        .pd-specialty-option { width: 100%; min-height: 36px; border: none; border-radius: 10px; background: transparent; color: ${T.navy}; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 10px; font-size: 12.5px; font-weight: 700; text-align: left; transition: all 0.15s ease; }
+        .pd-specialty-option:hover, .pd-specialty-option:focus-visible { background: rgba(32,181,223,0.12); color: #348CEA; outline: none; }
         .pd-appointment-grid { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 16px; align-items: center; }
         .pd-record-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+        .pd-snapshot-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+        .pd-snapshot-card { min-width: 0; border-radius: 16px; padding: 14px; background: rgba(255,255,255,0.84); border: 1px solid rgba(4,53,77,0.08); }
+        .pd-snapshot-label, .pd-snapshot-sub { overflow-wrap: anywhere; hyphens: auto; }
+        .pd-doctor-carousel { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(min(320px, 100%), 1fr); gap: 12px; overflow-x: auto; padding-bottom: 2px; }
+        .pd-doctor-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 6px; min-width: 0; }
+        .pd-doctor-meta { margin: 0; min-width: 0; font-size: 12px; color: ${T.slate2}; overflow-wrap: anywhere; line-height: 1.45; }
+        .pd-doctor-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+        .pd-doctor-action-link { display: inline-flex; align-items: center; justify-content: center; min-height: 32px; border-radius: 10px; padding: 0 10px; border: 1px solid rgba(4,53,77,0.1); background: rgba(255,255,255,0.82); box-shadow: inset 0 1px 0 rgba(255,255,255,0.92); text-decoration: none; font-size: 12px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
         .pd-notice-dot { width: 8px; height: 8px; border-radius: 50%; background: #20B5DF; box-shadow: 0 0 0 0 rgba(32,181,223,0.5); animation: qarevo-pulse 2s infinite; }
 
         @keyframes qarevo-pulse {
@@ -924,6 +992,7 @@ export default function PatientDashboardPage() {
         @media (max-width: 1200px) {
           .pd-shell { grid-template-columns: 240px minmax(0, 1fr); }
           .pd-right { display: none; }
+          .pd-dashboard-header-row { grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.1fr); }
           .pd-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .pd-actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
@@ -933,15 +1002,43 @@ export default function PatientDashboardPage() {
           .pd-left { display: none; }
           .pd-main { order: 1; }
           .pd-head-row { flex-wrap: wrap; }
+          .pd-dashboard-header-row { grid-template-columns: 1fr; align-items: stretch; }
+          .pd-toolbar { grid-template-columns: minmax(0, 1fr); justify-content: stretch; max-width: none; margin-left: 0; }
+          .pd-toolbar > button { display: none !important; }
           .pd-search { width: 100% !important; }
+          .pd-snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         @media (max-width: 680px) {
+          .pd-greeting-title { font-size: 22px; }
+          .pd-toolbar { grid-template-columns: minmax(0, 1fr); gap: 8px; }
           .pd-summary-grid { grid-template-columns: 1fr; }
           .pd-actions-grid { grid-template-columns: 1fr; }
           .pd-appointment-grid { grid-template-columns: 1fr; }
           .pd-record-grid { grid-template-columns: 1fr; }
-          .pd-hero-actions { flex-direction: column; }
+          .pd-hero-actions { grid-template-columns: 1fr; }
+          .pd-primary-cta { grid-column: 1 / -1; width: 100%; justify-content: center !important; }
+          .pd-secondary-cta, .pd-specialty-trigger { width: 100%; justify-content: center !important; min-height: 44px !important; white-space: nowrap; }
+          .pd-specialty-menu { width: min(230px, calc(100vw - 56px)); }
+          .pd-snapshot-grid { grid-template-columns: 1fr; }
+          .pd-doctor-carousel { grid-auto-flow: row; grid-template-columns: 1fr; overflow-x: visible; }
+          .pd-section-header { display: grid !important; grid-template-columns: 1fr; gap: 10px !important; }
+          .pd-section-title { font-size: 19px !important; }
+          .pd-section-action { justify-content: stretch; width: 100%; }
+          .pd-section-action a { width: 100%; min-height: 38px; }
+          .pd-doctor-footer { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 0; }
+          .pd-doctor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+          .pd-doctor-actions:has(.pd-doctor-action-link:only-child) { grid-template-columns: 1fr; }
+          .pd-doctor-action-link { min-height: 38px; width: 100%; }
+        }
+        @media (max-width: 430px) {
+          .pd-toolbar { grid-template-columns: minmax(0, 1fr); }
+          .pd-shell { padding-left: 12px; padding-right: 12px; }
+          .pd-main section { padding: 18px !important; }
+          .pd-greeting-title { font-size: 21px; line-height: 1.16; }
+          .pd-section-title { font-size: 18px !important; }
+          .pd-section-action a { justify-content: space-between; padding: 0 12px; }
+          .pd-doctor-actions { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -1018,15 +1115,16 @@ export default function PatientDashboardPage() {
 
         <section className='pd-main' aria-label='Patient dashboard home'>
           <header style={{ ...Glass.nav, position: 'relative', zIndex: 90, overflow: 'visible', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.82)', padding: '14px 14px 12px', marginBottom: '14px' }}>
-            <div className='pd-head-row' style={{ justifyContent: 'space-between' }}>
-              <div>
-                <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>
-                  {greeting}{patientName ? `, ${patientName}` : ''} <span aria-hidden='true'>👋</span>
+            <div className='pd-dashboard-header-row'>
+              <div className='pd-greeting-block'>
+                <h1 className='pd-greeting-title'>
+                  <span className='pd-greeting-kicker'>{greeting}</span>
+                  <span className='pd-greeting-name'>{patientName || 'Patient'} <span aria-hidden='true'>👋</span></span>
                 </h1>
                 <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>How are you feeling today?</p>
               </div>
-              <div className='pd-head-row'>
-                <label className='pd-search' htmlFor='dashboard-search' style={{ width: '300px', position: 'relative', zIndex: 120, display: 'block' }}>
+              <div className='pd-head-row pd-toolbar'>
+                <label className='pd-search' htmlFor='dashboard-search' style={{ width: '100%', position: 'relative', zIndex: 120, display: 'block', minWidth: 0 }}>
                   <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: search ? '#348CEA' : T.slate2, pointerEvents: 'none' }}>
                     <Ico p={ICONS.search} size={15} sw={1.8} />
                   </span>
@@ -1134,12 +1232,12 @@ export default function PatientDashboardPage() {
                 >
                   <Ico p={ICONS.message} size={16} sw={1.8} />
                 </HoverBtn>
-                <button type='button' aria-label='Open profile settings' onClick={() => router.push(PATIENT_ROUTES.settings)} style={{ width: '38px', height: '38px', borderRadius: '50%', border: '1px solid rgba(4,53,77,0.11)', background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))', color: T.navy, fontWeight: 700, cursor: 'pointer' }}>{patientInitials}</button>
+                <button type='button' className='pd-profile-avatar' aria-label='Open profile settings' onClick={() => router.push(PATIENT_ROUTES.settings)} style={{ width: '42px', height: '42px', borderRadius: '50%', border: '1px solid rgba(4,53,77,0.11)', background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))', color: T.navy, fontWeight: 700, cursor: 'pointer' }}>{patientInitials}</button>
               </div>
             </div>
           </header>
 
-          <section style={{ ...Glass.aiCard, borderRadius: '22px', padding: '22px', marginBottom: '14px', boxShadow: Sh.float }}>
+          <section style={{ ...Glass.aiCard, position: 'relative', zIndex: specialtyMenuOpen ? 260 : 1, overflow: 'visible', borderRadius: '22px', padding: '22px', marginBottom: '14px', boxShadow: Sh.float }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '18px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ maxWidth: '620px' }}>
                 <p style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#348CEA' }}>Your Care Journey</p>
@@ -1165,8 +1263,9 @@ export default function PatientDashboardPage() {
               </div>
             </div>
 
-            <div className='pd-hero-actions' style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
+            <div className='pd-hero-actions' style={{ marginTop: '16px' }}>
               <HoverBtn
+                className='pd-primary-cta'
                 onClick={() => router.push(PATIENT_ROUTES.findDoctor)}
                 base={{
                   minHeight: '38px',
@@ -1194,6 +1293,7 @@ export default function PatientDashboardPage() {
               </HoverBtn>
 
               <HoverBtn
+                className='pd-secondary-cta'
                 onClick={() => router.push(PATIENT_ROUTES.findDoctor)}
                 base={{
                   minHeight: '38px',
@@ -1222,6 +1322,7 @@ export default function PatientDashboardPage() {
               </HoverBtn>
 
               <HoverBtn
+                className='pd-secondary-cta'
                 onClick={handleBookNextAvailable}
                 base={{
                   minHeight: '38px',
@@ -1249,38 +1350,55 @@ export default function PatientDashboardPage() {
                 Book Next Available
               </HoverBtn>
 
-              <div style={{ position: 'relative' }}>
-                <select
-                  value={selectedSpecialty}
-                  onChange={(e) => handleBookBySpecialty(e.target.value)}
-                  style={{
-                    minHeight: '44px',
-                    padding: '0 16px',
+              <div ref={specialtyMenuRef} className='pd-specialty-wrap' style={{ position: 'relative' }}>
+                <HoverBtn
+                  className='pd-specialty-trigger'
+                  ariaLabel='Book by specialty'
+                  title='Book by specialty'
+                  onClick={() => setSpecialtyMenuOpen((open) => !open)}
+                  base={{
+                    minHeight: '38px',
+                    padding: '0 14px',
                     borderRadius: '12px',
                     border: '1px solid rgba(4,53,77,0.14)',
                     background: 'rgba(255,255,255,0.86)',
                     color: T.navy,
                     display: 'inline-flex',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                     gap: '8px',
                     fontSize: '13.5px',
                     fontWeight: 700,
                     letterSpacing: '-0.015em',
                     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 2px 8px rgba(4,53,77,0.08)',
                     cursor: 'pointer',
-                    appearance: 'none',
-                    paddingRight: '32px',
+                  }}
+                  on={{
+                    background: 'rgba(255,255,255,0.98)',
+                    color: '#348CEA',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 8px 20px rgba(4,53,77,0.1)',
                   }}
                 >
-                  <option value="">Book by Specialty ▾</option>
-                  <option value="Cardiology">Cardiology</option>
-                  <option value="Dermatology">Dermatology</option>
-                  <option value="General Practice">General Practice</option>
-                  <option value="Pediatrics">Pediatrics</option>
-                  <option value="Psychiatry">Psychiatry</option>
-                  <option value="Orthopedics">Orthopedics</option>
-                </select>
-                <Ico p={ICONS.chevronDown} size={12} sw={1.8} color={T.slate} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <span>{selectedSpecialty || 'Book by Specialty'}</span>
+                  <Ico p={ICONS.chevronDown} size={12} sw={1.8} color='currentColor' />
+                </HoverBtn>
+                {specialtyMenuOpen && (
+                  <div className='pd-specialty-menu' role='menu' aria-label='Book by specialty options'>
+                    {bookingSpecialties.map((specialty) => (
+                      <button
+                        key={specialty}
+                        type='button'
+                        role='menuitem'
+                        className='pd-specialty-option'
+                        onClick={() => handleBookBySpecialty(specialty)}
+                      >
+                        <span>{specialty}</span>
+                        {selectedSpecialty === specialty && <Ico p={ICONS.check} size={13} sw={1.9} color='currentColor' />}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -1302,12 +1420,12 @@ export default function PatientDashboardPage() {
           <div style={{ height: '14px' }} />
 
           <SectionCard title='Today’s Health Snapshot' sub='A live read of your care journey, focus areas, and next steps.'>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px' }}>
+            <div className='pd-snapshot-grid'>
               {snapshotCards.map((item) => (
-                <div key={item.label} style={{ borderRadius: '16px', padding: '14px', background: 'rgba(255,255,255,0.84)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                  <p style={{ margin: '0 0 6px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: T.slate2 }}>{item.label}</p>
+                <div key={item.label} className='pd-snapshot-card'>
+                  <p className='pd-snapshot-label' style={{ margin: '0 0 6px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: T.slate2 }}>{item.label}</p>
                   <p style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: T.navy }}>{item.value}</p>
-                  <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.slate }}>{item.sub}</p>
+                  <p className='pd-snapshot-sub' style={{ margin: '6px 0 0', fontSize: '12px', color: T.slate }}>{item.sub}</p>
                 </div>
               ))}
             </div>
@@ -1596,9 +1714,9 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Quick Re-Booking' sub='Book with doctors you have seen before for faster care.' action={<Link href='/patient/find-doctor' style={{ fontSize: '12.5px', color: '#348CEA', fontWeight: 600, textDecoration: 'none' }}>Find new doctor →</Link>}>
+          <SectionCard title='Quick Re-Booking' sub='Book with doctors you have seen before for faster care.' action={<Link href='/patient/find-doctor' style={{ fontSize: '12.5px', color: '#348CEA', fontWeight: 700, textDecoration: 'none' }}>Find new doctor →</Link>}>
             <div style={{ display: 'grid', gap: '10px' }}>
-              <div style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(320px, 1fr)', gap: '12px', overflowX: 'auto', paddingBottom: '2px' }}>
+              <div className='pd-doctor-carousel'>
                 {(recentDoctors ?? []).length === 0 && (
                   <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: '12px', fontWeight: 700 }}>Find a Doctor</Link>}>
                     No recent bookings yet. Book your first consultation to see quick re-booking options here.
@@ -1607,10 +1725,10 @@ export default function PatientDashboardPage() {
                 {(recentDoctors ?? []).map((doc) => (
                   <div key={doc.id} style={{ display: 'grid', gap: '8px' }}>
                     <DoctorCard name={doc.name} specialty={doc.specialty} verification={doc.verification} tags={doc.tags} imageUrl={doc.imageUrl} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '0 6px' }}>
-                      <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>⭐ {doc.rating} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <Link href={`/patient/physicians/${doc.id}?from=dashboard&intent=book`} style={{ fontSize: '12px', color: '#348CEA', textDecoration: 'none', fontWeight: 700 }}>Book Now</Link>
+                    <div className='pd-doctor-footer'>
+                      <p className='pd-doctor-meta'>⭐ {doc.rating} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
+                      <div className='pd-doctor-actions'>
+                        <Link className='pd-doctor-action-link' href={`/patient/physicians/${doc.id}?from=dashboard&intent=book`} style={{ color: '#348CEA' }}>Book Now</Link>
                       </div>
                     </div>
                   </div>
@@ -1621,9 +1739,9 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Recommended Physicians' sub='Continue your care journey by discovering the right specialist.' action={<Link href='/patient/find-doctor' style={{ fontSize: '12.5px', color: '#348CEA', fontWeight: 600, textDecoration: 'none' }}>Open discovery →</Link>}>
+          <SectionCard title='Recommended Physicians' sub='Continue your care journey by discovering the right specialist.' action={<Link href='/patient/find-doctor' style={{ fontSize: '12.5px', color: '#348CEA', fontWeight: 700, textDecoration: 'none' }}>Open discovery →</Link>}>
             <div style={{ display: 'grid', gap: '10px' }}>
-              <div style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(320px, 1fr)', gap: '12px', overflowX: 'auto', paddingBottom: '2px' }}>
+              <div className='pd-doctor-carousel'>
                 {(recommendedDoctors ?? []).length === 0 && (
                   <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: '12px', fontWeight: 700 }}>Open Discovery</Link>}>
                     No verified physicians are available from the API yet.
@@ -1632,11 +1750,11 @@ export default function PatientDashboardPage() {
                 {(recommendedDoctors ?? []).map((doc) => (
                   <div key={doc.name} style={{ display: 'grid', gap: '8px' }}>
                     <DoctorCard name={doc.name} specialty={doc.specialty} verification={doc.verification} tags={doc.tags} imageUrl={doc.imageUrl} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '0 6px' }}>
-                      <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>⭐ {doc.rating} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <Link href={`/patient/physicians/${doc.id}?from=dashboard&intent=view`} style={{ fontSize: '12px', color: T.navy, textDecoration: 'none', fontWeight: 600 }}>View Profile</Link>
-                        <Link href={`/patient/physicians/${doc.id}?from=dashboard&intent=book`} style={{ fontSize: '12px', color: '#348CEA', textDecoration: 'none', fontWeight: 700 }}>Book</Link>
+                    <div className='pd-doctor-footer'>
+                      <p className='pd-doctor-meta'>⭐ {doc.rating} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
+                      <div className='pd-doctor-actions'>
+                        <Link className='pd-doctor-action-link' href={`/patient/physicians/${doc.id}?from=dashboard&intent=view`} style={{ color: T.navy }}>View Profile</Link>
+                        <Link className='pd-doctor-action-link' href={`/patient/physicians/${doc.id}?from=dashboard&intent=book`} style={{ color: '#348CEA' }}>Book</Link>
                       </div>
                     </div>
                   </div>

@@ -7,17 +7,19 @@ interface HoverBtnProps {
   base: CSSProperties
   on: CSSProperties
   children: ReactNode
+  className?: string
   onClick?: () => void
   ariaLabel?: string
   title?: string
   disabled?: boolean
 }
 
-export default function HoverBtn({ base, on, children, onClick, ariaLabel, title, disabled }: HoverBtnProps) {
+export default function HoverBtn({ base, on, children, className, onClick, ariaLabel, title, disabled }: HoverBtnProps) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
       type='button'
+      className={className}
       onClick={onClick}
       aria-label={ariaLabel}
       title={title}

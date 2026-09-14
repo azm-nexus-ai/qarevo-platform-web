@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { T, Sh, Glass } from '@/lib/tokens'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'

@@ -11,6 +11,7 @@ export const DOCTOR_ROUTES = {
   workspace: '/doctor/workspace',
   appointments: '/doctor/appointments',
   patients: '/doctor/patients',
+  messages: '/doctor/messages',
   carePlans: '/doctor/care-plans',
   prescriptions: '/doctor/prescriptions',
   labOrders: '/doctor/lab-orders',
@@ -27,6 +28,7 @@ export const DOCTOR_SIDEBAR_ITEMS: DoctorNavItem[] = [
   { label: 'Workspace', icon: ICONS.steth, href: DOCTOR_ROUTES.workspace },
   { label: 'Appointments', icon: ICONS.calendar, href: DOCTOR_ROUTES.appointments },
   { label: 'Patients', icon: ICONS.user, href: DOCTOR_ROUTES.patients },
+  { label: 'Messages', icon: ICONS.message, href: DOCTOR_ROUTES.messages },
   { label: 'Care Plans', icon: ICONS.brain, href: DOCTOR_ROUTES.carePlans },
   { label: 'Prescriptions', icon: ICONS.pill, href: DOCTOR_ROUTES.prescriptions },
   { label: 'Lab Orders', icon: ICONS.cpu, href: DOCTOR_ROUTES.labOrders },
@@ -48,6 +50,7 @@ export function isDoctorNavActive(pathname: string, href: string) {
     )
   }
   if (href === DOCTOR_ROUTES.patients) return pathname.startsWith('/doctor/patients')
+  if (href === DOCTOR_ROUTES.messages) return pathname.startsWith('/doctor/messages')
   if (href === DOCTOR_ROUTES.carePlans) return pathname.startsWith('/doctor/care-plans')
   if (href === DOCTOR_ROUTES.prescriptions) return pathname.startsWith('/doctor/prescriptions')
   if (href === DOCTOR_ROUTES.labOrders) return pathname.startsWith('/doctor/lab-orders')

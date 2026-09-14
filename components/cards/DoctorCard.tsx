@@ -18,6 +18,7 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
 
   return (
     <div
+      className='doctor-card'
       style={{
         background: 'linear-gradient(145deg, #F6F9FF 0%, #EEF4FF 100%)',
         borderRadius: '14px',
@@ -28,9 +29,44 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
         boxShadow: Sh.inner,
       }}
     >
+      <style>{`
+        .doctor-card { min-width: 0; }
+        .doctor-card-main { min-width: 0; }
+        .doctor-card-name, .doctor-card-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .doctor-card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        @media (max-width: 430px) {
+          .doctor-card {
+            align-items: flex-start !important;
+            gap: 12px !important;
+            padding: 14px !important;
+          }
+          .doctor-card-avatar {
+            width: 46px !important;
+            height: 46px !important;
+          }
+          .doctor-card-name {
+            font-size: 14px !important;
+          }
+          .doctor-card-meta {
+            white-space: normal;
+            font-size: 12px !important;
+            line-height: 1.45;
+            margin-bottom: 10px !important;
+          }
+          .doctor-card-focus {
+            font-size: 9px !important;
+            margin-bottom: 6px !important;
+          }
+          .doctor-card-tags span {
+            padding: 4px 9px !important;
+            font-size: 11.5px !important;
+          }
+        }
+      `}</style>
       <div style={{ position: 'relative', flexShrink: 0 }}>
         {imageError || !imageUrl ? (
           <div
+            className='doctor-card-avatar'
             style={{
               width: '52px',
               height: '52px',
@@ -45,6 +81,7 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
           </div>
         ) : (
           <img
+            className='doctor-card-avatar'
             src={imageUrl}
             alt={name}
             width={52}
@@ -81,8 +118,9 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
         </span>
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className='doctor-card-main' style={{ flex: 1, minWidth: 0 }}>
         <div
+          className='doctor-card-name'
           style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontSize: '15px',
@@ -94,10 +132,11 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
         >
           {name}
         </div>
-        <div style={{ fontSize: '12.5px', color: T.slate2, marginBottom: '16px', letterSpacing: '-0.01em' }}>
+        <div className='doctor-card-meta' style={{ fontSize: '12.5px', color: T.slate2, marginBottom: '16px', letterSpacing: '-0.01em' }}>
           {specialty} · Clinical Ver: {verification}
         </div>
         <div
+          className='doctor-card-focus'
           style={{
             fontSize: '10px',
             fontWeight: 700,
@@ -109,7 +148,7 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
         >
           Clinical Focus
         </div>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <div className='doctor-card-tags'>
           {tags.map((tag, index) => (
             <span
               key={`${tag}-${index}`}

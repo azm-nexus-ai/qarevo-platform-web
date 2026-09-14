@@ -402,15 +402,6 @@ export default function ForgotPasswordPage() {
 
   const shouldShowBanner = errorKind && !['empty', 'invalid'].includes(errorKind)
 
-  const classifyError = (inputEmail: string): Exclude<ErrorKind, 'empty' | 'invalid' | null> | null => {
-    const lower = inputEmail.toLowerCase()
-    if (lower.includes('+network') || lower.startsWith('network@')) return 'network'
-    if (lower.includes('+server') || lower.startsWith('server@')) return 'server'
-    if (lower.includes('+rate') || lower.startsWith('rate@')) return 'rate'
-    if (lower.includes('+expired') || lower.startsWith('expired@')) return 'expired'
-    return null
-  }
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const cleaned = email.trim()

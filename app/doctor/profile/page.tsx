@@ -817,7 +817,7 @@ export default function DoctorProfilePage() {
 
         {consultationServices.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: T.slate2, fontSize: '14px' }}>
-            No consultation services configured yet. Click "Add Service" to create one.
+            No consultation services configured yet. Click &quot;Add Service&quot; to create one.
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '12px' }}>

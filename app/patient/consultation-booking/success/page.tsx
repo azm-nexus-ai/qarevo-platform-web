@@ -284,7 +284,7 @@ function SuccessPageContent() {
                 <div style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 700, color: T.blue }}>Timeline</div>
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {timelineItems.map((item, index) => (
+                {timelineItems.map((item) => (
                   <div key={item.title} className={`success-step ${item.active ? 'active' : ''}`} style={{ transition: 'all 0.2s ease' }}>
                     <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: item.active ? T.blue : T.teal, marginTop: '2px', boxShadow: item.active ? '0 0 0 6px rgba(32,181,223,0.12)' : '0 0 0 6px rgba(165,224,218,0.16)' }} />
                     <div style={{ flex: 1 }}>

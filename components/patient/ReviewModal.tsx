@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { T, Sh, Glass } from '@/lib/tokens'
+import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
@@ -14,7 +14,7 @@ type ReviewModalProps = {
   appointmentId: string
 }
 
-export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName, appointmentId }: ReviewModalProps) {
+export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }: ReviewModalProps) {
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [comment, setComment] = useState('')

@@ -5,17 +5,11 @@ import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
-import {
-  createPatientEpisode,
-  submitPatientEpisodeIntake,
-  updatePatientEpisodeIntake,
-} from '@/lib/api'
+import { createPatientAppointment } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
-
-type AgreementKey = 'info' | 'terms' | 'privacy' | 'policy'
 
 function formatFee(value: number) {
   return `$${value}`
@@ -32,13 +26,39 @@ function readLabel(service: string | null) {
   }
 }
 
+function parseAppointmentStart(dateLabel: string, timeLabel: string) {
+  const trimmedDate = dateLabel.trim()
+  const today = new Date()
+  let datePart = trimmedDate
+  if (/^today$/i.test(trimmedDate)) {
+    datePart = today.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })
+  } else if (/^tomorrow$/i.test(trimmedDate)) {
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    datePart = tomorrow.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  const parsed = new Date(`${datePart} ${timeLabel}`)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('Choose a valid appointment date and time before confirming.')
+  }
+  return parsed
+}
+
+function addDuration(start: Date, durationLabel: string) {
+  const minutes = Number(durationLabel.match(/(\d+)/)?.[1] ?? 30)
+  const end = new Date(start)
+  end.setMinutes(end.getMinutes() + minutes)
+  return end
+}
+
 function ReviewPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const physicianId = searchParams.get('physicianId') ?? ''
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const physicianData = useMemo(() => getBookingPhysician(searchParams, physician), [searchParams, physician])
-  const service = searchParams.get('service') ?? 'video'
+  const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
   const fee = Number(searchParams.get('fee') ?? physician?.consultationFee ?? 140)
   const duration = searchParams.get('duration') ?? '30 min'
   const insurance = searchParams.get('insurance') ?? 'Axa'
@@ -80,11 +100,6 @@ function ReviewPageContent() {
     return `/patient/consultation-booking/date-time?${next.toString()}`
   }, [searchParams, physicianData, service])
 
-  const editHref = useMemo(() => {
-    const next = buildBookingQueryParams(searchParams, physicianData, service)
-    return `/patient/consultation-booking/date-time?${next.toString()}`
-  }, [searchParams, physicianData, service])
-
   const handleConfirm = async () => {
     if (!allAgreed || isSubmitting) return
     setIsSubmitting(true)
@@ -92,22 +107,9 @@ function ReviewPageContent() {
 
     try {
       const insuranceType = /statutory|public|nhs|gkv/i.test(insurance) ? 'public' : 'private'
-      const episode = await createPatientEpisode({
-        pack_id: 'patient-booking-intake',
-        pack_version: '1.0.0',
-        bundesland: searchParams.get('bundesland') ?? 'Berlin',
-        insurance_type: insuranceType,
-        flow_type: service === 'follow-up' ? 'follow_up' : 'consultation',
-        matching_mode: physicianData.id ? 'patient_selects' : 'matching_required',
-        insurance_provider: insurance,
-        consent_data_processing: agreed,
-        consent_ai_assistance: true,
-        recipient_email: email,
-        recipient_phone_e164: phone.replace(/\s/g, ''),
-        notification_channel: 'email',
-      })
-
-      await updatePatientEpisodeIntake(episode.id, {
+      const startAt = parseAppointmentStart(date, slot)
+      const endAt = addDuration(startAt, duration)
+      const intake = {
         raw_text: editableNotes || medicalConcern,
         reported_duration: duration,
         reported_location: physicianData.hospital,
@@ -121,12 +123,34 @@ function ReviewPageContent() {
         selected_physician_name: physicianData.name,
         insurance_provider: insurance,
         consultation_fee: fee,
-      })
+      }
 
-      const submitResult = await submitPatientEpisodeIntake(episode.id)
+      const booking = await createPatientAppointment({
+        provider_id: physicianData.id,
+        start_at: startAt.toISOString(),
+        end_at: endAt.toISOString(),
+        consultation_modality: service,
+        intake,
+        episode: {
+          pack_id: 'patient-booking-intake',
+          pack_version: '1.0.0',
+          bundesland: searchParams.get('bundesland') ?? 'Berlin',
+          insurance_type: insuranceType,
+          flow_type: service === 'follow-up' ? 'follow_up' : 'consultation',
+          matching_mode: physicianData.id ? 'patient_selects' : 'matching_required',
+          insurance_provider: insurance,
+          consent_data_processing: agreed,
+          consent_ai_assistance: true,
+          recipient_email: email,
+          recipient_phone_e164: phone.replace(/\s/g, ''),
+          notification_channel: 'email',
+        },
+      })
       const next = new URLSearchParams(successHref.split('?')[1] ?? '')
-      next.set('episodeId', episode.id)
-      const aiDraftJobId = submitResult.ai_draft?.job_id
+      if (booking.episode_id) next.set('episodeId', booking.episode_id)
+      if (booking.consultation_id) next.set('consultationId', booking.consultation_id)
+      next.set('appointmentId', booking.id)
+      const aiDraftJobId = booking.ai_draft?.job_id
       if (aiDraftJobId) next.set('aiDraftJobId', aiDraftJobId)
       router.push(`/patient/consultation-booking/success?${next.toString()}`)
     } catch (error) {

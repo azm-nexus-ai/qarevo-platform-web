@@ -25,8 +25,9 @@ export interface AuthSlice {
     resetAuth: () => void
   }
 
+export type StoreState = AuthSlice
 
-export const createAuthSlice: StateCreator<any, [], [], AuthSlice> = (set) => ({
+export const createAuthSlice: StateCreator<StoreState, [], [], AuthSlice> = (set) => ({
     isAuthenticated: false,
     user: null,
     isLoading: false,

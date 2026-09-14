@@ -8,8 +8,8 @@ import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
-import { PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
-import { clearAuthTokens, getPatientDashboard, isAuthError, readAccessToken } from '@/lib/api'
+import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
+import { clearAuthTokens, getPatientDashboard, getPatientSettings, isAuthError, readAccessToken } from '@/lib/api'
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -24,6 +24,7 @@ export default function PatientMobileNavigation() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [patientName, setPatientName] = useState('Loading...')
   const [carePlanStatus, setCarePlanStatus] = useState('Loading')
+  const [darkMode, setDarkMode] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
   const patientInitials = getInitials(patientName)
@@ -76,16 +77,20 @@ export default function PatientMobileNavigation() {
     const token = readAccessToken()
     if (!token) return
 
-    const fetchDashboardProfile = async () => {
+    const fetchPatientChrome = async () => {
       try {
         const userId = localStorage.getItem('qarevo_user_id')
-        const data = await getPatientDashboard(userId)
+        const [data, settings] = await Promise.all([
+          getPatientDashboard(userId),
+          getPatientSettings(),
+        ])
         if (data.patient_name) {
           setPatientName(data.patient_name)
         }
         const plans = data.care_plans ?? data.carePlans ?? []
         const activePlan = plans.find((plan) => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
         setCarePlanStatus(activePlan?.status || (plans.length ? 'Active' : 'Not started'))
+        setDarkMode(Boolean(settings.dark_mode))
       } catch (error) {
         if (isAuthError(error)) {
           clearAuthTokens()
@@ -97,11 +102,22 @@ export default function PatientMobileNavigation() {
       }
     }
 
-    fetchDashboardProfile()
+    fetchPatientChrome()
   }, [router])
 
+  useEffect(() => {
+    const handleAppearanceChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ darkMode?: boolean; dark_mode?: boolean }>).detail
+      if (!detail) return
+      setDarkMode(Boolean(detail.darkMode ?? detail.dark_mode))
+    }
+
+    window.addEventListener('qarevo:patient-appearance-changed', handleAppearanceChange)
+    return () => window.removeEventListener('qarevo:patient-appearance-changed', handleAppearanceChange)
+  }, [])
+
   return (
-    <>
+    <div className={darkMode ? 'pmn-theme-dark' : undefined}>
       <style>{`
         .pmn-topbar {
           display: none;
@@ -190,6 +206,33 @@ export default function PatientMobileNavigation() {
           font-size: 18px;
           line-height: 1;
         }
+        .pmn-theme-dark .pmn-topbar,
+        .pmn-theme-dark .pmn-drawer {
+          background: rgba(7, 23, 35, 0.97);
+          border-color: rgba(125, 211, 252, 0.18);
+          color: #E6F6FF;
+          box-shadow: 0 14px 44px rgba(0,0,0,0.34);
+        }
+        .pmn-theme-dark .pmn-hamburger,
+        .pmn-theme-dark .pmn-drawer-close,
+        .pmn-theme-dark button[aria-label="Open messages"] {
+          border-color: rgba(125, 211, 252, 0.22) !important;
+          background: rgba(15, 47, 70, 0.72) !important;
+          color: #E6F6FF !important;
+        }
+        .pmn-theme-dark .pmn-hamburger span {
+          background: #E6F6FF;
+        }
+        .pmn-theme-dark .pmn-drawer section {
+          background: rgba(15, 47, 70, 0.88) !important;
+          border-color: rgba(125, 211, 252, 0.22) !important;
+          color: #E6F6FF !important;
+        }
+        .pmn-theme-dark .pmn-drawer p,
+        .pmn-theme-dark .pmn-drawer span,
+        .pmn-theme-dark .pmn-drawer a {
+          color: #E6F6FF !important;
+        }
 
         @media (max-width: 920px) {
           .pmn-topbar { display: flex; }
@@ -223,7 +266,8 @@ export default function PatientMobileNavigation() {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
           <button
             type="button"
-            aria-label="Notifications"
+            aria-label="Open messages"
+            onClick={() => router.push(PATIENT_ROUTES.messages)}
             style={{
               width: '40px',
               height: '40px',
@@ -238,7 +282,7 @@ export default function PatientMobileNavigation() {
               position: 'relative',
             }}
           >
-            <Ico p={ICONS.ema} size={18} sw={1.8} />
+            <Ico p={ICONS.message} size={18} sw={1.8} />
             <span
               style={{
                 position: 'absolute',
@@ -255,6 +299,7 @@ export default function PatientMobileNavigation() {
           <button
             type="button"
             aria-label="Profile"
+            onClick={() => router.push('/patient/settings')}
             style={{
               width: '38px',
               height: '38px',
@@ -394,6 +439,6 @@ export default function PatientMobileNavigation() {
           onConfirm={handleLogout}
         />
       )}
-    </>
+    </div>
   )
 }

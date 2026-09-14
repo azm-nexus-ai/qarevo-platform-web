@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { getOnboardingRedirectPath, readAuthFlowState } from '@/lib/auth-flow'
-import { ApiError, getApiErrorDetail, loginPatient, storeAuthTokens } from '@/lib/api'
+import { ApiError, getApiErrorDetail, loginPatient, loginPatientWithPasskey, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
@@ -258,6 +258,7 @@ function SocialBtn({ provider, onClick }: { provider: 'google' | 'apple'; onClic
   return (
     <button
       type="button"
+      className="signin-social-btn"
       onClick={onClick}
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
@@ -309,6 +310,9 @@ function getFriendlySignInError(error: unknown) {
   if (error instanceof ApiError && error.status >= 500) {
     return 'Sign in is temporarily unavailable. Please try again shortly.'
   }
+  if (error instanceof Error && /passkey|browser|cancelled/i.test(error.message)) {
+    return error.message
+  }
 
   return 'We could not sign you in right now. Please try again.'
 }
@@ -321,6 +325,7 @@ export default function SignInPage() {
   const [remember, setRemember] = useState(false)
   const [showPw,   setShowPw]   = useState(false)
   const [loading,  setLoading]  = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [touched,  setTouched]  = useState({ email: false, password: false })
   const [authError, setAuthError] = useState('')
 
@@ -355,6 +360,36 @@ export default function SignInPage() {
     }
   }
 
+  const completePatientSignIn = () => {
+    const authFlowState = readAuthFlowState()
+    if (authFlowState?.isAuthenticated) {
+      const nextRoute = authFlowState.onboardingCompleted
+        ? '/patient/dashboard'
+        : getOnboardingRedirectPath(authFlowState)
+      router.push(nextRoute)
+      return
+    }
+
+    router.push('/patient/dashboard')
+  }
+
+  const handlePasskeySignIn = async () => {
+    setTouched((current) => ({ ...current, email: true }))
+    if (!EMAIL_RE.test(email)) return
+
+    setPasskeyLoading(true)
+    setAuthError('')
+    try {
+      const response = await loginPatientWithPasskey(email)
+      storeAuthTokens({ ...response, role: 'patient' })
+      completePatientSignIn()
+    } catch (error) {
+      setAuthError(getFriendlySignInError(error))
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
+
   const pwToggle = (
     <button
       type="button"
@@ -368,13 +403,62 @@ export default function SignInPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
+    <div className="signin-page" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', width: '100%', overflowX: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; }
         input::placeholder { color: rgba(4,53,77,0.3); }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shake { 0%,100% { transform:translateX(0); } 20%,60% { transform:translateX(-5px); } 40%,80% { transform:translateX(5px); } }
         @media (max-width: 860px) { .signin-left { display: none !important; } }
+        .signin-page { min-width: 0; }
+        .signin-form-area,
+        .signin-form-wrap,
+        .signin-card { min-width: 0; }
+        .signin-social-btn { min-width: 0; }
+        @media (max-width: 640px) {
+          .signin-page { display: block !important; }
+          .signin-form-area {
+            min-height: 100svh !important;
+            align-items: flex-start !important;
+            justify-content: flex-start !important;
+            padding: 22px 14px 28px !important;
+            width: 100% !important;
+          }
+          .signin-form-wrap {
+            width: 100% !important;
+            max-width: none !important;
+          }
+          .signin-card {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 24px 18px 22px !important;
+            border-radius: 20px !important;
+          }
+          .signin-logo-row {
+            gap: 14px !important;
+            margin-bottom: 22px !important;
+          }
+          .signin-logo-row h1 {
+            font-size: 22px !important;
+            letter-spacing: 0 !important;
+          }
+          .signin-social-row {
+            flex-direction: column !important;
+          }
+          .signin-social-btn {
+            width: 100% !important;
+            flex: none !important;
+          }
+          .signin-trust-grid {
+            gap: 10px 14px !important;
+          }
+        }
+        @media (max-width: 380px) {
+          .signin-form-area { padding-left: 10px !important; padding-right: 10px !important; }
+          .signin-card { padding-left: 14px !important; padding-right: 14px !important; }
+          .signin-card-mark { display: none !important; }
+          .signin-logo-row h1 { font-size: 20px !important; }
+        }
       `}</style>
 
       {/* Left panel */}
@@ -383,8 +467,8 @@ export default function SignInPage() {
       </div>
 
       {/* Right: form area */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '460px' }}>
+      <div className="signin-form-area" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
+        <div className="signin-form-wrap" style={{ width: '100%', maxWidth: '460px' }}>
 
           {/* Back */}
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
@@ -393,7 +477,7 @@ export default function SignInPage() {
           </Link>
 
           {/* Card */}
-          <div style={{
+          <div className="signin-card" style={{
             background: 'rgba(255,255,255,0.88)',
             backdropFilter: 'blur(28px) saturate(200%)',
             WebkitBackdropFilter: 'blur(28px) saturate(200%)',
@@ -405,7 +489,7 @@ export default function SignInPage() {
           }}>
 
             {/* Logo mark */}
-            <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div className="signin-logo-row" style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
                 <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
                   Sign in to Qarevo
@@ -414,7 +498,7 @@ export default function SignInPage() {
                   Welcome back - your care ecosystem is ready.
                 </p>
               </div>
-              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="signin-card-mark" style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.heart} size={20} sw={1.25} color="#fff" />
               </div>
             </div>
@@ -491,6 +575,35 @@ export default function SignInPage() {
                     : <>Continue <Ico p={ICONS.arrowFwd} size={15} sw={2.2} /></>}
                 </button>
 
+                <button
+                  type="button"
+                  onClick={handlePasskeySignIn}
+                  disabled={passkeyLoading || loading}
+                  style={{
+                    width: '100%',
+                    padding: '12px 18px',
+                    borderRadius: '13px',
+                    border: '1.5px solid rgba(4,53,77,0.1)',
+                    background: passkeyLoading ? 'rgba(247,250,252,0.72)' : 'rgba(255,255,255,0.78)',
+                    color: T.navy,
+                    fontFamily: 'inherit',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.01em',
+                    cursor: passkeyLoading || loading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.15s ease',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85)',
+                  }}
+                >
+                  {passkeyLoading
+                    ? <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(4,53,77,0.18)', borderTopColor: T.blue, borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Checking passkey…</>
+                    : <><Ico p={ICONS.shield} size={15} sw={1.8} /> Sign in with passkey</>}
+                </button>
+
                 {/* Create account */}
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '2px 0 0', letterSpacing: '-0.01em' }}>
                   {"Don't have an account? "}
@@ -506,7 +619,7 @@ export default function SignInPage() {
                 <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(4,53,77,0.08)' }} />
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div className="signin-social-row" style={{ display: 'flex', gap: '10px' }}>
                 <SocialBtn provider="google" onClick={() => {
                   const authFlowState = readAuthFlowState()
                   const nextRoute = authFlowState?.isAuthenticated && !authFlowState.onboardingCompleted
@@ -526,7 +639,7 @@ export default function SignInPage() {
 
             {/* Trust indicators */}
             <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
+              <div className="signin-trust-grid" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
                 {[
                   { icon: ICONS.lock,     label: 'Secure Login'    },
                   { icon: ICONS.shield,   label: 'Encrypted Data'  },

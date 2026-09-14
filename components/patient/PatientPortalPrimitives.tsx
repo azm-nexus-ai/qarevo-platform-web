@@ -25,9 +25,11 @@ type PortalBadgeProps = {
 }
 
 export function PortalCard({ children, style, ...props }: PortalCardProps) {
+  const className = ['portal-card', props.className].filter(Boolean).join(' ')
   return (
     <div
       {...props}
+      className={className}
       style={{
         background: 'rgba(255,255,255,0.9)',
         backdropFilter: 'blur(22px) saturate(180%)',
@@ -89,9 +91,11 @@ function getButtonStyles(tone: 'primary' | 'secondary' | 'danger', fullWidth?: b
 }
 
 export function PortalButton({ children, tone = 'secondary', fullWidth = false, style, ...props }: PortalButtonProps) {
+  const className = ['portal-button', `portal-button-${tone}`, props.className].filter(Boolean).join(' ')
   return (
     <button
       {...props}
+      className={className}
       style={{
         ...getButtonStyles(tone, fullWidth),
         ...(props.disabled
@@ -111,7 +115,7 @@ export function PortalButton({ children, tone = 'secondary', fullWidth = false, 
 
 export function PortalLinkButton({ children, href, tone = 'secondary', fullWidth = false }: PortalLinkButtonProps) {
   return (
-    <a href={href} style={getButtonStyles(tone, fullWidth)}>
+    <a href={href} className={`portal-button portal-button-${tone}`} style={getButtonStyles(tone, fullWidth)}>
       {children}
     </a>
   )
@@ -128,6 +132,7 @@ export function PortalBadge({ children, tone = 'neutral' }: PortalBadgeProps) {
 
   return (
     <span
+      className={`portal-badge portal-badge-${tone}`}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -148,6 +153,7 @@ export function PortalBadge({ children, tone = 'neutral' }: PortalBadgeProps) {
 export function PortalEmptyState({ title, description }: { title: string; description: string }) {
   return (
     <div
+      className='portal-empty-state'
       style={{
         borderRadius: '18px',
         border: '1px dashed rgba(4,53,77,0.14)',

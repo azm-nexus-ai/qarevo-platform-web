@@ -237,6 +237,41 @@ export async function createMeeting(body: CreateMeetingRequest): Promise<CreateM
     return apiPost<CreateMeetingResponse>("/api/v1/meetings", body);
 }
 
+export type PatientAppointmentCreateRequest = {
+    provider_id: string;
+    start_at: string;
+    end_at: string;
+    consultation_modality?: string;
+    intake?: Record<string, unknown>;
+    episode?: Record<string, unknown>;
+};
+
+export type PatientAppointmentCreateResponse = {
+    id: string;
+    patient_id: string;
+    provider_id: string;
+    consultation_id?: string | null;
+    episode_id?: string | null;
+    ai_draft?: {
+        status?: string;
+        job_id?: string | null;
+        detail?: string;
+    } | null;
+    start_at: string;
+    end_at: string;
+    status: string;
+    consultation_modality: string;
+};
+
+export async function createPatientAppointment(
+    body: PatientAppointmentCreateRequest,
+): Promise<PatientAppointmentCreateResponse> {
+    return apiPost<PatientAppointmentCreateResponse, PatientAppointmentCreateRequest>(
+        "/api/v1/patient/appointments",
+        body,
+    );
+}
+
 export async function getProviders(consultationId: string): Promise<Provider[]> {
     return apiGet<Provider[]>(`/api/v1/consultations/${consultationId}/providers`);
 }
@@ -399,8 +434,12 @@ export type PortalMessage = {
     attachmentUrl?: string | null;
     attachmentName?: string | null;
     attachmentSize?: string | null;
+    attachmentContentType?: string | null;
     timestamp: string;
     isRead: boolean;
+    replyToMessageId?: string | null;
+    replyToText?: string | null;
+    replyToSenderId?: string | null;
 };
 
 export type PortalConversation = {
@@ -411,6 +450,8 @@ export type PortalConversation = {
     contactType: "Physician" | "Care Team" | "Support" | "Patient" | string;
     contactAvatar?: string | null;
     isOnline: boolean;
+    presence?: "active" | "offline" | string;
+    lastSeenLabel?: string | null;
     isPinned: boolean;
     lastMessage: string;
     lastMessageTime: string;
@@ -421,12 +462,38 @@ export type PortalConversation = {
 
 export type ConversationsResponse = {
     conversations: PortalConversation[];
+    total_count?: number;
+    page?: number;
+    page_size?: number;
+    has_next?: boolean;
+    has_previous?: boolean;
+};
+
+export type MessageContact = {
+    id: string;
+    provider_id: string;
+    name: string;
+    role: string;
+    type: string;
+    avatar?: string | null;
+    reason?: string | null;
+};
+
+export type MessageContactsResponse = {
+    contacts: MessageContact[];
 };
 
 export type SendPatientMessageRequest = {
     provider_id?: string;
     contact_id?: string;
     message: string;
+    reply_to_message_id?: string;
+};
+
+export type SendDoctorMessageRequest = {
+    patient_id: string;
+    message: string;
+    reply_to_message_id?: string;
 };
 
 export type EpisodeCreateRequest = {
@@ -1102,16 +1169,60 @@ export async function getPatientDoctor(doctorId: string): Promise<PatientDoctor>
     return apiGet<PatientDoctor>(`/api/v1/patient/doctors/${doctorId}`);
 }
 
-export async function getPatientMessages(): Promise<ConversationsResponse> {
-    return apiGet<ConversationsResponse>("/api/v1/patient/messages");
+export async function getPatientMessages(pagination: PaginationParams = {}): Promise<ConversationsResponse> {
+    const params = new URLSearchParams();
+    params.set("page", String(pagination.page ?? 1));
+    params.set("page_size", String(pagination.page_size ?? 20));
+    return apiGet<ConversationsResponse>(`/api/v1/patient/messages?${params.toString()}`);
+}
+
+export async function getPatientMessageContacts(): Promise<MessageContactsResponse> {
+    return apiGet<MessageContactsResponse>("/api/v1/patient/messages/contacts");
 }
 
 export async function sendPatientMessage(body: SendPatientMessageRequest): Promise<PortalConversation> {
     return apiPost<PortalConversation>("/api/v1/patient/messages", body);
 }
 
+export async function sendPatientMessageAttachment(formData: FormData): Promise<PortalConversation> {
+    return apiUpload<PortalConversation>("/api/v1/patient/messages/attachments", formData);
+}
+
 export async function markPatientConversationRead(conversationId: string): Promise<PortalConversation> {
     return apiPatch<PortalConversation>(`/api/v1/patient/messages/${conversationId}/read`, {});
+}
+
+export async function getDoctorMessages(pagination: PaginationParams = {}): Promise<ConversationsResponse> {
+    const params = new URLSearchParams();
+    params.set("page", String(pagination.page ?? 1));
+    params.set("page_size", String(pagination.page_size ?? 20));
+    return apiGet<ConversationsResponse>(`/api/v1/doctor/messages?${params.toString()}`);
+}
+
+export async function sendDoctorMessage(body: SendDoctorMessageRequest): Promise<PortalConversation> {
+    return apiPost<PortalConversation>("/api/v1/doctor/messages", body);
+}
+
+export async function sendDoctorMessageAttachment(formData: FormData): Promise<PortalConversation> {
+    return apiUpload<PortalConversation>("/api/v1/doctor/messages/attachments", formData);
+}
+
+export async function markDoctorConversationRead(conversationId: string): Promise<PortalConversation> {
+    return apiPatch<PortalConversation>(`/api/v1/doctor/messages/${conversationId}/read`, {});
+}
+
+export async function downloadAuthenticatedFile(path: string): Promise<Blob> {
+    const res = await fetch(`${getBaseUrl()}${path}`, {
+        headers: authHeaders(),
+        cache: "no-store",
+    });
+
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new ApiError(res.status, text);
+    }
+
+    return res.blob();
 }
 
 export async function createPatientEpisode(body: EpisodeCreateRequest): Promise<EpisodeResponse> {
@@ -1197,12 +1308,204 @@ export async function uploadMedicalRecord(formData: FormData): Promise<MedicalRe
     return apiUpload<MedicalRecordUploadResponse>("/api/v1/patient/medical-records/upload", formData);
 }
 
-export async function downloadMedicalRecord(fileId: string): Promise<MedicalRecordDownloadResponse> {
-    return apiGet<MedicalRecordDownloadResponse>(`/api/v1/patient/medical-records/${fileId}/download`);
+export async function downloadMedicalRecord(
+    fileId: string,
+    options?: { disposition?: "attachment" | "inline" },
+): Promise<MedicalRecordDownloadResponse> {
+    const params = new URLSearchParams();
+    if (options?.disposition) params.set("disposition", options.disposition);
+    const query = params.toString();
+    return apiGet<MedicalRecordDownloadResponse>(
+        `/api/v1/patient/medical-records/${fileId}/download${query ? `?${query}` : ""}`,
+    );
 }
 
 export async function deleteMedicalRecord(fileId: string): Promise<{ message: string }> {
     return apiDelete<{ message: string }>(`/api/v1/patient/medical-records/${fileId}`);
+}
+
+export type LabPartner = {
+    id: string;
+    name: string;
+    distance: string;
+    rating: string;
+    hours: string;
+    tests: string[];
+    insurance: string;
+    address: string;
+    directions_url?: string;
+};
+
+export type PatientLabRequest = {
+    id: string;
+    patient_id: string;
+    provider_id?: string | null;
+    physician_name?: string | null;
+    episode_id?: string | null;
+    title: string;
+    name?: string;
+    category?: string | null;
+    test?: string | null;
+    description?: string | null;
+    reason?: string | null;
+    priority?: string | null;
+    processing_time?: string | null;
+    processingTime?: string | null;
+    preparation_instructions?: string | null;
+    status: string;
+    recommended_date?: string | null;
+    completionDate?: string | null;
+    recommended_lab_name?: string | null;
+    recommended_lab_address?: string | null;
+    scheduled_for?: string | null;
+    scheduledForLabel?: string | null;
+    selected_lab_name?: string | null;
+    selected_lab_address?: string | null;
+    home_collection?: boolean;
+    result_file_id?: string | null;
+    result_uploaded_at?: string | null;
+    result_filename?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+};
+
+export type PatientLabRequestsResponse = {
+    test_requests: PatientLabRequest[];
+    partner_labs: LabPartner[];
+    preparation: Array<Record<string, unknown>>;
+    recent_uploads: Array<{
+        request_id: string;
+        title: string;
+        meta: string;
+        file_id: string;
+    }>;
+    summary: {
+        requested_tests: number;
+        pending_tests: number;
+        completed_tests: number;
+        upcoming_lab_appointment?: string | null;
+        estimated_completion?: string | null;
+    };
+};
+
+export type DoctorLabOrderPayload = {
+    patient_id: string;
+    episode_id?: string;
+    title: string;
+    category?: string;
+    test?: string;
+    status?: string;
+    scheduled_for?: string;
+    recommended_date?: string;
+    recommended_lab_name?: string;
+    recommended_lab_address?: string;
+    description?: string;
+    reason?: string;
+    priority?: string;
+    processing_time?: string;
+    preparation_instructions?: string;
+};
+
+export type DoctorLabOrderUpdatePayload = Partial<DoctorLabOrderPayload> & {
+    patient_id: string;
+    test_id: string;
+};
+
+export type DoctorLabOrdersResponse = {
+    test_requests: PatientLabRequest[];
+    provider_id?: string;
+    lab_test?: PatientLabRequest;
+    message?: string;
+};
+
+export async function getPatientLabRequests(): Promise<PatientLabRequestsResponse> {
+    return apiGet<PatientLabRequestsResponse>("/api/v1/patient/lab-requests");
+}
+
+export async function bookPatientLabRequest(requestId: string, formData: FormData): Promise<PatientLabRequestsResponse> {
+    return apiUpload<PatientLabRequestsResponse>(`/api/v1/patient/lab-requests/${requestId}/book`, formData);
+}
+
+export async function uploadPatientLabResult(requestId: string, formData: FormData): Promise<PatientLabRequestsResponse> {
+    return apiUpload<PatientLabRequestsResponse>(`/api/v1/patient/lab-requests/${requestId}/upload-result`, formData);
+}
+
+export async function getDoctorLabOrders(patientId: string): Promise<DoctorLabOrdersResponse> {
+    return apiGet<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${patientId}`);
+}
+
+export async function createDoctorLabOrder(body: DoctorLabOrderPayload): Promise<DoctorLabOrdersResponse> {
+    return apiPost<DoctorLabOrdersResponse, DoctorLabOrderPayload>("/api/v1/doctor/lab-orders", body);
+}
+
+export async function updateDoctorLabOrder(body: DoctorLabOrderUpdatePayload): Promise<DoctorLabOrdersResponse> {
+    return apiPut<DoctorLabOrdersResponse, DoctorLabOrderUpdatePayload>("/api/v1/doctor/lab-orders", body);
+}
+
+export async function deleteDoctorLabOrder(patientId: string, testId: string): Promise<DoctorLabOrdersResponse> {
+    return apiDelete<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${patientId}/${testId}`);
+}
+
+export async function uploadDoctorLabResult(
+    patientId: string,
+    testId: string,
+    formData: FormData,
+): Promise<DoctorLabOrdersResponse> {
+    return apiUpload<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${patientId}/${testId}/upload-result`, formData);
+}
+
+export type PatientBillingPaymentMethod = {
+    id?: string;
+    brand?: string;
+    label?: string;
+    meta?: string;
+    last4?: string;
+    expiry_month?: string;
+    expiry_year?: string;
+    primary?: boolean;
+};
+
+export type PatientBillingInvoice = {
+    id: string;
+    appointment?: string;
+    date?: string;
+    status?: "Paid" | "Pending" | "Refunded" | "Cancelled" | string;
+    amount?: string;
+    receipt_url?: string | null;
+    pdf_url?: string | null;
+};
+
+export type PatientBillingHistoryItem = {
+    title: string;
+    value: string;
+    hint: string;
+    tone?: "info" | "success" | "warning" | "neutral" | "danger";
+};
+
+export type PatientBillingInsuranceSummary = {
+    status: "not_added" | "incomplete" | "active" | string;
+    provider_name?: string | null;
+    member_number?: string | null;
+    insured_status?: string | null;
+    claims?: Array<Record<string, unknown>>;
+    authorizations?: Array<Record<string, unknown>>;
+};
+
+export type PatientBillingResponse = {
+    current_balance: number;
+    insurance_coverage: number;
+    amount_due: number;
+    currency?: string;
+    payment_provider_enabled?: boolean;
+    payment_methods: PatientBillingPaymentMethod[];
+    invoices: PatientBillingInvoice[];
+    payment_history: PatientBillingHistoryItem[];
+    upcoming_charges: Array<{ label?: string; amount?: string | number }>;
+    insurance_summary: PatientBillingInsuranceSummary;
+};
+
+export async function getPatientBilling(): Promise<PatientBillingResponse> {
+    return apiGet<PatientBillingResponse>("/api/v1/patient/billing");
 }
 
 // Health Metrics
@@ -1287,8 +1590,78 @@ export type PatientSettings = {
     marketing_emails: boolean;
     data_sharing: boolean;
     physician_access: boolean;
+    dark_mode: boolean;
+    high_contrast: boolean;
+    font_size: string;
+    language: string;
+    time_zone: string;
     emergency_contacts: EmergencyContact[];
     insurance?: Insurance;
+};
+
+export type PatientSettingsUpdate = {
+    email?: string;
+    phone?: string;
+    email_notifications?: boolean;
+    sms_notifications?: boolean;
+    push_notifications?: boolean;
+    appointment_reminders?: boolean;
+    medication_reminders?: boolean;
+    lab_result_alerts?: boolean;
+    marketing_emails?: boolean;
+    data_sharing?: boolean;
+    physician_access?: boolean;
+    dark_mode?: boolean;
+    high_contrast?: boolean;
+    font_size?: string;
+    language?: string;
+    time_zone?: string;
+};
+
+export type PatientLoginHistoryItem = {
+    id: string;
+    event_type: string;
+    success: boolean;
+    failure_reason?: string;
+    ip_address?: string;
+    user_agent?: string;
+    created_at: string;
+};
+
+export type PatientLoginHistoryResponse = {
+    items: PatientLoginHistoryItem[];
+    total_count: number;
+};
+
+export type PatientActiveDevice = {
+    id: string;
+    device_name: string;
+    browser_name?: string;
+    operating_system?: string;
+    ip_address?: string;
+    last_seen_at?: string;
+    created_at: string;
+    expires_at: string;
+    is_current: boolean;
+};
+
+export type PatientActiveDevicesResponse = {
+    items: PatientActiveDevice[];
+    total_count: number;
+};
+
+export type PatientPasskeyStatus = {
+    available: boolean;
+    enabled: boolean;
+    credential_count: number;
+    message: string;
+};
+
+export type PatientPasskeyCredential = {
+    id: string;
+    device_name?: string;
+    created_at: string;
+    last_used_at?: string;
 };
 
 export type EmergencyContact = {
@@ -1345,6 +1718,155 @@ export type ProfileUpdate = {
 
 export async function getPatientSettings(): Promise<PatientSettings> {
     return apiGet<PatientSettings>("/api/v1/patient/settings");
+}
+
+export async function updatePatientSettings(body: PatientSettingsUpdate): Promise<PatientSettings> {
+    return apiPut<PatientSettings>("/api/v1/patient/settings", body);
+}
+
+export async function downloadPatientDataExport(): Promise<Record<string, unknown>> {
+    return apiGet<Record<string, unknown>>("/api/v1/patient/settings/export");
+}
+
+export async function deactivatePatientAccount(): Promise<{ message: string }> {
+    return apiPost<{ message: string }>("/api/v1/patient/settings/deactivate-account", {});
+}
+
+export async function getPatientLoginHistory(): Promise<PatientLoginHistoryResponse> {
+    return apiGet<PatientLoginHistoryResponse>("/api/v1/patient/settings/login-history");
+}
+
+export async function getPatientActiveDevices(): Promise<PatientActiveDevicesResponse> {
+    const refreshToken = readRefreshToken();
+    return apiGet<PatientActiveDevicesResponse>(
+        "/api/v1/patient/settings/active-devices",
+        refreshToken ? { "X-Qarevo-Refresh-Token": refreshToken } : undefined,
+    );
+}
+
+export async function revokePatientActiveDevice(deviceId: string): Promise<{ message: string }> {
+    return apiDelete<{ message: string }>(`/api/v1/patient/settings/active-devices/${deviceId}`);
+}
+
+export async function revokeOtherPatientActiveDevices(): Promise<{ message: string }> {
+    const refreshToken = readRefreshToken();
+    return apiPost<{ message: string }>(
+        "/api/v1/patient/settings/active-devices/revoke-others",
+        {},
+        refreshToken ? { "X-Qarevo-Refresh-Token": refreshToken } : undefined,
+    );
+}
+
+export async function getPatientPasskeyStatus(): Promise<PatientPasskeyStatus> {
+    return apiGet<PatientPasskeyStatus>("/api/v1/patient/settings/passkeys/status");
+}
+
+export async function getPatientPasskeys(): Promise<PatientPasskeyCredential[]> {
+    return apiGet<PatientPasskeyCredential[]>("/api/v1/patient/settings/passkeys");
+}
+
+export async function deletePatientPasskey(credentialId: string): Promise<{ message: string }> {
+    return apiDelete<{ message: string }>(`/api/v1/patient/settings/passkeys/${credentialId}`);
+}
+
+function base64UrlToArrayBuffer(value: string): ArrayBuffer {
+    const padded = value.padEnd(value.length + ((4 - (value.length % 4)) % 4), "=");
+    const base64 = padded.replace(/-/g, "+").replace(/_/g, "/");
+    const binary = window.atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return bytes.buffer;
+}
+
+function arrayBufferToBase64Url(buffer: ArrayBuffer | null): string | null {
+    if (!buffer) return null;
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    return window.btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function prepareCredentialCreationOptions(options: PublicKeyCredentialCreationOptions): PublicKeyCredentialCreationOptions {
+    return {
+        ...options,
+        challenge: base64UrlToArrayBuffer(options.challenge as unknown as string),
+        user: {
+            ...options.user,
+            id: base64UrlToArrayBuffer(options.user.id as unknown as string),
+        },
+        excludeCredentials: options.excludeCredentials?.map((credential) => ({
+            ...credential,
+            id: base64UrlToArrayBuffer(credential.id as unknown as string),
+        })),
+    };
+}
+
+function prepareCredentialRequestOptions(options: PublicKeyCredentialRequestOptions): PublicKeyCredentialRequestOptions {
+    return {
+        ...options,
+        challenge: base64UrlToArrayBuffer(options.challenge as unknown as string),
+        allowCredentials: options.allowCredentials?.map((credential) => ({
+            ...credential,
+            id: base64UrlToArrayBuffer(credential.id as unknown as string),
+        })),
+    };
+}
+
+function serializeRegistrationCredential(credential: PublicKeyCredential) {
+    const response = credential.response as AuthenticatorAttestationResponse;
+    return {
+        id: credential.id,
+        rawId: arrayBufferToBase64Url(credential.rawId),
+        type: credential.type,
+        authenticatorAttachment: credential.authenticatorAttachment,
+        response: {
+            clientDataJSON: arrayBufferToBase64Url(response.clientDataJSON),
+            attestationObject: arrayBufferToBase64Url(response.attestationObject),
+            transports: response.getTransports?.() || [],
+        },
+    };
+}
+
+function serializeAuthenticationCredential(credential: PublicKeyCredential) {
+    const response = credential.response as AuthenticatorAssertionResponse;
+    return {
+        id: credential.id,
+        rawId: arrayBufferToBase64Url(credential.rawId),
+        type: credential.type,
+        authenticatorAttachment: credential.authenticatorAttachment,
+        response: {
+            clientDataJSON: arrayBufferToBase64Url(response.clientDataJSON),
+            authenticatorData: arrayBufferToBase64Url(response.authenticatorData),
+            signature: arrayBufferToBase64Url(response.signature),
+            userHandle: arrayBufferToBase64Url(response.userHandle),
+        },
+    };
+}
+
+export async function registerPatientPasskey(deviceName?: string): Promise<PatientPasskeyCredential> {
+    if (typeof window === "undefined" || !window.PublicKeyCredential || !navigator.credentials?.create) {
+        throw new Error("This browser does not support passkeys.");
+    }
+    const { options } = await apiPost<{ options: PublicKeyCredentialCreationOptions }>("/api/v1/patient/settings/passkeys/registration-options", {});
+    const credential = await navigator.credentials.create({ publicKey: prepareCredentialCreationOptions(options) });
+    if (!(credential instanceof PublicKeyCredential)) throw new Error("Passkey registration was cancelled.");
+    return apiPost<PatientPasskeyCredential>("/api/v1/patient/settings/passkeys/register", {
+        credential: serializeRegistrationCredential(credential),
+        device_name: deviceName,
+    });
+}
+
+export async function loginPatientWithPasskey(email: string): Promise<AuthTokenResponse> {
+    if (typeof window === "undefined" || !window.PublicKeyCredential || !navigator.credentials?.get) {
+        throw new Error("This browser does not support passkeys.");
+    }
+    const { options } = await apiPost<{ options: PublicKeyCredentialRequestOptions }>("/api/v1/auth/passkeys/authentication-options", { email });
+    const credential = await navigator.credentials.get({ publicKey: prepareCredentialRequestOptions(options) });
+    if (!(credential instanceof PublicKeyCredential)) throw new Error("Passkey sign-in was cancelled.");
+    return apiPost<AuthTokenResponse>("/api/v1/auth/passkeys/authenticate", {
+        email,
+        credential: serializeAuthenticationCredential(credential),
+    });
 }
 
 export async function getPatientHealthInfo(): Promise<PatientHealthInfo> {

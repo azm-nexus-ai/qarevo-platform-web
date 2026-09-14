@@ -33,10 +33,6 @@ function formatDateLabel(date: Date) {
   return date.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function formatShortDate(date: Date) {
-  return date.toLocaleDateString('en', { month: 'short', day: 'numeric' })
-}
-
 function addDays(date: Date, days: number) {
   const next = new Date(date)
   next.setDate(next.getDate() + days)
@@ -46,12 +42,12 @@ function addDays(date: Date, days: number) {
 function DateTimeSelectionPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { bookingState, updateBookingState, setBookingStep } = useBookingContext()
+  const { bookingState, updateBookingState } = useBookingContext()
 
-  const physicianId = searchParams.get('physicianId') ?? bookingState.physicianId ?? ''
+  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? bookingState.physicianId ?? ''
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const physicianData = useMemo(() => getBookingPhysician(searchParams, physician), [searchParams, physician])
-  const service = bookingState.service ?? searchParams.get('service') ?? 'video'
+  const service = bookingState.service ?? searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
   const fee = Number(searchParams.get('fee') ?? physician?.consultationFee ?? 140)
   const duration = searchParams.get('duration') ?? '30 min'
   const insurance = searchParams.get('insurance') ?? 'Axa'

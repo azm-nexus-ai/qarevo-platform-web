@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { Suspense, useMemo, useState, useEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { useSearchParams } from 'next/navigation'
+import { T, Sh } from '@/lib/tokens'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
@@ -11,8 +11,6 @@ import Ico from '@/components/ui/Ico'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import { 
   getPatientEpisode, 
-  getPatientEpisodeTimeline,
-  type PatientEpisodeTimelineResponse,
   type EpisodeResponse 
 } from '@/lib/api'
 
@@ -115,7 +113,6 @@ const documents: DocumentItem[] = [
 
 function FollowUpPageContent() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const episodeId = searchParams.get('episodeId')
   const physicianId = searchParams.get('physicianId') ?? 'sophia-reed'
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
@@ -133,7 +130,6 @@ function FollowUpPageContent() {
   const [consultationType, setConsultationType] = useState('Video')
   const [selectedPhysician, setSelectedPhysician] = useState(physicianName)
   const [episode, setEpisode] = useState<EpisodeResponse | null>(null)
-  const [timeline, setTimeline] = useState<PatientEpisodeTimelineResponse | null>(null)
   const [loadingEpisode, setLoadingEpisode] = useState(false)
 
   useEffect(() => {
@@ -142,12 +138,8 @@ function FollowUpPageContent() {
       
       try {
         setLoadingEpisode(true)
-        const [episodeData, timelineData] = await Promise.all([
-          getPatientEpisode(episodeId),
-          getPatientEpisodeTimeline(episodeId),
-        ])
+        const episodeData = await getPatientEpisode(episodeId)
         setEpisode(episodeData)
-        setTimeline(timelineData)
       } catch (err) {
         console.error('Failed to load episode data:', err)
       } finally {

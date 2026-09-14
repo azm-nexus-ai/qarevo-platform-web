@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import NavigationBar from '@/components/layout/NavigationBar'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { T, Sh, PAGE_BG } from '@/lib/tokens'
 import { PATIENT_SIDEBAR_ITEMS, PATIENT_ROUTES, isPatientNavActive } from '@/constants/patient-navigation'
 
 type Props = {

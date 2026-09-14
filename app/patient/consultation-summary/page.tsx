@@ -3,10 +3,9 @@
 import Link from 'next/link'
 import { Suspense, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { T, Sh } from '@/lib/tokens'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
-import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 
@@ -54,19 +53,12 @@ function ConsultationSummaryPageContent() {
   const physicianId = searchParams.get('physicianId') ?? 'sophia-reed'
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const date = searchParams.get('date') ?? 'Today'
-  const slot = searchParams.get('slot') ?? '4:30 PM'
-  const duration = searchParams.get('duration') ?? '30 min'
-  const insurance = searchParams.get('insurance') ?? 'Axa'
-  const notes = searchParams.get('notes') ?? ''
   const elapsedSeconds = Number(searchParams.get('elapsed') ?? 1800)
-  const networkStatus = searchParams.get('networkStatus') ?? 'Excellent'
-  const latency = searchParams.get('latency') ?? '12 ms'
   const physicianName = searchParams.get('physicianName') ?? physician?.name ?? 'Dr. Sophia Reed'
   const specialty = searchParams.get('specialty') ?? physician?.specialty ?? 'Internal Medicine'
   const appointmentId = searchParams.get('appointmentId') ?? 'QRV-CLN-10428'
   const bookingReference = searchParams.get('bookingReference') ?? 'REF-20260805-428'
   const doctorNotes = searchParams.get('doctorNotes') ?? ''
-  const messageCount = Number(searchParams.get('messageCount') ?? 3)
 
   const completionTime = useMemo(() => {
     const now = new Date()

@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
 import {
   clearAuthTokens,
   getDoctorPatients,
@@ -32,7 +30,6 @@ export default function DoctorCarePlansPage() {
   const [error, setError] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newPlan, setNewPlan] = useState({ title: '', status: 'Active', progress: 0, description: '', episode_id: '' })
-  const [selectedEpisodeId, setSelectedEpisodeId] = useState('')
 
   useEffect(() => {
     if (!readAccessToken()) {

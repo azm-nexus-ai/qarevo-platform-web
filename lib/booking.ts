@@ -31,7 +31,7 @@ export function getBookingPhysician(
   searchParams: URLSearchParams | { get: (key: string) => string | null },
   fallbackPhysician?: { id?: string; name?: string; specialty?: string; hospital?: string; imageUrl?: string; consultationFee?: number; experienceYears?: number; rating?: number; languages?: string[]; insurance?: string[] } | null,
 ): BookingPhysicianData {
-  const physicianId = searchParams.get('physicianId') ?? fallbackPhysician?.id ?? ''
+  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? fallbackPhysician?.id ?? ''
   const fromStore = physicianId ? PHYSICIANS.find((item) => item.id === physicianId) : undefined
   const base = fromStore ?? fallbackPhysician
 
@@ -71,6 +71,7 @@ export function buildBookingQueryParams(
 
   if (service) {
     next.set('service', service)
+    next.set('service_type', service)
   }
 
   return next

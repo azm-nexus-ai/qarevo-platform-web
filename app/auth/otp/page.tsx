@@ -4,14 +4,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { T, Sh, PAGE_BG } from '@/lib/tokens'
+import { T, PAGE_BG } from '@/lib/tokens'
 import { setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const DEMO_CODE     = '847291'
-const DEMO_EMAIL    = 'emma.harrison@gmail.com'
 const DEMO_PHONE    = '+44 ••• ••• 4821'
 const RESEND_SECS   = 60
 const MAX_ATTEMPTS  = 3
