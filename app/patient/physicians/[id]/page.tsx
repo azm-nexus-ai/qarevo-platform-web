@@ -83,8 +83,8 @@ function sortReviews(reviews: PhysicianProfileContent['reviews'], sort: ReviewSo
 
 const DEFAULT_PROFILE = {
   subSpecialties: ['Preventive Care', 'Chronic Care'],
-  patientsTreated: '1,000+',
-  consultationsDone: '800+',
+  patientsTreated: '0',
+  consultationsDone: '0',
   responseTime: '< 30 mins',
   availabilityStatus: 'available-today' as const,
   biography:
@@ -98,17 +98,9 @@ const DEFAULT_PROFILE = {
     { title: 'Consultant Physician', org: 'Current Hospital', period: '2021 - Present' },
     { title: 'Attending Physician', org: 'Regional Clinic', period: '2017 - 2021' },
   ],
-  services: [
-    { type: 'video' as const, label: 'Video Consultation', price: 140, duration: '30 min', availability: 'Today' },
-    { type: 'physical' as const, label: 'In-person Consultation', price: 180, duration: '40 min', availability: 'Tomorrow' },
-  ],
-  availabilitySlots: [
-    { day: 'Mon', timezone: 'WAT (UTC+1)', slots: ['10:00', '14:30'] },
-    { day: 'Tue', timezone: 'WAT (UTC+1)', slots: ['09:30', '16:00'] },
-  ],
-  reviews: [
-    { id: 'd1', patient: 'Verified Patient', rating: 5, date: 'Jul 28, 2026', helpful: 8, body: 'Great communication and clear treatment plan.' },
-  ],
+  services: [],
+  availabilitySlots: [],
+  reviews: [],
   faq: [
     { q: 'What happens during a video consultation?', a: 'The physician reviews your symptoms, history, and records, then provides a care plan and next steps.' },
   ],
@@ -159,9 +151,9 @@ function toProfile(doctor: PatientDoctor): PhysicianProfileContent {
   return {
     ...DEFAULT_PROFILE,
     ...profile,
-    services: profile.services.length ? profile.services : DEFAULT_PROFILE.services,
-    availabilitySlots: profile.availabilitySlots.length ? profile.availabilitySlots : DEFAULT_PROFILE.availabilitySlots,
-    reviews: profile.reviews?.length ? profile.reviews : DEFAULT_PROFILE.reviews,
+    services: profile.services,
+    availabilitySlots: profile.availabilitySlots,
+    reviews: profile.reviews ?? [],
     faq: profile.faq?.length ? profile.faq : DEFAULT_PROFILE.faq,
     subSpecialties: profile.subSpecialties?.length ? profile.subSpecialties : [doctor.specialty],
     specializations: profile.specializations?.length ? profile.specializations : doctor.conditions,
@@ -172,6 +164,10 @@ function toBookingHref(physician: Physician, serviceType: string, preservedParam
   const params = buildBookingQueryParams(preservedParams, physician, serviceType)
   params.set('from', 'profile')
   return `/patient/consultation-booking/date-time?${params.toString()}`
+}
+
+function formatPhysicianRating(physician: Pick<Physician, 'rating' | 'reviews'>) {
+  return physician.reviews > 0 ? `${physician.rating.toFixed(1)} ★` : 'No ratings yet'
 }
 
 function loadingPhysician(id: string): Physician {
@@ -231,7 +227,7 @@ function PhysicianProfilePageContent() {
 
           setRemoteDoctor(doctor)
           setSelectedService(initialService)
-          setSelectedDay(loadedProfile.availabilitySlots[0]?.day ?? 'Mon')
+	          setSelectedDay(loadedProfile.availabilitySlots[0]?.day ?? '')
           setSelectedSlot(preselectedSlot || firstAvailableSlot)
           setExpandedReviewId(loadedProfile.reviews[0]?.id ?? '')
           setOpenFaq(loadedProfile.faq[0]?.q ?? '')
@@ -395,9 +391,9 @@ function PhysicianProfilePageContent() {
               </div>
 
               <div>
-                <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, color: T.blue, marginBottom: '8px' }}>
-                  <Ico p={ICONS.check} size={12} sw={2.4} color={T.blue} />
-                  Verified Physician
+	                <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, color: physician.verification === 'Pending' ? T.amber : T.blue, marginBottom: '8px' }}>
+	                  <Ico p={ICONS.check} size={12} sw={2.4} color={T.blue} />
+	                  {physician.verification === 'Pending' ? 'Pending Verification' : 'Verified Physician'}
                 </span>
                 <h1 style={{ margin: '0 0 6px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '30px', fontWeight: 800, letterSpacing: '-0.034em', color: T.navy }}>{physician.name}</h1>
                 <p style={{ margin: '0 0 4px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>
@@ -438,7 +434,7 @@ function PhysicianProfilePageContent() {
             {[
               {
                 label: 'Rating',
-                value: physician.rating ? `${physician.rating.toFixed(1)} ★` : 'Not rated'
+	                value: formatPhysicianRating(physician)
               },
               { label: 'Patients Treated', value: profile.patientsTreated },
               { label: 'Years Experience', value: `${physician.experienceYears}` },
@@ -537,7 +533,11 @@ function PhysicianProfilePageContent() {
           <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
             <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Consultation Services</h3>
             <div className='pp-service-grid'>
-              {profile.services.map((service) => {
+	              {profile.services.length === 0 ? (
+	                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '12px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
+	                  This physician has not published consultation services yet.
+	                </div>
+	              ) : profile.services.map((service) => {
                 const active = effectiveSelectedService === service.type
                 return (
                   <Link
@@ -558,35 +558,43 @@ function PhysicianProfilePageContent() {
           <section className='pp-two-col'>
             <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
               <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Availability</h3>
-              <p style={{ margin: '0 0 8px', fontSize: '12px', color: T.slate2 }}>Timezone: {profile.availabilitySlots[0]?.timezone ?? 'WAT (UTC+1)'}</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '9px' }}>
-                {profile.availabilitySlots.map((item) => (
-                  <button
-                    key={item.day}
-                    type='button'
-                    onClick={() => {
-                      setSelectedDay(item.day)
-                      setSelectedSlot(item.slots[0] ?? '')
-                    }}
-                    style={{ borderRadius: '9px', border: effectiveSelectedDay === item.day ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: effectiveSelectedDay === item.day ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.86)', color: effectiveSelectedDay === item.day ? T.blue : T.slate, fontSize: '12px', fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
-                  >
-                    {item.day}
-                  </button>
-                ))}
-              </div>
+	              <p style={{ margin: '0 0 8px', fontSize: '12px', color: T.slate2 }}>Timezone: {profile.availabilitySlots[0]?.timezone ?? 'Not configured'}</p>
+	              {profile.availabilitySlots.length === 0 ? (
+	                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '12px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
+	                  This physician has not opened appointment slots yet.
+	                </div>
+	              ) : (
+	                <>
+	                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '9px' }}>
+	                    {profile.availabilitySlots.map((item) => (
+	                      <button
+	                        key={item.day}
+	                        type='button'
+	                        onClick={() => {
+	                          setSelectedDay(item.day)
+	                          setSelectedSlot(item.slots[0] ?? '')
+	                        }}
+	                        style={{ borderRadius: '9px', border: effectiveSelectedDay === item.day ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: effectiveSelectedDay === item.day ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.86)', color: effectiveSelectedDay === item.day ? T.blue : T.slate, fontSize: '12px', fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
+	                      >
+	                        {item.dayLabel ?? item.day}
+	                      </button>
+	                    ))}
+	                  </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
-                {selectedDaySlots.map((slot) => (
-                  <button
-                    key={slot}
-                    type='button'
-                    onClick={() => setSelectedSlot(slot)}
-                    style={{ borderRadius: '10px', border: effectiveSelectedSlot === slot ? '1px solid rgba(32,181,223,0.45)' : '1px solid rgba(4,53,77,0.1)', background: effectiveSelectedSlot === slot ? 'rgba(32,181,223,0.15)' : 'rgba(255,255,255,0.84)', color: effectiveSelectedSlot === slot ? T.blue : T.navy, fontSize: '12px', fontWeight: 700, padding: '7px 8px', cursor: 'pointer' }}
-                  >
-                    {slot}
-                  </button>
-                ))}
-              </div>
+	                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+	                    {selectedDaySlots.map((slot) => (
+	                      <button
+	                        key={slot}
+	                        type='button'
+	                        onClick={() => setSelectedSlot(slot)}
+	                        style={{ borderRadius: '10px', border: effectiveSelectedSlot === slot ? '1px solid rgba(32,181,223,0.45)' : '1px solid rgba(4,53,77,0.1)', background: effectiveSelectedSlot === slot ? 'rgba(32,181,223,0.15)' : 'rgba(255,255,255,0.84)', color: effectiveSelectedSlot === slot ? T.blue : T.navy, fontSize: '12px', fontWeight: 700, padding: '7px 8px', cursor: 'pointer' }}
+	                      >
+	                        {slot}
+	                      </button>
+	                    ))}
+	                  </div>
+	                </>
+	              )}
               <p style={{ margin: '9px 0 0', fontSize: '12px', color: T.slate2 }}>Next available appointment: {physician.nextAvailable}</p>
             </article>
 
@@ -649,7 +657,11 @@ function PhysicianProfilePageContent() {
                 ))}
               </div>
             </div>
-            {!reviewsLoaded ? (
+	            {profile.reviews.length === 0 ? (
+	              <div style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.84)', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
+	                No patient reviews yet.
+	              </div>
+	            ) : !reviewsLoaded ? (
               <button
                 type='button'
                 onClick={() => setReviewsLoaded(true)}
@@ -729,7 +741,7 @@ function PhysicianProfilePageContent() {
                 <div key={item.id} style={{ display: 'grid', gap: '8px' }}>
                   <DoctorCard name={item.name} specialty={item.specialty} verification={item.verification} tags={item.tags} imageUrl={item.imageUrl} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>{item.rating.toFixed(1)} ★ · {item.experienceYears} yrs</p>
+	                    <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>{formatPhysicianRating(item)} · {item.experienceYears} yrs</p>
                     <Link href={`/patient/physicians/${item.id}${preservedQuery.toString() ? `?${preservedQuery.toString()}` : ''}`} style={{ fontSize: '12px', color: '#348CEA', fontWeight: 700, textDecoration: 'none' }}>
                       View Profile
                     </Link>
@@ -746,7 +758,7 @@ function PhysicianProfilePageContent() {
             <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Doctor:</strong> {physician.name}</p>
             <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Specialty:</strong> {physician.specialty}</p>
             <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {physician.experienceYears} years</p>
-            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {physician.rating.toFixed(1)} ★</p>
+	            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatPhysicianRating(physician)}</p>
             <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Languages:</strong> {physician.languages.join(', ')}</p>
             <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {physician.hospital}</p>
           </section>
