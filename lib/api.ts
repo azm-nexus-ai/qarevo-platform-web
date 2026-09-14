@@ -109,6 +109,10 @@ async function refreshAuthToken(): Promise<boolean> {
 
     if (!res.ok) {
         clearAuthTokens();
+        // Redirect to login if refresh fails
+        if (typeof window !== "undefined") {
+            window.location.href = "/auth/sign-in";
+        }
         return false;
     }
 
