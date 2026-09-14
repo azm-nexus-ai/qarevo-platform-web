@@ -576,7 +576,7 @@ function PhysicianProfilePageContent() {
 	                        }}
 	                        style={{ borderRadius: '9px', border: effectiveSelectedDay === item.day ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: effectiveSelectedDay === item.day ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.86)', color: effectiveSelectedDay === item.day ? T.blue : T.slate, fontSize: '12px', fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
 	                      >
-	                        {item.dayLabel ?? item.day}
+	                        {item.day}
 	                      </button>
 	                    ))}
 	                  </div>
