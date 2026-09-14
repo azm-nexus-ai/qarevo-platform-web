@@ -210,10 +210,7 @@ export default function Doctor2FAPage() {
   const router = useRouter()
   const verifyingRef = useRef(false)
   
-  const [method, setMethod] = useState<'email' | 'phone'>('email')
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [countryCode, setCountryCode] = useState('+49')
   const [code, setCode] = useState('')
   
   const [touched, setTouched] = useState({
@@ -228,41 +225,26 @@ export default function Doctor2FAPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const storedIdentifier = localStorage.getItem('doctor_identifier')
-      if (storedIdentifier) {
-        if (storedIdentifier.includes('@')) {
-          setEmail(storedIdentifier)
-          setMethod('email')
-        } else {
-          setPhone(storedIdentifier)
-          setMethod('phone')
-        }
+      if (storedIdentifier?.includes('@')) {
+        setEmail(storedIdentifier)
       }
     }, 0)
     return () => window.clearTimeout(timer)
   }, [])
 
   const codeErr = touched.code && !code ? 'Verification code is required' : ''
-  const emailErr = method === 'email' && !email ? 'Email is required' : ''
 
   const handleSendCode = async () => {
-    if (method === 'email' && !email) {
-      setTouched({ ...touched, code: true })
-      return
-    }
-    if (method === 'phone' && !phone) {
-      setTouched({ ...touched, code: true })
-      return
-    }
-
     setLoading(true)
     setAuthError('')
 
     try {
-      // This would trigger sending a new OTP code
-      // For now, we'll just proceed to verification
+      if (email) {
+        await apiPost('/api/v1/auth/mfa/resend-email', { email })
+      }
       setSuccess(true)
     } catch (error) {
-      setAuthError(getFriendlyVerificationError(error, method))
+      setAuthError(getFriendlyVerificationError(error, 'email'))
     } finally {
       setLoading(false)
     }
@@ -277,16 +259,6 @@ export default function Doctor2FAPage() {
       return
     }
 
-    if (method === 'email' && !email) {
-      setAuthError('Email is required for verification')
-      return
-    }
-
-    if (method === 'phone' && !phone) {
-      setAuthError('Phone number is required for verification')
-      return
-    }
-
     setLoading(true)
     setAuthError('')
     verifyingRef.current = true
@@ -295,13 +267,7 @@ export default function Doctor2FAPage() {
       const tempToken = localStorage.getItem('doctor_temp_token')
       const headers: Record<string, string> | undefined = tempToken ? { Authorization: `Bearer ${tempToken}` } : undefined
       
-      const response = method === 'email'
-        ? await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-email', { email, code }, headers)
-        : await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-phone', {
-          country_code: countryCode,
-          phone,
-          code,
-        }, headers)
+      const response = await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-email', { email: email || undefined, code }, headers)
 
       // Clear temp tokens
       localStorage.removeItem('doctor_temp_token')
@@ -311,7 +277,7 @@ export default function Doctor2FAPage() {
       // Redirect to doctor dashboard
       router.push('/doctor/dashboard')
     } catch (error) {
-      setAuthError(getFriendlyVerificationError(error, method))
+      setAuthError(getFriendlyVerificationError(error, 'email'))
     } finally {
       verifyingRef.current = false
       setLoading(false)
@@ -362,7 +328,7 @@ export default function Doctor2FAPage() {
                   Verify Your Identity
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                  Enter the 6-digit code sent to your {method === 'email' ? 'email' : 'phone'}
+                  Enter the 6-digit code sent to your email.
                 </p>
               </div>
               <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -386,61 +352,14 @@ export default function Doctor2FAPage() {
               </div>
             )}
 
-            {/* Method selector */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-              <button
-                type="button"
-                onClick={() => setMethod('email')}
-                style={{
-                  flex: 1,
-                  padding: '10px 16px',
-                  borderRadius: '11px',
-                  border: method === 'email' ? `1.5px solid ${T.blue}` : '1.5px solid rgba(4,53,77,0.1)',
-                  background: method === 'email' ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.6)',
-                  color: method === 'email' ? T.blue : T.slate,
-                  fontFamily: 'inherit',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Ico p={ICONS.ema} size={14} sw={1.75} />
-                Email
-              </button>
-              <button
-                type="button"
-                onClick={() => setMethod('phone')}
-                style={{
-                  flex: 1,
-                  padding: '10px 16px',
-                  borderRadius: '11px',
-                  border: method === 'phone' ? `1.5px solid ${T.blue}` : '1.5px solid rgba(4,53,77,0.1)',
-                  background: method === 'phone' ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.6)',
-                  color: method === 'phone' ? T.blue : T.slate,
-                  fontFamily: 'inherit',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Ico p={ICONS.video} size={14} sw={1.75} />
-                Phone
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '10px 12px', borderRadius: '11px', border: '1.5px solid rgba(32,181,223,0.18)', background: 'rgba(32,181,223,0.07)', color: T.blue, fontSize: '13px', fontWeight: 700 }}>
+              <Ico p={ICONS.ema} size={14} sw={1.75} />
+              Email verification
             </div>
 
             {/* Form */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {method === 'email' ? (
+              {email && (
                 <Field
                   label="Email Address"
                   placeholder="doctor@example.com"
@@ -448,23 +367,7 @@ export default function Doctor2FAPage() {
                   value={email}
                   onChange={setEmail}
                   icon={ICONS.ema}
-                  error={emailErr}
                 />
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '12px' }}>
-                  <Field
-                    label="Country Code"
-                    placeholder="+49"
-                    value={countryCode}
-                    onChange={setCountryCode}
-                  />
-                  <Field
-                    label="Phone Number"
-                    placeholder="1234567890"
-                    value={phone}
-                    onChange={setPhone}
-                  />
-                </div>
               )}
 
               <Field
@@ -486,7 +389,7 @@ export default function Doctor2FAPage() {
                 <button
                   type="button"
                   onClick={handleSendCode}
-                  disabled={loading}
+                  disabled={loading || !email}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -494,11 +397,12 @@ export default function Doctor2FAPage() {
                     fontSize: '13px',
                     color: T.blue,
                     fontWeight: 600,
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: loading || !email ? 'not-allowed' : 'pointer',
+                    opacity: email ? 1 : 0.55,
                     textDecoration: 'none',
                   }}
                 >
-                  Resend Code
+                  {email ? 'Resend Code' : 'Check your email'}
                 </button>
                 <span style={{ fontSize: '12px', color: T.slate2 }}>
                   Code expires in 10 minutes

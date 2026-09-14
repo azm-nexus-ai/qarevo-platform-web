@@ -11,6 +11,7 @@ import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import ReviewModal from '@/components/patient/ReviewModal'
+import { apiGet, apiPost, getApiErrorDetail } from '@/lib/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ type Appointment = {
   bookingRef: string
   reason: string
   paymentStatus: 'Paid' | 'Pending' | 'Refunded'
+  startAt: string
   cancellationDate?: string
   cancellationReason?: string
   hasSummary?: boolean
@@ -50,152 +52,28 @@ type Appointment = {
 type ApiAppointment = {
   id: string
   consultation_modality?: string | null
-  start_at: string
+  start_at?: string | null
+  end_at?: string | null
   status?: string | null
   payment_status?: string | null
 }
 
 function normalizeAppointmentStatus(status?: string | null): AppointmentStatus {
-  if (status === 'CANCELLED') return 'Cancelled'
-  if (status === 'COMPLETED') return 'Completed'
-  if (status === 'RESCHEDULED') return 'Rescheduled'
+  const normalized = status?.toUpperCase()
+  if (normalized === 'CANCELLED') return 'Cancelled'
+  if (normalized === 'COMPLETED') return 'Completed'
+  if (normalized === 'RESCHEDULED') return 'Rescheduled'
   return 'Confirmed'
 }
 
 function normalizePaymentStatus(status?: string | null): Appointment['paymentStatus'] {
-  if (status === 'REFUNDED') return 'Refunded'
-  if (status === 'PENDING') return 'Pending'
+  const normalized = status?.toUpperCase()
+  if (normalized === 'REFUNDED') return 'Refunded'
+  if (normalized === 'PENDING') return 'Pending'
   return 'Paid'
 }
 
 type Tab = 'upcoming' | 'past' | 'cancelled'
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const UPCOMING: Appointment[] = [
-  {
-    id: 'appt-001',
-    physician: 'Dr. Sophia Reed',
-    specialty: 'Cardiology',
-    hospital: 'Qarevo Virtual Clinic',
-    imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120&h=120&fit=crop&auto=format&q=80',
-    consultationType: 'Video Consultation',
-    date: 'Today',
-    time: '4:30 PM',
-    duration: '30 min',
-    status: 'Starting Soon',
-    bookingRef: 'QRV-2026-0803',
-    reason: 'Cardiac follow-up and blood pressure review',
-    paymentStatus: 'Paid',
-  },
-  {
-    id: 'appt-002',
-    physician: 'Dr. Amara Okafor',
-    specialty: 'Endocrinology',
-    hospital: 'Kings Cross Medical Centre',
-    imageUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=120&h=120&fit=crop&auto=format&q=80',
-    consultationType: 'In-Person',
-    date: 'Tomorrow, Aug 8',
-    time: '10:00 AM',
-    duration: '45 min',
-    status: 'Confirmed',
-    bookingRef: 'QRV-2026-0804',
-    reason: 'HbA1c review and diabetes management plan update',
-    paymentStatus: 'Paid',
-  },
-  {
-    id: 'appt-003',
-    physician: 'Dr. James Whitmore',
-    specialty: 'Neurology',
-    hospital: "St. Luke's Clinic",
-    imageUrl: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=120&h=120&fit=crop&auto=format&q=80',
-    consultationType: 'Follow-Up',
-    date: 'Aug 12, 2026',
-    time: '2:15 PM',
-    duration: '30 min',
-    status: 'Confirmed',
-    bookingRef: 'QRV-2026-0812',
-    reason: 'Migraine treatment progress assessment',
-    paymentStatus: 'Pending',
-  },
-]
-
-const PAST: Appointment[] = [
-  {
-    id: 'appt-p1',
-    physician: 'Dr. Sophia Reed',
-    specialty: 'Cardiology',
-    hospital: 'Qarevo Virtual Clinic',
-    imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120&h=120&fit=crop&auto=format&q=80',
-    consultationType: 'Video Consultation',
-    date: 'Jul 29, 2026',
-    time: '4:00 PM',
-    duration: '30 min',
-    status: 'Completed',
-    bookingRef: 'QRV-2026-0729',
-    reason: 'Routine cardiology follow-up',
-    paymentStatus: 'Paid',
-    hasSummary: true,
-    hasPrescription: true,
-    hasLabRequest: false,
-  },
-  {
-    id: 'appt-p2',
-    physician: 'Dr. Amara Okafor',
-    specialty: 'Endocrinology',
-    hospital: 'Kings Cross Medical Centre',
-    imageUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=120&h=120&fit=crop&auto=format&q=80',
-    consultationType: 'In-Person',
-    date: 'Jul 18, 2026',
-    time: '11:00 AM',
-    duration: '45 min',
-    status: 'Completed',
-    bookingRef: 'QRV-2026-0718',
-    reason: 'Quarterly diabetes check',
-    paymentStatus: 'Paid',
-    hasSummary: true,
-    hasPrescription: false,
-    hasLabRequest: true,
-  },
-  {
-    id: 'appt-p3',
-    physician: 'Dr. Lena Vasquez',
-    specialty: 'General Practice',
-    hospital: 'Qarevo Virtual Clinic',
-    imageUrl: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=120&h=120&fit=crop&auto=format&q=80',
-    consultationType: 'Second Opinion',
-    date: 'Jun 30, 2026',
-    time: '9:30 AM',
-    duration: '20 min',
-    status: 'Completed',
-    bookingRef: 'QRV-2026-0630',
-    reason: 'Second opinion on treatment plan',
-    paymentStatus: 'Paid',
-    hasSummary: true,
-    hasPrescription: false,
-    hasLabRequest: false,
-  },
-]
-
-const CANCELLED: Appointment[] = [
-  {
-    id: 'appt-c1',
-    physician: 'Dr. James Whitmore',
-    specialty: 'Neurology',
-    hospital: "St. Luke's Clinic",
-    imageUrl: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=120&h=120&fit=crop&auto=format&q=80',
-    consultationType: 'Follow-Up',
-    date: 'Jul 22, 2026',
-    time: '3:00 PM',
-    duration: '30 min',
-    status: 'Cancelled',
-    bookingRef: 'QRV-2026-0722',
-    reason: 'Migraine treatment review',
-    paymentStatus: 'Refunded',
-    cancellationDate: 'Jul 20, 2026',
-    cancellationReason: 'Patient requested cancellation',
-  },
-]
 
 // ─── Badge ─────────────────────────────────────────────────────────────────────
 
@@ -789,50 +667,46 @@ function AppointmentsPageInner() {
   useEffect(() => {
     async function fetchAppointments() {
       try {
-        const response = await fetch('/api/v1/patient/appointments', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          },
-        })
-        if (response.ok) {
-          const data = await response.json()
-          const appointments: ApiAppointment[] = data.appointments || []
-          // Transform API data to match Appointment type
-          const transformed: Appointment[] = appointments.map((apt) => ({
+        const data = await apiGet<{ appointments?: ApiAppointment[] }>('/api/v1/patient/appointments')
+        const appointments = data.appointments || []
+        const transformed: Appointment[] = appointments
+          .filter((apt): apt is ApiAppointment & { start_at: string } => Boolean(apt.start_at))
+          .map((apt) => {
+            const startsAt = new Date(apt.start_at)
+            return {
             id: apt.id,
-            physician: 'Dr. Sophia Reed', // Would need to fetch from provider data
-            specialty: 'Cardiology',
-            hospital: 'Qarevo Virtual Clinic',
-            imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120&h=120&fit=crop&auto=format&q=80',
-            consultationType: apt.consultation_modality === 'video' ? 'Video Consultation' : 'In-Person',
-            date: new Date(apt.start_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            time: new Date(apt.start_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+            physician: 'Assigned physician',
+            specialty: 'Care team',
+            hospital: 'Qarevo Health',
+            imageUrl: '/icons/profilePic.svg',
+            consultationType: apt.consultation_modality === 'in_person' ? 'In-Person' : 'Video Consultation',
+            date: startsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            time: startsAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
             duration: '30 min',
             status: normalizeAppointmentStatus(apt.status),
             bookingRef: `QRV-${apt.id.slice(0, 8)}`,
             reason: 'Consultation',
             paymentStatus: normalizePaymentStatus(apt.payment_status),
-          }))
+            startAt: apt.start_at,
+            hasSummary: normalizeAppointmentStatus(apt.status) === 'Completed',
+          }
+        })
           
-          // Separate by status
-          const now = new Date()
-          const upcomingApts = transformed.filter((apt) =>
-            apt.status !== 'Cancelled' && apt.status !== 'Completed' && new Date(apt.date + ' ' + apt.time) > now
-          )
-          const cancelledApts = transformed.filter((apt) => apt.status === 'Cancelled')
-          const pastApts = transformed.filter((apt) =>
-            apt.status === 'Completed' || new Date(apt.date + ' ' + apt.time) <= now
-          )
-          
-          setUpcoming(upcomingApts)
-          setCancelled(cancelledApts)
-          setPast(pastApts)
-        }
+        const now = new Date()
+        const upcomingApts = transformed.filter((apt) =>
+          apt.status !== 'Cancelled' && apt.status !== 'Completed' && new Date(apt.startAt) > now
+        )
+        const cancelledApts = transformed.filter((apt) => apt.status === 'Cancelled')
+        const pastApts = transformed.filter((apt) =>
+          apt.status === 'Completed' || new Date(apt.startAt) <= now
+        )
+
+        setUpcoming(upcomingApts)
+        setCancelled(cancelledApts)
+        setPast(pastApts)
       } catch (error) {
         console.error('Failed to fetch appointments:', error)
-        // Fall back to mock data on error
-        setUpcoming(UPCOMING)
-        setCancelled(CANCELLED)
+        setToast(getApiErrorDetail(error) || 'Failed to load appointments.')
       } finally {
         setLoading(false)
       }
@@ -859,30 +733,17 @@ function AppointmentsPageInner() {
     if (!cancelTarget) return
     
     try {
-      const response = await fetch(`/api/v1/endpoints/appointments/${cancelTarget.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-        body: JSON.stringify({ reason: 'Patient requested cancellation' }),
-      })
-
-      if (response.ok) {
-        const appt: Appointment = { ...cancelTarget, status: 'Cancelled', cancellationDate: 'Today', cancellationReason: 'Patient requested cancellation', paymentStatus: 'Refunded' }
-        setUpcoming(prev => prev.filter(a => a.id !== cancelTarget.id))
-        setCancelled(prev => [appt, ...prev])
-        setCancelTarget(null)
-        setToast('Appointment cancelled. A refund has been initiated.')
-        if (upcoming.filter(a => a.id !== cancelTarget.id).length === 0) {
-          setActiveTab('cancelled')
-        }
-      } else {
-        const error = await response.json()
-        setToast(error.detail || 'Failed to cancel appointment')
+      await apiPost(`/api/v1/appointments/${cancelTarget.id}/cancel?reason=${encodeURIComponent('Patient requested cancellation')}`)
+      const appt: Appointment = { ...cancelTarget, status: 'Cancelled', cancellationDate: 'Today', cancellationReason: 'Patient requested cancellation', paymentStatus: 'Refunded' }
+      setUpcoming(prev => prev.filter(a => a.id !== cancelTarget.id))
+      setCancelled(prev => [appt, ...prev])
+      setCancelTarget(null)
+      setToast('Appointment cancelled. A refund has been initiated.')
+      if (upcoming.filter(a => a.id !== cancelTarget.id).length === 0) {
+        setActiveTab('cancelled')
       }
-    } catch {
-      setToast('Failed to cancel appointment. Please try again.')
+    } catch (error) {
+      setToast(getApiErrorDetail(error) || 'Failed to cancel appointment. Please try again.')
     }
   }
 
@@ -890,29 +751,16 @@ function AppointmentsPageInner() {
     if (!reviewTarget) return
     
     try {
-      const response = await fetch('/api/v1/patient/reviews', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-        body: JSON.stringify({
-          rating,
-          comment,
-          appointment_id: reviewTarget.id,
-        }),
+      await apiPost('/api/v1/patient/reviews', {
+        rating,
+        comment,
+        appointment_id: reviewTarget.id,
       })
-
-      if (response.ok) {
-        setToast('Review submitted successfully!')
-        // Mark the appointment as reviewed
-        setReviewTarget(null)
-      } else {
-        const error = await response.json()
-        setToast(error.detail || 'Failed to submit review')
-      }
-    } catch {
-      setToast('Failed to submit review. Please try again.')
+      setToast('Review submitted successfully!')
+      setPast(prev => prev.map(appt => appt.id === reviewTarget.id ? { ...appt, hasReviewed: true } : appt))
+      setReviewTarget(null)
+    } catch (error) {
+      setToast(getApiErrorDetail(error) || 'Failed to submit review. Please try again.')
     }
   }
 
@@ -1057,11 +905,11 @@ function AppointmentsPageInner() {
           {/* PAST */}
           {activeTab === 'past' && (
             <>
-              {PAST.length > 0 ? (
+              {past.length > 0 ? (
                 <SCard>
                   <h2 style={{ margin: '0 0 14px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Completed Appointments</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {PAST.map(appt => <PastCard key={appt.id} appt={appt} onReview={setReviewTarget} />)}
+                    {past.map(appt => <PastCard key={appt.id} appt={appt} onReview={setReviewTarget} />)}
                   </div>
                 </SCard>
               ) : (

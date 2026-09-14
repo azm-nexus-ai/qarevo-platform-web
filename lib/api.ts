@@ -56,7 +56,12 @@ export function getApiErrorDetail(error: unknown): string | null {
         const parsed = JSON.parse(body) as { detail?: unknown; message?: unknown; error?: unknown };
         const detail = parsed.detail ?? parsed.message ?? parsed.error;
 
-        if (typeof detail === "string") return detail;
+        if (typeof detail === "string") {
+            if (/invalid or expired access token/i.test(detail)) {
+                return "Your session has expired. Please sign in again.";
+            }
+            return detail;
+        }
         if (Array.isArray(detail)) {
             const messages = detail
                 .map((item) => {
@@ -109,9 +114,8 @@ async function refreshAuthToken(): Promise<boolean> {
 
     if (!res.ok) {
         clearAuthTokens();
-        // Redirect to login if refresh fails
         if (typeof window !== "undefined") {
-            window.location.href = "/auth/sign-in";
+            window.dispatchEvent(new Event("qarevo:auth-session-expired"));
         }
         return false;
     }

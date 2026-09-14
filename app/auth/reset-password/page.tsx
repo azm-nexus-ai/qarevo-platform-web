@@ -450,7 +450,7 @@ function PasswordField({
               justifyContent: 'center',
             }}
           >
-            <Ico p={show ? ICONS.user : ICONS.lock} size={13} sw={1.75} />
+            <Ico p={show ? ICONS.eyeOff : ICONS.eye} size={13} sw={1.75} />
           </button>
 
           {success ? <Ico p={ICONS.check} size={14} sw={2.5} color={T.green} /> : error ? <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} /> : null}

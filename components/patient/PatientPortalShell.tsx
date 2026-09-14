@@ -225,6 +225,32 @@ export default function PatientPortalShell({
           background: rgba(11, 32, 48, 0.88) !important;
           border-color: rgba(125, 211, 252, 0.18) !important;
         }
+        .patient-portal-shell.pps-theme-dark .pps-main [style*="background: #fff"],
+        .patient-portal-shell.pps-theme-dark .pps-main [style*="background: rgb(255, 255, 255)"],
+        .patient-portal-shell.pps-theme-dark .pps-main [style*="background: rgba(255,255,255"],
+        .patient-portal-shell.pps-theme-dark .pps-main [style*="background: rgba(255, 255, 255"],
+        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="background: #fff"],
+        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="background: rgb(255, 255, 255)"],
+        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="background: rgba(255,255,255"],
+        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="background: rgba(255, 255, 255"] {
+          background: rgba(10, 31, 45, 0.94) !important;
+          border-color: rgba(125, 211, 252, 0.2) !important;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 34px rgba(0,0,0,0.18) !important;
+        }
+        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: rgb(4, 53, 77)"],
+        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: #04354D"],
+        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: #04354d"],
+        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: rgb(4, 53, 77)"],
+        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: #04354D"],
+        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: #04354d"] {
+          color: #E6F6FF !important;
+        }
+        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: rgb(53, 84, 104)"],
+        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: rgb(119, 145, 163)"],
+        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: rgb(53, 84, 104)"],
+        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: rgb(119, 145, 163)"] {
+          color: #B7D3E2 !important;
+        }
         .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) h1,
         .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) h2,
         .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) h3,

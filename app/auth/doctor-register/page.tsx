@@ -361,7 +361,7 @@ export default function DoctorRegisterPage() {
       aria-label={showPassword ? 'Hide password' : 'Show password'}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex' }}
     >
-      <Ico p={showPassword ? ICONS.user : ICONS.lock} size={14} sw={1.75} />
+      <Ico p={showPassword ? ICONS.eyeOff : ICONS.eye} size={14} sw={1.75} />
     </button>
   )
 

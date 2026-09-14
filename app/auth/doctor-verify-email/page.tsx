@@ -206,8 +206,6 @@ function DoctorVerifyEmailPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
-  const country_code = searchParams.get('country_code') || '234'
-  const phone = searchParams.get('phone') || ''
   
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
@@ -230,7 +228,7 @@ function DoctorVerifyEmailPageContent() {
       setSuccess(true)
       // Keep loading state true during redirect to prevent button clicks
       setTimeout(() => {
-        router.push(`/auth/doctor-verify-phone?country_code=${country_code}&phone=${phone}`)
+        router.push('/auth/doctor/login?verified=email')
       }, 1500)
       return // Don't set loading to false yet
     } catch (error) {

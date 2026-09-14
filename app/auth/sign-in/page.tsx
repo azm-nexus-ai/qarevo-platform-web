@@ -398,7 +398,7 @@ export default function SignInPage() {
       aria-label={showPw ? 'Hide password' : 'Show password'}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex' }}
     >
-      <Ico p={showPw ? ICONS.user : ICONS.lock} size={14} sw={1.75} />
+      <Ico p={showPw ? ICONS.eyeOff : ICONS.eye} size={14} sw={1.75} />
     </button>
   )
 
@@ -409,7 +409,26 @@ export default function SignInPage() {
         input::placeholder { color: rgba(4,53,77,0.3); }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shake { 0%,100% { transform:translateX(0); } 20%,60% { transform:translateX(-5px); } 40%,80% { transform:translateX(5px); } }
-        @media (max-width: 860px) { .signin-left { display: none !important; } }
+        @media (max-width: 860px) {
+          .signin-left { display: none !important; }
+          .signin-form-area {
+            min-height: 100svh !important;
+            align-items: flex-start !important;
+            justify-content: flex-start !important;
+            padding: 24px 16px 30px !important;
+            width: 100% !important;
+          }
+          .signin-form-wrap {
+            width: 100% !important;
+            max-width: 520px !important;
+            margin: 0 auto !important;
+          }
+          .signin-card {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 32px 24px 28px !important;
+          }
+        }
         .signin-page { min-width: 0; }
         .signin-form-area,
         .signin-form-wrap,

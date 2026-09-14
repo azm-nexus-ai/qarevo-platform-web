@@ -159,7 +159,7 @@ function PasswordField({ label, value, onChange, error, showStrength, confirm }:
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex', alignItems: 'center' }}
       aria-label={show ? 'Hide password' : 'Show password'}
     >
-      <Ico p={show ? ICONS.user : ICONS.lock} size={14} sw={1.75} />
+      <Ico p={show ? ICONS.eyeOff : ICONS.eye} size={14} sw={1.75} />
     </button>
   )
 
