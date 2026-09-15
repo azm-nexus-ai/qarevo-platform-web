@@ -68,7 +68,7 @@ const quickActions: ActionItem[] = [
 ]
 
 function formatFee(value: number) {
-  return `$${value}`
+  return value > 0 ? `$${value}` : 'Not configured'
 }
 
 function readLabel(service: string | null) {
@@ -84,13 +84,13 @@ function readLabel(service: string | null) {
 
 function SuccessPageContent() {
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? 'sophia-reed'
+  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const physicianData = useMemo(() => getBookingPhysician(searchParams, physician), [searchParams, physician])
   const service = searchParams.get('service') ?? 'video'
-  const fee = Number(searchParams.get('fee') ?? physician?.consultationFee ?? 140)
+  const fee = Number(searchParams.get('fee') ?? physicianData.consultationFee ?? 0)
   const duration = searchParams.get('duration') ?? '30 min'
-  const insurance = searchParams.get('insurance') ?? 'Axa'
+  const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
   const date = searchParams.get('date') ?? 'Today'
   const slot = searchParams.get('slot') ?? '4:30 PM'
   const notes = searchParams.get('notes') ?? ''
@@ -120,7 +120,7 @@ function SuccessPageContent() {
         <p style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Booking Snapshot</p>
         <div style={{ display: 'grid', gap: '8px' }}>
           {[
-            ['Physician', physician?.name ?? 'Selected physician'],
+            ['Physician', physicianData.name],
             ['Consultation', readLabel(service)],
             ['Date', date],
             ['Time', slot],
@@ -238,18 +238,18 @@ function SuccessPageContent() {
 
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div style={{ width: '88px', height: '88px', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(4,53,77,0.12)', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', display: 'grid', placeItems: 'center' }}>
-                  {physician ? (
-                    <img src={physician.imageUrl} alt={physician.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {physicianData.imageUrl ? (
+                    <img src={physicianData.imageUrl} alt={physicianData.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <Ico p={ICONS.steth} size={28} sw={1.5} color={T.navy} />
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: '220px' }}>
-                  <h3 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physician?.name ?? 'Selected physician'}</h3>
-                  <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physician?.specialty ?? 'Care Team'} · {physician?.hospital ?? 'Qarevo Care Network'}</p>
+                  <h3 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
+                  <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: T.slate2 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.activity} size={12} sw={1.75} color={T.blue} />{physician?.experienceYears ?? 12} years experience</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.lock} size={12} sw={1.75} color={T.blue} />{physician?.languages.join(', ') ?? 'English, French'}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.activity} size={12} sw={1.75} color={T.blue} />{physicianData.experienceYears} years experience</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.lock} size={12} sw={1.75} color={T.blue} />{physicianData.languages.length ? physicianData.languages.join(', ') : 'Languages not listed'}</span>
                   </div>
                 </div>
               </div>

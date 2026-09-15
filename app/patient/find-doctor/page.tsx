@@ -78,6 +78,39 @@ function buildProfileHref(
   return `/patient/physicians/${physician.id}?${params.toString()}`
 }
 
+function buildBookingHref(
+  physician: PatientDoctor,
+  state: {
+    consultationType: string
+    insurance: string
+  },
+) {
+  const serviceType = getQuickBookServiceType(state.consultationType, physician.consultationTypes)
+  const params = new URLSearchParams({
+    physicianId: physician.id,
+    provider_id: physician.id,
+    physicianName: physician.name,
+    physicianSpecialty: physician.specialty,
+    physicianHospital: physician.hospital,
+    physicianImageUrl: physician.imageUrl,
+    physicianConsultationFee: String(physician.consultationFee),
+    physicianExperienceYears: String(physician.experienceYears),
+    physicianRating: String(physician.rating),
+    physicianLanguages: physician.languages.join(','),
+    physicianInsurance: physician.insurance.join(','),
+    insurance: state.insurance === 'Any' ? physician.insurance[0] ?? 'Self pay' : state.insurance,
+    service: serviceType,
+    service_type: serviceType,
+    from: 'find-doctor',
+  })
+
+  return `/patient/consultation-booking/date-time?${params.toString()}`
+}
+
+function formatDoctorRating(doctor: PatientDoctor) {
+  return doctor.reviews > 0 ? `${doctor.rating.toFixed(1)} (${doctor.reviews} reviews)` : 'No ratings yet'
+}
+
 export default function FindDoctorPage() {
   const router = useRouter()
   const pathname = usePathname()
@@ -91,7 +124,7 @@ export default function FindDoctorPage() {
   ])
 
   const [specialty, setSpecialty] = useState<(typeof QUICK_SPECIALTIES)[number]>('All')
-  const [availability, setAvailability] = useState<'any' | 'today' | 'this-week'>('any')
+  const [availability, setAvailability] = useState<'any' | 'today' | 'tomorrow' | 'this-week'>('any')
   const [gender, setGender] = useState<'any' | 'female' | 'male'>('any')
   const [language, setLanguage] = useState<(typeof LANGUAGE_OPTIONS)[number]>('Any')
   const [experience, setExperience] = useState<'any' | '0-5' | '6-10' | '11+'>('any')
@@ -487,9 +520,10 @@ export default function FindDoctorPage() {
                   <label style={{ fontSize: '12px', color: T.slate2 }}>
                     Availability
                     <select value={availability} onChange={(e) => { setAvailability(e.target.value as typeof availability); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
-                      <option value='any'>Any</option>
-                      <option value='today'>Available Today</option>
-                      <option value='this-week'>This Week</option>
+	                      <option value='any'>Any</option>
+	                      <option value='today'>Available Today</option>
+	                      <option value='tomorrow'>Available Tomorrow</option>
+	                      <option value='this-week'>This Week</option>
                     </select>
                   </label>
 
@@ -679,7 +713,7 @@ export default function FindDoctorPage() {
                   filteredPhysicians.map((doctor) => (
                     <article key={doctor.id} style={{ background: 'rgba(255,255,255,0.88)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.card, padding: '14px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
-                        <span style={{ ...Glass.chip, color: T.navy, fontSize: '11px', fontWeight: 700, padding: '4px 9px', borderRadius: '999px' }}>Verified Physician</span>
+	                        <span style={{ ...Glass.chip, color: doctor.verification === 'Pending' ? T.amber : T.navy, fontSize: '11px', fontWeight: 700, padding: '4px 9px', borderRadius: '999px' }}>{doctor.verification === 'Pending' ? 'Pending Verification' : 'Verified Physician'}</span>
                         <button
                           type='button'
                           onClick={() => toggleFavorite(doctor.id)}
@@ -701,7 +735,7 @@ export default function FindDoctorPage() {
                       <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {doctor.hospital}</p>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {doctor.experienceYears} years</p>
-                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {doctor.rating.toFixed(1)} ({doctor.reviews} reviews)</p>
+	                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatDoctorRating(doctor)}</p>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Consultation Fee:</strong> ${doctor.consultationFee}</p>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {doctor.nextAvailable}</p>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Distance:</strong> {doctor.distanceKm.toFixed(1)} km</p>
@@ -718,11 +752,11 @@ export default function FindDoctorPage() {
                         <Link href={buildProfileHref(doctor, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: '1px solid rgba(4,53,77,0.14)', background: 'rgba(255,255,255,0.88)', color: T.navy, fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>
                           View Profile
                         </Link>
-                        <Link href={buildProfileHref(doctor, 'book', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', display: 'inline-flex', alignItems: 'center' }}>
-                          Book Now
-                        </Link>
-                        <Link
-                          href={`/patient/consultation-booking/date-time?provider_id=${doctor.id}&service_type=${getQuickBookServiceType(consultationType, doctor.consultationTypes)}&from=find-doctor`}
+	                        <Link href={buildBookingHref(doctor, { consultationType, insurance })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', display: 'inline-flex', alignItems: 'center' }}>
+	                          Book Now
+	                        </Link>
+	                        <Link
+	                          href={buildBookingHref(doctor, { consultationType, insurance })}
                           style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: '1px solid rgba(52,140,234,0.3)', background: 'rgba(52,140,234,0.08)', color: '#348CEA', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}
                         >
                           Quick Book

@@ -113,13 +113,15 @@ export default function DoctorLayout({
           top: 0,
           zIndex: 10,
           boxShadow: Sh.nav,
+          display: 'flex',
+          flexDirection: 'column',
         }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)', flexShrink: 0 }}>
             <AuthenticatedLogo width={140} />
             <p style={{ margin: '8px 0 0', fontSize: '11px', color: T.slate2, fontWeight: 500 }}>Doctor Portal</p>
           </div>
           
-          <nav style={{ padding: '16px 12px' }}>
+          <nav style={{ padding: '16px 12px', flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {DOCTOR_SIDEBAR_ITEMS.map((item) => {
                 const isActive = isDoctorNavActive(pathname, item.href)
@@ -216,7 +218,7 @@ export default function DoctorLayout({
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Manage your consultations and patients</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button 
+                <button
                   onClick={handleSettingsClick}
                   style={{
                     padding: '10px',
@@ -229,6 +231,26 @@ export default function DoctorLayout({
                   title="Settings"
                 >
                   <Ico p={ICONS.info} size={18} sw={1.8} color={T.slate2} />
+                </button>
+                <button
+                  onClick={handleLogoutClick}
+                  disabled={loggingOut}
+                  style={{
+                    minHeight: '40px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(220,38,38,0.16)',
+                    background: 'rgba(220,38,38,0.06)',
+                    color: T.red,
+                    cursor: loggingOut ? 'wait' : 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    transition: 'all 0.15s',
+                    opacity: loggingOut ? 0.65 : 1,
+                  }}
+                  title="Sign out"
+                >
+                  {loggingOut ? 'Signing out...' : 'Sign out'}
                 </button>
                 <button 
                   onClick={handleProfileClick}

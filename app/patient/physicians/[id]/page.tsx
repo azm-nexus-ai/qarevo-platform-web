@@ -300,6 +300,8 @@ function PhysicianProfilePageContent() {
 
   // Helper: Get slots for selected day
   const selectedDaySlots = getSlotsForDay(profile.availabilitySlots, effectiveSelectedDay)
+  const profileSpecialties = Array.from(new Set([physician.specialty, ...profile.subSpecialties].filter(Boolean)))
+  const profileSpecialtyLine = profileSpecialties.join(' · ')
 
   // Helper: Get effective selected slot with fallback
   const effectiveSelectedSlot = getEffectiveSelectedSlot(selectedDaySlots, selectedSlot)
@@ -392,12 +394,12 @@ function PhysicianProfilePageContent() {
 
               <div>
 	                <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, color: physician.verification === 'Pending' ? T.amber : T.blue, marginBottom: '8px' }}>
-	                  <Ico p={ICONS.check} size={12} sw={2.4} color={T.blue} />
+                  <Ico p={ICONS.check} size={12} sw={2.4} color={physician.verification === 'Pending' ? T.amber : T.blue} />
 	                  {physician.verification === 'Pending' ? 'Pending Verification' : 'Verified Physician'}
                 </span>
                 <h1 style={{ margin: '0 0 6px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '30px', fontWeight: 800, letterSpacing: '-0.034em', color: T.navy }}>{physician.name}</h1>
                 <p style={{ margin: '0 0 4px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>
-                  {physician.specialty} · {profile.subSpecialties.join(' · ')}
+                  {profileSpecialtyLine || 'Specialty not configured'}
                 </p>
                 <p style={{ margin: '0 0 4px', fontSize: '13px', color: T.slate2 }}>
                   {physician.hospital} · {physician.experienceYears} years experience · {physician.languages.join(', ')}

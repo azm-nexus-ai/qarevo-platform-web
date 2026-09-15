@@ -4,12 +4,13 @@ import Link from 'next/link'
 import { Suspense, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
+import { getBookingPhysician } from '@/lib/booking'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
 function formatFee(value: number) {
-  return `$${value}`
+  return value > 0 ? `$${value}` : 'Not configured'
 }
 
 function readLabel(service: string | null) {
@@ -26,12 +27,13 @@ function readLabel(service: string | null) {
 function ConfirmationPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? ''
+  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
+  const physicianData = useMemo(() => getBookingPhysician(searchParams, physician), [searchParams, physician])
   const service = searchParams.get('service') ?? 'video'
-  const fee = Number(searchParams.get('fee') ?? physician?.consultationFee ?? 140)
+  const fee = Number(searchParams.get('fee') ?? physicianData.consultationFee ?? 0)
   const duration = searchParams.get('duration') ?? '30 min'
-  const insurance = searchParams.get('insurance') ?? 'Axa'
+  const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
   const date = searchParams.get('date') ?? 'Today'
   const slot = searchParams.get('slot') ?? '4:30 PM'
 
@@ -61,7 +63,7 @@ function ConfirmationPageContent() {
               <div style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)', padding: '14px 16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Provider</span>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{physician?.name ?? 'Selected physician'}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{physicianData.name}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Slot</span>

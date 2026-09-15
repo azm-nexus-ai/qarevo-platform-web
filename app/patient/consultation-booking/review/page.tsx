@@ -1,18 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
-import { createPatientAppointment } from '@/lib/api'
+import { createPatientAppointment, getPatientDoctor, type PatientDoctor } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 
 function formatFee(value: number) {
-  return `$${value}`
+  return value > 0 ? `$${value}` : 'Not configured'
 }
 
 function readLabel(service: string | null) {
@@ -52,16 +52,56 @@ function addDuration(start: Date, durationLabel: string) {
   return end
 }
 
+function profileServices(doctor: PatientDoctor | null) {
+  const services = doctor?.profile?.services
+  if (!Array.isArray(services)) return []
+
+  return services
+    .map((service) => {
+      if (!service || typeof service !== 'object') return null
+      const item = service as Record<string, unknown>
+      return {
+        type: typeof item.type === 'string' ? item.type : '',
+        duration: typeof item.duration === 'string' ? item.duration : '',
+        price: typeof item.price === 'number' ? item.price : null,
+      }
+    })
+    .filter((service): service is { type: string; duration: string; price: number | null } => Boolean(service))
+}
+
+function doctorToBookingFallback(doctor: PatientDoctor | null) {
+  if (!doctor) return undefined
+  return {
+    id: doctor.id,
+    name: doctor.name,
+    specialty: doctor.specialty,
+    hospital: doctor.hospital,
+    imageUrl: doctor.imageUrl || '',
+    consultationFee: doctor.consultationFee,
+    experienceYears: doctor.experienceYears,
+    rating: doctor.rating,
+    languages: doctor.languages,
+    insurance: doctor.insurance,
+  }
+}
+
 function ReviewPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? ''
+  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
-  const physicianData = useMemo(() => getBookingPhysician(searchParams, physician), [searchParams, physician])
+  const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
+  const [doctorLoadError, setDoctorLoadError] = useState('')
+  const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor) ?? physician, [remoteDoctor, physician])
+  const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
-  const fee = Number(searchParams.get('fee') ?? physician?.consultationFee ?? 140)
-  const duration = searchParams.get('duration') ?? '30 min'
-  const insurance = searchParams.get('insurance') ?? 'Axa'
+  const serviceDetail = useMemo(() => {
+    const services = profileServices(remoteDoctor)
+    return services.find((item) => item.type === service) ?? services[0]
+  }, [remoteDoctor, service])
+  const fee = Number(searchParams.get('fee') ?? serviceDetail?.price ?? physicianData.consultationFee ?? 0)
+  const duration = searchParams.get('duration') ?? serviceDetail?.duration ?? '30 min'
+  const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
   const date = searchParams.get('date') ?? 'Today'
   const slot = searchParams.get('slot') ?? '4:30 PM'
   const notes = searchParams.get('notes') ?? ''
@@ -76,6 +116,29 @@ function ReviewPageContent() {
   const [submitError, setSubmitError] = useState('')
   const [showPolicy, setShowPolicy] = useState(false)
   const [editableNotes, setEditableNotes] = useState(notes)
+
+  useEffect(() => {
+    if (!physicianId || physician) return
+
+    let cancelled = false
+    getPatientDoctor(physicianId)
+      .then((doctor) => {
+        if (cancelled) return
+        setRemoteDoctor(doctor)
+        setDoctorLoadError('')
+      })
+      .catch((error) => {
+        console.error('Failed to load selected doctor', error)
+        if (!cancelled) {
+          setRemoteDoctor(null)
+          setDoctorLoadError('We could not load the selected physician details. Please go back and choose the doctor again.')
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [physicianId, physician])
 
   const appointmentEnd = useMemo(() => {
     const parts = duration.match(/(\d+)/)
@@ -200,8 +263,13 @@ function ReviewPageContent() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Consultation</span><strong style={{ color: T.navy }}>{readLabel(service)}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Date</span><strong style={{ color: T.navy }}>{date}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Time</span><strong style={{ color: T.navy }}>{slot}</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Fee</span><strong style={{ color: T.navy }}>${fee}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Fee</span><strong style={{ color: T.navy }}>{formatFee(fee)}</strong></div>
               </div>
+              {doctorLoadError && (
+                <div style={{ marginTop: '10px', borderRadius: '12px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(254,242,242,0.9)', color: '#B91C1C', padding: '10px 11px', fontSize: '12px', fontWeight: 700, lineHeight: 1.5 }}>
+                  {doctorLoadError}
+                </div>
+              )}
             </section>
           </aside>
 
@@ -224,8 +292,8 @@ function ReviewPageContent() {
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ width: '84px', height: '84px', borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(4,53,77,0.12)', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', display: 'grid', placeItems: 'center' }}>
-                  {physician ? (
-                    <img src={physician.imageUrl} alt={physician.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {physicianData.imageUrl ? (
+                    <img src={physicianData.imageUrl} alt={physicianData.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <Ico p={ICONS.steth} size={28} sw={1.5} color={T.navy} />
                   )}
@@ -235,12 +303,12 @@ function ReviewPageContent() {
                     <Ico p={ICONS.check} size={10} sw={2.2} color={T.blue} />
                     Verified Physician
                   </div>
-                  <h3 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physician?.name ?? 'Selected physician'}</h3>
-                  <p style={{ margin: '0 0 6px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physician?.specialty ?? 'Care Team'} · {physician?.hospital ?? 'Qarevo Care Network'}</p>
+                  <h3 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
+                  <p style={{ margin: '0 0 6px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: T.slate2 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.activity} size={12} sw={1.75} color={T.blue} />{physician?.experienceYears ?? 12} years experience</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.steth} size={12} sw={1.75} color={T.blue} />{(physician?.rating ?? 4.9).toFixed(1)} rating</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.lock} size={12} sw={1.75} color={T.blue} />{physician?.languages.join(', ') ?? 'English, French'}</span>
+	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.activity} size={12} sw={1.75} color={T.blue} />{physicianData.experienceYears} years experience</span>
+	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.steth} size={12} sw={1.75} color={T.blue} />{remoteDoctor && remoteDoctor.reviews > 0 ? `${remoteDoctor.rating.toFixed(1)} rating` : 'No ratings yet'}</span>
+	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.lock} size={12} sw={1.75} color={T.blue} />{physicianData.languages.length ? physicianData.languages.join(', ') : 'Languages not listed'}</span>
                   </div>
                 </div>
               </div>
@@ -381,7 +449,7 @@ function ReviewPageContent() {
                 </div>
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Booking Summary</p>
-                  <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 800, color: T.navy }}>{physician?.name ?? 'Selected physician'}</h3>
+                  <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
                 </div>
               </div>
 

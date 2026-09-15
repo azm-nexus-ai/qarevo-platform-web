@@ -36,16 +36,16 @@ export function getBookingPhysician(
   const base = fromStore ?? fallbackPhysician
 
   return {
-    id: physicianId || base?.id || 'sophia-reed',
-    name: searchParams.get('physicianName') ?? base?.name ?? 'Selected physician',
+    id: physicianId || base?.id || '',
+    name: searchParams.get('physicianName') ?? base?.name ?? 'Loading physician...',
     specialty: searchParams.get('physicianSpecialty') ?? base?.specialty ?? 'Specialist',
-    hospital: searchParams.get('physicianHospital') ?? base?.hospital ?? 'Qarevo Care Network',
-    imageUrl: searchParams.get('physicianImageUrl') ?? base?.imageUrl ?? 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=220&h=220&fit=crop',
-    consultationFee: parseNumber(searchParams.get('physicianConsultationFee') ?? null, base?.consultationFee ?? 140),
-    experienceYears: parseNumber(searchParams.get('physicianExperienceYears') ?? null, base?.experienceYears ?? 12),
-    rating: parseNumber(searchParams.get('physicianRating') ?? null, base?.rating ?? 4.9),
-    languages: parseList(searchParams.get('physicianLanguages') ?? null, base?.languages ?? ['English', 'French']),
-    insurance: parseList(searchParams.get('physicianInsurance') ?? null, base?.insurance ?? ['Axa']),
+    hospital: searchParams.get('physicianHospital') ?? base?.hospital ?? 'Care location not configured',
+    imageUrl: searchParams.get('physicianImageUrl') ?? base?.imageUrl ?? '',
+    consultationFee: parseNumber(searchParams.get('physicianConsultationFee') ?? null, base?.consultationFee ?? 0),
+    experienceYears: parseNumber(searchParams.get('physicianExperienceYears') ?? null, base?.experienceYears ?? 0),
+    rating: parseNumber(searchParams.get('physicianRating') ?? null, base?.rating ?? 0),
+    languages: parseList(searchParams.get('physicianLanguages') ?? null, base?.languages ?? []),
+    insurance: parseList(searchParams.get('physicianInsurance') ?? null, base?.insurance ?? []),
   }
 }
 

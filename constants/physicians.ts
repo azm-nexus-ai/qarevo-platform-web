@@ -47,7 +47,7 @@ export interface PhysicianProfileContent {
   education: Array<{ title: string; org: string; period: string }>
   experienceTimeline: Array<{ title: string; org: string; period: string }>
   services: PhysicianService[]
-  availabilitySlots: Array<{ day: string; timezone: string; slots: string[] }>
+  availabilitySlots: Array<{ day: string; dayLabel?: string; timezone: string; slots: string[] }>
   reviews: PhysicianReview[]
   faq: Array<{ q: string; a: string }>
   location: {

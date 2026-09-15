@@ -444,6 +444,31 @@ export type DoctorSearchResponse = {
     filters: Record<string, unknown>;
 };
 
+export type PatientBookingAvailabilityDay = {
+    date: string;
+    status: "available" | "booked" | "unavailable" | "limited" | string;
+    slot_count?: number;
+};
+
+export type PatientBookingWorkingHours = {
+    start?: string | null;
+    end?: string | null;
+    timezone?: string | null;
+};
+
+export type PatientBookingAvailabilityResponse = {
+    provider_id: string;
+    availability: PatientBookingAvailabilityDay[];
+    working_hours?: PatientBookingWorkingHours;
+    available_days?: string[];
+};
+
+export type PatientBookingSlotsResponse = {
+    date: string;
+    slots: string[];
+    working_hours?: PatientBookingWorkingHours;
+};
+
 export type PatientDashboardCarePlan = {
     title?: string;
     name?: string;
@@ -1217,6 +1242,16 @@ export async function searchPatientDashboard(query: string): Promise<PatientDash
 
 export async function getPatientDoctor(doctorId: string): Promise<PatientDoctor> {
     return apiGet<PatientDoctor>(`/api/v1/patient/doctors/${doctorId}`);
+}
+
+export async function getPatientBookingAvailability(providerId: string): Promise<PatientBookingAvailabilityResponse> {
+    const params = new URLSearchParams({ provider_id: providerId });
+    return apiGet<PatientBookingAvailabilityResponse>(`/api/v1/patient/booking-datetime/availability?${params.toString()}`);
+}
+
+export async function getPatientBookingSlots(providerId: string, date: string): Promise<PatientBookingSlotsResponse> {
+    const params = new URLSearchParams({ provider_id: providerId, date });
+    return apiGet<PatientBookingSlotsResponse>(`/api/v1/patient/booking-datetime/slots?${params.toString()}`);
 }
 
 export async function getPatientMessages(pagination: PaginationParams = {}): Promise<ConversationsResponse> {
