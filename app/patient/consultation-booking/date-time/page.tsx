@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { Suspense, useMemo, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
@@ -176,6 +175,11 @@ function DateTimeSelectionPageContent() {
   const summaryHref = physicianData.id
     ? `/patient/physicians/${physicianData.id}${preservedParams ? `?${preservedParams}` : ''}`
     : '/patient/find-doctor'
+  const backDestination = searchParams.get('from') === 'find-doctor' ? '/patient/find-doctor' : summaryHref
+
+  const handleBack = () => {
+    router.push(backDestination)
+  }
 
   const selectedDateKey = formatDateKey(selectedDate)
   const quickShortcuts = [
@@ -320,10 +324,10 @@ function DateTimeSelectionPageContent() {
             .dt-detail-grid, .dt-slot-grid { grid-template-columns: 1fr; }
           }
         `}</style>
-        <Link href={summaryHref} style={{ minHeight: '42px', marginBottom: '12px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.84)', boxShadow: '0 10px 24px rgba(4,53,77,0.08)', color: T.navy, textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+        <button type='button' onClick={handleBack} style={{ minHeight: '42px', marginBottom: '12px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.84)', boxShadow: '0 10px 24px rgba(4,53,77,0.08)', color: T.navy, fontFamily: 'inherit', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
           <Ico p={ICONS.arrowBack} size={15} sw={2} color={T.navy} />
           Back
-        </Link>
+        </button>
         <div className='dt-grid'>
           <aside style={{ display: 'grid', gap: '12px' }}>
             <section style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.84)', padding: '18px' }}>
@@ -384,10 +388,10 @@ function DateTimeSelectionPageContent() {
                   <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '28px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose Your Appointment</h1>
                   <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7, maxWidth: '760px' }}>Select your preferred consultation date and time. Availability updates smoothly so you can book with confidence and clarity.</p>
                 </div>
-                <Link href={summaryHref} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: T.blue, fontSize: '13px', fontWeight: 700 }}>
+                <button type='button' onClick={handleBack} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', background: 'transparent', color: T.blue, fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
                   <Ico p={ICONS.arrowBack} size={14} sw={1.8} color={T.blue} />
                   Back to Consultation Options
-                </Link>
+                </button>
               </div>
             </header>
 
@@ -740,10 +744,10 @@ function DateTimeSelectionPageContent() {
                 <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
               </HoverBtn>
 
-              <Link href={summaryHref} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: '10px', color: T.slate2, textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+              <button type='button' onClick={handleBack} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: '10px', border: 'none', background: 'transparent', color: T.slate2, fontFamily: 'inherit', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
                 <Ico p={ICONS.arrowSm} size={13} sw={2} style={{ transform: 'rotate(180deg)' }} />
                 Back
-              </Link>
+              </button>
             </section>
 
             <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '16px' }}>

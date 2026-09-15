@@ -105,12 +105,22 @@ async function refreshAuthToken(): Promise<boolean> {
     const refreshToken = readRefreshToken();
     if (!refreshToken) return false;
 
-    const res = await fetch(`${getBaseUrl()}/api/v1/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-        cache: "no-store",
-    });
+    let res: Response;
+    try {
+        res = await fetch(`${getBaseUrl()}/api/v1/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+            cache: "no-store",
+        });
+    } catch (error) {
+        console.warn("Auth refresh request failed", error);
+        clearAuthTokens();
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("qarevo:auth-session-expired"));
+        }
+        return false;
+    }
 
     if (!res.ok) {
         clearAuthTokens();
