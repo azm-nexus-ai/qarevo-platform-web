@@ -224,11 +224,7 @@ export default function DoctorRegisterPage() {
   const [licenseNumber, setLicenseNumber] = useState('')
   const [isIndependent, setIsIndependent] = useState(false)
   
-  const [consents, setConsents] = useState({
-    terms_privacy: false,
-    telehealth: false,
-    marketing: false,
-  })
+  const [consentAccepted, setConsentAccepted] = useState(false)
   
   const [touched, setTouched] = useState({
     firstName: false,
@@ -315,8 +311,8 @@ export default function DoctorRegisterPage() {
       return
     }
     
-    if (!consents.terms_privacy || !consents.telehealth) {
-      setAuthError('You must accept Terms & Privacy and Telehealth consent')
+    if (!consentAccepted) {
+      setAuthError('You must accept the terms and consent to telehealth services')
       return
     }
 
@@ -339,7 +335,11 @@ export default function DoctorRegisterPage() {
         experience_years: experienceYears ? parseInt(experienceYears) : undefined,
         license_number: licenseNumber || undefined,
         is_independent: isIndependent,
-        consents,
+        consents: {
+          terms_privacy: true,
+          telehealth: true,
+          marketing: true,
+        },
       }
 
       await registerDoctor(registerData)
@@ -580,15 +580,33 @@ export default function DoctorRegisterPage() {
                   error={dateOfBirthErr}
                   onBlur={() => setTouched({ ...touched, dateOfBirth: true })}
                 />
-                <Field
-                  label="Gender"
-                  placeholder="e.g., Male, Female, Other"
-                  type="text"
-                  value={gender}
-                  onChange={setGender}
-                  error={genderErr}
-                  onBlur={() => setTouched({ ...touched, gender: true })}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
+                    Gender
+                  </label>
+                  <select
+                    value={gender}
+                    onChange={e => setGender(e.target.value)}
+                    onBlur={() => setTouched({ ...touched, gender: true })}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      borderRadius: '11px',
+                      border: genderErr ? '1.5px solid rgba(220,38,38,0.55)' : '1.5px solid rgba(4,53,77,0.1)',
+                      background: 'rgba(255,255,255,0.7)',
+                      color: gender ? T.navy : T.slate2,
+                      fontSize: '14px',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="">Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {genderErr && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{genderErr}</p>}
+                </div>
               </div>
 
               <Field
@@ -627,38 +645,24 @@ export default function DoctorRegisterPage() {
 
               {/* Consents */}
               <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(32,181,223,0.04)', border: '1px solid rgba(32,181,223,0.12)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <Checkbox
-                    checked={consents.terms_privacy}
-                    onChange={() => setConsents({ ...consents, terms_privacy: !consents.terms_privacy })}
-                  >
-                    I accept the <Link href="/terms" style={{ color: T.blue, textDecoration: 'underline' }}>Terms of Service</Link> and <Link href="/privacy" style={{ color: T.blue, textDecoration: 'underline' }}>Privacy Policy</Link>
-                  </Checkbox>
-                  <Checkbox
-                    checked={consents.telehealth}
-                    onChange={() => setConsents({ ...consents, telehealth: !consents.telehealth })}
-                  >
-                    I consent to telehealth services and virtual consultations
-                  </Checkbox>
-                  <Checkbox
-                    checked={consents.marketing}
-                    onChange={() => setConsents({ ...consents, marketing: !consents.marketing })}
-                  >
-                    I agree to receive marketing communications (optional)
-                  </Checkbox>
-                </div>
+                <Checkbox
+                  checked={consentAccepted}
+                  onChange={() => setConsentAccepted(!consentAccepted)}
+                >
+                  I accept the <Link href="/terms" style={{ color: T.blue, textDecoration: 'underline' }}>Terms of Service</Link> and <Link href="/privacy" style={{ color: T.blue, textDecoration: 'underline' }}>Privacy Policy</Link>, and consent to telehealth services and virtual consultations
+                </Checkbox>
               </div>
 
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={loading || !consents.terms_privacy || !consents.telehealth}
+                disabled={loading || !consentAccepted}
                 style={{
                   width: '100%',
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: loading || !consents.terms_privacy || !consents.telehealth
+                  background: loading || !consentAccepted
                     ? 'rgba(32,181,223,0.4)'
                     : `linear-gradient(135deg,${T.blue} 0%,#348CEA 100%)`,
                   color: '#fff',
@@ -666,13 +670,13 @@ export default function DoctorRegisterPage() {
                   fontSize: '15px',
                   fontWeight: 700,
                   letterSpacing: '-0.02em',
-                  cursor: loading || !consents.terms_privacy || !consents.telehealth ? 'not-allowed' : 'pointer',
+                  cursor: loading || !consentAccepted ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
                   transition: 'all 0.15s ease',
-                  boxShadow: loading || !consents.terms_privacy || !consents.telehealth
+                  boxShadow: loading || !consentAccepted
                     ? 'none'
                     : '0 3px 10px rgba(32,181,223,0.32), 0 1px 3px rgba(32,181,223,0.2)',
                 }}
