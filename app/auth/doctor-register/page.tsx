@@ -220,6 +220,8 @@ export default function DoctorRegisterPage() {
   const [dateOfBirth, setDateOfBirth] = useState('')
   const [gender, setGender] = useState('')
   const [specialty, setSpecialty] = useState('')
+  const [customSpecialty, setCustomSpecialty] = useState('')
+  const [isOtherSpecialty, setIsOtherSpecialty] = useState(false)
   const [experienceYears, setExperienceYears] = useState('')
   const [licenseNumber, setLicenseNumber] = useState('')
   const [isIndependent, setIsIndependent] = useState(false)
@@ -331,7 +333,7 @@ export default function DoctorRegisterPage() {
         country_code: countryCode,
         date_of_birth: dateOfBirth,
         gender,
-        specialty: specialty || undefined,
+        specialty: isOtherSpecialty ? customSpecialty : specialty,
         experience_years: experienceYears ? parseInt(experienceYears) : undefined,
         license_number: licenseNumber || undefined,
         is_independent: isIndependent,
@@ -609,13 +611,70 @@ export default function DoctorRegisterPage() {
                 </div>
               </div>
 
-              <Field
-                label="Medical Specialty"
-                placeholder="e.g., Cardiology, General Practice"
-                value={specialty}
-                onChange={setSpecialty}
-                optional
-              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
+                  Medical Specialty
+                  <span style={{ fontSize: '11.5px', color: T.slate2, fontWeight: 400, marginLeft: '4px' }}>Optional</span>
+                </label>
+                <select
+                  value={specialty}
+                  onChange={e => {
+                    const value = e.target.value
+                    setSpecialty(value)
+                    setIsOtherSpecialty(value === 'OTHER')
+                    if (value !== 'OTHER') setCustomSpecialty('')
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '11px',
+                    border: '1.5px solid rgba(4,53,77,0.1)',
+                    background: 'rgba(255,255,255,0.7)',
+                    color: specialty ? T.navy : T.slate2,
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="">Select specialty (optional)</option>
+                  <option value="GENERAL_MEDICINE">General Medicine</option>
+                  <option value="FAMILY_MEDICINE">Family Medicine</option>
+                  <option value="INTERNAL_MEDICINE">Internal Medicine</option>
+                  <option value="EMERGENCY_MEDICINE">Emergency Medicine</option>
+                  <option value="GENERAL_SURGERY">General Surgery</option>
+                  <option value="CARDIOLOGY">Cardiology</option>
+                  <option value="NEUROLOGY">Neurology</option>
+                  <option value="DERMATOLOGY">Dermatology</option>
+                  <option value="PEDIATRICS">Pediatrics</option>
+                  <option value="GYNECOLOGY">Gynecology</option>
+                  <option value="ONCOLOGY">Oncology</option>
+                  <option value="PSYCHIATRY">Psychiatry</option>
+                  <option value="RADIOLOGY">Radiology</option>
+                  <option value="ANESTHESIOLOGY">Anesthesiology</option>
+                  <option value="GASTROENTEROLOGY">Gastroenterology</option>
+                  <option value="NEPHROLOGY">Nephrology</option>
+                  <option value="PULMONOLOGY">Pulmonology</option>
+                  <option value="UROLOGY">Urology</option>
+                  <option value="OPHTHALMOLOGY">Ophthalmology</option>
+                  <option value="ENT">ENT (Otolaryngology)</option>
+                  <option value="ENDOCRINOLOGY">Endocrinology</option>
+                  <option value="HEMATOLOGY">Hematology</option>
+                  <option value="RHEUMATOLOGY">Rheumatology</option>
+                  <option value="INFECTIOUS_DISEASE">Infectious Disease</option>
+                  <option value="GERIATRICS">Geriatrics</option>
+                  <option value="SPORTS_MEDICINE">Sports Medicine</option>
+                  <option value="PLASTIC_SURGERY">Plastic Surgery</option>
+                  <option value="OTHER">Other (specify below)</option>
+                </select>
+                {isOtherSpecialty && (
+                  <Field
+                    label="Please specify your specialty"
+                    placeholder="e.g., Sports Medicine, Palliative Care"
+                    value={customSpecialty}
+                    onChange={setCustomSpecialty}
+                  />
+                )}
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field
