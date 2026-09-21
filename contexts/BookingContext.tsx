@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 
 export interface BookingState {
   physicianId?: string
@@ -42,7 +42,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     return initialState
   })
 
-  const updateBookingState = (updates: Partial<BookingState>) => {
+  const updateBookingState = useCallback((updates: Partial<BookingState>) => {
     setBookingState((prev) => {
       const newState = { ...prev, ...updates }
       // Save to localStorage
@@ -51,18 +51,18 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       }
       return newState
     })
-  }
+  }, [])
 
-  const resetBookingState = () => {
+  const resetBookingState = useCallback(() => {
     setBookingState(initialState)
     if (typeof window !== 'undefined') {
       localStorage.removeItem('qarevo_booking_state')
     }
-  }
+  }, [])
 
-  const setBookingStep = (step: BookingState['step']) => {
+  const setBookingStep = useCallback((step: BookingState['step']) => {
     updateBookingState({ step })
-  }
+  }, [updateBookingState])
 
   return (
     <BookingContext.Provider value={{ bookingState, updateBookingState, resetBookingState, setBookingStep }}>
