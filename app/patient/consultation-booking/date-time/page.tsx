@@ -161,6 +161,7 @@ function DateTimeSelectionPageContent() {
   const [selectedSlot, setSelectedSlot] = useState(bookingState.slot ?? searchParams.get('slot') ?? '')
   const [showTimeSheet, setShowTimeSheet] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [dateValidationError, setDateValidationError] = useState('')
   const [availability, setAvailability] = useState<PatientBookingAvailabilityDay[]>([])
   const [workingHours, setWorkingHours] = useState<PatientBookingWorkingHours | null>(null)
   const [availableDays, setAvailableDays] = useState<string[]>([])
@@ -252,6 +253,40 @@ function DateTimeSelectionPageContent() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Validate selected date against available days
+  useEffect(() => {
+    if (!selectedDateKey || availableDays.length === 0) {
+      setDateValidationError('')
+      return
+    }
+
+    const isAvailable = availableDays.includes(selectedDateKey)
+    if (!isAvailable) {
+      const nextAvailable = availableDays[0]
+      let errorMessage = `Dr. ${physicianData.name} is not available on ${formatDateLabel(selectedDate)}.`
+      
+      if (nextAvailable) {
+        try {
+          const nextAvailableDate = new Date(`${nextAvailable}T00:00:00`)
+          if (!isNaN(nextAvailableDate.getTime())) {
+            const formattedNextDate = formatDateLabel(nextAvailableDate)
+            errorMessage += ` Next available day is ${formattedNextDate}. Please select an available date.`
+          } else {
+            errorMessage += ` Please check the doctor's availability settings.`
+          }
+        } catch {
+          errorMessage += ` Please check the doctor's availability settings.`
+        }
+      } else {
+        errorMessage += ` Please check the doctor's availability settings.`
+      }
+      
+      setDateValidationError(errorMessage)
+    } else {
+      setDateValidationError('')
+    }
+  }, [selectedDateKey, availableDays, physicianData.name])
 
   useEffect(() => {
     if (!physicianData.id || !selectedDateKey) return
@@ -439,22 +474,23 @@ function DateTimeSelectionPageContent() {
                   <h2 style={{ margin: 0, fontFamily: '"Plus Jakarta Sans", sans-serif', fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose your preferred appointment date</h2>
                 </div>
 
-	                <input
+                <input
                   type='date'
                   value={formatDateKey(selectedDate)}
                   onChange={(event) => {
                     const newDate = new Date(event.target.value)
                     if (!isNaN(newDate.getTime())) {
                       setSelectedDate(newDate)
+                      setDateValidationError('')
                     }
                   }}
                   min={new Date().toISOString().split('T')[0]}
                   style={{
                     width: '100%',
                     borderRadius: '12px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    padding: '16px', // 44px minimum touch target
-                    fontSize: '16px', // Prevent iOS zoom
+                    border: dateValidationError ? '1.5px solid rgba(220,38,38,0.4)' : '1px solid rgba(4,53,77,0.12)',
+                    padding: '16px',
+                    fontSize: '16px',
                     fontWeight: 600,
                     color: T.navy,
                     background: 'rgba(255,255,255,0.95)',
@@ -462,18 +498,24 @@ function DateTimeSelectionPageContent() {
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     minHeight: '48px',
-	                  }}
-	                />
-	                {availabilityError && (
-	                  <div style={{ borderRadius: '12px', border: '1px solid rgba(220,38,38,0.22)', background: 'rgba(254,242,242,0.9)', color: '#B91C1C', padding: '11px 12px', fontSize: '13px', fontWeight: 600 }}>
-	                    {availabilityError}
-	                  </div>
-	                )}
-	                {selectedAvailability && selectedAvailability.status !== 'available' && (
-	                  <div style={{ borderRadius: '12px', border: '1px solid rgba(217,119,6,0.22)', background: 'rgba(255,251,235,0.9)', color: T.amber, padding: '11px 12px', fontSize: '13px', fontWeight: 600 }}>
-	                    This doctor has no open slot on {formatDateLabel(selectedDate)}.
-	                  </div>
-	                )}
+                  }}
+                />
+                {dateValidationError && (
+                  <div style={{ borderRadius: '12px', border: '1px solid rgba(220,38,38,0.22)', background: 'rgba(254,242,242,0.9)', color: '#B91C1C', padding: '11px 12px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Ico p={ICONS.info} size={14} color="#B91C1C" />
+                    {dateValidationError}
+                  </div>
+                )}
+                {availabilityError && (
+                  <div style={{ borderRadius: '12px', border: '1px solid rgba(220,38,38,0.22)', background: 'rgba(254,242,242,0.9)', color: '#B91C1C', padding: '11px 12px', fontSize: '13px', fontWeight: 600 }}>
+                    {availabilityError}
+                  </div>
+                )}
+                {selectedAvailability && selectedAvailability.status !== 'available' && (
+                  <div style={{ borderRadius: '12px', border: '1px solid rgba(217,119,6,0.22)', background: 'rgba(255,251,235,0.9)', color: T.amber, padding: '11px 12px', fontSize: '13px', fontWeight: 600 }}>
+                    This doctor has no open slot on {formatDateLabel(selectedDate)}.
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', paddingTop: '2px' }}>
                   {[
