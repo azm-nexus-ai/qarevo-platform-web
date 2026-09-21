@@ -160,6 +160,7 @@ function DateTimeSelectionPageContent() {
   const [selectedDate, setSelectedDate] = useState(initialDate)
   const [selectedSlot, setSelectedSlot] = useState(bookingState.slot ?? searchParams.get('slot') ?? '')
   const [showTimeSheet, setShowTimeSheet] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [availability, setAvailability] = useState<PatientBookingAvailabilityDay[]>([])
   const [workingHours, setWorkingHours] = useState<PatientBookingWorkingHours | null>(null)
   const [availableDays, setAvailableDays] = useState<string[]>([])
@@ -247,6 +248,10 @@ function DateTimeSelectionPageContent() {
       cancelled = true
     }
   }, [physicianData.id, selectedDateKey])
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!physicianData.id || !selectedDateKey) return
@@ -513,7 +518,7 @@ function DateTimeSelectionPageContent() {
                   marginBottom: '12px',
                 }}
               >
-	                Select Time Slot: {selectedSlot || 'No slots available'}
+	                Select Time Slot: {mounted ? (selectedSlot || 'No slots available') : 'Loading...'}
 	              </button>
 
 	              <div style={{ display: 'grid', gap: '12px' }}>
