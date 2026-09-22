@@ -219,6 +219,7 @@ function DateTimeSelectionPageContent() {
     if (!physicianData.id) return
 
     let cancelled = false
+    setLoadingAvailability(true)
     getPatientBookingAvailability(physicianData.id)
       .then((response) => {
         if (cancelled) return
@@ -226,12 +227,6 @@ function DateTimeSelectionPageContent() {
         setAvailability(response.availability)
         setWorkingHours(response.working_hours ?? null)
         setAvailableDays(response.available_days ?? [])
-
-        const requestedIsAvailable = response.availability.some((day) => day.date === selectedDateKey && day.status === 'available')
-        const firstAvailableDate = response.availability.find((day) => day.status === 'available')?.date
-        if (!requestedIsAvailable && firstAvailableDate) {
-          setSelectedDate(new Date(`${firstAvailableDate}T00:00:00`))
-        }
       })
       .catch((error) => {
         console.error('Failed to load provider availability', error)
@@ -248,7 +243,7 @@ function DateTimeSelectionPageContent() {
     return () => {
       cancelled = true
     }
-  }, [physicianData.id, selectedDateKey])
+  }, [physicianData.id])
 
   useEffect(() => {
     setMounted(true)
