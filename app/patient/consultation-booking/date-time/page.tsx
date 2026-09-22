@@ -261,23 +261,15 @@ function DateTimeSelectionPageContent() {
       return
     }
 
-    const isAvailable = availableDays.includes(selectedDateKey)
+    const selectedDayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
+    const isAvailable = availableDays.includes(selectedDayOfWeek)
+    
     if (!isAvailable) {
-      const nextAvailable = availableDays[0]
+      const nextAvailableDay = availableDays[0]
       let errorMessage = `Dr. ${physicianData.name} is not available on ${formatDateLabel(selectedDate)}.`
       
-      if (nextAvailable) {
-        try {
-          const nextAvailableDate = new Date(`${nextAvailable}T00:00:00`)
-          if (!isNaN(nextAvailableDate.getTime())) {
-            const formattedNextDate = formatDateLabel(nextAvailableDate)
-            errorMessage += ` Next available day is ${formattedNextDate}. Please select an available date.`
-          } else {
-            errorMessage += ` Please check the doctor's availability settings.`
-          }
-        } catch {
-          errorMessage += ` Please check the doctor's availability settings.`
-        }
+      if (nextAvailableDay) {
+        errorMessage += ` Available days: ${availableDays.join(', ')}. Please select an available date.`
       } else {
         errorMessage += ` Please check the doctor's availability settings.`
       }
@@ -286,7 +278,7 @@ function DateTimeSelectionPageContent() {
     } else {
       setDateValidationError('')
     }
-  }, [selectedDateKey, availableDays, physicianData.name])
+  }, [selectedDateKey, availableDays, physicianData.name, selectedDate])
 
   useEffect(() => {
     if (!physicianData.id || !selectedDateKey) return
@@ -749,7 +741,7 @@ function DateTimeSelectionPageContent() {
                 {[
                   ['Consultation', readLabel(service)],
                   ['Selected Date', formatDateLabel(selectedDate)],
-                  ['Selected Time', selectedSlot],
+                  ['Selected Time', mounted ? selectedSlot : 'Loading...'],
                   ['Duration', duration],
                   ['Fee', formatFee(fee)],
                   ['Insurance', insurance],
