@@ -261,7 +261,7 @@ function DateTimeSelectionPageContent() {
     
     if (!isAvailable) {
       const nextAvailableDay = availableDays[0]
-      let errorMessage = `Dr. ${physicianData.name} is not available on ${formatDateLabel(selectedDate)}.`
+      let errorMessage = `${physicianData.name} is not available on ${formatDateLabel(selectedDate)}.`
       
       if (nextAvailableDay) {
         errorMessage += ` Available days: ${availableDays.join(', ')}. Please select an available date.`
@@ -498,7 +498,7 @@ function DateTimeSelectionPageContent() {
                     {availabilityError}
                   </div>
                 )}
-                {selectedAvailability && selectedAvailability.status !== 'available' && (
+                {selectedAvailability && selectedAvailability.status !== 'available' && !dateValidationError && (
                   <div style={{ borderRadius: '12px', border: '1px solid rgba(217,119,6,0.22)', background: 'rgba(255,251,235,0.9)', color: T.amber, padding: '11px 12px', fontSize: '13px', fontWeight: 600 }}>
                     This doctor has no open slot on {formatDateLabel(selectedDate)}.
                   </div>
