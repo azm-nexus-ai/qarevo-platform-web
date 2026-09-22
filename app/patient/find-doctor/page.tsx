@@ -752,15 +752,9 @@ export default function FindDoctorPage() {
                         <Link href={buildProfileHref(doctor, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: '1px solid rgba(4,53,77,0.14)', background: 'rgba(255,255,255,0.88)', color: T.navy, fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>
                           View Profile
                         </Link>
-	                        <Link href={buildBookingHref(doctor, { consultationType, insurance })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', display: 'inline-flex', alignItems: 'center' }}>
+                        <Link href={buildBookingHref(doctor, { consultationType, insurance })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', display: 'inline-flex', alignItems: 'center' }}>
 	                          Book Now
 	                        </Link>
-	                        <Link
-	                          href={buildBookingHref(doctor, { consultationType, insurance })}
-                          style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: '1px solid rgba(52,140,234,0.3)', background: 'rgba(52,140,234,0.08)', color: '#348CEA', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}
-                        >
-                          Quick Book
-                        </Link>
                       </div>
                     </article>
                   ))
