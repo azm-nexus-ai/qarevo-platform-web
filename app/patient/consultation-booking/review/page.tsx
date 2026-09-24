@@ -105,6 +105,8 @@ function ReviewPageContent() {
   const date = searchParams.get('date') ?? 'Today'
   const slot = searchParams.get('slot') ?? '4:30 PM'
   const notes = searchParams.get('notes') ?? ''
+  const episodeId = searchParams.get('episode_id') ?? ''
+  const intakeSubmitted = searchParams.get('intake_submitted') === 'true'
   const patientName = 'A. Bello'
   const email = 'abello@qarevo.health'
   const phone = '+234 805 000 0000'
@@ -160,7 +162,7 @@ function ReviewPageContent() {
 
   const backHref = useMemo(() => {
     const next = buildBookingQueryParams(searchParams, physicianData, service)
-    return `/patient/consultation-booking/date-time?${next.toString()}`
+    return `/patient/consultation-booking/intake?${next.toString()}`
   }, [searchParams, physicianData, service])
 
   const handleConfirm = async () => {
@@ -194,7 +196,7 @@ function ReviewPageContent() {
         end_at: endAt.toISOString(),
         consultation_modality: service,
         intake,
-        episode: {
+        episode: episodeId ? undefined : {
           pack_id: 'patient-booking-intake',
           pack_version: '1.0.0',
           bundesland: searchParams.get('bundesland') ?? 'Berlin',
@@ -237,7 +239,7 @@ function ReviewPageContent() {
                 <div style={{ width: '80%', height: '100%', background: 'linear-gradient(90deg, #20B5DF 0%, #348CEA 100%)', borderRadius: '999px', transition: 'width 0.3s ease' }} />
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {['Doctor Selected', 'Consultation Type', 'Date & Time', 'Review', 'Confirmation'].map((step, index) => {
+                {['Doctor Selected', 'Date & Time', 'Intake', 'Review', 'Confirmation'].map((step, index) => {
                   const completed = index < 3
                   const active = index === 3
                   return (

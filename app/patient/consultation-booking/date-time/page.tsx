@@ -200,7 +200,7 @@ function DateTimeSelectionPageContent() {
     const next = buildBookingQueryParams(searchParams, physicianData, selectedServiceType)
     next.set('date', formatDateKey(selectedDate))
     if (selectedSlot) next.set('slot', selectedSlot)
-    return `/patient/consultation-booking/review?${next.toString()}`
+    return `/patient/consultation-booking/intake?${next.toString()}`
   }, [searchParams, physicianData, selectedDate, selectedSlot, selectedServiceType])
 
   // Save booking state to context when selections change
