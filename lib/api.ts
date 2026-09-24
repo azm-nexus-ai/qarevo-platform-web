@@ -440,6 +440,7 @@ export type PatientDoctor = {
     verification: string;
     tags: string[];
     profile?: Record<string, unknown>;
+    services?: { type: string; price: number; duration: number }[];
 };
 
 export type DoctorSearchResponse = {

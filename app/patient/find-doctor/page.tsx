@@ -735,10 +735,12 @@ export default function FindDoctorPage() {
                       <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {doctor.hospital}</p>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {doctor.experienceYears} years</p>
-	                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatDoctorRating(doctor)}</p>
-                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Consultation Fee:</strong> ${doctor.consultationFee}</p>
+                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatDoctorRating(doctor)}</p>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {doctor.nextAvailable}</p>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Distance:</strong> {doctor.distanceKm.toFixed(1)} km</p>
+                        {doctor.services && doctor.services.length > 0 && (
+                          <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Fee:</strong> ${Math.min(...doctor.services.map(s => s.price))} - ${Math.max(...doctor.services.map(s => s.price))}</p>
+                        )}
                       </div>
 
                       <p style={{ margin: '8px 0 0', fontSize: '12px', color: T.slate2 }}>

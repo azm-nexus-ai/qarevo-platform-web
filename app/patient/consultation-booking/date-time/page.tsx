@@ -95,7 +95,8 @@ function parseSlotStart(date: Date, slot: string) {
 }
 
 function profileServices(doctor: PatientDoctor | null) {
-  const services = doctor?.profile?.services
+  // Use the new services field from the API, fall back to profile.services for compatibility
+  const services = doctor?.services ?? doctor?.profile?.services
   if (!Array.isArray(services)) return []
 
   return services
@@ -104,7 +105,7 @@ function profileServices(doctor: PatientDoctor | null) {
       const item = service as Record<string, unknown>
       return {
         type: typeof item.type === 'string' ? item.type : '',
-        duration: typeof item.duration === 'string' ? item.duration : '',
+        duration: typeof item.duration === 'number' ? `${item.duration} min` : (typeof item.duration === 'string' ? item.duration : ''),
         price: typeof item.price === 'number' ? item.price : null,
       }
     })
@@ -139,10 +140,11 @@ function DateTimeSelectionPageContent() {
   const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor) ?? physician, [remoteDoctor, physician])
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
   const service = bookingState.service ?? searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
+  const [selectedServiceType, setSelectedServiceType] = useState(service)
   const serviceDetail = useMemo(() => {
     const services = profileServices(remoteDoctor)
-    return services.find((item) => item.type === service) ?? services[0]
-  }, [remoteDoctor, service])
+    return services.find((item) => item.type === selectedServiceType) ?? services[0]
+  }, [remoteDoctor, selectedServiceType])
   const fee = Number(searchParams.get('fee') ?? serviceDetail?.price ?? physicianData.consultationFee ?? 0)
   const duration = searchParams.get('duration') ?? serviceDetail?.duration ?? '30 min'
   const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
@@ -195,11 +197,11 @@ function DateTimeSelectionPageContent() {
   const selectedAvailability = availability.find((day) => day.date === selectedDateKey)
 
   const continueHref = useMemo(() => {
-    const next = buildBookingQueryParams(searchParams, physicianData, service)
-    next.set('date', formatDateLabel(selectedDate))
+    const next = buildBookingQueryParams(searchParams, physicianData, selectedServiceType)
+    next.set('date', formatDateKey(selectedDate))
     if (selectedSlot) next.set('slot', selectedSlot)
     return `/patient/consultation-booking/review?${next.toString()}`
-  }, [searchParams, physicianData, selectedDate, selectedSlot, service])
+  }, [searchParams, physicianData, selectedDate, selectedSlot, selectedServiceType])
 
   // Save booking state to context when selections change
   useEffect(() => {
@@ -207,13 +209,13 @@ function DateTimeSelectionPageContent() {
       updateBookingState({
         physicianId: physicianData.id,
         physicianName: physicianData.name,
-        service,
+        service: selectedServiceType,
         date: formatDateLabel(selectedDate),
         slot: selectedSlot,
         step: 'datetime',
       })
     }
-  }, [physicianData.id, physicianData.name, service, selectedDate, selectedSlot, updateBookingState])
+  }, [physicianData.id, physicianData.name, selectedServiceType, selectedDate, selectedSlot, updateBookingState])
 
   useEffect(() => {
     if (!physicianData.id) return
@@ -394,7 +396,7 @@ function DateTimeSelectionPageContent() {
               )}
               <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
               <div style={{ display: 'grid', gap: '7px', fontSize: '12px', color: T.slate2 }}>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Consultation</span><strong style={{ color: T.navy }}>{readLabel(service)}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Consultation</span><strong style={{ color: T.navy }}>{readLabel(selectedServiceType)}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Duration</span><strong style={{ color: T.navy }}>{duration}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Working hours</span><strong style={{ color: T.navy }}>{formatWorkingTime(workingHours?.start)} - {formatWorkingTime(workingHours?.end)}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Days</span><strong style={{ color: T.navy }}>{availableDays.length ? availableDays.join(', ') : 'Not configured'}</strong></div>
@@ -456,6 +458,41 @@ function DateTimeSelectionPageContent() {
               </div>
 
               <div style={{ display: 'grid', gap: '12px' }}>
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation Type</p>
+                  <h2 style={{ margin: 0, fontFamily: '"Plus Jakarta Sans", sans-serif', fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose consultation type</h2>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                  {profileServices(remoteDoctor).map((svc) => (
+                    <button
+                      key={svc.type}
+                      type='button'
+                      onClick={() => setSelectedServiceType(svc.type)}
+                      style={{
+                        flex: 1,
+                        minHeight: '52px',
+                        borderRadius: '12px',
+                        border: selectedServiceType === svc.type ? '2px solid rgba(32,181,223,0.5)' : '1px solid rgba(4,53,77,0.12)',
+                        background: selectedServiceType === svc.type ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.9)',
+                        color: selectedServiceType === svc.type ? T.blue : T.navy,
+                        fontSize: '14px',
+                        fontWeight: selectedServiceType === svc.type ? 700 : 500,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        transition: 'all 0.16s ease',
+                      }}
+                    >
+                      <span style={{ textTransform: 'capitalize' }}>{svc.type}</span>
+                      <span style={{ fontSize: '12px', color: T.slate2 }}>{svc.duration} · ${svc.price}</span>
+                    </button>
+                  ))}
+                </div>
+
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Select Date</p>
                   <h2 style={{ margin: 0, fontFamily: '"Plus Jakarta Sans", sans-serif', fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose your preferred appointment date</h2>
