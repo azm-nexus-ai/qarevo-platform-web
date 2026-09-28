@@ -925,6 +925,10 @@ export type DoctorAppointmentDetail = DoctorAppointmentSummary & {
     patient_phone: string | null;
     consultation_status: string | null;
     created_at: string;
+    episode_id: string | null;
+    chief_complaint: string | null;
+    intake_submitted_at: string | null;
+    ai_draft_ready: boolean;
 };
 
 export type DoctorConsultationInQueue = {

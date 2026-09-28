@@ -91,6 +91,12 @@ export default function AppointmentDetailPage() {
     }
   }
 
+  const handleGoToEpisode = () => {
+    if (appointmentData?.episode_id) {
+      router.push(`/doctor/episodes/${appointmentData.episode_id}`)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -138,6 +144,14 @@ export default function AppointmentDetailPage() {
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Go to Consultation
+            </button>
+          )}
+          {appointmentData.episode_id && (
+            <button
+              onClick={handleGoToEpisode}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              View Intake & AI Draft
             </button>
           )}
         </div>
@@ -215,6 +229,50 @@ export default function AppointmentDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Patient Intake Information */}
+      {appointmentData.episode_id && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Patient Intake Information</h3>
+              {appointmentData.ai_draft_ready && (
+                <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                  AI Draft Ready
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="p-6">
+            {appointmentData.chief_complaint ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Chief Complaint</p>
+                  <p className="mt-1 text-gray-900">{appointmentData.chief_complaint}</p>
+                </div>
+                {appointmentData.intake_submitted_at && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Intake Submitted</p>
+                    <p className="mt-1 text-gray-900">{formatDate(appointmentData.intake_submitted_at)}</p>
+                  </div>
+                )}
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    onClick={handleGoToEpisode}
+                    className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+                  >
+                    View Full Intake & AI Draft →
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-gray-500 text-sm">
+                No intake information available. Click "View Intake & AI Draft" to see full episode details.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Status Update */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
