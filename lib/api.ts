@@ -303,6 +303,7 @@ export type PatientAppointmentCreateRequest = {
     end_at: string;
     consultation_modality?: string;
     intake?: Record<string, unknown>;
+    episode_id?: string;
     episode?: Record<string, unknown>;
 };
 

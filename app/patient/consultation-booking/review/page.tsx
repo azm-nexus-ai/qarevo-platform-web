@@ -174,7 +174,10 @@ function ReviewPageContent() {
       const insuranceType = /statutory|public|nhs|gkv/i.test(insurance) ? 'public' : 'private'
       const startAt = parseAppointmentStart(date, slot)
       const endAt = addDuration(startAt, duration)
-      const intake = {
+      
+      // If intake was already submitted on the intake page, don't send intake data here
+      // to avoid overwriting the detailed intake fields (chief_complaint, symptoms, medical_history)
+      const intake = episodeId ? undefined : {
         raw_text: editableNotes || medicalConcern,
         reported_duration: duration,
         reported_location: physicianData.hospital,
@@ -196,6 +199,7 @@ function ReviewPageContent() {
         end_at: endAt.toISOString(),
         consultation_modality: service,
         intake,
+        episode_id: episodeId || undefined,
         episode: episodeId ? undefined : {
           pack_id: 'patient-booking-intake',
           pack_version: '1.0.0',
