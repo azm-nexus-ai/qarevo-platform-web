@@ -233,7 +233,7 @@ export default function AppointmentDetailPage() {
               </div>
             )}
           </div>
-          {appointmentData.status === 'cancelled' && appointmentData.cancellation_reason && (
+          {appointmentData.status.toLowerCase() === 'cancelled' && appointmentData.cancellation_reason && (
             <div className="mt-6 pt-6 border-t border-gray-200">
               <p className="text-sm font-medium text-gray-600">Cancellation Reason</p>
               <p className="mt-1 text-gray-900">{appointmentData.cancellation_reason}</p>
