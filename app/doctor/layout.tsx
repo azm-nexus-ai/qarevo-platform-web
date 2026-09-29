@@ -7,6 +7,7 @@ import { ICONS } from '@/constants/icons'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import DoctorMobileNavigation from '@/components/doctor/DoctorMobileNavigation'
 import {
   clearAuthTokens,
   getDoctorProfile,
@@ -99,6 +100,23 @@ export default function DoctorLayout({
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
+      <DoctorMobileNavigation />
+      <style>{`
+        @media (max-width: 920px) {
+          aside {
+            display: none;
+          }
+          main {
+            marginLeft: 0;
+          }
+          header {
+            display: none;
+          }
+          div[style*="padding: 28px 32px"] {
+            padding: 16px;
+          }
+        }
+      `}</style>
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
         <aside style={{

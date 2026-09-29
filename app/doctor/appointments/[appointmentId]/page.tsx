@@ -124,24 +124,24 @@ export default function AppointmentDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center space-x-4 flex-1 min-w-0">
           <button
             onClick={handleBack}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           >
             ← Back
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Appointment Details</h1>
-            <p className="text-gray-500 mt-1">ID: {appointmentData.appointment_id}</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 truncate">Appointment Details</h1>
+            <p className="text-gray-500 mt-1 text-sm truncate">ID: {appointmentData.appointment_id}</p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-shrink-0">
           {appointmentData.consultation_id && (
             <button
               onClick={handleGoToConsultation}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
             >
               Go to Consultation
             </button>
@@ -149,7 +149,7 @@ export default function AppointmentDetailPage() {
           {appointmentData.episode_id && (
             <button
               onClick={handleGoToEpisode}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
             >
               View Intake & AI Draft
             </button>
@@ -163,14 +163,14 @@ export default function AppointmentDetailPage() {
           <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
         </div>
         <div className="p-6">
-          <div className="flex items-start space-x-4">
+          <div className="flex items-start space-x-4 flex-col sm:flex-row">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
               <span className="text-blue-600 font-bold text-xl">
                 {appointmentData.patient_name.split(' ').map(n => n[0]).join('').toUpperCase()}
               </span>
             </div>
             <div className="flex-1">
-              <h4 className="text-xl font-semibold text-gray-900">{appointmentData.patient_name}</h4>
+              <h4 className="text-xl font-semibold text-gray-900 truncate">{appointmentData.patient_name}</h4>
               <div className="mt-2 space-y-1">
                 {appointmentData.patient_email && (
                   <p className="text-sm text-gray-600">
@@ -279,7 +279,7 @@ export default function AppointmentDetailPage() {
               </div>
             ) : (
               <div className="text-gray-500 text-sm">
-                No intake information available. Click "View Intake & AI Draft" to see full episode details.
+                No intake information available. Click &ldquo;View Intake & AI Draft&rdquo; to see full episode details.
               </div>
             )}
           </div>
@@ -292,12 +292,12 @@ export default function AppointmentDetailPage() {
           <h3 className="text-lg font-semibold text-gray-900">Update Status</h3>
         </div>
         <div className="p-6">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4 flex-col sm:flex-row w-full">
             <select
               value={appointmentData.status}
               onChange={(e) => handleStatusUpdate(e.target.value)}
               disabled={updatingStatus}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 w-full sm:w-auto"
             >
               <option value="booked">Booked</option>
               <option value="completed">Completed</option>
