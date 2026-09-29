@@ -226,7 +226,19 @@ export default function AppointmentDetailPage() {
               <p className="text-sm font-medium text-gray-600">Created At</p>
               <p className="mt-1 text-gray-900">{formatDate(appointmentData.created_at)}</p>
             </div>
+            {appointmentData.cancelled_at && (
+              <div>
+                <p className="text-sm font-medium text-gray-600">Cancelled At</p>
+                <p className="mt-1 text-gray-900">{formatDate(appointmentData.cancelled_at)}</p>
+              </div>
+            )}
           </div>
+          {appointmentData.status === 'cancelled' && appointmentData.cancellation_reason && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <p className="text-sm font-medium text-gray-600">Cancellation Reason</p>
+              <p className="mt-1 text-gray-900">{appointmentData.cancellation_reason}</p>
+            </div>
+          )}
         </div>
       </div>
 

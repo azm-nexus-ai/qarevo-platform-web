@@ -930,6 +930,8 @@ export type DoctorAppointmentDetail = DoctorAppointmentSummary & {
     chief_complaint: string | null;
     intake_submitted_at: string | null;
     ai_draft_ready: boolean;
+    cancellation_reason: string | null;
+    cancelled_at: string | null;
 };
 
 export type DoctorConsultationInQueue = {

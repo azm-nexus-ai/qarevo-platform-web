@@ -591,7 +591,13 @@ function RescheduleModal({ appt, onClose, onConfirm }: { appt: Appointment; onCl
 
 // ─── Cancel Modal ──────────────────────────────────────────────────────────────
 
-function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose: () => void; onConfirm: () => void }) {
+function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose: () => void; onConfirm: (reason: string) => void }) {
+  const [reason, setReason] = useState('')
+
+  const handleConfirm = () => {
+    onConfirm(reason || 'Patient requested cancellation')
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div aria-hidden onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(4,53,77,0.28)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
@@ -611,6 +617,28 @@ function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose:
         <p style={{ margin: '0 0 24px', fontSize: '13px', color: T.slate2 }}>
           {appt.date} · {appt.time} · {appt.consultationType}
         </p>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
+            Reason for cancellation (optional)
+          </label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Please let us know why you're cancelling..."
+            style={{
+              width: '100%',
+              minHeight: '80px',
+              padding: '12px',
+              borderRadius: '10px',
+              border: '1px solid rgba(4,53,77,0.15)',
+              background: 'rgba(255,255,255,0.9)',
+              fontSize: '13px',
+              color: T.navy,
+              resize: 'vertical',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+            }}
+          />
+        </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <HoverBtn
             onClick={onClose}
@@ -620,7 +648,7 @@ function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose:
             Keep Appointment
           </HoverBtn>
           <HoverBtn
-            onClick={onConfirm}
+            onClick={handleConfirm}
             base={{ minHeight: '46px', padding: '0 16px', borderRadius: '12px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(255,245,245,0.96)', color: T.red, fontSize: '13.5px', fontWeight: 700, cursor: 'pointer' }}
             on={{ background: 'rgba(255,238,238,0.98)', transform: 'translateY(-1px)' }}
           >
@@ -729,12 +757,12 @@ function AppointmentsPageInner() {
     setToast('Appointment rescheduled successfully.')
   }
 
-  const handleCancelConfirm = async () => {
+  const handleCancelConfirm = async (reason: string) => {
     if (!cancelTarget) return
-    
+
     try {
-      await apiPost(`/api/v1/appointments/${cancelTarget.id}/cancel?reason=${encodeURIComponent('Patient requested cancellation')}`)
-      const appt: Appointment = { ...cancelTarget, status: 'Cancelled', cancellationDate: 'Today', cancellationReason: 'Patient requested cancellation', paymentStatus: 'Refunded' }
+      await apiPost(`/api/v1/appointments/${cancelTarget.id}/cancel?reason=${encodeURIComponent(reason)}`)
+      const appt: Appointment = { ...cancelTarget, status: 'Cancelled', cancellationDate: 'Today', cancellationReason: reason, paymentStatus: 'Refunded' }
       setUpcoming(prev => prev.filter(a => a.id !== cancelTarget.id))
       setCancelled(prev => [appt, ...prev])
       setCancelTarget(null)
