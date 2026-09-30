@@ -104,16 +104,16 @@ export default function DoctorLayout({
       <style>{`
         @media (max-width: 920px) {
           aside {
-            display: none;
+            display: none !important;
           }
           main {
-            marginLeft: 0;
+            margin-left: 0 !important;
           }
           header {
-            display: none;
+            display: none !important;
           }
           div[style*="padding: 28px 32px"] {
-            padding: 16px;
+            padding: 16px !important;
           }
         }
       `}</style>
