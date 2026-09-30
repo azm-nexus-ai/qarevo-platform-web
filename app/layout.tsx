@@ -19,15 +19,15 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Qarevo Health — European Healthcare Platform',
+    default: 'Qarevo Health',
     template: '%s | Qarevo Health',
   },
   description: 'Discover verified physicians, orchestrate continuous care, and experience the highest standard of clinical intelligence and data governance.',
   keywords: ['healthcare', 'telemedicine', 'physician', 'GDPR', 'HIPAA', 'clinical intelligence'],
   icons: {
-    icon: '/brand/Untitled design - 2026-08-03T165004.531.png',
-    shortcut: '/brand/Untitled design - 2026-08-03T165004.531.png',
-    apple: '/brand/Untitled design - 2026-08-03T165004.531.png',
+    icon: '/brand/qarevo-mark.png',
+    shortcut: '/brand/qarevo-mark.png',
+    apple: '/brand/qarevo-mark.png',
   },
 }
 
