@@ -441,7 +441,7 @@ export default function DoctorProfilePage() {
         boxShadow: Sh.card,
         padding: '32px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(4,53,77,0.06)', flexWrap: 'wrap' }}>
           <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 24px rgba(32,181,223,0.3)' }}>
             {profileData.avatar_url ? (
               <img src={profileData.avatar_url} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
