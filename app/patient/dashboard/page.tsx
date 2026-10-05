@@ -121,14 +121,7 @@ const sideNavItems: NavItem[] = [
   ...PATIENT_SIDEBAR_ITEMS,
 ]
 
-const summaryCards: SummaryCard[] = [
-  { label: 'Upcoming Appointment', value: '1', sub: 'Today at 4:30 PM', icon: ICONS.calendar, tint: 'rgba(32,181,223,0.14)', href: PATIENT_ROUTES.appointmentDetails },
-  { label: 'Assigned Physician', value: 'Dr. Sophia Reed', sub: 'Cardiology', icon: ICONS.steth, tint: 'rgba(52,140,234,0.14)', href: '/patient/physicians/sophia-reed' },
-  { label: 'Health Records', value: '18', sub: '2 new this week', icon: ICONS.shield, tint: 'rgba(165,224,218,0.24)', href: PATIENT_ROUTES.medicalRecords },
-  { label: 'Active Prescriptions', value: '3', sub: '1 refill due', icon: ICONS.heart, tint: 'rgba(32,181,223,0.12)', href: PATIENT_ROUTES.prescriptions },
-  { label: 'Unread Messages', value: '4', sub: '2 from clinicians', icon: ICONS.message, tint: 'rgba(52,140,234,0.14)', href: PATIENT_ROUTES.messages },
-  { label: 'Recent Lab Requests', value: '2', sub: 'Available now', icon: ICONS.cpu, tint: 'rgba(165,224,218,0.24)', href: PATIENT_ROUTES.labRequests },
-]
+// Hardcoded fallback arrays removed - use API data or show empty states
 
 const quickActions: QuickAction[] = [
   { label: 'Book Appointment', sub: 'Schedule visit', icon: ICONS.calendar, href: PATIENT_ROUTES.findDoctor },
@@ -141,63 +134,14 @@ const quickActions: QuickAction[] = [
   { label: 'Health Tracker', sub: 'Wellness insights', icon: ICONS.activity, href: PATIENT_ROUTES.dashboard },
 ]
 
-const carePlans = [
-  { name: 'Cardiac Recovery Plan', progress: 74, physician: 'Dr. Sophia Reed', eta: '3 weeks left', tasks: '4 outstanding tasks' },
-  { name: 'Diabetes Support Plan', progress: 61, physician: 'Dr. Amara Okafor', eta: '5 weeks left', tasks: '2 outstanding tasks' },
-]
 
-const medications = [
-  { name: 'Atorvastatin', dosage: '20 mg', frequency: 'Once daily', remaining: '14 doses left', progress: 82, due: 'Tonight · 8:00 PM', status: 'On track' },
-  { name: 'Omega-3 Softgels', dosage: '1000 mg', frequency: 'Twice daily', remaining: '6 doses left', progress: 68, due: 'Morning · 8:00 AM', status: 'Reminder set' },
-]
 
-const labData = [
-  { title: 'Latest Results', value: 'Lipid panel', status: 'Normal range', detail: 'Uploaded 2 hrs ago' },
-  { title: 'Pending Tests', value: 'CBC and Thyroid', status: 'Scheduled tomorrow', detail: 'Fast-track collection' },
-  { title: 'Completed Tests', value: 'HbA1c', status: 'Improved trend', detail: 'Shared with care team' },
-]
 
-const referrals = [
-  { name: 'Cardiology Review', status: 'Pending review', detail: 'Specialist booking requested' },
-  { name: 'Nutrition Consult', status: 'Booked', detail: 'Next slot · Tomorrow 10:30 AM' },
-  { name: 'Sleep Specialist', status: 'Completed', detail: 'Follow-up letter available' },
-]
 
-const messageThreads = [
-  { sender: 'Dr. Reed', preview: 'Your blood pressure trend looks stable this week.', unread: true, time: '2m ago' },
-  { sender: 'Care Team', preview: 'Your lab appointment has been confirmed.', unread: false, time: '1h ago' },
-  { sender: 'Support', preview: 'Your prescription refill is ready for pickup.', unread: true, time: 'Today' },
-]
 
-const docs = [
-  { name: 'Prescriptions', count: '3 active files' },
-  { name: 'Consultation Notes', count: '2 recent summaries' },
-  { name: 'Lab Reports', count: '4 downloadable reports' },
-  { name: 'Referral Letters', count: '1 specialist letter' },
-]
 
-const wellnessCards = [
-  { title: 'Water Intake', value: '2.1L', sub: 'Target 2.5L' },
-  { title: 'Sleep', value: '7.3h', sub: 'Steady recovery' },
-  { title: 'Exercise', value: '42 min', sub: 'Light activity' },
-  { title: 'Mood', value: 'Balanced', sub: 'Steady outlook' },
-]
 
-const timelineItems = [
-  { title: 'Consultation Completed', sub: 'Dr. Sophia Reed · Cardiology', time: 'Today · 10:20 AM' },
-  { title: 'Lab Result Received', sub: 'Lipid panel report is now available', time: 'Yesterday · 6:45 PM' },
-  { title: 'Medical Record Uploaded', sub: 'Blood pressure trend added to profile', time: 'Aug 1 · 1:15 PM' },
-  { title: 'Prescription Updated', sub: 'Atorvastatin dosage adjusted', time: 'Jul 31 · 9:30 AM' },
-  { title: 'Recent Appointment', sub: 'Routine follow-up completed', time: 'Jul 29 · 4:00 PM' },
-]
 
-const notifications = [
-  { title: 'Upcoming Appointment Reminder', body: 'You have a virtual follow-up with Dr. Reed in 2 hours.', time: 'Now' },
-  { title: 'Prescription Ready', body: 'Your refill is ready for pickup.', time: '35m ago' },
-  { title: 'New Message', body: 'Your care team sent pre-consultation instructions.', time: '1h ago' },
-  { title: 'Doctor Follow-up', body: 'Please share your hydration logs for this week.', time: 'Yesterday' },
-  { title: 'Payment Confirmation', body: 'Consultation fee payment was successful.', time: 'Yesterday' },
-]
 
 const bookingSpecialties = [
   'Cardiology',
@@ -690,16 +634,15 @@ export default function PatientDashboardPage() {
 
   const displaySummaryCards = useMemo<SummaryCard[]>(() => {
     const source = dashboardArray(dashboardData, 'summary_cards', 'summaryCards')
-    if (!source.length && !dashboardHasKey(dashboardData, 'summary_cards', 'summaryCards')) return summaryCards
-    return source.map((item, index) => {
-      const fallback = summaryCards[index % summaryCards.length]
+    if (!source.length && !dashboardHasKey(dashboardData, 'summary_cards', 'summaryCards')) return []
+    return source.map((item) => {
       return {
-        label: text(item.label, fallback.label),
-        value: text(item.value, fallback.value),
-        sub: text(item.sub ?? item.hint ?? item.status, fallback.sub),
-        icon: resolveIcon(item.icon, fallback.icon),
-        tint: text(item.tint, fallback.tint),
-        href: text(item.href, fallback.href),
+        label: text(item.label, 'Summary item'),
+        value: text(item.value, '-'),
+        sub: text(item.sub ?? item.hint ?? item.status, ''),
+        icon: resolveIcon(item.icon, ICONS.info),
+        tint: text(item.tint, 'rgba(32,181,223,0.14)'),
+        href: text(item.href, PATIENT_ROUTES.dashboard),
       }
     })
   }, [dashboardData])
@@ -720,7 +663,7 @@ export default function PatientDashboardPage() {
 
   const displayCarePlans = useMemo<CarePlanCard[]>(() => {
     const source = dashboardArray(dashboardData, 'care_plans', 'carePlans')
-    if (!source.length && !dashboardHasKey(dashboardData, 'care_plans', 'carePlans')) return carePlans
+    if (!source.length && !dashboardHasKey(dashboardData, 'care_plans', 'carePlans')) return []
     return source.map((item) => {
       const fallback = { eta: 'In progress', tasks: 'No tasks yet' }
       const planName = text(item.name ?? item.title, 'Care plan')
@@ -737,7 +680,7 @@ export default function PatientDashboardPage() {
 
   const displayMedications = useMemo<MedicationCard[]>(() => {
     const source = dashboardArray(dashboardData, 'medications')
-    if (!source.length && !dashboardHasKey(dashboardData, 'medications')) return medications
+    if (!source.length && !dashboardHasKey(dashboardData, 'medications')) return []
     return source.map((item) => {
       const fallback = { dosage: '', frequency: '', remaining: '', due: '' }
       return {
@@ -754,7 +697,7 @@ export default function PatientDashboardPage() {
 
   const displayLabData = useMemo<LabDatum[]>(() => {
     const source = dashboardArray(dashboardData, 'lab_data', 'labData')
-    if (!source.length && !dashboardHasKey(dashboardData, 'lab_data', 'labData')) return labData
+    if (!source.length && !dashboardHasKey(dashboardData, 'lab_data', 'labData')) return []
     return source.map((item) => {
       const fallback = { value: 'Lab test', detail: '' }
       return {
@@ -768,7 +711,7 @@ export default function PatientDashboardPage() {
 
   const displayReferrals = useMemo<ReferralCard[]>(() => {
     const source = dashboardArray(dashboardData, 'referrals')
-    if (!source.length && !dashboardHasKey(dashboardData, 'referrals')) return referrals
+    if (!source.length && !dashboardHasKey(dashboardData, 'referrals')) return []
     return source.map((item) => {
       const fallback = { detail: '' }
       return {
@@ -781,7 +724,7 @@ export default function PatientDashboardPage() {
 
   const displayMessageThreads = useMemo<MessageThread[]>(() => {
     const source = dashboardArray(dashboardData, 'message_threads', 'messageThreads')
-    if (!source.length && !dashboardHasKey(dashboardData, 'message_threads', 'messageThreads')) return messageThreads.map((message) => ({ ...message, href: doctorContactHref(message.sender) }))
+    if (!source.length && !dashboardHasKey(dashboardData, 'message_threads', 'messageThreads')) return []
     return source.map((item) => {
       const fallback = { preview: '', unread: false, time: '' }
       const sender = text(item.sender ?? item.name ?? item.contactName, 'Care team')
@@ -797,7 +740,7 @@ export default function PatientDashboardPage() {
 
   const displayDocs = useMemo<DocumentCard[]>(() => {
     const source = dashboardArray(dashboardData, 'docs', 'documents')
-    if (!source.length && !dashboardHasKey(dashboardData, 'docs', 'documents')) return docs.map((doc) => ({ ...doc, href: documentHref(doc.name) }))
+    if (!source.length && !dashboardHasKey(dashboardData, 'docs', 'documents')) return []
     return source.map((item) => {
       const fallback = { count: '0 files' }
       const name = text(item.name ?? item.title, 'Document')
@@ -811,7 +754,7 @@ export default function PatientDashboardPage() {
 
   const displayWellnessCards = useMemo<WellnessCard[]>(() => {
     const source = dashboardArray(dashboardData, 'wellness_cards', 'wellnessCards')
-    if (!source.length && !dashboardHasKey(dashboardData, 'wellness_cards', 'wellnessCards')) return wellnessCards
+    if (!source.length && !dashboardHasKey(dashboardData, 'wellness_cards', 'wellnessCards')) return []
     return source.map((item) => {
       const fallback = { value: '', sub: '' }
       return {
@@ -857,7 +800,7 @@ export default function PatientDashboardPage() {
 
   const displayTimelineItems = useMemo<TimelineCard[]>(() => {
     const source = dashboardArray(dashboardData, 'timeline_items', 'timelineItems')
-    if (!source.length && !dashboardHasKey(dashboardData, 'timeline_items', 'timelineItems')) return timelineItems
+    if (!source.length && !dashboardHasKey(dashboardData, 'timeline_items', 'timelineItems')) return []
     return source.map((item) => {
       const fallback = { sub: '', time: '' }
       return {
@@ -870,7 +813,7 @@ export default function PatientDashboardPage() {
 
   const displayNotifications = useMemo<NotificationCard[]>(() => {
     const source = dashboardArray(dashboardData, 'notifications')
-    if (!source.length && !dashboardHasKey(dashboardData, 'notifications')) return notifications
+    if (!source.length && !dashboardHasKey(dashboardData, 'notifications')) return []
     return source.map((item) => {
       const fallback = { body: '', time: '' }
       return {
@@ -921,9 +864,9 @@ export default function PatientDashboardPage() {
     ]
   }, [dashboardData, displayLabData, displayMedications.length, displayMessageThreads, displaySummaryCards])
 
-  const currentAppointment = displaySummaryCards.find((item) => item.label.toLowerCase().includes('appointment')) ?? summaryCards[0]
-  const primaryPhysician = displaySummaryCards.find((item) => item.label.toLowerCase().includes('physician')) ?? summaryCards[1]
-  const hasUpcomingAppointment = Number.parseInt(currentAppointment.value, 10) > 0
+  const currentAppointment = displaySummaryCards.find((item) => item.label.toLowerCase().includes('appointment'))
+  const primaryPhysician = displaySummaryCards.find((item) => item.label.toLowerCase().includes('physician'))
+  const hasUpcomingAppointment = currentAppointment ? Number.parseInt(currentAppointment.value, 10) > 0 : false
   const hasCareActivity = hasUpcomingAppointment || displayCarePlans.length > 0 || displayMedications.length > 0 || displayLabData.length > 0 || displayMessageThreads.length > 0
   const heroBody = hasCareActivity
     ? 'Your dashboard is pulling from your care activity, clinical records, messages, and booking history.'
@@ -932,7 +875,7 @@ export default function PatientDashboardPage() {
     ? Math.round(displayCarePlans.reduce((total, plan) => total + plan.progress, 0) / displayCarePlans.length)
     : 0
   const todayScheduleItems = [
-    ...(hasUpcomingAppointment ? [{ title: 'Upcoming appointment', body: `${primaryPhysician.value} · ${primaryPhysician.sub}`, time: currentAppointment.sub }] : []),
+    ...(hasUpcomingAppointment && currentAppointment && primaryPhysician ? [{ title: 'Upcoming appointment', body: `${primaryPhysician.value} · ${primaryPhysician.sub}`, time: currentAppointment.sub }] : []),
     ...displayMedications.slice(0, 1).map((item) => ({ title: 'Medication reminder', body: `${item.name} · ${item.dosage}`, time: `Due ${item.due}` })),
     ...displayLabData.slice(0, 1).map((item) => ({ title: 'Lab update', body: `${item.value} · ${item.status}`, time: item.detail })),
   ].slice(0, 3)
@@ -1438,15 +1381,15 @@ export default function PatientDashboardPage() {
             sub='Your next scheduled consultations and follow-up care.'
             action={hasUpcomingAppointment ? <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: '11px', color: T.blue, fontWeight: 700 }}><span className='pd-notice-dot' /> Scheduled</span> : undefined}
           >
-            {hasUpcomingAppointment ? (
+            {hasUpcomingAppointment && primaryPhysician && currentAppointment ? (
               <div className='pd-appointment-grid' style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.86)', padding: '14px' }}>
-                <Image src='https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=160&h=160&fit=crop' alt={primaryPhysician.value} width={96} height={96} style={{ width: '96px', height: '96px', borderRadius: '14px', objectFit: 'cover', border: '1px solid rgba(4,53,77,0.12)', boxShadow: '0 8px 18px rgba(4,53,77,0.16)' }} />
+                <Image src='https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=160&h=160&fit=crop' alt={primaryPhysician.value || 'Physician'} width={96} height={96} style={{ width: '96px', height: '96px', borderRadius: '14px', objectFit: 'cover', border: '1px solid rgba(4,53,77,0.12)', boxShadow: '0 8px 18px rgba(4,53,77,0.16)' }} />
                 <div>
-                  <h3 style={{ margin: '0 0 5px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{primaryPhysician.value}</h3>
-                  <p style={{ margin: '0 0 10px', fontSize: '13px', color: T.slate2 }}>{primaryPhysician.sub} · Virtual consultation</p>
+                  <h3 style={{ margin: '0 0 5px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{primaryPhysician.value || 'Physician'}</h3>
+                  <p style={{ margin: '0 0 10px', fontSize: '13px', color: T.slate2 }}>{primaryPhysician.sub || 'Specialty'} · Virtual consultation</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
-                    <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Date:</strong> {currentAppointment.sub.split(' at ')[0] || 'Scheduled'}</p>
-                    <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Time:</strong> {currentAppointment.sub.split(' at ')[1] || currentAppointment.sub}</p>
+                    <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Date:</strong> {currentAppointment.sub?.split(' at ')[0] || 'Scheduled'}</p>
+                    <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Time:</strong> {currentAppointment.sub?.split(' at ')[1] || currentAppointment.sub || 'TBD'}</p>
                     <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Type:</strong> Consultation</p>
                     <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Status:</strong> Booked</p>
                   </div>
@@ -1726,7 +1669,7 @@ export default function PatientDashboardPage() {
                   <div key={doc.id} style={{ display: 'grid', gap: '8px' }}>
                     <DoctorCard name={doc.name} specialty={doc.specialty} verification={doc.verification} tags={doc.tags} imageUrl={doc.imageUrl} />
                     <div className='pd-doctor-footer'>
-                      <p className='pd-doctor-meta'>⭐ {doc.rating} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
+                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : 'No ratings'} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
                       <div className='pd-doctor-actions'>
                         <Link className='pd-doctor-action-link' href={`/patient/physicians/${doc.id}?from=dashboard&intent=book`} style={{ color: '#348CEA' }}>Book Now</Link>
                       </div>
@@ -1751,7 +1694,7 @@ export default function PatientDashboardPage() {
                   <div key={doc.name} style={{ display: 'grid', gap: '8px' }}>
                     <DoctorCard name={doc.name} specialty={doc.specialty} verification={doc.verification} tags={doc.tags} imageUrl={doc.imageUrl} />
                     <div className='pd-doctor-footer'>
-                      <p className='pd-doctor-meta'>⭐ {doc.rating} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
+                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : 'No ratings'} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
                       <div className='pd-doctor-actions'>
                         <Link className='pd-doctor-action-link' href={`/patient/physicians/${doc.id}?from=dashboard&intent=view`} style={{ color: T.navy }}>View Profile</Link>
                         <Link className='pd-doctor-action-link' href={`/patient/physicians/${doc.id}?from=dashboard&intent=book`} style={{ color: '#348CEA' }}>Book</Link>

@@ -14,8 +14,12 @@ function getEndTimeISO(hoursFromNow: number) {
 export async function POST(request: Request) {
     try {
         const body = await request.json().catch(() => ({}));
-        const patientId = body.patient_id ?? process.env.DEMO_PATIENT_ID ?? "3fa85f64-5717-4562-b3fc-2c963f66afa6";
-        const providerId = body.provider_id ?? process.env.DEMO_PROVIDER_ID ?? "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+        const patientId = body.patient_id;
+        const providerId = body.provider_id;
+
+        if (!patientId || !providerId) {
+            return NextResponse.json({ error: "patient_id and provider_id are required" }, { status: 400 });
+        }
 
         const now = getNowISO();
         const endAt = getEndTimeISO(2);

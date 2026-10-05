@@ -692,6 +692,25 @@ export type VerifyPhoneCodeResponse = {
     message: string;
 };
 
+export type VerifyOtpRequest = {
+    code: string;
+    email?: string;
+    country_code?: string;
+    phone?: string;
+};
+
+export type VerifyOtpResponse = {
+    message: string;
+    access_token?: string;
+    refresh_token?: string;
+    token_type?: string;
+    expires_in?: number;
+    email_verified?: boolean;
+    phone_verified?: boolean;
+    user_id?: string;
+    role?: string;
+};
+
 // Doctor Authentication API Functions
 export async function registerDoctor(body: DoctorRegisterRequest): Promise<DoctorRegisterResponse> {
     return apiPost<DoctorRegisterResponse>("/api/v1/doctor/register", body);
@@ -705,6 +724,10 @@ export async function checkDoctorUsernameAvailability(username: string): Promise
 
 export async function loginDoctor(body: DoctorLoginRequest): Promise<DoctorLoginResponse> {
     return apiPost<DoctorLoginResponse>("/api/v1/auth/doctor/login", body);
+}
+
+export async function verifyOtp(body: VerifyOtpRequest): Promise<VerifyOtpResponse> {
+    return apiPost<VerifyOtpResponse, VerifyOtpRequest>("/api/v1/auth/verify-otp", body);
 }
 
 export async function loginPatient(body: { email: string; password: string }): Promise<AuthTokenResponse> {

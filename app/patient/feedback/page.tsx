@@ -138,9 +138,9 @@ function FeedbackPageContent() {
   const date = searchParams.get('date') ?? 'Today'
   const slot = searchParams.get('slot') ?? '4:30 PM'
   const duration = searchParams.get('duration') ?? '30 min'
-  const physicianName = searchParams.get('physicianName') ?? physician?.name ?? 'Dr. Sophia Reed'
-  const specialty = searchParams.get('specialty') ?? physician?.specialty ?? 'Cardiology'
-  const insurance = searchParams.get('insurance') ?? 'Axa'
+  const physicianName = searchParams.get('physicianName') ?? physician?.name ?? ''
+  const specialty = searchParams.get('specialty') ?? physician?.specialty ?? ''
+  const insurance = searchParams.get('insurance') ?? ''
   const notes = searchParams.get('notes') ?? ''
 
   const [overallRating, setOverallRating] = useState(4.5)

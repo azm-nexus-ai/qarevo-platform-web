@@ -50,50 +50,63 @@ function formatDateLabel(value: string) {
 
 function ConsultationSummaryPageContent() {
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? 'sophia-reed'
-  const physician = PHYSICIANS.find((item) => item.id === physicianId)
-  const date = searchParams.get('date') ?? 'Today'
-  const elapsedSeconds = Number(searchParams.get('elapsed') ?? 1800)
-  const physicianName = searchParams.get('physicianName') ?? physician?.name ?? 'Dr. Sophia Reed'
-  const specialty = searchParams.get('specialty') ?? physician?.specialty ?? 'Internal Medicine'
-  const appointmentId = searchParams.get('appointmentId') ?? 'QRV-CLN-10428'
-  const bookingReference = searchParams.get('bookingReference') ?? 'REF-20260805-428'
-  const doctorNotes = searchParams.get('doctorNotes') ?? ''
+  const physicianId = searchParams.get('physicianId')
+  const physician = physicianId ? PHYSICIANS.find((item) => item.id === physicianId) : null
+  const date = searchParams.get('date')
+  const elapsedSeconds = searchParams.get('elapsed') ? Number(searchParams.get('elapsed')) : 0
+  const physicianName = searchParams.get('physicianName')
+  const specialty = searchParams.get('specialty')
+  const appointmentId = searchParams.get('appointmentId')
+  const bookingReference = searchParams.get('bookingReference')
+  const doctorNotes = searchParams.get('doctorNotes')
+
+  // Show error state if required consultation data is missing
+  if (!physicianId || !appointmentId) {
+    return (
+      <PatientPortalShell
+        eyebrow="Consultation Not Found"
+        title="No consultation summary available"
+        description="We couldn't find the consultation summary you're looking for. The consultation may not have been completed yet, or the link may be incorrect."
+      >
+        <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.float, padding: '40px 24px', textAlign: 'center' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(4,53,77,0.06)', display: 'grid', placeItems: 'center', margin: '0 auto 20px' }}>
+            <Ico p={ICONS.activity} size={28} sw={1.5} color={T.slate2} />
+          </div>
+          <h2 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy }}>Consultation summary not found</h2>
+          <p style={{ margin: '0 0 24px', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>
+            The consultation summary you're looking for doesn't exist yet or may have been removed. Consultation summaries are generated after your appointment is completed. Please check your appointments page.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href="/patient/appointments" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 20px', borderRadius: '12px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, border: 'none', textDecoration: 'none' }}>
+              View my appointments
+            </Link>
+            <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 20px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+              Back to dashboard
+            </Link>
+          </div>
+        </section>
+      </PatientPortalShell>
+    )
+  }
 
   const completionTime = useMemo(() => {
     const now = new Date()
     return now.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
   }, [])
 
-  const diagnoses: DiagnosisItem[] = [
-    { name: 'Stress-related fatigue', description: 'Symptoms were discussed in the context of recent workload and sleep disruption.', severity: 'Moderate', status: 'Primary Diagnosis' },
-    { name: 'Hydration imbalance', description: 'Mild signs of low fluid intake were noted during the consultation.', severity: 'Mild', status: 'Secondary Diagnosis' },
-  ]
+  const diagnoses: DiagnosisItem[] = []
 
-  const recommendations: RecommendationItem[] = [
-    { title: 'Rest and recovery', body: 'Priority should be given to rest, hydration, and a lighter schedule for the next 48 hours.' },
-    { title: 'Lifestyle adjustments', body: 'Reducing caffeine and maintaining steady meals will support recovery.' },
-    { title: 'Medication adherence', body: 'Continue prescribed medication as directed and notify the care team if symptoms worsen.' },
-  ]
+  const recommendations: RecommendationItem[] = []
 
-  const nextSteps: StepItem[] = [
-    { title: 'Collect prescription', body: 'Your medication plan is ready for review and pickup.', status: 'Ready' },
-    { title: 'Complete lab tests', body: 'A follow-up blood panel may help confirm the current assessment.', status: 'Recommended' },
-    { title: 'Schedule follow-up', body: 'A short follow-up visit is advisable if symptoms persist.', status: 'Suggested' },
-    { title: 'Monitor symptoms', body: 'Seek urgent care if dizziness or chest pain develops.', status: 'Important' },
-  ]
+  const nextSteps: StepItem[] = []
 
-  const documents: DocumentItem[] = [
-    { title: 'Consultation Summary PDF', meta: 'Prepared today' },
-    { title: 'Medical Report', meta: 'Shared with your care team' },
-    { title: 'Visit Notes', meta: 'Available in medical records' },
-  ]
+  const documents: DocumentItem[] = []
 
   const soapSections = {
-    subjective: doctorNotes || 'Patient reported fatigue, lightheadedness, and reduced energy over the last week. Mild symptoms appeared more often in the evening.',
-    objective: 'No acute distress during the visit. Blood pressure and oxygen measures were stable, and vitals were reassuring.',
-    assessment: 'Clinical assessment suggests a manageable pattern of fatigue with stress and hydration factors contributing to symptoms.',
-    plan: 'Continue current care plan, maintain hydration, monitor symptoms closely, and review again if symptoms persist beyond 48 hours.',
+    subjective: doctorNotes || 'No subjective notes recorded.',
+    objective: 'No objective findings recorded.',
+    assessment: 'No assessment recorded.',
+    plan: 'No treatment plan recorded.',
   }
 
 
@@ -143,7 +156,7 @@ function ConsultationSummaryPageContent() {
                   {[
                     ['Completed', completionTime],
                     ['Duration', formatDuration(elapsedSeconds)],
-                    ['Date', formatDateLabel(date)],
+                    ['Date', date ? formatDateLabel(date) : 'Not specified'],
                     ['Physician', physicianName],
                   ].map(([label, value]) => (
                     <div key={label} style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.9)', border: '1px solid rgba(4,53,77,0.06)' }}>
@@ -193,14 +206,14 @@ function ConsultationSummaryPageContent() {
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ width: '92px', height: '92px', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(4,53,77,0.12)', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', display: 'grid', placeItems: 'center' }}>
                   {physician ? (
-                    <img src={physician.imageUrl} alt={physicianName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={physician.imageUrl} alt={physicianName || 'Physician'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <Ico p={ICONS.steth} size={28} sw={1.5} color={T.navy} />
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: '220px' }}>
-                  <h3 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physicianName}</h3>
-                  <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{specialty} · {physician?.hospital ?? 'Qarevo Care Network'}</p>
+                  <h3 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physicianName || 'Physician'}</h3>
+                  <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{specialty || 'Specialist'} · {physician?.hospital ?? 'Qarevo Care Network'}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: T.slate2 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.activity} size={12} sw={1.75} color={T.blue} />{physician?.experienceYears ?? 12} years experience</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.lock} size={12} sw={1.75} color={T.blue} />{physician?.languages.join(', ') ?? 'English, French'}</span>

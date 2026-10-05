@@ -162,7 +162,7 @@ function DateTimeSelectionPageContent() {
   const [selectedDate, setSelectedDate] = useState(initialDate)
   const [selectedSlot, setSelectedSlot] = useState(bookingState.slot ?? searchParams.get('slot') ?? '')
   const [showTimeSheet, setShowTimeSheet] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(true)
   const [dateValidationError, setDateValidationError] = useState('')
   const [availability, setAvailability] = useState<PatientBookingAvailabilityDay[]>([])
   const [workingHours, setWorkingHours] = useState<PatientBookingWorkingHours | null>(null)
@@ -221,35 +221,33 @@ function DateTimeSelectionPageContent() {
     if (!physicianData.id) return
 
     let cancelled = false
-    setLoadingAvailability(true)
-    getPatientBookingAvailability(physicianData.id)
-      .then((response) => {
+    const fetchData = async () => {
+      setLoadingAvailability(true)
+      try {
+        const response = await getPatientBookingAvailability(physicianData.id)
         if (cancelled) return
         setAvailabilityError('')
         setAvailability(response.availability)
         setWorkingHours(response.working_hours ?? null)
         setAvailableDays(response.available_days ?? [])
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error('Failed to load provider availability', error)
         if (!cancelled) {
           setAvailability([])
           setAvailableDays([])
           setAvailabilityError('We could not load this doctor schedule. Please try again.')
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoadingAvailability(false)
-      })
+      }
+    }
+
+    fetchData()
 
     return () => {
       cancelled = true
     }
   }, [physicianData.id])
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Validate selected date against available days
   useEffect(() => {
