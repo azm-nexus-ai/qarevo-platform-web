@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { getBookingPhysician } from '@/lib/booking'
+import { getPatientTimezone } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
@@ -96,6 +97,19 @@ function SuccessPageContent() {
   const notes = searchParams.get('notes')
   const [hoveredAction, setHoveredAction] = useState<string | null>(null)
   const [reminderEnabled, setReminderEnabled] = useState(true)
+  const [userTimeZone, setUserTimeZone] = useState('Africa/Lagos')
+
+  useEffect(() => {
+    async function loadTimezone() {
+      try {
+        const data = await getPatientTimezone()
+        setUserTimeZone(data.time_zone || 'Africa/Lagos')
+      } catch (error) {
+        console.error('Failed to load timezone, using default', error)
+      }
+    }
+    loadTimezone()
+  }, [])
 
   // Show error state if required booking data is missing
   if (!physicianId || !date || !slot) {
@@ -290,7 +304,7 @@ function SuccessPageContent() {
                   ['Consultation Type', readLabel(service)],
                   ['Appointment Date', date],
                   ['Appointment Time', slot],
-                  ['Timezone', 'Africa/Lagos (GMT+1)'],
+                  ['Timezone', userTimeZone],
                   ['Duration', duration],
                   ['Consultation Fee', formatFee(parsedFee)],
                   ['Insurance Coverage', insurance || 'Not specified'],

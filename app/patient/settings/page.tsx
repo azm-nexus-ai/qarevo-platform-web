@@ -126,6 +126,7 @@ export default function PatientSettingsPage() {
     insurance_provider_name: '',
     insurance_number: '',
     insured_status: '',
+    insurance_type: 'SELF_PAY',
     validity_start: '',
     validity_end: '',
   })
@@ -365,6 +366,7 @@ export default function PatientSettingsPage() {
         insurance_provider_name: insurance.insurance_provider_name || '',
         insurance_number: insurance.insurance_number || '',
         insured_status: insurance.insured_status || '',
+        insurance_type: insurance.insurance_type || 'SELF_PAY',
         validity_start: insurance.validity_start ? insurance.validity_start.split('T')[0] : '',
         validity_end: insurance.validity_end ? insurance.validity_end.split('T')[0] : '',
       })
@@ -1087,6 +1089,18 @@ export default function PatientSettingsPage() {
               {showInsuranceEdit && (
                 <div style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.95)', padding: '16px', marginBottom: '16px' }}>
                   <div className='settings-info-grid'>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Insurance Type</label>
+                      <select
+                        value={insuranceEdit.insurance_type}
+                        onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_type: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                      >
+                        <option value='SELF_PAY'>Self Pay (Private)</option>
+                        <option value='GKV'>Statutory (GKV)</option>
+                        <option value='PKV'>Private (PKV)</option>
+                      </select>
+                    </div>
                     <div className='settings-wide'>
                       <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Insurance Provider</label>
                       <input
@@ -1151,6 +1165,10 @@ export default function PatientSettingsPage() {
               <div className='settings-info-grid'>
                 {insurance ? (
                   <>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Type</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_type || 'Self Pay'}</p>
+                    </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
                       <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Provider</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_provider_name || 'Not set'}</p>

@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
-import { createPatientAppointment, getPatientDoctor, type PatientDoctor } from '@/lib/api'
+import { createPatientAppointment, getPatientDoctor, getPatientTimezone, type PatientDoctor } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -92,6 +92,19 @@ function ReviewPageContent() {
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
   const [doctorLoadError, setDoctorLoadError] = useState('')
+  const [userTimeZone, setUserTimeZone] = useState('Africa/Lagos')
+
+  useEffect(() => {
+    async function loadTimezone() {
+      try {
+        const data = await getPatientTimezone()
+        setUserTimeZone(data.time_zone || 'Africa/Lagos')
+      } catch (error) {
+        console.error('Failed to load timezone, using default', error)
+      }
+    }
+    loadTimezone()
+  }, [])
   const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor) ?? physician, [remoteDoctor, physician])
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
@@ -147,8 +160,8 @@ function ReviewPageContent() {
     const minutes = parts ? Number(parts[1]) : 30
     const start = new Date('2026-01-01T09:00:00')
     start.setMinutes(start.getMinutes() + minutes)
-    return start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })
-  }, [duration])
+    return start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZone: userTimeZone })
+  }, [duration, userTimeZone])
 
   const allAgreed = agreed
 
@@ -330,7 +343,7 @@ function ReviewPageContent() {
                   ['Consultation Type', readLabel(service)],
                   ['Appointment Date', date],
                   ['Appointment Time', slot],
-                  ['Timezone', 'Africa/Lagos (GMT+1)'],
+                  ['Timezone', userTimeZone],
                   ['Estimated Duration', duration],
                   ['Consultation Fee', formatFee(fee)],
                   ['Insurance Coverage', insurance],

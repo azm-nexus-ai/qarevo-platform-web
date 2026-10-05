@@ -1814,6 +1814,7 @@ export type Insurance = {
     insurance_provider_name?: string;
     insurance_number?: string;
     insured_status?: string;
+    insurance_type?: string;
     validity_start?: string;
     validity_end?: string;
 };
@@ -1822,6 +1823,7 @@ export type InsuranceCreate = {
     insurance_provider_name?: string;
     insurance_number?: string;
     insured_status?: string;
+    insurance_type?: string;
     validity_start?: string;
     validity_end?: string;
 };
@@ -1830,6 +1832,7 @@ export type InsuranceUpdate = {
     insurance_provider_name?: string;
     insurance_number?: string;
     insured_status?: string;
+    insurance_type?: string;
     validity_start?: string;
     validity_end?: string;
 };
@@ -1848,6 +1851,14 @@ export async function getPatientSettings(): Promise<PatientSettings> {
 
 export async function updatePatientSettings(body: PatientSettingsUpdate): Promise<PatientSettings> {
     return apiPut<PatientSettings>("/api/v1/patient/settings", body);
+}
+
+export async function getPatientTimezone(): Promise<{ time_zone: string }> {
+    return apiGet<{ time_zone: string }>("/api/v1/patient/settings/timezone");
+}
+
+export async function updatePatientTimezone(body: { time_zone: string }): Promise<{ time_zone: string }> {
+    return apiPut<{ time_zone: string }>("/api/v1/patient/settings/timezone", body);
 }
 
 export async function downloadPatientDataExport(): Promise<Record<string, unknown>> {
