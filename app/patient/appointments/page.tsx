@@ -11,7 +11,7 @@ import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import ReviewModal from '@/components/patient/ReviewModal'
-import { apiGet, apiPost, getApiErrorDetail } from '@/lib/api'
+import { apiGet, apiPost, getApiErrorDetail, getPatientTimezone } from '@/lib/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -691,6 +691,19 @@ function AppointmentsPageInner() {
   const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [reviewTarget, setReviewTarget] = useState<Appointment | null>(null)
+  const [userTimeZone, setUserTimeZone] = useState('Africa/Lagos')
+
+  useEffect(() => {
+    async function loadTimezone() {
+      try {
+        const data = await getPatientTimezone()
+        setUserTimeZone(data.time_zone || 'Africa/Lagos')
+      } catch (error) {
+        console.error('Failed to load timezone, using default', error)
+      }
+    }
+    loadTimezone()
+  }, [])
 
   useEffect(() => {
     async function fetchAppointments() {
@@ -708,8 +721,8 @@ function AppointmentsPageInner() {
             hospital: 'Qarevo Health',
             imageUrl: '/icons/profilePic.svg',
             consultationType: apt.consultation_modality === 'in_person' ? 'In-Person' : 'Video Consultation',
-            date: startsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            time: startsAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+            date: startsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: userTimeZone }),
+            time: startsAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: userTimeZone }),
             duration: '30 min',
             status: normalizeAppointmentStatus(apt.status),
             bookingRef: `QRV-${apt.id.slice(0, 8)}`,

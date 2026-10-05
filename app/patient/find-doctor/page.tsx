@@ -156,7 +156,7 @@ export default function FindDoctorPage() {
     const needle = q.toLowerCase()
     return physicians
       .filter((p) => {
-        const hay = `${p.name} ${p.specialty} ${p.hospital} ${p.conditions.join(' ')}`.toLowerCase()
+        const hay = `${p.name} ${p.specialty} ${p.hospital} ${(p.conditions || []).join(' ')}`.toLowerCase()
         return hay.includes(needle)
       })
       .slice(0, 5)
@@ -737,7 +737,7 @@ export default function FindDoctorPage() {
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {doctor.experienceYears} years</p>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatDoctorRating(doctor)}</p>
                         <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {doctor.nextAvailable}</p>
-                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Distance:</strong> {doctor.distanceKm.toFixed(1)} km</p>
+                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Distance:</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : 'Not available'}</p>
                         {doctor.services && doctor.services.length > 0 && (
                           <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Fee:</strong> ${Math.min(...doctor.services.map(s => s.price))} - ${Math.max(...doctor.services.map(s => s.price))}</p>
                         )}

@@ -13,6 +13,7 @@ import {
   getPatientDoctor,
   getPatientBookingAvailability,
   getPatientBookingSlots,
+  getPatientTimezone,
   type PatientDoctor,
   type PatientBookingAvailabilityDay,
   type PatientBookingWorkingHours,
@@ -36,8 +37,8 @@ function formatDateKey(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-function formatDateLabel(date: Date) {
-  return date.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })
+function formatDateLabel(date: Date, timeZone?: string) {
+  return date.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric', timeZone })
 }
 
 function addDays(date: Date, days: number) {
@@ -162,7 +163,7 @@ function DateTimeSelectionPageContent() {
   const [selectedDate, setSelectedDate] = useState(initialDate)
   const [selectedSlot, setSelectedSlot] = useState(bookingState.slot ?? searchParams.get('slot') ?? '')
   const [showTimeSheet, setShowTimeSheet] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(true)
   const [dateValidationError, setDateValidationError] = useState('')
   const [availability, setAvailability] = useState<PatientBookingAvailabilityDay[]>([])
   const [workingHours, setWorkingHours] = useState<PatientBookingWorkingHours | null>(null)
@@ -171,6 +172,19 @@ function DateTimeSelectionPageContent() {
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [availabilityError, setAvailabilityError] = useState('')
+  const [userTimeZone, setUserTimeZone] = useState('Africa/Lagos')
+
+  useEffect(() => {
+    async function loadTimezone() {
+      try {
+        const data = await getPatientTimezone()
+        setUserTimeZone(data.time_zone || 'Africa/Lagos')
+      } catch (error) {
+        console.error('Failed to load timezone, using default', error)
+      }
+    }
+    loadTimezone()
+  }, [])
   const preservedParams = useMemo(() => {
     const next = buildBookingQueryParams(searchParams, physicianData, service)
     return next.toString()
@@ -221,35 +235,33 @@ function DateTimeSelectionPageContent() {
     if (!physicianData.id) return
 
     let cancelled = false
-    setLoadingAvailability(true)
-    getPatientBookingAvailability(physicianData.id)
-      .then((response) => {
+    const fetchData = async () => {
+      setLoadingAvailability(true)
+      try {
+        const response = await getPatientBookingAvailability(physicianData.id)
         if (cancelled) return
         setAvailabilityError('')
         setAvailability(response.availability)
         setWorkingHours(response.working_hours ?? null)
         setAvailableDays(response.available_days ?? [])
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error('Failed to load provider availability', error)
         if (!cancelled) {
           setAvailability([])
           setAvailableDays([])
           setAvailabilityError('We could not load this doctor schedule. Please try again.')
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoadingAvailability(false)
-      })
+      }
+    }
+
+    fetchData()
 
     return () => {
       cancelled = true
     }
   }, [physicianData.id])
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Validate selected date against available days
   useEffect(() => {
@@ -258,12 +270,12 @@ function DateTimeSelectionPageContent() {
       return
     }
 
-    const selectedDayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
+    const selectedDayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: userTimeZone }).toUpperCase()
     const isAvailable = availableDays.includes(selectedDayOfWeek)
     
     if (!isAvailable) {
       const nextAvailableDay = availableDays[0]
-      let errorMessage = `${physicianData.name} is not available on ${formatDateLabel(selectedDate)}.`
+      let errorMessage = `${physicianData.name} is not available on ${formatDateLabel(selectedDate, userTimeZone)}.`
       
       if (nextAvailableDay) {
         errorMessage += ` Available days: ${availableDays.join(', ')}. Please select an available date.`
@@ -304,13 +316,14 @@ function DateTimeSelectionPageContent() {
     }
   }, [physicianData.id, selectedDateKey])
 
-  const appointmentEnd = useMemo(() => {
+  const endTime = useMemo(() => {
+    if (!duration || !selectedDate || !selectedSlot) return ''
     const parts = duration.match(/(\d+)/)
     const minutes = parts ? Number(parts[1]) : 30
     const start = parseSlotStart(selectedDate, selectedSlot || '9:00 AM')
     start.setMinutes(start.getMinutes() + minutes)
-    return `${start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}`
-  }, [duration, selectedDate, selectedSlot])
+    return `${start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZone: userTimeZone })}`
+  }, [duration, selectedDate, selectedSlot, userTimeZone])
 
   const canContinue = Boolean(selectedSlot && availableSlots.includes(selectedSlot))
 
@@ -721,7 +734,7 @@ function DateTimeSelectionPageContent() {
                   {[
                     ['Consultation Type', readLabel(service)],
                     ['Appointment Duration', duration],
-                    ['Estimated End Time', appointmentEnd],
+                    ['Estimated End Time', endTime],
                     ['Consultation Fee', formatFee(fee)],
                     ['Insurance Coverage', insurance],
                     ['Cancellation Policy', 'Free up to 24 hours before appointment'],

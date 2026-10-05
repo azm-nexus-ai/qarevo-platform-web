@@ -283,7 +283,7 @@ export default function DoctorSettingsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>Working Hours</label>
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <input
                   type="time"
                   value={settingsData.working_hours_start}

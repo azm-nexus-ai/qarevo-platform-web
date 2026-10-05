@@ -111,12 +111,12 @@ export default function PhysicianWorkspace() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Physician Workspace</h1>
-          <p className="text-gray-500 mt-1">Manage your consultations and patient queue</p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-gray-900 truncate">Physician Workspace</h1>
+          <p className="text-gray-500 mt-1 text-sm truncate">Manage your consultations and patient queue</p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 flex-shrink-0">
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -124,7 +124,7 @@ export default function PhysicianWorkspace() {
               setConsultationPage(1)
               setEpisodePage(1)
             }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
           >
             <option value="">All Statuses</option>
             <option value="scheduled">Scheduled</option>
@@ -171,9 +171,9 @@ export default function PhysicianWorkspace() {
                 <div
                   key={consultation.consultation_id}
                   onClick={() => handleConsultationClick(consultation.consultation_id)}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors flex-col sm:flex-row gap-4"
                 >
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 w-full sm:w-auto">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-blue-600 font-semibold">
                         {consultation.patient_name.split(' ').map(n => n[0]).join('').toUpperCase()}
@@ -189,7 +189,7 @@ export default function PhysicianWorkspace() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 flex-shrink-0">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(consultation.status)}`}>
                       {consultation.status.replace('_', ' ').toUpperCase()}
                     </span>
@@ -199,11 +199,11 @@ export default function PhysicianWorkspace() {
               ))}
             </div>
           )}
-          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4 flex-col sm:flex-row gap-4">
             <p className="text-sm text-gray-500">
               Page {workspaceData.page} · Showing {workspaceData.consultations.length} of {workspaceData.filtered_count}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 type="button"
                 disabled={!workspaceData.has_previous || loading}
@@ -241,9 +241,9 @@ export default function PhysicianWorkspace() {
                   key={episode.episode_id}
                   type="button"
                   onClick={() => handleEpisodeClick(episode.episode_id)}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors text-left"
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors text-left flex-col sm:flex-row gap-4"
                 >
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 w-full sm:w-auto">
                     <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center">
                       <span className="text-cyan-700 font-semibold">
                         {episode.patient.name.split(' ').map(n => n[0]).join('').toUpperCase()}
@@ -257,7 +257,7 @@ export default function PhysicianWorkspace() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 flex-shrink-0">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${episode.ai_draft_ready ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
                       {episode.ai_draft_ready ? 'AI READY' : episode.latest_ai_job_status?.toUpperCase() || 'NO AI DRAFT'}
                     </span>
@@ -271,11 +271,11 @@ export default function PhysicianWorkspace() {
             </div>
           )}
           {episodeData && (
-            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4 flex-col sm:flex-row gap-4">
               <p className="text-sm text-gray-500">
                 Page {episodeData.page} · Showing {episodeData.episodes.length} of {episodeData.filtered_count}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
                   type="button"
                   disabled={!episodeData.has_previous || loading}

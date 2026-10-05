@@ -89,12 +89,12 @@ export default function PatientsPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Patients</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ minWidth: 0 }}>
+          <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Patients</h1>
           <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage your patient directory</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
           <div style={{
             padding: '10px 16px',
             borderRadius: '12px',
@@ -193,21 +193,23 @@ export default function PatientsPage() {
                 background: 'rgba(247,250,252,0.6)',
                 border: '1px solid rgba(4,53,77,0.04)',
                 transition: 'all 0.15s ease',
-                cursor: 'default'
+                cursor: 'default',
+                flexDirection: 'row',
+                gap: '16px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, minWidth: 0 }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(32,181,223,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.blue, fontSize: '14px', fontWeight: 700 }}>
                     {patient.name.split(' ').map((n: string) => n[0]).join('')}
                   </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{patient.name}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate2 }}>{patient.email || 'No email'} · {patient.phone || 'No phone'}</p>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{patient.name}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{patient.email || 'No email'} · {patient.phone || 'No phone'}</p>
                     <p style={{ margin: '2px 0 0', fontSize: '11px', color: T.slate }}>
                       {patient.gender || 'Unknown gender'}, {patient.age ?? 'Unknown'} years · Last visit: {patient.last_visit ? formatDate(patient.last_visit) : 'No visits yet'}
                     </p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>Consultations</p>
                     <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: T.navy }}>{patient.total_consultations}</p>
@@ -228,7 +230,7 @@ export default function PatientsPage() {
           </div>
 
           {/* Pagination */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)', flexWrap: 'wrap', gap: '12px' }}>
             <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Page {patientsData.page} · Showing {visiblePatients.length} of {patientsData.filtered_count} patients</p>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button

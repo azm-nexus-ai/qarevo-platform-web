@@ -104,15 +104,46 @@ function getAppointmentTarget(dateValue: string, slot: string) {
 
 function AppointmentDetailsPageContent() {
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? 'sophia-reed'
-  const physician = PHYSICIANS.find((item) => item.id === physicianId)
-  const service = searchParams.get('service') ?? 'video'
-  const fee = Number(searchParams.get('fee') ?? physician?.consultationFee ?? 140)
-  const duration = searchParams.get('duration') ?? '30 min'
-  const insurance = searchParams.get('insurance') ?? 'Axa'
-  const date = searchParams.get('date') ?? 'Today'
-  const slot = searchParams.get('slot') ?? '4:30 PM'
-  const notes = searchParams.get('notes') ?? ''
+  const physicianId = searchParams.get('physicianId')
+  const physician = physicianId ? PHYSICIANS.find((item) => item.id === physicianId) : null
+  const service = searchParams.get('service')
+  const fee = searchParams.get('fee')
+  const duration = searchParams.get('duration')
+  const insurance = searchParams.get('insurance')
+  const date = searchParams.get('date')
+  const slot = searchParams.get('slot')
+  const notes = searchParams.get('notes')
+  
+  // Show error state if required appointment data is missing
+  if (!physicianId || !date || !slot) {
+    return (
+      <PatientPortalShell
+        eyebrow="Appointment Not Found"
+        title="No appointment details available"
+        description="We couldn't find the appointment you're looking for. It may have been cancelled, or the link may be incorrect."
+      >
+        <section className='appt-card' style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(4,53,77,0.06)', display: 'grid', placeItems: 'center', margin: '0 auto 20px' }}>
+            <Ico p={ICONS.calendar} size={28} sw={1.5} color={T.slate2} />
+          </div>
+          <h2 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy }}>Appointment not found</h2>
+          <p style={{ margin: '0 0 24px', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>
+            The appointment details you're looking for don't exist or may have been removed. Please check your appointments page or contact support.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href={PATIENT_ROUTES.appointments} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 20px', borderRadius: '12px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, border: 'none', textDecoration: 'none' }}>
+              View my appointments
+            </Link>
+            <Link href={PATIENT_ROUTES.dashboard} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 20px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+              Back to dashboard
+            </Link>
+          </div>
+        </section>
+      </PatientPortalShell>
+    )
+  }
+  
+  const parsedFee = fee ? Number(fee) : (physician?.consultationFee ?? 0)
   const [hoveredAction, setHoveredAction] = useState<string | null>(null)
   const [reminderEnabled, setReminderEnabled] = useState(true)
   const [now, setNow] = useState(new Date())
@@ -304,7 +335,7 @@ function AppointmentDetailsPageContent() {
                   ['Date', date],
                   ['Time', slot],
                   ['Duration', duration],
-                  ['Fee', formatFee(fee)],
+                  ['Fee', formatFee(parsedFee)],
                   ['Insurance', insurance],
                   ['Appointment ID', appointmentId],
                   ['Reference', bookingReference],

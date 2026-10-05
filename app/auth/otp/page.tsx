@@ -1,17 +1,15 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
-import { setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import { verifyOtp, storeAuthTokens } from '@/lib/api'
 
 // ─── Config ────────────────────────────────────────────────────────────────────
-const DEMO_CODE     = '847291'
-const DEMO_PHONE    = '+44 ••• ••• 4821'
 const RESEND_SECS   = 60
 const MAX_ATTEMPTS  = 3
 
@@ -373,7 +371,7 @@ function DestChip({ mode, onSwitch }: { mode: VerifyMode; onSwitch: () => void }
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 13px' }}>
         <Ico p={mode === 'email' ? ICONS.ema : ICONS.activity} size={11} sw={1.75} color={T.blue} />
         <span style={{ fontSize: '13px', fontWeight: 700, color: T.blue, letterSpacing: '-0.01em', fontFamily: 'monospace' }}>
-          {mode === 'email' ? 'em•••@gmail.com' : DEMO_PHONE}
+          {mode === 'email' ? 'em•••@gmail.com' : '+44 ••• ••• 4821'}
         </span>
       </div>
       <button onClick={onSwitch} style={{ padding: '6px 11px 6px 6px', background: 'none', border: 'none', borderLeft: `1px solid ${T.blueMid}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'inherit', fontSize: '11.5px', fontWeight: 600, color: T.blue, letterSpacing: '-0.01em' }}>
@@ -407,46 +405,70 @@ function TimerRing({ secs, total }: { secs: number; total: number }) {
 }
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
-export default function OtpPage() {
+function OtpPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { secs, expired, restart } = useCountdown(RESEND_SECS)
   const [digits,    setDigits]    = useState(['', '', '', '', '', ''])
   const [mode,      setMode]      = useState<VerifyMode>('email')
   const [errorKind, setErrorKind] = useState<ErrorKind>(null)
   const [attempts,  setAttempts]  = useState(0)
-  const [verified,  setVerified]  = useState(false)
   const [loading,   setLoading]   = useState(false)
   const [resendOk,  setResendOk]  = useState(false)
 
+  // Get email/phone from URL params (set by previous registration/login flow)
+  const email = searchParams.get('email')
+  const countryCode = searchParams.get('country_code')
+  const phone = searchParams.get('phone')
+
   const filled     = digits.every(d => d !== '')
   const tooMany    = attempts >= MAX_ATTEMPTS
-  const illState   = verified ? 'success' : errorKind ? 'error' : 'idle'
+  const illState   = errorKind ? 'error' : 'idle'
 
-  const handleComplete = useCallback((code: string) => {
+  const handleComplete = useCallback(async (code: string) => {
     if (tooMany) { setErrorKind('toomany'); return }
     setLoading(true)
     setErrorKind(null)
-    setTimeout(() => {
-      setLoading(false)
-      if (code === DEMO_CODE) {
-        setVerified(true)
-        setAuthenticatedOnboardingStage('account-created')
-        setTimeout(() => router.push('/auth/account-created'), 1800)
-      } else if (expired) {
-        setErrorKind('expired')
-        setDigits(['', '', '', '', '', ''])
+    
+    try {
+      // Build request based on mode and available params
+      const requestBody: { code: string; email?: string; country_code?: string; phone?: string } = { code }
+      
+      if (mode === 'email' && email) {
+        requestBody.email = email
+      } else if (mode === 'phone' && countryCode && phone) {
+        requestBody.country_code = countryCode
+        requestBody.phone = phone
       } else {
-        const next = attempts + 1
-        setAttempts(next)
-        if (next >= MAX_ATTEMPTS) {
-          setErrorKind('toomany')
-        } else {
-          setErrorKind('invalid')
-        }
-        setDigits(['', '', '', '', '', ''])
+        throw new Error('Missing required email or phone parameters')
       }
-    }, 800)
-  }, [attempts, expired, tooMany, router])
+      
+      const response = await verifyOtp(requestBody)
+      
+      // Store auth tokens if returned
+      if (response.access_token && response.refresh_token) {
+        storeAuthTokens({
+          access_token: response.access_token,
+          refresh_token: response.refresh_token,
+          token_type: response.token_type,
+          expires_in: response.expires_in,
+          user_id: response.user_id,
+          role: response.role,
+        })
+      }
+      
+      // Redirect to account-created or dashboard based on verification status
+      if (response.email_verified || response.phone_verified) {
+        router.push('/auth/account-created')
+      } else {
+        setErrorKind('invalid')
+      }
+    } catch (error) {
+      setLoading(false)
+      setErrorKind('invalid')
+      setDigits(['', '', '', '', '', ''])
+    }
+  }, [tooMany, mode, router, email, countryCode, phone])
 
   const handleVerify = () => {
     if (!filled || loading || tooMany) return
@@ -524,152 +546,125 @@ export default function OtpPage() {
           <SecurityIllustration state={illState} />
         </div>
 
-        {/* Success overlay */}
-        {verified ? (
-          <div style={{ textAlign: 'center', animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 14px', borderRadius: '100px', background: 'rgba(9,173,112,0.1)', border: '1px solid rgba(9,173,112,0.25)', marginBottom: '16px' }}>
-              <Ico p={ICONS.check} size={10} sw={3} color={T.green} />
-              <span style={{ fontSize: '11.5px', fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>Identity Confirmed</span>
-            </div>
-            <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', margin: '0 0 10px' }}>
-              Verification successful
-            </h1>
-            <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.7, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
-              Your identity has been confirmed. Redirecting you now…
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '20px', color: T.slate2 }}>
-              <span style={{ width: '14px', height: '14px', border: `2px solid ${T.green}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
-              <span style={{ fontSize: '13px', fontWeight: 500, letterSpacing: '-0.01em' }}>Taking you to your account…</span>
-            </div>
+        {/* Headline */}
+        <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '23px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 10px' }}>
+            Verify Your Identity
+          </h1>
+          <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.7, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
+            {mode === 'email'
+              ? "We've sent a 6-digit security code to your email."
+              : "We've sent a 6-digit security code to your phone."}
+          </p>
+          <DestChip mode={mode} onSwitch={switchMode} />
+        </div>
+
+        {/* Error banner */}
+        {errorKind && (
+          <div style={{ marginBottom: '16px' }}>
+            <ErrorBanner kind={errorKind} onDismiss={() => setErrorKind(null)} />
           </div>
-        ) : (
-          <>
-            {/* Headline */}
-            <div style={{ textAlign: 'center', marginBottom: '22px' }}>
-              <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '23px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 10px' }}>
-                Verify Your Identity
-              </h1>
-              <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.7, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
-                {mode === 'email'
-                  ? "We've sent a 6-digit security code to your email."
-                  : "We've sent a 6-digit security code to your phone."}
-              </p>
-              <DestChip mode={mode} onSwitch={switchMode} />
-            </div>
-
-            {/* Error banner */}
-            {errorKind && (
-              <div style={{ marginBottom: '16px' }}>
-                <ErrorBanner kind={errorKind} onDismiss={() => setErrorKind(null)} />
-              </div>
-            )}
-
-            {/* Resend toast */}
-            {resendOk && (
-              <div style={{ padding: '10px 14px', borderRadius: '11px', background: 'rgba(235,248,245,0.9)', border: '1px solid rgba(9,173,112,0.25)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', animation: 'slideIn 0.28s ease both' }}>
-                <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
-                <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>
-                  New code sent. Check your {mode === 'email' ? 'inbox' : 'messages'}.
-                </span>
-              </div>
-            )}
-
-            {/* OTP + timer row */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '-0.01em' }}>
-                  Enter 6-digit code
-                </span>
-                {!expired
-                  ? <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.01em' }}>Expires in</span>
-                      <TimerRing secs={secs} total={RESEND_SECS} />
-                    </div>
-                  : <span style={{ fontSize: '12px', fontWeight: 600, color: T.red, letterSpacing: '-0.01em' }}>Code expired</span>}
-              </div>
-              <OtpCells
-                value={digits}
-                onChange={setDigits}
-                onComplete={handleComplete}
-                error={!!errorKind && errorKind !== 'network'}
-                success={verified}
-                disabled={loading || tooMany || verified}
-              />
-              {attempts > 0 && !tooMany && (
-                <p style={{ textAlign: 'center', fontSize: '12px', color: T.amber, marginTop: '8px', letterSpacing: '-0.005em', fontWeight: 500 }}>
-                  {MAX_ATTEMPTS - attempts} attempt{MAX_ATTEMPTS - attempts !== 1 ? 's' : ''} remaining
-                </p>
-              )}
-              {/* Demo hint */}
-              <p style={{ textAlign: 'center', fontSize: '11.5px', color: T.slate2, margin: '8px 0 0', letterSpacing: '-0.005em' }}>
-                {'Demo code: '}
-                <span style={{ fontFamily: 'monospace', fontWeight: 700, color: T.blue, letterSpacing: '0.1em' }}>{DEMO_CODE}</span>
-              </p>
-            </div>
-
-            {/* Verify CTA */}
-            <button
-              className="pri-btn"
-              onClick={handleVerify}
-              disabled={!filled || loading || tooMany}
-              style={{
-                width: '100%', padding: '14px 20px', borderRadius: '13px', border: 'none',
-                background: !filled || tooMany
-                  ? 'rgba(4,53,77,0.06)'
-                  : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
-                color: !filled || tooMany ? T.slate2 : '#fff',
-                fontFamily: 'inherit', fontSize: '15px', fontWeight: 700,
-                letterSpacing: '-0.02em',
-                cursor: !filled || loading || tooMany ? 'not-allowed' : 'pointer',
-                marginBottom: '10px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: filled && !tooMany ? '0 3px 10px rgba(32,181,223,0.3), inset 0 1px 0 rgba(255,255,255,0.14)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {loading
-                ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Verifying…</>
-                : <>Verify Code <Ico p={ICONS.arrowFwd} size={14} sw={2.2} /></>}
-            </button>
-
-            {/* Back */}
-            <Link href="/auth/verify-email" style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              padding: '12px', borderRadius: '13px',
-              border: `1.5px solid ${T.border}`,
-              background: 'transparent', fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 600,
-              color: T.slate, letterSpacing: '-0.01em', textDecoration: 'none',
-              transition: 'all 0.14s ease',
-            }}>
-              <Ico p={ICONS.arrowSm} size={13} sw={2} style={{ transform: 'rotate(180deg)' }} />
-              Back to Email Verification
-            </Link>
-
-            {/* Resend row */}
-            <div style={{ marginTop: '22px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-              <p style={{ margin: 0, fontSize: '13px', color: T.slate2, letterSpacing: '-0.01em' }}>
-                {"Didn't receive the code?"}
-              </p>
-              <button
-                className="ghost"
-                onClick={handleResend}
-                disabled={!expired || loading}
-                style={{
-                  background: 'transparent', border: 'none', cursor: expired && !loading ? 'pointer' : 'not-allowed',
-                  fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 700,
-                  color: expired && !loading ? T.blue : T.slate2,
-                  letterSpacing: '-0.01em', padding: '6px 14px', borderRadius: '8px',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  transition: 'all 0.14s ease',
-                }}
-              >
-                {!expired
-                  ? <><span style={{ width: '12px', height: '12px', border: `1.5px solid ${T.slate2}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block' }} />Resend in {secs}s</>
-                  : <><Ico p={ICONS.arrowFwd} size={13} sw={2} />Resend Code</>}
-              </button>
-            </div>
-          </>
         )}
+
+        {/* Resend toast */}
+        {resendOk && (
+          <div style={{ padding: '10px 14px', borderRadius: '11px', background: 'rgba(235,248,245,0.9)', border: '1px solid rgba(9,173,112,0.25)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', animation: 'slideIn 0.28s ease both' }}>
+            <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
+            <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>
+              New code sent. Check your {mode === 'email' ? 'inbox' : 'messages'}.
+            </span>
+          </div>
+        )}
+
+        {/* OTP + timer row */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '-0.01em' }}>
+              Enter 6-digit code
+            </span>
+            {!expired
+              ? <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.01em' }}>Expires in</span>
+                  <TimerRing secs={secs} total={RESEND_SECS} />
+                </div>
+              : <span style={{ fontSize: '12px', fontWeight: 600, color: T.red, letterSpacing: '-0.01em' }}>Code expired</span>}
+          </div>
+          <OtpCells
+            value={digits}
+            onChange={setDigits}
+            onComplete={handleComplete}
+            error={!!errorKind && errorKind !== 'network'}
+            success={false}
+            disabled={loading || tooMany}
+          />
+          {attempts > 0 && !tooMany && (
+            <p style={{ textAlign: 'center', fontSize: '12px', color: T.amber, marginTop: '8px', letterSpacing: '-0.005em', fontWeight: 500 }}>
+              {MAX_ATTEMPTS - attempts} attempt{MAX_ATTEMPTS - attempts !== 1 ? 's' : ''} remaining
+            </p>
+          )}
+        </div>
+
+        {/* Verify CTA */}
+        <button
+          className="pri-btn"
+          onClick={handleVerify}
+          disabled={!filled || loading || tooMany}
+          style={{
+            width: '100%', padding: '14px 20px', borderRadius: '13px', border: 'none',
+            background: !filled || tooMany
+              ? 'rgba(4,53,77,0.06)'
+              : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+            color: !filled || tooMany ? T.slate2 : '#fff',
+            fontFamily: 'inherit', fontSize: '15px', fontWeight: 700,
+            letterSpacing: '-0.02em',
+            cursor: !filled || loading || tooMany ? 'not-allowed' : 'pointer',
+            marginBottom: '10px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            boxShadow: filled && !tooMany ? '0 3px 10px rgba(32,181,223,0.3), inset 0 1px 0 rgba(255,255,255,0.14)' : 'none',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          {loading
+            ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Verifying…</>
+            : <>Verify Code <Ico p={ICONS.arrowFwd} size={14} sw={2.2} /></>}
+        </button>
+
+        {/* Back */}
+        <Link href="/auth/verify-email" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          padding: '12px', borderRadius: '13px',
+          border: `1.5px solid ${T.border}`,
+          background: 'transparent', fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 600,
+          color: T.slate, letterSpacing: '-0.01em', textDecoration: 'none',
+          transition: 'all 0.14s ease',
+        }}>
+          <Ico p={ICONS.arrowSm} size={13} sw={2} style={{ transform: 'rotate(180deg)' }} />
+          Back to Email Verification
+        </Link>
+
+        {/* Resend row */}
+        <div style={{ marginTop: '22px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: T.slate2, letterSpacing: '-0.01em' }}>
+            {"Didn't receive the code?"}
+          </p>
+          <button
+            className="ghost"
+            onClick={handleResend}
+            disabled={!expired || loading}
+            style={{
+              background: 'transparent', border: 'none', cursor: expired && !loading ? 'pointer' : 'not-allowed',
+              fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 700,
+              color: expired && !loading ? T.blue : T.slate2,
+              letterSpacing: '-0.01em', padding: '6px 14px', borderRadius: '8px',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'all 0.14s ease',
+            }}
+          >
+            {!expired
+              ? <><span style={{ width: '12px', height: '12px', border: `1.5px solid ${T.slate2}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block' }} />Resend in {secs}s</>
+              : <><Ico p={ICONS.arrowFwd} size={13} sw={2} />Resend Code</>}
+          </button>
+        </div>
       </div>
 
       {/* Trust strip */}
@@ -696,5 +691,17 @@ export default function OtpPage() {
         <Link href="/support" style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Support</Link>
       </p>
     </div>
+  )
+}
+
+export default function OtpPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '3px solid rgba(32,181,223,0.2)', borderTopColor: T.blue, animation: 'spin 1s linear infinite' }} />
+      </div>
+    }>
+      <OtpPageContent />
+    </Suspense>
   )
 }

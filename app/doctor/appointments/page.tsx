@@ -98,19 +98,19 @@ export default function DoctorAppointments() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-          <p className="text-gray-500 mt-1">Manage your scheduled appointments</p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-gray-900 truncate">Appointments</h1>
+          <p className="text-gray-500 mt-1 text-sm truncate">Manage your scheduled appointments</p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 flex-shrink-0">
           <select
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value)
               setPage(1)
             }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
           >
             <option value="">All Statuses</option>
             <option value="booked">Booked</option>
@@ -153,9 +153,9 @@ export default function DoctorAppointments() {
                 <div
                   key={appointment.appointment_id}
                   onClick={() => handleViewDetails(appointment.appointment_id)}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors flex-col sm:flex-row gap-4"
                 >
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 w-full sm:w-auto">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-blue-600 font-semibold">
                         {appointment.patient_name.split(' ').map(n => n[0]).join('').toUpperCase()}
@@ -171,7 +171,7 @@ export default function DoctorAppointments() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 flex-shrink-0">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
                       {appointment.status.replace('_', ' ').toUpperCase()}
                     </span>
@@ -181,11 +181,11 @@ export default function DoctorAppointments() {
               ))}
             </div>
           )}
-          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4 flex-col sm:flex-row gap-4">
             <p className="text-sm text-gray-500">
               Page {appointmentsData.page} · Showing {appointmentsData.appointments.length} of {appointmentsData.filtered_count}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 type="button"
                 disabled={!appointmentsData.has_previous || loading}

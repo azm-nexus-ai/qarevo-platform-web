@@ -692,6 +692,25 @@ export type VerifyPhoneCodeResponse = {
     message: string;
 };
 
+export type VerifyOtpRequest = {
+    code: string;
+    email?: string;
+    country_code?: string;
+    phone?: string;
+};
+
+export type VerifyOtpResponse = {
+    message: string;
+    access_token?: string;
+    refresh_token?: string;
+    token_type?: string;
+    expires_in?: number;
+    email_verified?: boolean;
+    phone_verified?: boolean;
+    user_id?: string;
+    role?: string;
+};
+
 // Doctor Authentication API Functions
 export async function registerDoctor(body: DoctorRegisterRequest): Promise<DoctorRegisterResponse> {
     return apiPost<DoctorRegisterResponse>("/api/v1/doctor/register", body);
@@ -705,6 +724,10 @@ export async function checkDoctorUsernameAvailability(username: string): Promise
 
 export async function loginDoctor(body: DoctorLoginRequest): Promise<DoctorLoginResponse> {
     return apiPost<DoctorLoginResponse>("/api/v1/auth/doctor/login", body);
+}
+
+export async function verifyOtp(body: VerifyOtpRequest): Promise<VerifyOtpResponse> {
+    return apiPost<VerifyOtpResponse, VerifyOtpRequest>("/api/v1/auth/verify-otp", body);
 }
 
 export async function loginPatient(body: { email: string; password: string }): Promise<AuthTokenResponse> {
@@ -1791,6 +1814,7 @@ export type Insurance = {
     insurance_provider_name?: string;
     insurance_number?: string;
     insured_status?: string;
+    insurance_type?: string;
     validity_start?: string;
     validity_end?: string;
 };
@@ -1799,6 +1823,7 @@ export type InsuranceCreate = {
     insurance_provider_name?: string;
     insurance_number?: string;
     insured_status?: string;
+    insurance_type?: string;
     validity_start?: string;
     validity_end?: string;
 };
@@ -1807,6 +1832,7 @@ export type InsuranceUpdate = {
     insurance_provider_name?: string;
     insurance_number?: string;
     insured_status?: string;
+    insurance_type?: string;
     validity_start?: string;
     validity_end?: string;
 };
@@ -1825,6 +1851,14 @@ export async function getPatientSettings(): Promise<PatientSettings> {
 
 export async function updatePatientSettings(body: PatientSettingsUpdate): Promise<PatientSettings> {
     return apiPut<PatientSettings>("/api/v1/patient/settings", body);
+}
+
+export async function getPatientTimezone(): Promise<{ time_zone: string }> {
+    return apiGet<{ time_zone: string }>("/api/v1/patient/settings/timezone");
+}
+
+export async function updatePatientTimezone(body: { time_zone: string }): Promise<{ time_zone: string }> {
+    return apiPut<{ time_zone: string }>("/api/v1/patient/settings/timezone", body);
 }
 
 export async function downloadPatientDataExport(): Promise<Record<string, unknown>> {

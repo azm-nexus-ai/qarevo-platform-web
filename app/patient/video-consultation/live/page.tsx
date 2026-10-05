@@ -208,8 +208,8 @@ function LiveConsultationPageContent() {
     return () => window.clearTimeout(timer)
   }, [chatOpen, messages.length])
 
-  const doctorName = physician?.name ?? 'Dr. Sophia Reed'
-  const specialty = physician?.specialty ?? 'Internal Medicine'
+  const doctorName = physician?.name ?? ''
+  const specialty = physician?.specialty ?? ''
   const formattedElapsed = useMemo(() => formatElapsed(elapsedSeconds), [elapsedSeconds])
 
   const quickReplies = ['Can you explain this next step?', 'I would like a written summary', 'Please note my current concerns']

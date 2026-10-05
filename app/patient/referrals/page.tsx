@@ -141,10 +141,10 @@ function ReferralsPageContent() {
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const date = searchParams.get('date') ?? 'Today'
   const slot = searchParams.get('slot') ?? '4:30 PM'
-  const physicianName = searchParams.get('physicianName') ?? physician?.name ?? 'Dr. Sophia Reed'
-  const specialty = searchParams.get('specialty') ?? physician?.specialty ?? 'Cardiology'
+  const physicianName = searchParams.get('physicianName') ?? physician?.name ?? ''
+  const specialty = searchParams.get('specialty') ?? physician?.specialty ?? ''
   const duration = searchParams.get('duration') ?? '30 min'
-  const insurance = searchParams.get('insurance') ?? 'Axa'
+  const insurance = searchParams.get('insurance') ?? ''
   const notes = searchParams.get('notes') ?? ''
 
   const [selectedProvider, setSelectedProvider] = useState(providers[0].id)

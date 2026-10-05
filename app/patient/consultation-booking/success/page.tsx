@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { getBookingPhysician } from '@/lib/booking'
+import { getPatientTimezone } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
@@ -84,18 +85,62 @@ function readLabel(service: string | null) {
 
 function SuccessPageContent() {
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
-  const physician = PHYSICIANS.find((item) => item.id === physicianId)
+  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id')
+  const physician = physicianId ? PHYSICIANS.find((item) => item.id === physicianId) : null
   const physicianData = useMemo(() => getBookingPhysician(searchParams, physician), [searchParams, physician])
-  const service = searchParams.get('service') ?? 'video'
-  const fee = Number(searchParams.get('fee') ?? physicianData.consultationFee ?? 0)
-  const duration = searchParams.get('duration') ?? '30 min'
-  const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
-  const date = searchParams.get('date') ?? 'Today'
-  const slot = searchParams.get('slot') ?? '4:30 PM'
-  const notes = searchParams.get('notes') ?? ''
+  const service = searchParams.get('service')
+  const fee = searchParams.get('fee')
+  const duration = searchParams.get('duration')
+  const insurance = searchParams.get('insurance')
+  const date = searchParams.get('date')
+  const slot = searchParams.get('slot')
+  const notes = searchParams.get('notes')
   const [hoveredAction, setHoveredAction] = useState<string | null>(null)
   const [reminderEnabled, setReminderEnabled] = useState(true)
+  const [userTimeZone, setUserTimeZone] = useState('Africa/Lagos')
+
+  useEffect(() => {
+    async function loadTimezone() {
+      try {
+        const data = await getPatientTimezone()
+        setUserTimeZone(data.time_zone || 'Africa/Lagos')
+      } catch (error) {
+        console.error('Failed to load timezone, using default', error)
+      }
+    }
+    loadTimezone()
+  }, [])
+
+  // Show error state if required booking data is missing
+  if (!physicianId || !date || !slot) {
+    return (
+      <PatientPortalShell
+        eyebrow="Booking Not Found"
+        title="No booking information available"
+        description="We couldn't find the booking details you're looking for. The session may have expired or the link may be incorrect."
+      >
+        <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.float, padding: '40px 24px', textAlign: 'center' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(4,53,77,0.06)', display: 'grid', placeItems: 'center', margin: '0 auto 20px' }}>
+            <Ico p={ICONS.calendar} size={28} sw={1.5} color={T.slate2} />
+          </div>
+          <h2 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy }}>Booking not found</h2>
+          <p style={{ margin: '0 0 24px', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>
+            The booking details you're looking for don't exist or may have been removed. Please check your appointments page or start a new booking.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href={PATIENT_ROUTES.appointments} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 20px', borderRadius: '12px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, border: 'none', textDecoration: 'none' }}>
+              View my appointments
+            </Link>
+            <Link href={PATIENT_ROUTES.dashboard} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 20px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+              Back to dashboard
+            </Link>
+          </div>
+        </section>
+      </PatientPortalShell>
+    )
+  }
+
+  const parsedFee = fee ? Number(fee) : (physicianData.consultationFee ?? 0)
 
   const appointmentId = useMemo(() => {
     const prefix = physicianData.name.split(' ').pop()?.slice(0, 3).toUpperCase() ?? 'QRV'
@@ -124,8 +169,8 @@ function SuccessPageContent() {
             ['Consultation', readLabel(service)],
             ['Date', date],
             ['Time', slot],
-            ['Fee', formatFee(fee)],
-            ['Insurance', insurance],
+            ['Fee', formatFee(parsedFee)],
+            ['Insurance', insurance || 'Not specified'],
           ].map(([label, value]) => (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: '1px solid rgba(4,53,77,0.06)' }}>
               <span style={{ fontSize: '12px', color: T.slate2 }}>{label}</span>
@@ -259,10 +304,10 @@ function SuccessPageContent() {
                   ['Consultation Type', readLabel(service)],
                   ['Appointment Date', date],
                   ['Appointment Time', slot],
-                  ['Timezone', 'Africa/Lagos (GMT+1)'],
+                  ['Timezone', userTimeZone],
                   ['Duration', duration],
-                  ['Consultation Fee', formatFee(fee)],
-                  ['Insurance Coverage', insurance],
+                  ['Consultation Fee', formatFee(parsedFee)],
+                  ['Insurance Coverage', insurance || 'Not specified'],
                   ['Appointment ID', appointmentId],
                   ['Booking Reference', bookingReference],
                   ['Patient Notes', notes || 'No additional notes provided'],

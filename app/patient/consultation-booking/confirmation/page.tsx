@@ -27,15 +27,42 @@ function readLabel(service: string | null) {
 function ConfirmationPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
-  const physician = PHYSICIANS.find((item) => item.id === physicianId)
+  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id')
+  const physician = physicianId ? PHYSICIANS.find((item) => item.id === physicianId) : null
   const physicianData = useMemo(() => getBookingPhysician(searchParams, physician), [searchParams, physician])
-  const service = searchParams.get('service') ?? 'video'
-  const fee = Number(searchParams.get('fee') ?? physicianData.consultationFee ?? 0)
-  const duration = searchParams.get('duration') ?? '30 min'
-  const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
-  const date = searchParams.get('date') ?? 'Today'
-  const slot = searchParams.get('slot') ?? '4:30 PM'
+  const service = searchParams.get('service')
+  const fee = searchParams.get('fee')
+  const duration = searchParams.get('duration')
+  const insurance = searchParams.get('insurance')
+  const date = searchParams.get('date')
+  const slot = searchParams.get('slot')
+
+  // Show error state if required booking data is missing
+  if (!physicianId || !date || !slot) {
+    return (
+      <main style={{ minHeight: '100vh', background: PAGE_BG }}>
+        <div style={{ maxWidth: '1180px', margin: '0 auto', padding: '24px 20px 40px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.float, padding: '40px 24px', textAlign: 'center' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(4,53,77,0.06)', display: 'grid', placeItems: 'center', margin: '0 auto 20px' }}>
+              <Ico p={ICONS.calendar} size={28} sw={1.5} color={T.slate2} />
+            </div>
+            <h1 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Booking information not found</h1>
+            <p style={{ margin: '0 0 24px', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>
+              We couldn't find the booking details you're looking for. The session may have expired or the link may be incorrect. Please start a new booking.
+            </p>
+            <Link
+              href="/patient/consultation-booking"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 24px', borderRadius: '12px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '14px', fontWeight: 700, border: 'none', textDecoration: 'none' }}
+            >
+              Start new booking
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  const parsedFee = fee ? Number(fee) : (physicianData.consultationFee ?? 0)
 
   const successHref = useMemo(() => {
     const next = new URLSearchParams(searchParams.toString())
@@ -84,11 +111,11 @@ function ConfirmationPageContent() {
               <div style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: '1px solid rgba(4,53,77,0.06)' }}>
                   <span style={{ fontSize: '12px', color: T.slate2 }}>Fee</span>
-                  <span style={{ fontSize: '12px', color: T.navy, fontWeight: 700 }}>{formatFee(fee)}</span>
+                  <span style={{ fontSize: '12px', color: T.navy, fontWeight: 700 }}>{formatFee(parsedFee)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: '1px solid rgba(4,53,77,0.06)' }}>
                   <span style={{ fontSize: '12px', color: T.slate2 }}>Insurance</span>
-                  <span style={{ fontSize: '12px', color: T.green, fontWeight: 700 }}>{insurance}</span>
+                  <span style={{ fontSize: '12px', color: T.green, fontWeight: 700 }}>{insurance || 'Not specified'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: '1px solid rgba(4,53,77,0.06)' }}>
                   <span style={{ fontSize: '12px', color: T.slate2 }}>Status</span>
