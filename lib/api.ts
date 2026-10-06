@@ -17,6 +17,20 @@ export function readRefreshToken(): string | null {
     return window.localStorage.getItem("qarevo_refresh_token");
 }
 
+export function readUserRole(): 'PATIENT' | 'PROVIDER' | null {
+    if (typeof window === "undefined") return null;
+    const role = window.localStorage.getItem("qarevo_role");
+    return (role === 'PATIENT' || role === 'PROVIDER') ? role : null;
+}
+
+export function isPatient(): boolean {
+    return readUserRole() === 'PATIENT';
+}
+
+export function isProvider(): boolean {
+    return readUserRole() === 'PROVIDER';
+}
+
 export function clearAuthTokens() {
     if (typeof window === "undefined") return;
     [
@@ -648,6 +662,70 @@ export type MedicalRecordDownloadResponse = {
     content_type: string;
     download_url: string;
     expires_in: number;
+};
+
+// Approval Workflow Types
+export type RecommendationCreateRequest = {
+    type: 'MEDICATION' | 'PROCEDURE' | 'INVESTIGATION' | 'LIFESTYLE' | 'REFERRAL' | 'FOLLOW_UP' | 'OTHER';
+    content: string;
+};
+
+export type RecommendationActionRequest = {
+    reason?: string;
+};
+
+export type RecommendationResponse = {
+    id: string;
+    episode_id: string;
+    type: string;
+    content: string;
+    status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+    created_by?: string | null;
+    approved_by?: string | null;
+    approved_at?: string | null;
+    rejected_reason?: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type RecommendationListResponse = {
+    episode_id: string;
+    recommendations: RecommendationResponse[];
+    total_count: number;
+};
+
+export type BillingAuthorizeRequest = {
+    amount_cents?: number;
+    currency?: string;
+    insurance_type?: 'GKV' | 'PKV' | 'SELF_PAY';
+};
+
+export type BillingSubmitRequest = {
+    amount_cents?: number;
+    reason?: string;
+};
+
+export type BillingStatusResponse = {
+    id: string;
+    episode_id: string;
+    patient_id: string;
+    status: 'PENDING_AUTHORIZATION' | 'AUTHORIZED' | 'SUBMITTED' | 'PAID' | 'REJECTED';
+    amount_cents?: number | null;
+    currency: string;
+    insurance_type: string;
+    billing_requirements?: {
+        claim_submission_required: boolean;
+        direct_billing: boolean;
+        requires_pre_authorization: boolean;
+        patient_pays_upfront: boolean;
+    } | null;
+    authorized_by?: string | null;
+    authorized_at?: string | null;
+    submitted_by?: string | null;
+    submitted_at?: string | null;
+    settled_at?: string | null;
+    created_at: string;
+    updated_at: string;
 };
 
 export type MedicalRecordsResponse = {
@@ -1448,6 +1526,75 @@ export async function downloadMedicalRecord(
 
 export async function deleteMedicalRecord(fileId: string): Promise<{ message: string }> {
     return apiDelete<{ message: string }>(`/api/v1/patient/medical-records/${fileId}`);
+}
+
+// Approval Workflow API Functions
+export async function createRecommendation(
+    episodeId: string,
+    body: RecommendationCreateRequest
+): Promise<RecommendationResponse> {
+    return apiPost<RecommendationResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/recommendations`,
+        body
+    );
+}
+
+export async function getRecommendations(
+    episodeId: string
+): Promise<RecommendationListResponse> {
+    return apiGet<RecommendationListResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/recommendations`
+    );
+}
+
+export async function approveRecommendation(
+    episodeId: string,
+    recommendationId: string,
+    body?: RecommendationActionRequest
+): Promise<RecommendationResponse> {
+    return apiPut<RecommendationResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/recommendations/${recommendationId}/approve`,
+        body || {}
+    );
+}
+
+export async function rejectRecommendation(
+    episodeId: string,
+    recommendationId: string,
+    body?: RecommendationActionRequest
+): Promise<RecommendationResponse> {
+    return apiPut<RecommendationResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/recommendations/${recommendationId}/reject`,
+        body || {}
+    );
+}
+
+export async function authorizeBilling(
+    episodeId: string,
+    body: BillingAuthorizeRequest
+): Promise<BillingStatusResponse> {
+    return apiPost<BillingStatusResponse>(
+        `/api/v1/patient/episodes/${episodeId}/billing/authorize`,
+        body
+    );
+}
+
+export async function getBillingStatus(
+    episodeId: string
+): Promise<BillingStatusResponse> {
+    return apiGet<BillingStatusResponse>(
+        `/api/v1/patient/episodes/${episodeId}/billing/status`
+    );
+}
+
+export async function submitBilling(
+    episodeId: string,
+    body?: BillingSubmitRequest
+): Promise<BillingStatusResponse> {
+    return apiPost<BillingStatusResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/billing/submit`,
+        body || {}
+    );
 }
 
 export type LabPartner = {

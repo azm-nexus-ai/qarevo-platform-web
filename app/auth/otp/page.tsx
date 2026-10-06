@@ -453,7 +453,7 @@ function OtpPageContent() {
           token_type: response.token_type,
           expires_in: response.expires_in,
           user_id: response.user_id,
-          role: response.role,
+          role: 'PATIENT'
         })
       }
       
