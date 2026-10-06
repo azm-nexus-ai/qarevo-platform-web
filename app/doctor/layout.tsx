@@ -12,6 +12,7 @@ import {
   clearAuthTokens,
   getDoctorProfile,
   isAuthError,
+  isProvider,
   logoutCurrentUser,
   readAccessToken,
   type DoctorProfileResponse,
@@ -38,6 +39,12 @@ export default function DoctorLayout({
       return () => window.clearTimeout(mountedTimer)
     }
 
+    if (!isProvider()) {
+      clearAuthTokens()
+      router.replace('/auth/doctor/login')
+      return () => window.clearTimeout(mountedTimer)
+    }
+
     let cancelled = false
 
     async function fetchProfile() {
@@ -47,7 +54,7 @@ export default function DoctorLayout({
       } catch (error) {
         if (isAuthError(error)) {
           clearAuthTokens()
-          router.replace('/auth/sign-in')
+          router.replace('/auth/doctor/login')
           return
         }
         console.error('Failed to load doctor profile', error)

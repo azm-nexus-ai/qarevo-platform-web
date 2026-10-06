@@ -4,6 +4,7 @@ import { signupRequest } from '@/lib/auth-flow'
 export interface User {
   id: string
   email: string
+  role?: 'PATIENT' | 'PROVIDER'
 }
 
 export interface AuthState {

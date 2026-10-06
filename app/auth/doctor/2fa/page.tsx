@@ -272,7 +272,7 @@ export default function Doctor2FAPage() {
       // Clear temp tokens
       localStorage.removeItem('doctor_temp_token')
       localStorage.removeItem('doctor_identifier')
-      storeAuthTokens({ ...response, role: 'doctor' })
+      storeAuthTokens({ ...response, role: 'PROVIDER' })
       
       // Redirect to doctor dashboard
       router.push('/doctor/dashboard')
