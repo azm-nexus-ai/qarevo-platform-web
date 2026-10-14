@@ -2336,3 +2336,86 @@ export async function requestPasswordReset(email: string): Promise<ForgotPasswor
 export async function resetPassword(token: string, newPassword: string): Promise<ResetPasswordResponse> {
     return apiPost<ResetPasswordResponse, ResetPasswordRequest>("/api/v1/auth/reset-password", { token, new_password: newPassword });
 }
+
+// Admin API Functions
+export function readAdminRole(): 'ADMIN' | null {
+    if (typeof window === "undefined") return null;
+    const role = window.localStorage.getItem("qarevo_role");
+    return role === 'ADMIN' ? 'ADMIN' : null;
+}
+
+export function isAdmin(): boolean {
+    return readAdminRole() === 'ADMIN';
+}
+
+// Admin Dashboard Types
+export type AdminDashboardOverview = {
+    patients: {
+        total: number;
+    };
+    doctors: {
+        total: number;
+        verified: number;
+        pending_verification: number;
+    };
+    users: {
+        total: number;
+    };
+    exceptions: {
+        active: number;
+    };
+    generated_at: string;
+};
+
+export type AdminDashboardActivity = {
+    period_days: number;
+    date_from: string;
+    date_to: string;
+    new_patients: number;
+    new_doctors: number;
+    new_exceptions: number;
+};
+
+export type AdminDashboardHealth = {
+    pending_verifications: number;
+    critical_exceptions: number;
+    high_exceptions: number;
+    status: string;
+    generated_at: string;
+};
+
+export type AdminDashboardDoctorsSummary = {
+    total: number;
+    verified: number;
+    pending: number;
+    by_specialty: Record<string, number>;
+    by_region: Record<string, number>;
+};
+
+export type AdminDashboardPatientsSummary = {
+    total: number;
+    active: number;
+    inactive: number;
+    new_this_month: number;
+};
+
+// Admin Dashboard API Functions
+export async function getAdminDashboardOverview(): Promise<AdminDashboardOverview> {
+    return apiGet<AdminDashboardOverview>("/api/v1/admin/dashboard/overview");
+}
+
+export async function getAdminDashboardActivity(days: number = 7): Promise<AdminDashboardActivity> {
+    return apiGet<AdminDashboardActivity>(`/api/v1/admin/dashboard/activity?days=${days}`);
+}
+
+export async function getAdminDashboardHealth(): Promise<AdminDashboardHealth> {
+    return apiGet<AdminDashboardHealth>("/api/v1/admin/dashboard/health");
+}
+
+export async function getAdminDashboardDoctorsSummary(): Promise<AdminDashboardDoctorsSummary> {
+    return apiGet<AdminDashboardDoctorsSummary>("/api/v1/admin/dashboard/doctors-summary");
+}
+
+export async function getAdminDashboardPatientsSummary(): Promise<AdminDashboardPatientsSummary> {
+    return apiGet<AdminDashboardPatientsSummary>("/api/v1/admin/dashboard/patients-summary");
+}
