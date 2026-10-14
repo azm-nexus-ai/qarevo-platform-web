@@ -2419,3 +2419,246 @@ export async function getAdminDashboardDoctorsSummary(): Promise<AdminDashboardD
 export async function getAdminDashboardPatientsSummary(): Promise<AdminDashboardPatientsSummary> {
     return apiGet<AdminDashboardPatientsSummary>("/api/v1/admin/dashboard/patients-summary");
 }
+
+// Admin Doctors Types
+export type AdminDoctor = {
+    provider_id: string;
+    user_id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+    specialty: string;
+    experience_years: number;
+    license_number: string;
+    license_verified: boolean;
+    is_independent: boolean;
+    status: string;
+    region?: string;
+    avatar_url?: string;
+    created_at: string;
+    updated_at?: string;
+};
+
+export type AdminDoctorVerification = {
+    provider_id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+    specialty: string;
+    license_number: string;
+    license_document_url?: string;
+    medical_license_document_url?: string;
+    id_document_url?: string;
+    submission_date: string;
+    status: string;
+};
+
+export type AdminDoctorsListResponse = {
+    doctors: AdminDoctor[];
+    total_count: number;
+    filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+};
+
+export type AdminVerifyDoctorRequest = {
+    approve: boolean;
+    rejection_reason?: string;
+};
+
+export type AdminUpdateDoctorStatusRequest = {
+    status: string;
+    reason?: string;
+};
+
+// Admin Patients Types
+export type AdminPatient = {
+    patient_id: string;
+    user_id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+    date_of_birth?: string;
+    gender?: string;
+    status: string;
+    created_at: string;
+    updated_at?: string;
+};
+
+export type AdminPatientEpisode = {
+    episode_id: string;
+    status: string;
+    created_at: string;
+    chief_complaint?: string;
+};
+
+export type AdminPatientsListResponse = {
+    patients: AdminPatient[];
+    total_count: number;
+    filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+};
+
+export type AdminUpdatePatientRequest = {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    date_of_birth?: string;
+};
+
+// Admin Users Types
+export type AdminUser = {
+    admin_id: string;
+    user_id: string;
+    full_name: string;
+    email: string;
+    role: string;
+    status: string;
+    permissions?: Record<string, unknown>;
+    created_at: string;
+    updated_at?: string;
+};
+
+export type AdminUsersListResponse = {
+    admin_users: AdminUser[];
+    total_count: number;
+    filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+};
+
+export type AdminCreateAdminUserRequest = {
+    email: string;
+    full_name: string;
+    role: string;
+    permissions?: Record<string, unknown>;
+    password?: string;
+};
+
+export type AdminUpdateAdminUserRequest = {
+    full_name?: string;
+    role?: string;
+    permissions?: Record<string, unknown>;
+};
+
+export type AdminUpdateAdminStatusRequest = {
+    status: string;
+    reason?: string;
+};
+
+// Admin Doctors API Functions
+export async function getAdminDoctors(
+    status?: string,
+    specialty?: string,
+    region?: string,
+    search?: string,
+    limit: number = 50,
+    offset: number = 0,
+): Promise<AdminDoctorsListResponse> {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (specialty) params.set("specialty", specialty);
+    if (region) params.set("region", region);
+    if (search) params.set("search", search);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiGet<AdminDoctorsListResponse>(`/api/v1/admin/doctors?${params.toString()}`);
+}
+
+export async function getAdminDoctor(providerId: string): Promise<AdminDoctor> {
+    return apiGet<AdminDoctor>(`/api/v1/admin/doctors/${providerId}`);
+}
+
+export async function getPendingDoctors(limit: number = 50, offset: number = 0): Promise<AdminDoctorVerification[]> {
+    const params = new URLSearchParams();
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiGet<AdminDoctorVerification[]>(`/api/v1/admin/doctors/pending?${params.toString()}`);
+}
+
+export async function getDoctorVerificationDetails(providerId: string): Promise<AdminDoctorVerification> {
+    return apiGet<AdminDoctorVerification>(`/api/v1/admin/doctors/${providerId}/verification`);
+}
+
+export async function verifyDoctor(providerId: string, body: AdminVerifyDoctorRequest): Promise<{ message: string }> {
+    return apiPut<{ message: string }, AdminVerifyDoctorRequest>(`/api/v1/admin/doctors/${providerId}/verify`, body);
+}
+
+export async function updateDoctorStatus(providerId: string, body: AdminUpdateDoctorStatusRequest): Promise<{ message: string }> {
+    return apiPut<{ message: string }, AdminUpdateDoctorStatusRequest>(`/api/v1/admin/doctors/${providerId}/status`, body);
+}
+
+// Admin Patients API Functions
+export async function getAdminPatients(
+    search?: string,
+    status?: string,
+    limit: number = 50,
+    offset: number = 0,
+): Promise<AdminPatientsListResponse> {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (status) params.set("status", status);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiGet<AdminPatientsListResponse>(`/api/v1/admin/patients?${params.toString()}`);
+}
+
+export async function getAdminPatient(patientId: string): Promise<AdminPatient> {
+    return apiGet<AdminPatient>(`/api/v1/admin/patients/${patientId}`);
+}
+
+export async function getAdminPatientEpisodes(patientId: string): Promise<AdminPatientEpisode[]> {
+    return apiGet<AdminPatientEpisode[]>(`/api/v1/admin/patients/${patientId}/episodes`);
+}
+
+export async function exportAdminPatientData(patientId: string): Promise<Record<string, unknown>> {
+    return apiGet<Record<string, unknown>>(`/api/v1/admin/patients/${patientId}/export`);
+}
+
+export async function updateAdminPatient(patientId: string, body: AdminUpdatePatientRequest): Promise<AdminPatient> {
+    return apiPut<AdminPatient, AdminUpdatePatientRequest>(`/api/v1/admin/patients/${patientId}`, body);
+}
+
+// Admin Users API Functions
+export async function getAdminUsers(
+    role?: string,
+    status?: string,
+    search?: string,
+    limit: number = 50,
+    offset: number = 0,
+): Promise<AdminUsersListResponse> {
+    const params = new URLSearchParams();
+    if (role) params.set("role", role);
+    if (status) params.set("status", status);
+    if (search) params.set("search", search);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiGet<AdminUsersListResponse>(`/api/v1/admin/admin-users?${params.toString()}`);
+}
+
+export async function getAdminUser(adminId: string): Promise<AdminUser> {
+    return apiGet<AdminUser>(`/api/v1/admin/admin-users/${adminId}`);
+}
+
+export async function createAdminUser(body: AdminCreateAdminUserRequest): Promise<AdminUser> {
+    return apiPost<AdminUser, AdminCreateAdminUserRequest>("/api/v1/admin/admin-users", body);
+}
+
+export async function updateAdminUser(adminId: string, body: AdminUpdateAdminUserRequest): Promise<AdminUser> {
+    return apiPut<AdminUser, AdminUpdateAdminUserRequest>(`/api/v1/admin/admin-users/${adminId}`, body);
+}
+
+export async function updateAdminUserStatus(adminId: string, body: AdminUpdateAdminStatusRequest): Promise<{ message: string }> {
+    return apiPut<{ message: string }, AdminUpdateAdminStatusRequest>(`/api/v1/admin/admin-users/${adminId}/status`, body);
+}
+
+export async function deleteAdminUser(adminId: string): Promise<{ message: string }> {
+    return apiDelete<{ message: string }>(`/api/v1/admin/admin-users/${adminId}`);
+}
