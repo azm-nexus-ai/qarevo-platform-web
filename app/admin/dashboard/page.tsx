@@ -43,7 +43,7 @@ function StatCard({ title, value, subtitle, icon, color, trend }: {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <p style={{ margin: 0, fontSize: '12.5px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{title}</p>
-          <p style={{ margin: '8px 0 0', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{value}</p>
+          <p style={{ margin: '8px 0 0', fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{value}</p>
           {subtitle && (
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate2 }}>{subtitle}</p>
           )}
@@ -88,7 +88,7 @@ function HealthCard({ data }: { data: AdminDashboardHealth }) {
       padding: '24px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>System Health</h3>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>System Health</h3>
         <span style={{
           padding: '6px 12px',
           borderRadius: '999px',
@@ -130,7 +130,7 @@ function ActivityCard({ data }: { data: AdminDashboardActivity }) {
       padding: '24px',
     }}>
       <div style={{ marginBottom: '16px' }}>
-        <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Activity</h3>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Activity</h3>
         <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate2 }}>
           Last {data.period_days} days ({new Date(data.date_from).toLocaleDateString()} - {new Date(data.date_to).toLocaleDateString()})
         </p>
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Page Header */}
       <div>
-        <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
+        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
           Admin Dashboard
         </h1>
         <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate2 }}>
@@ -293,7 +293,7 @@ export default function AdminDashboard() {
           boxShadow: Sh.card,
           padding: '24px',
         }}>
-          <h3 style={{ margin: '0 0 16px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>
             Doctors by Specialty
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>

@@ -69,10 +69,12 @@ export default function LandingPage() {
       />
 
       {/* Ambient glow orbs */}
-      <Glow color="rgba(32,181,223,0.13)"  w={700} h={480} top={340}  left="50%"  opacity={0.9} />
-      <Glow color="rgba(52,140,234,0.08)" w={600} h={300} top={660}  left="60%"  opacity={0.8} />
-      <Glow color="rgba(32,181,223,0.07)"  w={800} h={400} top={980}  left="45%"  opacity={0.7} />
-      <Glow color="rgba(52,140,234,0.08)" w={700} h={350} top={1460} left="55%"  opacity={0.7} />
+      <div className="glow-orb">
+        <Glow color="rgba(32,181,223,0.13)"  w={700} h={480} top={340}  left="50%"  opacity={0.9} />
+        <Glow color="rgba(52,140,234,0.08)" w={600} h={300} top={660}  left="60%"  opacity={0.8} />
+        <Glow color="rgba(32,181,223,0.07)"  w={800} h={400} top={980}  left="45%"  opacity={0.7} />
+        <Glow color="rgba(52,140,234,0.08)" w={700} h={350} top={1460} left="55%"  opacity={0.7} />
+      </div>
 
       <NavigationBar />
       <main id="main-content">

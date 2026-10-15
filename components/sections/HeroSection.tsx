@@ -13,8 +13,7 @@ export default function HeroSection() {
         <section className="section-pad" style={{ textAlign: 'center' }}>
           <h1
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: 'clamp(32px, 6vw, 68px)',
+              fontSize: 'clamp(28px, 6vw, 68px)',
               fontWeight: 800,
               lineHeight: 1.04,
               letterSpacing: '-0.038em',
