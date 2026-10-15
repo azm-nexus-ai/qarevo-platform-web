@@ -17,10 +17,10 @@ export function readRefreshToken(): string | null {
     return window.localStorage.getItem("qarevo_refresh_token");
 }
 
-export function readUserRole(): 'PATIENT' | 'PROVIDER' | null {
+export function readUserRole(): 'PATIENT' | 'PROVIDER' | 'ADMIN' | null {
     if (typeof window === "undefined") return null;
     const role = window.localStorage.getItem("qarevo_role");
-    return (role === 'PATIENT' || role === 'PROVIDER') ? role : null;
+    return (role === 'PATIENT' || role === 'PROVIDER' || role === 'ADMIN') ? role : null;
 }
 
 export function isPatient(): boolean {
@@ -435,6 +435,11 @@ export type AuthTokenResponse = {
     provider_id?: string;
 };
 
+export type AdminLoginResponse = AuthTokenResponse & {
+    role: string;
+    admin_role: string;
+};
+
 export type PatientDoctor = {
     id: string;
     name: string;
@@ -812,6 +817,9 @@ export async function loginPatient(body: { email: string; password: string }): P
     return apiPost<AuthTokenResponse>("/api/v1/auth/login", body);
 }
 
+export async function loginAdmin(body: { email: string; password: string }): Promise<AdminLoginResponse> {
+  return apiPost<AdminLoginResponse>("/api/v1/auth/admin/login", body);
+}
 export async function logoutCurrentUser(): Promise<void> {
     const refreshToken = readRefreshToken();
     try {
