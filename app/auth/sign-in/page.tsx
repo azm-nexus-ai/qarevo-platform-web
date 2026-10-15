@@ -341,7 +341,7 @@ export default function SignInPage() {
 
     try {
       const response = await loginPatient({ email, password })
-      storeAuthTokens({ ...response, role: 'patient' })
+      storeAuthTokens({ ...response, role: 'PATIENT' })
       const authFlowState = readAuthFlowState()
       if (authFlowState?.isAuthenticated) {
         const nextRoute = authFlowState.onboardingCompleted
@@ -381,7 +381,7 @@ export default function SignInPage() {
     setAuthError('')
     try {
       const response = await loginPatientWithPasskey(email)
-      storeAuthTokens({ ...response, role: 'patient' })
+      storeAuthTokens({ ...response, role: 'PATIENT' })
       completePatientSignIn()
     } catch (error) {
       setAuthError(getFriendlySignInError(error))

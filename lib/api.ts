@@ -17,6 +17,20 @@ export function readRefreshToken(): string | null {
     return window.localStorage.getItem("qarevo_refresh_token");
 }
 
+export function readUserRole(): 'PATIENT' | 'PROVIDER' | null {
+    if (typeof window === "undefined") return null;
+    const role = window.localStorage.getItem("qarevo_role");
+    return (role === 'PATIENT' || role === 'PROVIDER') ? role : null;
+}
+
+export function isPatient(): boolean {
+    return readUserRole() === 'PATIENT';
+}
+
+export function isProvider(): boolean {
+    return readUserRole() === 'PROVIDER';
+}
+
 export function clearAuthTokens() {
     if (typeof window === "undefined") return;
     [
@@ -648,6 +662,70 @@ export type MedicalRecordDownloadResponse = {
     content_type: string;
     download_url: string;
     expires_in: number;
+};
+
+// Approval Workflow Types
+export type RecommendationCreateRequest = {
+    type: 'MEDICATION' | 'PROCEDURE' | 'INVESTIGATION' | 'LIFESTYLE' | 'REFERRAL' | 'FOLLOW_UP' | 'OTHER';
+    content: string;
+};
+
+export type RecommendationActionRequest = {
+    reason?: string;
+};
+
+export type RecommendationResponse = {
+    id: string;
+    episode_id: string;
+    type: string;
+    content: string;
+    status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+    created_by?: string | null;
+    approved_by?: string | null;
+    approved_at?: string | null;
+    rejected_reason?: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type RecommendationListResponse = {
+    episode_id: string;
+    recommendations: RecommendationResponse[];
+    total_count: number;
+};
+
+export type BillingAuthorizeRequest = {
+    amount_cents?: number;
+    currency?: string;
+    insurance_type?: 'GKV' | 'PKV' | 'SELF_PAY';
+};
+
+export type BillingSubmitRequest = {
+    amount_cents?: number;
+    reason?: string;
+};
+
+export type BillingStatusResponse = {
+    id: string;
+    episode_id: string;
+    patient_id: string;
+    status: 'PENDING_AUTHORIZATION' | 'AUTHORIZED' | 'SUBMITTED' | 'PAID' | 'REJECTED';
+    amount_cents?: number | null;
+    currency: string;
+    insurance_type: string;
+    billing_requirements?: {
+        claim_submission_required: boolean;
+        direct_billing: boolean;
+        requires_pre_authorization: boolean;
+        patient_pays_upfront: boolean;
+    } | null;
+    authorized_by?: string | null;
+    authorized_at?: string | null;
+    submitted_by?: string | null;
+    submitted_at?: string | null;
+    settled_at?: string | null;
+    created_at: string;
+    updated_at: string;
 };
 
 export type MedicalRecordsResponse = {
@@ -1450,6 +1528,75 @@ export async function deleteMedicalRecord(fileId: string): Promise<{ message: st
     return apiDelete<{ message: string }>(`/api/v1/patient/medical-records/${fileId}`);
 }
 
+// Approval Workflow API Functions
+export async function createRecommendation(
+    episodeId: string,
+    body: RecommendationCreateRequest
+): Promise<RecommendationResponse> {
+    return apiPost<RecommendationResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/recommendations`,
+        body
+    );
+}
+
+export async function getRecommendations(
+    episodeId: string
+): Promise<RecommendationListResponse> {
+    return apiGet<RecommendationListResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/recommendations`
+    );
+}
+
+export async function approveRecommendation(
+    episodeId: string,
+    recommendationId: string,
+    body?: RecommendationActionRequest
+): Promise<RecommendationResponse> {
+    return apiPut<RecommendationResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/recommendations/${recommendationId}/approve`,
+        body || {}
+    );
+}
+
+export async function rejectRecommendation(
+    episodeId: string,
+    recommendationId: string,
+    body?: RecommendationActionRequest
+): Promise<RecommendationResponse> {
+    return apiPut<RecommendationResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/recommendations/${recommendationId}/reject`,
+        body || {}
+    );
+}
+
+export async function authorizeBilling(
+    episodeId: string,
+    body: BillingAuthorizeRequest
+): Promise<BillingStatusResponse> {
+    return apiPost<BillingStatusResponse>(
+        `/api/v1/patient/episodes/${episodeId}/billing/authorize`,
+        body
+    );
+}
+
+export async function getBillingStatus(
+    episodeId: string
+): Promise<BillingStatusResponse> {
+    return apiGet<BillingStatusResponse>(
+        `/api/v1/patient/episodes/${episodeId}/billing/status`
+    );
+}
+
+export async function submitBilling(
+    episodeId: string,
+    body?: BillingSubmitRequest
+): Promise<BillingStatusResponse> {
+    return apiPost<BillingStatusResponse>(
+        `/api/v1/doctor/episodes/${episodeId}/billing/submit`,
+        body || {}
+    );
+}
+
 export type LabPartner = {
     id: string;
     name: string;
@@ -2188,4 +2335,87 @@ export async function requestPasswordReset(email: string): Promise<ForgotPasswor
 
 export async function resetPassword(token: string, newPassword: string): Promise<ResetPasswordResponse> {
     return apiPost<ResetPasswordResponse, ResetPasswordRequest>("/api/v1/auth/reset-password", { token, new_password: newPassword });
+}
+
+// Admin API Functions
+export function readAdminRole(): 'ADMIN' | null {
+    if (typeof window === "undefined") return null;
+    const role = window.localStorage.getItem("qarevo_role");
+    return role === 'ADMIN' ? 'ADMIN' : null;
+}
+
+export function isAdmin(): boolean {
+    return readAdminRole() === 'ADMIN';
+}
+
+// Admin Dashboard Types
+export type AdminDashboardOverview = {
+    patients: {
+        total: number;
+    };
+    doctors: {
+        total: number;
+        verified: number;
+        pending_verification: number;
+    };
+    users: {
+        total: number;
+    };
+    exceptions: {
+        active: number;
+    };
+    generated_at: string;
+};
+
+export type AdminDashboardActivity = {
+    period_days: number;
+    date_from: string;
+    date_to: string;
+    new_patients: number;
+    new_doctors: number;
+    new_exceptions: number;
+};
+
+export type AdminDashboardHealth = {
+    pending_verifications: number;
+    critical_exceptions: number;
+    high_exceptions: number;
+    status: string;
+    generated_at: string;
+};
+
+export type AdminDashboardDoctorsSummary = {
+    total: number;
+    verified: number;
+    pending: number;
+    by_specialty: Record<string, number>;
+    by_region: Record<string, number>;
+};
+
+export type AdminDashboardPatientsSummary = {
+    total: number;
+    active: number;
+    inactive: number;
+    new_this_month: number;
+};
+
+// Admin Dashboard API Functions
+export async function getAdminDashboardOverview(): Promise<AdminDashboardOverview> {
+    return apiGet<AdminDashboardOverview>("/api/v1/admin/dashboard/overview");
+}
+
+export async function getAdminDashboardActivity(days: number = 7): Promise<AdminDashboardActivity> {
+    return apiGet<AdminDashboardActivity>(`/api/v1/admin/dashboard/activity?days=${days}`);
+}
+
+export async function getAdminDashboardHealth(): Promise<AdminDashboardHealth> {
+    return apiGet<AdminDashboardHealth>("/api/v1/admin/dashboard/health");
+}
+
+export async function getAdminDashboardDoctorsSummary(): Promise<AdminDashboardDoctorsSummary> {
+    return apiGet<AdminDashboardDoctorsSummary>("/api/v1/admin/dashboard/doctors-summary");
+}
+
+export async function getAdminDashboardPatientsSummary(): Promise<AdminDashboardPatientsSummary> {
+    return apiGet<AdminDashboardPatientsSummary>("/api/v1/admin/dashboard/patients-summary");
 }
