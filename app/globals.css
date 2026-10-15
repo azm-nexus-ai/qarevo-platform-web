@@ -217,3 +217,39 @@ button {
     border-bottom: 1px solid rgba(4,53,77,0.07);
   }
 }
+
+/* ── Physician section grid: stack on mobile ── */
+@media (max-width: 767px) {
+  .physician-grid {
+    grid-template-columns: 1fr !important;
+    gap: 48px !important;
+  }
+}
+
+/* ── Hide glow orbs on mobile to prevent overflow ── */
+@media (max-width: 767px) {
+  .glow-orb {
+    display: none !important;
+  }
+}
+
+/* ── Responsive container max-width for mobile ── */
+@media (max-width: 767px) {
+  main > div > div {
+    max-width: 100% !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}
+
+/* ── Better mobile padding for sections with inline styles ── */
+@media (max-width: 767px) {
+  #hero > div,
+  #security-governance > div,
+  #for-physicians > div,
+  #virtual-consultations > div,
+  #dashboard-preview > div {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}

@@ -31,7 +31,7 @@ export default function PhysicianSection() {
       }}
     >
       <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '88px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '72px', alignItems: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '72px', alignItems: 'center' }} className="physician-grid">
           {/* Left: Content */}
           <div>
             <div
@@ -64,8 +64,7 @@ export default function PhysicianSection() {
 
             <h2
               style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: 'clamp(28px, 4vw, 42px)',
+                fontSize: 'clamp(24px, 4vw, 42px)',
                 fontWeight: 800,
                 lineHeight: 1.12,
                 letterSpacing: '-0.035em',

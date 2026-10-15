@@ -229,7 +229,7 @@ export default function AdminDoctorsPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Page Header */}
       <div>
-        <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
+        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
           Doctors Management
         </h1>
         <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate2 }}>

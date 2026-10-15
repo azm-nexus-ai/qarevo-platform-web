@@ -2662,3 +2662,321 @@ export async function updateAdminUserStatus(adminId: string, body: AdminUpdateAd
 export async function deleteAdminUser(adminId: string): Promise<{ message: string }> {
     return apiDelete<{ message: string }>(`/api/v1/admin/admin-users/${adminId}`);
 }
+
+// Admin Exceptions Types
+export type AdminException = {
+    exception_id: string;
+    type: string;
+    severity: string;
+    source: string;
+    source_type: string;
+    status: string;
+    details?: Record<string, unknown>;
+    assigned_to?: string;
+    assigned_to_name?: string;
+    created_at: string;
+    updated_at?: string;
+    resolved_at?: string;
+    resolution_notes?: string;
+};
+
+export type AdminExceptionStats = {
+    total: number;
+    by_status: Record<string, number>;
+    by_severity: Record<string, number>;
+    by_type: Record<string, number>;
+};
+
+export type AdminExceptionsListResponse = {
+    exceptions: AdminException[];
+    total_count: number;
+    filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+};
+
+export type AdminCreateExceptionRequest = {
+    type: string;
+    severity: string;
+    source: string;
+    source_type: string;
+    details?: Record<string, unknown>;
+};
+
+// Admin System Config Types
+export type AdminSystemConfig = {
+    config_id: string;
+    key: string;
+    value: unknown;
+    description?: string;
+    category: string;
+    is_sensitive: boolean;
+    created_at: string;
+    updated_at?: string;
+    created_by?: string;
+};
+
+export type AdminConfigsListResponse = {
+    configs: AdminSystemConfig[];
+    total_count: number;
+    filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+};
+
+export type AdminCreateConfigRequest = {
+    key: string;
+    value?: unknown;
+    description?: string;
+    category?: string;
+    is_sensitive?: boolean;
+};
+
+export type AdminUpdateConfigRequest = {
+    value?: unknown;
+    description?: string;
+    category?: string;
+    is_sensitive?: boolean;
+};
+
+export type AdminBulkConfigEntry = {
+    key: string;
+    value?: unknown;
+    description?: string;
+    category?: string;
+    is_sensitive?: boolean;
+};
+
+export type AdminBulkUpdateConfigsRequest = {
+    configs: AdminBulkConfigEntry[];
+};
+
+// Admin Audit Types
+export type AdminAuditLog = {
+    log_id: string;
+    admin_user_id: string;
+    admin_user_name?: string;
+    action: string;
+    target_type: string;
+    target_id?: string;
+    changes?: Record<string, { old: unknown; new: unknown }>;
+    ip_address?: string;
+    user_agent?: string;
+    created_at: string;
+};
+
+export type AdminAuditLogsListResponse = {
+    logs: AdminAuditLog[];
+    total_count: number;
+    filtered_count: number;
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+};
+
+export type AdminActionSummary = {
+    action: string;
+    count: number;
+};
+
+export type AdminActionTrend = {
+    date: string;
+    count: number;
+};
+
+// Admin Exceptions API Functions
+export async function getExceptionStats(): Promise<AdminExceptionStats> {
+    return apiGet<AdminExceptionStats>("/api/v1/admin/exceptions/stats/summary");
+}
+
+export async function getAdminExceptions(
+    status?: string,
+    severity?: string,
+    type?: string,
+    assignedTo?: string,
+    limit: number = 50,
+    offset: number = 0,
+): Promise<AdminExceptionsListResponse> {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (severity) params.set("severity", severity);
+    if (type) params.set("type", type);
+    if (assignedTo) params.set("assigned_to", assignedTo);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiGet<AdminExceptionsListResponse>(`/api/v1/admin/exceptions?${params.toString()}`);
+}
+
+export async function getAdminException(exceptionId: string): Promise<AdminException> {
+    return apiGet<AdminException>(`/api/v1/admin/exceptions/${exceptionId}`);
+}
+
+export async function createAdminException(body: AdminCreateExceptionRequest): Promise<AdminException> {
+    return apiPost<AdminException, AdminCreateExceptionRequest>("/api/v1/admin/exceptions", body);
+}
+
+export async function assignException(exceptionId: string, assignedTo: string): Promise<{ message: string }> {
+    return apiPut<{ message: string }>(`/api/v1/admin/exceptions/${exceptionId}/assign?assigned_to=${assignedTo}`, {});
+}
+
+export async function resolveException(exceptionId: string, resolutionNotes?: string): Promise<{ message: string }> {
+    return apiPut<{ message: string }>(`/api/v1/admin/exceptions/${exceptionId}/resolve`, { resolution_notes: resolutionNotes });
+}
+
+export async function closeException(exceptionId: string): Promise<{ message: string }> {
+    return apiPut<{ message: string }>(`/api/v1/admin/exceptions/${exceptionId}/close`, {});
+}
+
+// Admin System Config API Functions
+export async function getAdminConfigs(
+    category?: string,
+    search?: string,
+    limit: number = 50,
+    offset: number = 0,
+): Promise<AdminConfigsListResponse> {
+    const params = new URLSearchParams();
+    if (category) params.set("category", category);
+    if (search) params.set("search", search);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiGet<AdminConfigsListResponse>(`/api/v1/admin/system-config?${params.toString()}`);
+}
+
+export async function getAdminConfig(key: string): Promise<AdminSystemConfig> {
+    return apiGet<AdminSystemConfig>(`/api/v1/admin/system-config/${key}`);
+}
+
+export async function createAdminConfig(body: AdminCreateConfigRequest): Promise<AdminSystemConfig> {
+    return apiPost<AdminSystemConfig, AdminCreateConfigRequest>("/api/v1/admin/system-config", body);
+}
+
+export async function bulkUpdateAdminConfigs(body: AdminBulkUpdateConfigsRequest): Promise<{ message: string }> {
+    return apiPost<{ message: string }, AdminBulkUpdateConfigsRequest>("/api/v1/admin/system-config/bulk", body);
+}
+
+export async function updateAdminConfig(configId: string, body: AdminUpdateConfigRequest): Promise<AdminSystemConfig> {
+    return apiPut<AdminSystemConfig, AdminUpdateConfigRequest>(`/api/v1/admin/system-config/${configId}`, body);
+}
+
+export async function deleteAdminConfig(configId: string): Promise<{ message: string }> {
+    return apiDelete<{ message: string }>(`/api/v1/admin/system-config/${configId}`);
+}
+
+// Admin Audit API Functions
+export async function getAdminAuditLogs(
+    adminUserId?: string,
+    action?: string,
+    targetType?: string,
+    targetId?: string,
+    dateFrom?: string,
+    dateTo?: string,
+    limit: number = 50,
+    offset: number = 0,
+): Promise<AdminAuditLogsListResponse> {
+    const params = new URLSearchParams();
+    if (adminUserId) params.set("admin_user_id", adminUserId);
+    if (action) params.set("action", action);
+    if (targetType) params.set("target_type", targetType);
+    if (targetId) params.set("target_id", targetId);
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiGet<AdminAuditLogsListResponse>(`/api/v1/admin/audit-logs?${params.toString()}`);
+}
+
+export async function searchAdminAuditLogs(
+    adminUserId?: string,
+    action?: string,
+    targetType?: string,
+    searchTerm?: string,
+    dateFrom?: string,
+    dateTo?: string,
+    limit: number = 50,
+    offset: number = 0,
+): Promise<AdminAuditLogsListResponse> {
+    const params = new URLSearchParams();
+    if (adminUserId) params.set("admin_user_id", adminUserId);
+    if (action) params.set("action", action);
+    if (targetType) params.set("target_type", targetType);
+    if (searchTerm) params.set("search_term", searchTerm);
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiPost<AdminAuditLogsListResponse>("/api/v1/admin/audit-logs/search", {
+        admin_user_id: adminUserId,
+        action,
+        target_type: targetType,
+        search_term: searchTerm,
+        date_from: dateFrom,
+        date_to: dateTo,
+        limit,
+        offset,
+    });
+}
+
+export async function exportAdminAuditLogs(dateFrom?: string, dateTo?: string, format: string = "json"): Promise<Record<string, unknown>> {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
+    params.set("format", format);
+    return apiGet<Record<string, unknown>>(`/api/v1/admin/audit-logs/export/data?${params.toString()}`);
+}
+
+export async function getActionSummary(dateFrom?: string, dateTo?: string): Promise<AdminActionSummary[]> {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
+    return apiGet<AdminActionSummary[]>(`/api/v1/admin/audit-logs/summary/actions?${params.toString()}`);
+}
+
+export async function getAuditLog(logId: string): Promise<AdminAuditLog> {
+    return apiGet<AdminAuditLog>(`/api/v1/admin/audit-logs/${logId}`);
+}
+
+export async function getUserActivityTimeline(
+    adminUserId: string,
+    dateFrom?: string,
+    dateTo?: string,
+    limit: number = 100,
+    offset: number = 0,
+): Promise<AdminAuditLog[]> {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiGet<AdminAuditLog[]>(`/api/v1/admin/audit-logs/timeline/user/${adminUserId}?${params.toString()}`);
+}
+
+export async function getResourceActivityTimeline(
+    targetType: string,
+    targetId: string,
+    limit: number = 100,
+    offset: number = 0,
+): Promise<AdminAuditLog[]> {
+    const params = new URLSearchParams();
+    params.set("limit", String(limit));
+    params.set("offset", String(offset));
+    return apiGet<AdminAuditLog[]>(`/api/v1/admin/audit-logs/timeline/resource/${targetType}/${targetId}?${params.toString()}`);
+}
+
+export async function getActionTrends(
+    action?: string,
+    dateFrom?: string,
+    dateTo?: string,
+    granularity: string = "day",
+): Promise<AdminActionTrend[]> {
+    const params = new URLSearchParams();
+    if (action) params.set("action", action);
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
+    params.set("granularity", granularity);
+    return apiGet<AdminActionTrend[]>(`/api/v1/admin/audit-logs/trends?${params.toString()}`);
+}

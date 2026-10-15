@@ -44,7 +44,7 @@ export default function NavigationBar() {
 
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth <= 900
+      const mobile = window.innerWidth <= 768
       setIsMobile(mobile)
     }
 

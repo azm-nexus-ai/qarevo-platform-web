@@ -197,7 +197,7 @@ export default function AdminLayout({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Admin Portal</h2>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Admin Portal</h2>
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Platform administration and monitoring</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -263,7 +263,7 @@ export default function AdminLayout({
                 <Ico p={ICONS.logout} size={20} sw={1.8} color={T.red} />
               </div>
               <div>
-                <h2 id="admin-logout-title" style={{ margin: '0 0 6px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Sign out?</h2>
+                <h2 id="admin-logout-title" style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Sign out?</h2>
                 <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: T.slate }}>
                   You will need to sign in again to access the admin portal.
                 </p>

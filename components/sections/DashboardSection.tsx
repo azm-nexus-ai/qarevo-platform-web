@@ -88,7 +88,6 @@ export default function DashboardSection() {
             >
               <span
                 style={{
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                   fontSize: '15.5px',
                   fontWeight: 700,
                   color: T.navy,
