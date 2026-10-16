@@ -25,7 +25,6 @@ export default function NavigationBar() {
   useEffect(() => {
     const checkAuth = () => {
       const token = readAccessToken()
-      console.log('[NavigationBar] Access token check:', token ? 'exists' : 'null')
       setIsAuthenticated(!!token)
     }
 
@@ -33,7 +32,6 @@ export default function NavigationBar() {
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'qarevo_access_token' || e.key === 'qarevo_refresh_token') {
-        console.log('[NavigationBar] Storage changed, rechecking auth')
         checkAuth()
       }
     }
