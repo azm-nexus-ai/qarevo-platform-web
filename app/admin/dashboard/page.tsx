@@ -64,11 +64,11 @@ function StatCard({ title, value, subtitle, icon, color, trend }: {
 function HealthCard({ data }: { data: AdminDashboardHealth }) {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'healthy':
+      case 'green':
         return { bg: 'rgba(15,158,119,0.12)', color: T.green, text: 'System Healthy' }
-      case 'warning':
+      case 'amber':
         return { bg: 'rgba(217,119,6,0.12)', color: T.amber, text: 'Attention Needed' }
-      case 'critical':
+      case 'red':
         return { bg: 'rgba(220,38,38,0.12)', color: T.red, text: 'Critical Issues' }
       default:
         return { bg: 'rgba(32,181,223,0.12)', color: T.blue, text: status }
@@ -166,12 +166,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!readAccessToken()) {
       clearAuthTokens()
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
       return
     }
 
     if (!isAdmin()) {
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
       return
     }
 
@@ -197,7 +197,7 @@ export default function AdminDashboard() {
       } catch (err) {
         if (isAuthError(err)) {
           clearAuthTokens()
-          router.replace('/auth/sign-in')
+          router.replace('/auth/admin/login')
           return
         }
         console.error('Failed to load admin dashboard', err)
@@ -249,10 +249,9 @@ export default function AdminDashboard() {
         <StatCard
           title="Total Patients"
           value={overview.patients.total}
-          subtitle={patientsSummary ? `Active: ${patientsSummary.active}` : undefined}
+          subtitle={patientsSummary ? `${patientsSummary.new_last_7_days} new patients in the last 7 days` : undefined}
           icon={ICONS.user}
           color={T.blue}
-          trend={patientsSummary ? { value: `+${patientsSummary.new_this_month} this month`, positive: true } : undefined}
         />
         <StatCard
           title="Total Doctors"
@@ -283,7 +282,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Doctors Summary */}
-      {doctorsSummary && (
+      {doctorsSummary?.by_specialty && (
         <div style={{
           background: 'rgba(255,255,255,0.88)',
           backdropFilter: 'blur(22px) saturate(175%)',

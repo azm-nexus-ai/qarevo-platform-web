@@ -2396,15 +2396,12 @@ export type AdminDashboardDoctorsSummary = {
     total: number;
     verified: number;
     pending: number;
-    by_specialty: Record<string, number>;
-    by_region: Record<string, number>;
+    by_specialty?: Record<string, number> | null;
 };
 
 export type AdminDashboardPatientsSummary = {
     total: number;
-    active: number;
-    inactive: number;
-    new_this_month: number;
+    new_last_7_days: number;
 };
 
 // Admin Dashboard API Functions
