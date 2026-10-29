@@ -660,24 +660,69 @@ export default function VerifyEmailPage() {
 
             {/* What's next */}
             <div style={{ paddingTop: '22px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
-              <p style={{ fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px', textAlign: 'left' }}>{"What's next"}</p>
+              <h2 style={{ fontSize: '13px', color: T.navy, textAlign: 'left', margin: '0 0 12px' }}>
+                {"What's next"}
+              </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {[
-                  { icon: ICONS.steth,    label: 'Book a consultation',     sub: 'Connect with a verified specialist'     },
-                  { icon: ICONS.activity, label: 'Review your health summary', sub: 'AI-powered clinical insights'         },
-                  { icon: ICONS.shield,   label: 'Complete your profile',    sub: 'Secure your personal health information' },
-                ].map(({ icon, label, sub }) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 13px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.14s ease' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Ico p={icon} size={14} sw={1.75} color={T.blue} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-                      <div style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.005em' }}>{sub}</div>
-                    </div>
-                    <Ico p={ICONS.arrowFwd} size={12} sw={2} color={T.slate2} />
-                  </div>
-                ))}
+                  {
+                    icon: ICONS.shield,
+                    label: 'Complete your profile',
+                    sub: 'Add your personal, contact and health information',
+                    href: '/auth/profile-setup/personal-information',
+                  },
+                  {
+                    icon: ICONS.steth,
+                    label: 'Book a consultation',
+                    sub: 'Available in your portal after completing profile setup',
+                    href: null,
+                  },
+                  {
+                    icon: ICONS.activity,
+                    label: 'View medical records',
+                    sub: 'Review documents already added to your account',
+                    href: '/patient/medical-records',
+                  },
+                ].map(({ icon, label, sub, href }) => {
+                  const rowStyle: React.CSSProperties = {
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    padding: '12px 13px', borderRadius: '12px',
+                    background: 'rgba(4,53,77,0.024)',
+                    border: '1px solid rgba(4,53,77,0.06)',
+                    textAlign: 'left', textDecoration: 'none', color: T.navy,
+                  }
+                  const content = (
+                      <>
+                        <Ico p={icon} size={18} sw={1.75} color={T.blue} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 700 }}>{label}</div>
+                          <div style={{ fontSize: '12px', color: T.slate2, marginTop: '3px' }}>{sub}</div>
+                        </div>
+                      </>
+                  )
+
+                  return href ? (
+                      <Link
+                          key={label}
+                          href={href}
+                          className="ghost"
+                          onClick={() => {
+                            if (href === '/auth/profile-setup/personal-information') {
+                              setOnboardingStage('personal-information')
+                            }
+                          }}
+                          style={rowStyle}
+                      >
+                        {content}
+                        <Ico p={ICONS.arrowFwd} size={12} sw={2} color={T.slate2} />
+                      </Link>
+                  ) : (
+                      <div key={label} style={rowStyle}>
+                        {content}
+                        <Ico p={ICONS.lock} size={12} sw={2} color={T.slate2} />
+                      </div>
+                  )
+                })}
               </div>
             </div>
           </div>
