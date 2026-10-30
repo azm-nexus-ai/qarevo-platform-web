@@ -51,12 +51,12 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     if (!readAccessToken()) {
       clearAuthTokens()
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
       return
     }
 
     if (!isAdmin()) {
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
       return
     }
 
@@ -76,7 +76,7 @@ export default function AdminSettingsPage() {
       } catch (err) {
         if (isAuthError(err)) {
           clearAuthTokens()
-          router.replace('/auth/sign-in')
+          router.replace('/auth/admin/login')
           return
         }
         console.error('Failed to load settings', err)

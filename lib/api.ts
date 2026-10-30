@@ -17,10 +17,10 @@ export function readRefreshToken(): string | null {
     return window.localStorage.getItem("qarevo_refresh_token");
 }
 
-export function readUserRole(): 'PATIENT' | 'PROVIDER' | null {
+export function readUserRole(): 'PATIENT' | 'PROVIDER' | 'ADMIN' | null {
     if (typeof window === "undefined") return null;
     const role = window.localStorage.getItem("qarevo_role");
-    return (role === 'PATIENT' || role === 'PROVIDER') ? role : null;
+    return (role === 'PATIENT' || role === 'PROVIDER' || role === 'ADMIN') ? role : null;
 }
 
 export function isPatient(): boolean {
@@ -75,6 +75,15 @@ export function getApiErrorDetail(error: unknown): string | null {
                 return "Your session has expired. Please sign in again.";
             }
             return detail;
+        }
+        if (
+            detail &&
+            typeof detail === "object" &&
+            !Array.isArray(detail) &&
+            "message" in detail &&
+            typeof detail.message === "string"
+        ) {
+            return detail.message;
         }
         if (Array.isArray(detail)) {
             const messages = detail
@@ -433,6 +442,11 @@ export type AuthTokenResponse = {
     phone_verified: boolean;
     user_id?: string;
     provider_id?: string;
+};
+
+export type AdminLoginResponse = AuthTokenResponse & {
+    role: string;
+    admin_role: string;
 };
 
 export type PatientDoctor = {
@@ -812,6 +826,9 @@ export async function loginPatient(body: { email: string; password: string }): P
     return apiPost<AuthTokenResponse>("/api/v1/auth/login", body);
 }
 
+export async function loginAdmin(body: { email: string; password: string }): Promise<AdminLoginResponse> {
+  return apiPost<AdminLoginResponse>("/api/v1/auth/admin/login", body);
+}
 export async function logoutCurrentUser(): Promise<void> {
     const refreshToken = readRefreshToken();
     try {
@@ -2388,15 +2405,12 @@ export type AdminDashboardDoctorsSummary = {
     total: number;
     verified: number;
     pending: number;
-    by_specialty: Record<string, number>;
-    by_region: Record<string, number>;
+    by_specialty?: Record<string, number> | null;
 };
 
 export type AdminDashboardPatientsSummary = {
     total: number;
-    active: number;
-    inactive: number;
-    new_this_month: number;
+    new_last_7_days: number;
 };
 
 // Admin Dashboard API Functions

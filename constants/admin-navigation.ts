@@ -15,7 +15,7 @@ export const ADMIN_ROUTES = {
   systemConfig: '/admin/system-config',
   audit: '/admin/audit',
   settings: '/admin/settings',
-  logout: '/auth/sign-in',
+  logout: '/auth/admin/login',
 } as const
 
 export const ADMIN_SIDEBAR_ITEMS: AdminNavItem[] = [

@@ -31,13 +31,13 @@ export default function AdminLayout({
 
     if (!readAccessToken()) {
       clearAuthTokens()
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
       return () => window.clearTimeout(mountedTimer)
     }
 
     if (!isAdmin()) {
       clearAuthTokens()
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
       return () => window.clearTimeout(mountedTimer)
     }
 
@@ -60,7 +60,7 @@ export default function AdminLayout({
       console.error('Admin logout failed before local cleanup', error)
     } finally {
       setShowLogoutConfirm(false)
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
     }
   }
 
