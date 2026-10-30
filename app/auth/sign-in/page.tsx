@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
-import { getOnboardingRedirectPath, readAuthFlowState } from '@/lib/auth-flow'
+import { getOnboardingRedirectPath, readAuthFlowState, setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
 import { ApiError, getApiErrorDetail, loginPatient, loginPatientWithPasskey, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -342,17 +342,7 @@ export default function SignInPage() {
     try {
       const response = await loginPatient({ email, password })
       storeAuthTokens({ ...response, role: 'PATIENT' })
-      const authFlowState = readAuthFlowState()
-      if (authFlowState?.isAuthenticated) {
-        const nextRoute = authFlowState.onboardingCompleted
-          ? '/patient/dashboard'
-          : getOnboardingRedirectPath(authFlowState)
-        router.push(nextRoute)
-        return
-      }
-
-      const onboardingIncomplete = /new|incomplete|onboard/i.test(email)
-      router.push(onboardingIncomplete ? '/auth/profile-setup' : '/patient/dashboard')
+      completePatientSignIn()
     } catch (error) {
       setAuthError(getFriendlySignInError(error))
     } finally {
@@ -361,6 +351,12 @@ export default function SignInPage() {
   }
 
   const completePatientSignIn = () => {
+    if (new URLSearchParams(window.location.search).get('next') === 'profile-setup') {
+        setAuthenticatedOnboardingStage('personal-information')
+        router.replace('/auth/profile-setup/personal-information')
+        return
+    }
+
     const authFlowState = readAuthFlowState()
     if (authFlowState?.isAuthenticated) {
       const nextRoute = authFlowState.onboardingCompleted
