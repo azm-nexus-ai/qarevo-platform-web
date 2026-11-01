@@ -950,11 +950,11 @@ test('clinician draft persists and requires explicit review, with recoverable pu
   await page.reload()
   await expect(page.locator('#record-summary')).toHaveValue(approvedRecord.summary)
   await page.getByRole('button', { name: 'Approve and publish', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Confirm that you reviewed')
+  await expect(page.getByRole('alert').filter({ hasText: 'Confirm that you reviewed' })).toBeVisible()
   expect(publications).toBe(0)
   await page.getByRole('checkbox', { name: /I have reviewed this saved record/ }).check()
   await page.getByRole('button', { name: 'Approve and publish', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Publication could not be confirmed')
+  await expect(page.getByRole('alert').filter({ hasText: 'Publication could not be confirmed' })).toBeVisible()
   await expect(page.locator('#record-summary')).toHaveValue(approvedRecord.summary)
   publicationFailure = false
   await page.getByRole('button', { name: 'Approve and publish', exact: true }).click()
