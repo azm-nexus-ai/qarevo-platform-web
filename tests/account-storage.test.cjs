@@ -23,16 +23,37 @@ function storage() {
   return data
 }
 
-function tab(localStorage = storage(), fetch = async () => new Response('{}')) {
+const lockManagers = new WeakMap()
+function locksFor(localStorage) {
+  if (!lockManagers.has(localStorage)) {
+    const tails = new Map()
+    lockManagers.set(localStorage, {
+      request(name, options, callback) {
+        const next = (tails.get(name) || Promise.resolve()).catch(() => {}).then(() => {
+          if (options.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+          return callback()
+        })
+        tails.set(name, next)
+        return next
+      },
+    })
+  }
+  return lockManagers.get(localStorage)
+}
+
+function tab(localStorage = storage(), fetch = async () => new Response('{}'), overrides = {}) {
+  const events = []
   const window = {
     localStorage,
     sessionStorage: storage(),
-    dispatchEvent() {},
+    dispatchEvent(event) { events.push(event.type) },
   }
   const shared = {
     window, fetch, Headers, Response, Event, URL, URLSearchParams,
-    crypto: webcrypto, console,
+    crypto: webcrypto, console, AbortController, setTimeout, clearTimeout,
+    navigator: { locks: locksFor(localStorage) },
     process: { env: { NEXT_PUBLIC_API_BASE_URL: 'https://qarevo.invalid' } },
+    ...overrides,
   }
   const core = { exports: {} }
   vm.runInNewContext(storageCode, { ...shared, module: core, exports: core.exports })
@@ -44,7 +65,7 @@ function tab(localStorage = storage(), fetch = async () => new Response('{}')) {
       throw new Error('Unexpected import: ' + name)
     },
   })
-  return { ...window, core: core.exports, api: api.exports }
+  return { ...window, events, core: core.exports, api: api.exports }
 }
 
 function login(t, id) {
@@ -226,4 +247,156 @@ test('login failures and explicit temporary credentials do not trigger session r
   await assert.rejects(t.api.apiPost('/private', {}, { Authorization: 'Bearer temporary' }), error => error.status === 401)
   assert.equal(count, 2)
   assert.equal(t.api.readAccessToken(), 'access-A')
+})
+
+const renewed = () => new Response(JSON.stringify({
+  user_id: 'A', access_token: 'renewed-A', refresh_token: 'renewed-refresh-A',
+}))
+
+test('parallel reads and writes share one rotation and retry with unchanged method/body', async () => {
+  let rotations = 0
+  const retries = []
+  const t = tab(undefined, async (url, init) => {
+    if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }
+    if (new Headers(init.headers).get('Authorization') === 'Bearer access-A') return new Response('', { status: 401 })
+    retries.push({ method: init.method || 'GET', body: init.body })
+    return new Response('{"ok":true}')
+  })
+  login(t, 'A')
+  await Promise.all([t.api.apiGet('/private'), t.api.apiPost('/private', { draft: 'keep' }), t.api.apiGet('/private')])
+  assert.equal(rotations, 1)
+  assert.equal(retries.length, 3)
+  assert.deepEqual(retries.find(item => item.method === 'POST'), { method: 'POST', body: '{"draft":"keep"}' })
+})
+
+test('two tabs serialize a single-use token and retain each tab draft', async () => {
+  let rotations = 0
+  const fetch = async (url, init) => {
+    if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }
+    return new Response('{"ok":true}', { status: new Headers(init.headers).get('Authorization') === 'Bearer renewed-A' ? 200 : 401 })
+  }
+  const first = tab(undefined, fetch)
+  login(first, 'A')
+  const second = tab(first.localStorage, fetch)
+  first.core.createAccountDraftStorage().setItem('health', 'first')
+  second.core.createAccountDraftStorage().setItem('health', 'second')
+  await Promise.all([first.api.apiGet('/private'), second.api.apiGet('/private')])
+  assert.equal(rotations, 1)
+  assert.equal(first.core.createAccountDraftStorage().getItem('health'), 'first')
+  assert.equal(second.core.createAccountDraftStorage().getItem('health'), 'second')
+})
+
+test('a delayed 401 uses an already-renewed token without rotating again', async () => {
+  const late = deferred()
+  let rotations = 0
+  const t = tab(undefined, async (url, init) => {
+    if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }
+    if (new Headers(init.headers).get('Authorization') === 'Bearer renewed-A') return new Response('{}')
+    if (url.endsWith('/late')) return late.promise
+    return new Response('', { status: 401 })
+  })
+  login(t, 'A')
+  const delayedRequest = t.api.apiGet('/late')
+  await t.api.apiGet('/private')
+  late.resolve(new Response('', { status: 401 }))
+  await delayedRequest
+  assert.equal(rotations, 1)
+})
+
+for (const failure of ['network', 429, 500, 503, 422]) {
+  test(`refresh ${failure} preserves session and drafts, backs off across tabs, and can recover`, async () => {
+    let rotations = 0
+    let now = Date.now()
+    class Clock extends Date { static now() { return now } }
+    const fetch = async (url, init) => {
+      if (url.endsWith('/auth/refresh')) {
+        if (++rotations > 1) return renewed()
+        if (failure === 'network') throw new TypeError('Offline')
+        return new Response('{}', { status: failure, headers: { 'Retry-After': '10' } })
+      }
+      return new Response('{}', { status: new Headers(init.headers).get('Authorization') === 'Bearer renewed-A' ? 200 : 401 })
+    }
+    const t = tab(undefined, fetch, { Date: Clock })
+    login(t, 'A')
+    const second = tab(t.localStorage, fetch, { Date: Clock })
+    t.core.createAccountDraftStorage().setItem('health', 'keep')
+    const temporary = error => error.name === 'SessionRefreshError' && !t.api.isAuthError(error)
+    await assert.rejects(t.api.apiGet('/private'), temporary)
+    await assert.rejects(second.api.apiGet('/private'), temporary)
+    assert.equal(rotations, 1)
+    assert.equal(t.api.readRefreshToken(), 'refresh-A')
+    assert.equal(t.core.createAccountDraftStorage().getItem('health'), 'keep')
+    assert.equal(t.events.includes('qarevo:auth-session-expired'), false)
+    now += 11_000
+    await t.api.apiGet('/private')
+    assert.equal(rotations, 2)
+    assert.equal(t.api.readRefreshToken(), 'renewed-refresh-A')
+    assert.equal(t.core.createAccountDraftStorage().getItem('health'), 'keep')
+  })
+}
+
+for (const status of [401, 403]) {
+  test(`definitive refresh rejection ${status} clears credentials and drafts`, async () => {
+    const t = tab(undefined, async url => new Response('{}', { status: url.endsWith('/auth/refresh') ? status : 401 }))
+    login(t, 'A')
+    t.core.createAccountDraftStorage().setItem('health', 'clear on expiry')
+    await assert.rejects(t.api.apiGet('/private'))
+    assert.equal(t.api.readAccessToken(), null)
+    assert.equal(t.api.readRefreshToken(), null)
+    assert.equal(Object.keys(t.sessionStorage).length, 0)
+    assert.equal(t.events.filter(event => event === 'qarevo:auth-session-expired').length, 1)
+  })
+}
+
+for (const body of ['not JSON', '{}', '{"access_token":"new","refresh_token":" "}', '{"access_token":"new","refresh_token":"new-r","user_id":"B"}']) {
+  test(`invalid refresh payload cannot corrupt credentials: ${body}`, async () => {
+    const t = tab(undefined, async url => url.endsWith('/auth/refresh') ? new Response(body) : new Response('', { status: 401 }))
+    login(t, 'A')
+    await assert.rejects(t.api.apiGet('/private'), error => error.name === 'SessionRefreshError')
+    assert.equal(t.api.readAccessToken(), 'access-A')
+    assert.equal(t.api.readRefreshToken(), 'refresh-A')
+  })
+}
+
+test('a renewal timeout preserves the session and releases the in-flight request', async () => {
+  const started = deferred()
+  let timeout
+  const t = tab(undefined, async (url, init) => {
+    if (!url.endsWith('/auth/refresh')) return new Response('', { status: 401 })
+    return new Promise((resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      started.resolve()
+    })
+  }, { setTimeout(callback) { timeout = callback; return 1 }, clearTimeout() {} })
+  login(t, 'A')
+  const request = t.api.apiGet('/private')
+  const rejection = assert.rejects(request, error => error.name === 'SessionRefreshError')
+  await started.promise
+  timeout()
+  await rejection
+  assert.equal(t.api.readRefreshToken(), 'refresh-A')
+  await assert.rejects(t.api.apiGet('/private'), error => error.name === 'SessionRefreshError')
+})
+
+test('unsupported lock coordination fails safely without sending a rotating token', async () => {
+  let requests = 0
+  const t = tab(undefined, async () => { requests++; return new Response('', { status: 401 }) }, { navigator: {} })
+  login(t, 'A')
+  await assert.rejects(t.api.apiGet('/private'), /current browser/i)
+  assert.equal(requests, 1)
+  assert.equal(t.api.readRefreshToken(), 'refresh-A')
+})
+
+test('a protected request retries only once even if the renewed token is rejected', async () => {
+  let requests = 0
+  let rotations = 0
+  const t = tab(undefined, async url => {
+    if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }
+    requests++
+    return new Response('', { status: 401 })
+  })
+  login(t, 'A')
+  await assert.rejects(t.api.apiGet('/private'), error => t.api.isAuthError(error))
+  assert.equal(rotations, 1)
+  assert.equal(requests, 2)
 })

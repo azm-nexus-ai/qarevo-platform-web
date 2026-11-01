@@ -6,15 +6,27 @@ Signup email is held only in that tab until authentication. Contact email comes 
 
 The browser account guard rejects stale request results, refresh responses and logout completions after an account change. Other tabs return to the appropriate sign-in screen. This is browser-state isolation; backend authorization remains necessary.
 
+## Session renewal
+
+Concurrent requests share a renewal promise; the browser's Web Locks API serializes refresh-token rotation across same-origin tabs. After waiting, each caller checks whether another request already renewed the tokens. The original request retries once with the latest access token and its original method/body. Auth endpoints and explicitly supplied temporary credentials are excluded.
+
+- Refresh HTTP 401/403 ends the session and clears private browser drafts.
+- Network errors, timeouts, rate limits, other server errors and malformed responses raise a separate temporary error. They preserve credentials and drafts instead of propagating the initial access-token 401 to logout handlers.
+- Renewal has a 15-second deadline. Temporary failures apply a shared 5-second backoff, respecting `Retry-After` up to 60 seconds. A subsequent user request can retry after that delay; there is no background retry loop.
+- Refresh cannot change the account, role or draft ownership. Late responses remain subject to the account guard.
+- Automatic renewal requires Web Locks (current browsers on HTTPS or localhost). Without it, the client reports an error and keeps drafts instead of attempting uncoordinated token rotation.
+
+Backend token rotation and reuse detection are unchanged. If the server rotates successfully but its response is lost, a later retry may require signing in again; this change does not provide server-side idempotent recovery. Different deployment origins and old tabs still running the previous JavaScript do not share the new coordination; reload live-dev tabs after deployment.
+
 ## Checks
 
-- `pnpm run test:privacy`: Node regression tests covering legacy cleanup, draft ownership, session changes, stale responses/bodies, refresh and logout.
+- `pnpm run test:privacy`: Node regressions covering legacy cleanup, draft ownership, session changes, stale responses/bodies, concurrent renewal, temporary failures, timeout, malformed responses, terminal rejection and logout.
 - `pnpm run build`: runs those regressions before the production build.
 - `pnpm run test:e2e:privacy`: Chromium browser tests with intercepted synthetic API responses; no local patient database, real registration or email delivery is required.
 - Install the test browser with `pnpm exec playwright install chromium`.
 - To test an already-running server: `E2E_EXTERNAL_SERVER=1 E2E_BASE_URL=http://127.0.0.1:3100 pnpm run test:e2e:privacy`.
 
-GitHub Actions installs Chromium and tests the production build with synthetic fixtures. Its browser check runs alongside Vercel; a successful Vercel build alone is not acceptance of the browser flow.
+GitHub Actions installs Chromium and tests the production build with synthetic fixtures, including real Web Locks across two tabs, outage recovery and expiry cleanup. Its browser check runs alongside Vercel; a successful Vercel build alone is not acceptance of the browser flow.
 
 ## Live-dev acceptance
 
@@ -32,4 +44,4 @@ Do not submit personal/clinical test values into another patient's record. Brows
 
 Revert this release's commit on development to redeploy the previous code. A revert cannot recover discarded browser drafts; saved database records are unaffected.
 
-Separate follow-up work includes concurrent browser refresh coordination, recovery from transient refresh failures, complete server-backed onboarding persistence, honest dashboard states and removal of fabricated clinical content.
+Separate follow-up work includes server-side recovery for lost rotation responses, complete server-backed onboarding persistence, honest dashboard states and removal of fabricated clinical content.

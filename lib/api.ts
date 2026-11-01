@@ -51,6 +51,7 @@ export function clearAuthTokens() {
         "qarevo_role",
         "qarevo_temp_auth",
         "qarevo_temp_token",
+        "qarevo_refresh_retry_after",
     ].forEach((key) => window.localStorage.removeItem(key));
     accountChanged();
 }
@@ -114,6 +115,40 @@ export function isAuthError(error: unknown): boolean {
     return error instanceof ApiError && error.status === 401;
 }
 
+// A temporary renewal failure is not an authentication rejection. In particular,
+// callers must not treat the original access-token 401 as a reason to log out.
+export class SessionRefreshError extends Error {
+    constructor(message = "We couldn't renew your session right now. Please try again shortly.") {
+        super(message);
+        this.name = "SessionRefreshError";
+    }
+}
+
+const REFRESH_RETRY_KEY = "qarevo_refresh_retry_after";
+const refreshRequests = new Map<string, Promise<boolean>>();
+
+function refreshRetryAt(scope: string): number {
+    try {
+        const saved = JSON.parse(window.localStorage.getItem(REFRESH_RETRY_KEY) || "null");
+        return saved?.scope === scope && Number.isFinite(saved.retryAt) ? saved.retryAt : 0;
+    } catch {
+        return 0;
+    }
+}
+
+function deferRefresh(scope: string, response?: Response) {
+    const retryAfter = response?.headers.get("Retry-After");
+    const requested = retryAfter
+        ? (/^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now())
+        : 0;
+    const delay = Math.min(60_000, Math.max(5_000, Number.isFinite(requested) ? requested : 0));
+    try {
+        window.localStorage.setItem(REFRESH_RETRY_KEY, JSON.stringify({ scope, retryAt: Date.now() + delay }));
+    } catch {
+        // Renewal remains serialized even if the optional backoff cannot be saved.
+    }
+}
+
 export function storeAuthTokens(payload: {
     access_token: string;
     refresh_token: string;
@@ -133,6 +168,7 @@ export function storeAuthTokens(payload: {
     if (newSession) {
         window.localStorage.removeItem("qarevo_role");
         window.localStorage.removeItem("qarevo_provider_id");
+        window.localStorage.removeItem(REFRESH_RETRY_KEY);
     }
     window.localStorage.setItem("qarevo_access_token", payload.access_token);
     window.localStorage.setItem("qarevo_refresh_token", payload.refresh_token);
@@ -144,50 +180,95 @@ export function storeAuthTokens(payload: {
     if (newSession) accountChanged();
 }
 
-async function refreshAuthToken(): Promise<boolean> {
-    const scope = readAccountScope();
-    const refreshToken = readRefreshToken();
-    if (!refreshToken) return false;
+async function refreshAuthToken(scope: string, accessAtStart: string, refreshAtStart: string): Promise<boolean> {
+    const existing = refreshRequests.get(scope);
+    if (existing) return existing;
 
-    let res: Response;
+    const pending = (async () => {
+        // Web Locks serialize rotation across tabs on this origin. An in-memory
+        // promise alone cannot protect a single-use refresh token in another tab.
+        if (typeof navigator === "undefined" || !navigator.locks) {
+            throw new SessionRefreshError("Automatic session renewal requires a current browser on HTTPS or localhost. Your draft has been kept.");
+        }
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15_000);
+        const check = () => {
+            assertCurrentAccount();
+            if (scope !== readAccountScope()) throw new Error("Your session changed. Reload this page.");
+        };
+        const renewedElsewhere = () => readAccessToken() !== accessAtStart || readRefreshToken() !== refreshAtStart;
+        try {
+            return await navigator.locks.request("qarevo:session-refresh", { signal: controller.signal }, async () => {
+                check();
+                // A late 401 may arrive after another request/tab already renewed.
+                if (renewedElsewhere()) return true;
+                if (refreshRetryAt(scope) > Date.now()) throw new SessionRefreshError();
+
+                let res: Response;
+                try {
+                    res = await fetch(`${getBaseUrl()}/api/v1/auth/refresh`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ refresh_token: refreshAtStart }),
+                        cache: "no-store",
+                        signal: controller.signal,
+                    });
+                } catch {
+                    check();
+                    if (renewedElsewhere()) return true;
+                    deferRefresh(scope);
+                    throw new SessionRefreshError();
+                }
+
+                check();
+                if (renewedElsewhere()) return true;
+                if (res.status === 401 || res.status === 403) {
+                    clearAuthTokens();
+                    window.dispatchEvent(new Event("qarevo:auth-session-expired"));
+                    return false;
+                }
+                if (!res.ok) {
+                    deferRefresh(scope, res);
+                    throw new SessionRefreshError();
+                }
+
+                const payload = await res.json().catch(() => null);
+                check();
+                if (renewedElsewhere()) return true;
+                if (!payload || typeof payload.access_token !== "string" || !payload.access_token.trim() ||
+                    typeof payload.refresh_token !== "string" || !payload.refresh_token.trim() ||
+                    (payload.user_id != null && payload.user_id !== window.localStorage.getItem("qarevo_user_id"))) {
+                    deferRefresh(scope);
+                    throw new SessionRefreshError();
+                }
+                // Renewal cannot change identity, role, or the draft ownership revision.
+                storeAuthTokens({
+                    access_token: payload.access_token,
+                    refresh_token: payload.refresh_token,
+                    token_type: "bearer",
+                    expires_in: typeof payload.expires_in === "number" && payload.expires_in > 0 ? payload.expires_in : undefined,
+                });
+                window.localStorage.removeItem(REFRESH_RETRY_KEY);
+                return true;
+            });
+        } catch (error) {
+            // Expiration intentionally changes the scope; keep its result distinct
+            // from network/timeout failures and from a newer account's session.
+            if (controller.signal.aborted) {
+                check();
+                throw new SessionRefreshError();
+            }
+            throw error;
+        } finally {
+            clearTimeout(timer);
+        }
+    })();
+    refreshRequests.set(scope, pending);
     try {
-        res = await fetch(`${getBaseUrl()}/api/v1/auth/refresh`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refresh_token: refreshToken }),
-            cache: "no-store",
-        });
-    } catch (error) {
-        if (scope !== readAccountScope()) return false;
-        console.warn("Auth refresh request failed", error);
-        clearAuthTokens();
-        if (typeof window !== "undefined") {
-            window.dispatchEvent(new Event("qarevo:auth-session-expired"));
-        }
-        return false;
+        return await pending;
+    } finally {
+        if (refreshRequests.get(scope) === pending) refreshRequests.delete(scope);
     }
-
-    if (scope !== readAccountScope()) return false;
-    if (!res.ok) {
-        clearAuthTokens();
-        if (typeof window !== "undefined") {
-            window.dispatchEvent(new Event("qarevo:auth-session-expired"));
-        }
-        return false;
-    }
-
-    const payload = (await res.json()) as {
-        access_token: string;
-        refresh_token: string;
-        token_type?: string;
-        expires_in?: number;
-        user_id?: string;
-        provider_id?: string;
-        role?: string;
-    };
-    if (scope !== readAccountScope()) return false;
-    storeAuthTokens(payload);
-    return true;
 }
 
 function authHeaders(headers?: Record<string, string>): Record<string, string> {
@@ -206,6 +287,7 @@ async function fetchWithAuthRetry(
 
     const scope = readAccountScope();
     const accessAtStart = readAccessToken();
+    const refreshAtStart = readRefreshToken();
     const sessionRequest =
         Boolean(accessAtStart) &&
         new Headers(init.headers).get("Authorization") ===
@@ -226,12 +308,12 @@ async function fetchWithAuthRetry(
         res.status !== 401 ||
         !sessionRequest ||
         authRequest ||
-        !readRefreshToken()
+        !scope || !accessAtStart || !refreshAtStart
     ) {
         return res;
     }
 
-    const refreshed = await refreshAuthToken().catch(() => false);
+    const refreshed = await refreshAuthToken(scope, accessAtStart, refreshAtStart);
     check();
     if (!refreshed) return res;
 
