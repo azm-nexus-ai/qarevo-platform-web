@@ -771,3 +771,78 @@ test('public preview avoids fabricated clinical outcomes, credentials and appoin
   }
   await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toHaveCount(0)
 })
+
+async function mockAppointmentManagement(context: BrowserContext) {
+  const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
+  const appointment = { id: '11111111-1111-4111-8111-111111111111', consultation_id: '22222222-2222-4222-8222-222222222222', provider_id: '33333333-3333-4333-8333-333333333333', provider_name: 'Synthetic Clinician', specialty: 'General medicine', status: 'BOOKED', consultation_modality: 'video', start_at: '2030-07-10T07:00:00Z', end_at: '2030-07-10T07:45:00Z', time_zone: 'Europe/Berlin' }
+  const slot = { label: '10:00 AM', start_at: '2030-07-11T08:00:00Z', end_at: '2030-07-11T08:45:00Z', time_zone: 'Europe/Berlin', duration_minutes: 45 }
+  const state = { available: true, cancelFailure: false, reschedules: [] as Record<string, unknown>[], cancellations: [] as { url: string; body: unknown }[] }
+  await context.route('**/api/v1/patient/appointments**', route => route.fulfill({ headers, json: new URL(route.request().url()).pathname.endsWith(appointment.id) ? appointment : { appointments: [appointment], time_zone: 'Europe/Berlin' } }))
+  await context.route('**/api/v1/patient/booking-datetime/availability**', route => route.fulfill({ headers, json: { availability: [{ date: '2030-07-11', slot_count: 1, status: 'available' }] } }))
+  await context.route('**/api/v1/patient/booking-datetime/slots**', route => route.fulfill({ headers, json: { slot_details: state.available ? [slot] : [] } }))
+  await context.route(`**/api/v1/appointments/${appointment.id}/reschedule`, route => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+    state.reschedules.push(route.request().postDataJSON())
+    appointment.start_at = slot.start_at; appointment.end_at = slot.end_at
+    return route.fulfill({ headers, json: { status: 'rescheduled' } })
+  })
+  await context.route(`**/api/v1/appointments/${appointment.id}/cancel`, route => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+    state.cancellations.push({ url: route.request().url(), body: route.request().postDataJSON() })
+    if (state.cancelFailure) return route.fulfill({ headers, status: 503, json: { detail: 'Synthetic cancellation outage. Your appointment remains booked.' } })
+    appointment.status = 'CANCELLED'
+    return route.fulfill({ headers, json: { status: 'cancelled' } })
+  })
+  return { appointment, slot, state }
+}
+
+test('rescheduling saves exact server times and details survive a refresh', async ({ page, context }) => {
+  const { appointment, slot, state } = await mockAppointmentManagement(context)
+  await signIn(page, alpha)
+  await page.goto('/patient/appointments')
+  await expect(page.getByText('45 min', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Reschedule', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Reschedule appointment', exact: true })
+  await dialog.getByRole('button', { name: 'Confirm reschedule', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('Select an available date and time')
+  await dialog.getByLabel('Date — required').selectOption('2030-07-11')
+  await dialog.getByLabel('Time — required').selectOption(slot.start_at)
+  await dialog.getByRole('button', { name: 'Confirm reschedule', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  expect(state.reschedules).toEqual([{ start_at: slot.start_at, end_at: slot.end_at, reason: 'Patient requested reschedule' }])
+  await page.getByRole('button', { name: 'View Details', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`appointmentId=${appointment.id}`))
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Synthetic Clinician', exact: true })).toBeVisible()
+  await expect(page.getByText(/Thu, 11 July 2030/).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open video room' })).toHaveAttribute('href', new RegExp(appointment.consultation_id))
+  await expect(page.locator('body')).not.toContainText('Your selected plan is verified')
+})
+
+test('stale reschedule and failed cancellation remain visible without false refund claims', async ({ page, context }) => {
+  const { slot, state } = await mockAppointmentManagement(context)
+  await signIn(page, alpha)
+  await page.goto('/patient/appointments')
+  await page.getByRole('button', { name: 'Reschedule', exact: true }).click()
+  const reschedule = page.getByRole('dialog', { name: 'Reschedule appointment', exact: true })
+  await reschedule.getByLabel('Date — required').selectOption('2030-07-11')
+  await reschedule.getByLabel('Time — required').selectOption(slot.start_at)
+  state.available = false
+  await reschedule.getByRole('button', { name: 'Confirm reschedule', exact: true }).click()
+  await expect(reschedule.getByRole('alert')).toContainText('no longer available')
+  expect(state.reschedules).toHaveLength(0)
+  await reschedule.getByRole('button', { name: 'Keep current appointment' }).click()
+  await page.getByRole('button', { name: 'Cancel Appointment', exact: true }).click()
+  const cancellation = page.getByRole('dialog', { name: 'Cancel appointment?', exact: true })
+  await cancellation.getByLabel('Reason for cancellation — optional').fill('SYNTHETIC-PRIVATE-REASON')
+  state.cancelFailure = true
+  await cancellation.getByRole('button', { name: 'Cancel appointment', exact: true }).click()
+  await expect(cancellation.getByRole('alert')).toContainText('Synthetic cancellation outage')
+  state.cancelFailure = false
+  await cancellation.getByRole('button', { name: 'Cancel appointment', exact: true }).click()
+  await expect(cancellation).toHaveCount(0)
+  expect(state.cancellations[0].body).toEqual({ reason: 'SYNTHETIC-PRIVATE-REASON' })
+  expect(state.cancellations.every(request => !request.url.includes('reason='))).toBe(true)
+  await expect(page.getByRole('status')).toContainText('No payment or refund was processed')
+  await expect(page.getByText('Payment Refunded', { exact: true })).toHaveCount(0)
+})
