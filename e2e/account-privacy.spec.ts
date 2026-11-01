@@ -698,7 +698,7 @@ test('patient dashboard and discovery retain the shared theme control outside th
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320)
     await page.getByRole('button', { name: 'Open navigation menu', exact: true }).click()
     await expect(page.getByRole('dialog', { name: 'Navigation menu', exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Close navigation menu', exact: true }).click()
+    await page.getByRole('dialog', { name: 'Navigation menu', exact: true }).getByRole('button', { name: 'Close navigation menu', exact: true }).click()
     await expect(page.getByRole('dialog', { name: 'Navigation menu', exact: true })).toHaveCount(0)
     await page.setViewportSize({ width: 1280, height: 900 })
   }
