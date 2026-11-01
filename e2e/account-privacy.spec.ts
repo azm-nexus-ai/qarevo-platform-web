@@ -19,6 +19,7 @@ type RenewalScenario = {
   settingsStatus?: number
   holdSettings?: Promise<void>
   logoutCount?: number
+  onboardingComplete?: boolean
 }
 const scenarios = new WeakMap<BrowserContext, RenewalScenario>()
 
@@ -91,7 +92,7 @@ async function mockApi(context: BrowserContext) {
         saved.set(owner, account)
       }
       const steps = ['personal', 'contact', 'health', 'coverage']
-      const next = steps.find(step => !account[step]) || null
+      const next = scenario.onboardingComplete ? null : steps.find(step => !account[step]) || null
       return route.fulfill({ headers: cors, json: { ...account, personal: account.personal || {}, complete: !next, next_step: next, completed_steps: steps.filter(step => account[step]), coverage_verified: false, legal_ready: false, consent_version: 'dev-test-20261101' } })
     }
     if (pathname === '/api/v1/auth/logout') {
@@ -432,7 +433,8 @@ test('password recovery guides users through their email link and rejects a miss
   await expect(page.locator('a[href="/auth/reset-password"]')).toHaveCount(0)
   await page.goto('/auth/reset-password')
   await expect(page.getByText('The password reset link is missing or invalid.', { exact: false })).toBeVisible()
-  await page.goto('/auth/reset-password?token=synthetic-reset-token')
+  await page.goto('/auth/reset-password#token=synthetic-reset-token')
+  await expect(page).toHaveURL(/\/auth\/reset-password$/)
   await page.getByLabel('New Password', { exact: true }).fill('SyntheticNewPassword123!')
   await page.getByLabel('Confirm New Password', { exact: true }).fill('SyntheticNewPassword123!')
   await page.locator('button[type="submit"]').click()
@@ -685,8 +687,11 @@ test('main navigation exposes dark mode on desktop and mobile and synchronizes t
 })
 
 
-test('patient dashboard and discovery retain the shared theme control outside the standard shell', async ({ page }) => {
+test('patient dashboard and discovery retain the shared theme control outside the standard shell', async ({ page, context }) => {
   await signIn(page, alpha)
+  scenarios.get(context)!.onboardingComplete = true
+  await page.goto('/auth/profile-setup/profile-completed')
+  await page.getByRole('link', { name: 'Continue to Dashboard', exact: true }).click()
   for (const route of ['/patient/dashboard', '/patient/find-doctor']) {
     await page.goto(route)
     const toggle = page.getByRole('button', { name: 'Dark mode', exact: true })
@@ -694,12 +699,39 @@ test('patient dashboard and discovery retain the shared theme control outside th
     await expect(page.getByRole('dialog', { name: 'Navigation menu', exact: true })).toHaveCount(0)
     await page.setViewportSize({ width: 320, height: 844 })
     await expect(toggle).toBeVisible()
-    const bounds = await toggle.boundingBox()
-    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320)
+    await expect.poll(async () => {
+      const bounds = await toggle.boundingBox()
+      return bounds ? bounds.x + bounds.width : Infinity
+    }).toBeLessThanOrEqual(320)
     await page.getByRole('button', { name: 'Open navigation menu', exact: true }).click()
     await expect(page.getByRole('dialog', { name: 'Navigation menu', exact: true })).toBeVisible()
     await page.getByRole('dialog', { name: 'Navigation menu', exact: true }).getByRole('button', { name: 'Close navigation menu', exact: true }).click()
     await expect(page.getByRole('dialog', { name: 'Navigation menu', exact: true })).toHaveCount(0)
     await page.setViewportSize({ width: 1280, height: 900 })
   }
+})
+
+ test('legacy password reset links are scrubbed and still submit the captured token', async ({ page, context }) => {
+  let submitted: Record<string, unknown> | null = null
+  await context.route('**/api/v1/auth/reset-password', route => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' } })
+    submitted = route.request().postDataJSON()
+    return route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { message: 'Password updated' } })
+  })
+  await page.goto('/auth/reset-password?token=legacy-synthetic-token&lang=de')
+  await expect(page).toHaveURL(/reset-password\?lang=de$/)
+  await page.getByLabel('New Password', { exact: true }).fill('SyntheticNewPassword123!')
+  await page.getByLabel('Confirm New Password', { exact: true }).fill('SyntheticNewPassword123!')
+  await page.locator('button[type="submit"]').click()
+  await expect(page.getByText('Your password has been successfully updated.', { exact: false })).toBeVisible()
+  expect(submitted).toMatchObject({ token: 'legacy-synthetic-token' })
+})
+
+test('public preview avoids fabricated clinical outcomes, credentials and appointment availability', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'One place to prepare for your care' })).toBeVisible()
+  for (const claim of ['ISO 27001', 'HIPAA', 'SOC 2', 'EMA Standards', 'Confidence score: 92%', 'Dr. Sarah Jenkins', 'Dr. Sarah Chen', 'AI-powered treatment recommendations', 'Oct 12, 14:00 CET']) {
+    await expect(page.locator('body')).not.toContainText(claim)
+  }
+  await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toHaveCount(0)
 })

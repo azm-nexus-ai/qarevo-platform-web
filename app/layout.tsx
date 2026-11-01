@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     default: 'Qarevo Health',
     template: '%s | Qarevo Health',
   },
-  description: 'Discover verified physicians, orchestrate continuous care, and experience the highest standard of clinical intelligence and data governance.',
+  description: 'Qarevo Health connects patients and independent practices through a clinician-led digital care journey. Development preview.',
   keywords: ['healthcare', 'telemedicine', 'physician', 'clinical intelligence'],
   icons: {
     icon: '/brand/qarevo-mark.png',

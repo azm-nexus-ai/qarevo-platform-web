@@ -7,9 +7,8 @@ export const APPOINTMENT_SLOTS: AppointmentSlot[] = [
 ]
 
 export const TRUST_FRAMEWORKS: TrustCardData[] = [
-  { label: 'ISO 27001', sub: 'Information Security',    icon: ICONS.shield, accent: '#20B5DF' },
-  { label: 'GDPR',      sub: 'Data Protection',         icon: ICONS.ema,    accent: '#0E8A5F' },
-  { label: 'HIPAA',     sub: 'Health Data Privacy',     icon: ICONS.shield, accent: '#7C3AED' },
-  { label: 'EMA',       sub: 'Clinical Standards',      icon: ICONS.ema,    accent: '#D97706' },
-  { label: 'SOC 2',     sub: 'Security & Availability', icon: ICONS.shield, accent: '#0891B2' },
+  { label: 'Your account', sub: 'Email verification', icon: ICONS.shield, accent: '#20B5DF' },
+  { label: 'Your choices', sub: 'Explicit processing choices', icon: ICONS.ema, accent: '#0E8A5F' },
+  { label: 'Clinical access', sub: 'Role and assignment checks', icon: ICONS.shield, accent: '#7C3AED' },
+  { label: 'Development preview', sub: 'Synthetic test data only', icon: ICONS.ema, accent: '#D97706' },
 ]

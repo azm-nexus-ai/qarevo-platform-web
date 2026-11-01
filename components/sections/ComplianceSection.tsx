@@ -32,7 +32,7 @@ export default function ComplianceSection() {
               minWidth: '136px',
             }}
           >
-            Governed by frameworks
+            Built around trust
           </span>
           <div className="trust-flex">
             {TRUST_FRAMEWORKS.map((framework) => (

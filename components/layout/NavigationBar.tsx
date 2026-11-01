@@ -424,7 +424,9 @@ export default function NavigationBar() {
         id="mobile-drawer"
         ref={drawerRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal={mobileOpen ? true : undefined}
+        aria-hidden={!mobileOpen}
+        inert={!mobileOpen}
         aria-label="Navigation menu"
         onKeyDown={handleDrawerKeyDown}
         style={{

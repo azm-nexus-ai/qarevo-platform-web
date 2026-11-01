@@ -22,8 +22,8 @@ export default function HeroSection() {
               margin: '0 auto 24px',
             }}
           >
-            European healthcare,{' '}
-            <span style={{ color: T.slate2, fontWeight: 700 }}>engineered for precision.</span>
+            Care that fits your life,{' '}
+            <span style={{ color: T.slate2, fontWeight: 700 }}>guided by clinicians.</span>
           </h1>
 
           <p
@@ -37,8 +37,7 @@ export default function HeroSection() {
               letterSpacing: '-0.01em',
             }}
           >
-            Discover verified physicians, orchestrate continuous care, and experience the highest
-            standard of clinical intelligence and data governance.
+            We are building a clearer path from your first question to a clinician-led consultation and follow-up. Explore the Qarevo development preview with synthetic test data.
           </p>
 
           <div className="hero-btns">

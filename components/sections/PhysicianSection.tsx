@@ -10,9 +10,9 @@ export default function PhysicianSection() {
   const router = useRouter()
 
   const features = [
-    { icon: ICONS.steth, title: 'Verified Physicians', desc: 'Board-certified specialists across Europe' },
-    { icon: ICONS.video, title: 'Virtual Consultations', desc: 'HD video with AI-assisted diagnostics' },
-    { icon: ICONS.brain, title: 'Clinical Intelligence', desc: 'AI-powered treatment recommendations' },
+    { icon: ICONS.steth, title: 'Verified Physicians', desc: 'Professional access follows administrator review' },
+    { icon: ICONS.video, title: 'Virtual Consultations', desc: 'Video consultation workflow under development' },
+    { icon: ICONS.brain, title: 'Optional Drafting', desc: 'Consent-based draft assistance requiring clinician review' },
     { icon: ICONS.shield, title: 'Secure Platform', desc: 'Account verification and controlled clinical access' },
   ]
 
@@ -86,7 +86,7 @@ export default function PhysicianSection() {
                 maxWidth: '420px',
               }}
             >
-              Expand your practice with AI-powered clinical tools, secure patient management, and seamless care coordination across Europe.
+              Explore patient intake, assigned clinical work and care coordination in our development preview for independent practices.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '36px' }}>
@@ -210,10 +210,10 @@ export default function PhysicianSection() {
                 </div>
                 <div>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em', marginBottom: '2px' }}>
-                    Dr. Sarah Chen
+                    Practice workspace
                   </div>
                   <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.005em' }}>
-                    Cardiology • Berlin
+                    Illustrative workflow
                   </div>
                 </div>
               </div>
@@ -222,18 +222,18 @@ export default function PhysicianSection() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                 <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(9,173,112,0.08)', border: '1px solid rgba(9,173,112,0.15)' }}>
                   <div style={{ fontSize: '24px', fontWeight: 800, color: T.green, letterSpacing: '-0.02em', marginBottom: '2px' }}>
-                    247
+                    Intake
                   </div>
                   <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                    Patients
+                    Review
                   </div>
                 </div>
                 <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.15)' }}>
                   <div style={{ fontSize: '24px', fontWeight: 800, color: T.link, letterSpacing: '-0.02em', marginBottom: '2px' }}>
-                    4.9
+                    Notes
                   </div>
                   <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                    Rating
+                    Document
                   </div>
                 </div>
               </div>
@@ -243,17 +243,17 @@ export default function PhysicianSection() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <Ico p={ICONS.activity} size={14} sw={1.6} color={T.blue} />
                   <span style={{ fontSize: "13px", fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                    Today&apos;s Schedule
+                    A connected care journey
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: "1px solid var(--border)" }}>
-                    <span style={{ fontSize: "13px", color: T.slate }}>09:00 AM</span>
-                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>Patient Consultation</span>
+                    <span style={{ fontSize: "13px", color: T.slate }}>01</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>Review patient intake</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-                    <span style={{ fontSize: "13px", color: T.slate }}>11:30 AM</span>
-                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>Follow-up Call</span>
+                    <span style={{ fontSize: "13px", color: T.slate }}>02</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>Document follow-up</span>
                   </div>
                 </div>
               </div>
@@ -279,7 +279,7 @@ export default function PhysicianSection() {
             >
               <Ico p={ICONS.check} size={16} sw={2.5} color={T.green} />
               <span style={{ fontSize: "13px", fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                License Verified
+                Approval required
               </span>
             </div>
 
