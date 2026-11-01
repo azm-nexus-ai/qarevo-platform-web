@@ -846,3 +846,49 @@ test('stale reschedule and failed cancellation remain visible without false refu
   await expect(page.getByRole('status')).toContainText('No payment or refund was processed')
   await expect(page.getByText('Payment Refunded', { exact: true })).toHaveCount(0)
 })
+
+for (const role of ['patient', 'doctor'] as const) {
+  test(`${role} video room exposes provider errors and never pretends to connect`, async ({ page, context }) => {
+    const id = '55555555-5555-4555-8555-555555555555'
+    const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
+    let joins = 0
+    let allowed = true
+    const awsRequests: string[] = []
+    page.on('request', request => { if (new URL(request.url()).hostname.endsWith('amazonaws.com')) awsRequests.push(request.url()) })
+    await context.route(`**/api/v1/consultations/${id}**`, route => {
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+      if (route.request().url().endsWith('/join')) {
+        joins++
+        return route.fulfill({ status: 503, headers, json: { detail: 'Live video is not enabled in this development environment. Your appointment remains saved.' } })
+      }
+      return allowed ? route.fulfill({ headers, json: { consultation_id: id, status: 'SCHEDULED', scheduled_at: '2030-07-10T07:00:00Z' } }) : route.fulfill({ status: 404, headers, json: { detail: 'Consultation not found' } })
+    })
+    if (role === 'patient') await signIn(page, alpha)
+    else {
+      await context.addInitScript(() => {
+        localStorage.setItem('qarevo_access_token', 'synthetic-role-token')
+        localStorage.setItem('qarevo_refresh_token', 'synthetic-role-refresh')
+        localStorage.setItem('qarevo_user_id', 'synthetic-role-owner')
+        localStorage.setItem('qarevo_role', 'PROVIDER')
+      })
+      await context.route('**/api/v1/doctor/profile', route => route.fulfill({ headers, json: { full_name: 'Synthetic Doctor', specialty: 'General Medicine' } }))
+    }
+    const path = role === 'patient' ? '/patient/video-consultation/waiting-room' : '/doctor/video-consultation'
+    await page.goto(`${path}?consultationId=${id}`)
+    await expect(page.getByRole('button', { name: 'Join consultation', exact: true })).toBeVisible()
+    expect(joins).toBe(0)
+    await page.getByRole('button', { name: 'Join consultation', exact: true }).click()
+    await expect(page.getByRole('alert').filter({ hasText: 'Live video is not enabled' })).toBeVisible()
+    expect(joins).toBe(1)
+    expect(awsRequests).toEqual([])
+    await expect(page.getByText('Connected · Other participant present', { exact: true })).toHaveCount(0)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    allowed = false
+    await page.reload()
+    await expect(page.getByRole('alert').filter({ hasText: 'Consultation not found' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Join consultation', exact: true })).toHaveCount(0)
+    expect(joins).toBe(1)
+  })
+}

@@ -468,3 +468,86 @@ test('malformed and non-object drafts fall back to saved server data', async () 
     assert.equal(result.name, 'Saved Patient')
   }
 })
+
+function videoHarness({ holdMicrophone = null, failMicrophone = false } = {}) {
+  const module = { exports: {} }
+  vm.runInNewContext(compile('video-connection.ts'), { module, exports: module.exports, Promise, Set, Error })
+  let markMicrophoneStarted
+  const microphoneStarted = new Promise(resolve => { markMicrophoneStarted = resolve })
+  const calls = []
+  const events = []
+  let observer, presence
+  const av = {
+    addObserver(value) { observer = value }, removeObserver() { calls.push('remove-observer') },
+    realtimeSubscribeToAttendeeIdPresence(value) { presence = value },
+    realtimeUnsubscribeToAttendeeIdPresence() { calls.push('unsubscribe') },
+    async bindAudioElement() {}, unbindAudioElement() { calls.push('unbind-audio') },
+    start() { calls.push('start'); observer.audioVideoDidStart() }, stop() { calls.push('stop') },
+    startLocalVideoTile() { calls.push('camera-start') }, stopLocalVideoTile() { calls.push('camera-stop') },
+    bindVideoElement() {}, realtimeMuteLocalAudio() { calls.push('mute') }, realtimeUnmuteLocalAudio() { return true },
+  }
+  class Devices {
+    async listAudioInputDevices() { return [{ deviceId: 'synthetic-mic' }] }
+    async listVideoInputDevices() { return [{ deviceId: 'synthetic-camera' }] }
+    async startAudioInput() { calls.push('microphone-start'); markMicrophoneStarted(); await holdMicrophone; if (failMicrophone) throw new Error('Permission denied') }
+    async stopAudioInput() { calls.push('microphone-stop') }
+    async startVideoInput() { calls.push('video-input-start') }
+    async stopVideoInput() { calls.push('video-input-stop') }
+    async destroy() { calls.push('devices-destroy') }
+  }
+  const sdk = {
+    NoOpLogger: class {}, DefaultDeviceController: Devices, MeetingSessionConfiguration: class {},
+    DefaultMeetingSession: class { audioVideo = av; async destroy() { calls.push('session-destroy') } },
+    MeetingSessionStatusCode: { MeetingEnded: 5 },
+  }
+  return {
+    calls, events, microphoneStarted, get observer() { return observer }, get presence() { return presence },
+    create: () => module.exports.createVideoConnection({ meeting_id: 'synthetic', attendee_id: 'local', join_token: 'never-persist', media_placement: {} }, {}, {
+      state: (...args) => events.push(['state', ...args]), tile: value => events.push(['tile', value]), removeTile: value => events.push(['remove', value]), participants: value => events.push(['participants', value]), warning: value => events.push(['warning', value]),
+    }, async () => sdk),
+  }
+}
+
+test('video connects from SDK events and releases devices on leave without ending clinical care', async () => {
+  const harness = videoHarness()
+  const connection = await harness.create()
+  await connection.start(true)
+  assert.ok(harness.events.some(event => event[0] === 'state' && event[1] === 'connected'))
+  harness.presence('local', true)
+  harness.presence('other', true)
+  harness.presence('other', true)
+  assert.deepEqual(harness.events.filter(event => event[0] === 'participants'), [['participants', 1], ['participants', 1]])
+  await connection.setCamera(false)
+  connection.setMicrophone(false)
+  await connection.stop(); await connection.stop()
+  assert.ok(harness.calls.includes('microphone-stop'))
+  assert.ok(harness.calls.includes('video-input-stop'))
+  assert.equal(harness.calls.filter(call => call === 'session-destroy').length, 1)
+  const count = harness.events.length
+  harness.observer.audioVideoDidStart()
+  harness.presence('stale', true)
+  assert.equal(harness.events.length, count)
+})
+
+test('leaving while microphone permission is pending cannot start a late connection', async () => {
+  let release
+  const holdMicrophone = new Promise(resolve => { release = resolve })
+  const harness = videoHarness({ holdMicrophone })
+  const connection = await harness.create()
+  const starting = connection.start(false)
+  await harness.microphoneStarted
+  assert.ok(harness.calls.includes('microphone-start'))
+  await connection.stop()
+  release()
+  await starting
+  assert.ok(!harness.calls.includes('start'))
+  assert.ok(harness.calls.filter(call => call === 'microphone-stop').length >= 2)
+})
+
+test('denied microphone access cleans up the session without claiming connection success', async () => {
+  const harness = videoHarness({ failMicrophone: true })
+  const connection = await harness.create()
+  await assert.rejects(connection.start(false), /Permission denied/)
+  assert.ok(!harness.calls.includes('start'))
+  assert.ok(harness.calls.includes('devices-destroy'))
+})

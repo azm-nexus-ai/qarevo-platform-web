@@ -65,8 +65,7 @@ export default function ConsultationDetailPage() {
   }
 
   const handleJoinVideo = () => {
-    // TODO: Navigate to video consultation page
-    router.push(`/doctor/video-consultation/${consultationId}`)
+    router.push(`/doctor/video-consultation?consultationId=${encodeURIComponent(consultationId)}`)
   }
 
   const handleComplete = async () => {
