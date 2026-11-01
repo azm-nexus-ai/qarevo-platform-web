@@ -617,7 +617,7 @@ test('intake requires visible consent and keeps clinical text out of navigation 
   await signIn(page, alpha)
   await page.goto(`/patient/consultation-booking/intake?physicianId=${providerId}&date=2027-01-04&slot=09:00&notes=discard-legacy-query`)
   await page.getByRole('button', { name: 'Continue to Review' }).click()
-  await expect(page.getByRole('alert')).toContainText('Confirm the required data-processing choice')
+  await expect(page.locator('[data-validation-summary]')).toContainText('Confirm the required data-processing choice')
   expect(created).toHaveLength(0)
   await page.getByLabel('Chief Complaint (Required)').fill('Synthetic private concern')
   await page.getByLabel('I agree to processing this synthetic intake').check()
