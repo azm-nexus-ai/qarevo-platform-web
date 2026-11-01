@@ -64,11 +64,11 @@ function StatCard({ title, value, subtitle, icon, color, trend }: {
 function HealthCard({ data }: { data: AdminDashboardHealth }) {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'green':
-        return { bg: 'rgba(15,158,119,0.12)', color: T.green, text: 'System Healthy' }
-      case 'amber':
+      case 'healthy':
+        return { bg: 'rgba(15,158,119,0.12)', color: T.green, text: 'No Open Operational Alerts' }
+      case 'warning':
         return { bg: 'rgba(217,119,6,0.12)', color: T.amber, text: 'Attention Needed' }
-      case 'red':
+      case 'critical':
         return { bg: 'rgba(220,38,38,0.12)', color: T.red, text: 'Critical Issues' }
       default:
         return { bg: 'rgba(32,181,223,0.12)', color: T.blue, text: status }
@@ -88,7 +88,7 @@ function HealthCard({ data }: { data: AdminDashboardHealth }) {
       padding: '24px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>System Health</h3>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Operational Status</h3>
         <span style={{
           padding: '6px 12px',
           borderRadius: '999px',
@@ -161,6 +161,7 @@ export default function AdminDashboard() {
   const [doctorsSummary, setDoctorsSummary] = useState<AdminDashboardDoctorsSummary | null>(null)
   const [patientsSummary, setPatientsSummary] = useState<AdminDashboardPatientsSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [retry, setRetry] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -175,6 +176,7 @@ export default function AdminDashboard() {
       return
     }
 
+    setLoading(true)
     let cancelled = false
 
     async function fetchDashboard() {
@@ -212,7 +214,7 @@ export default function AdminDashboard() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, retry])
 
   if (loading) {
     return (
@@ -225,7 +227,8 @@ export default function AdminDashboard() {
   if (error) {
     return (
       <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
-        {error}
+        <p>{error}</p>
+        <button type="button" onClick={() => setRetry(value => value + 1)} style={{ padding: 12, borderRadius: 10, cursor: 'pointer' }}>Try again</button>
       </div>
     )
   }

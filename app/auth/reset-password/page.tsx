@@ -254,9 +254,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'End-to-End Encryption', sub: 'Password updates are securely processed' },
-          { icon: ICONS.shield, label: 'Identity Verified', sub: 'Only authenticated users can reset credentials' },
-          { icon: ICONS.check, label: 'HIPAA · GDPR Ready', sub: 'Healthcare-grade compliance and safety' },
+          { icon: ICONS.lock, label: 'Single-use Link', sub: 'A completed reset invalidates this link' },
+          { icon: ICONS.shield, label: 'Mailbox Access', sub: 'Use the link sent to your email address' },
+          { icon: ICONS.check, label: 'Session Protection', sub: 'Existing refresh sessions are revoked after reset' },
         ].map(({ icon, label, sub }, i) => (
           <div
             key={label}

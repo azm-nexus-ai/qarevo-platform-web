@@ -47,6 +47,8 @@ async function mockApi(context: BrowserContext) {
       const body = request.postDataJSON()
       return route.fulfill({ headers: cors, json: tokens(body.email) })
     }
+    if (pathname === '/api/v1/auth/forgot-password') return route.fulfill({ headers: cors, json: { message: 'If an account exists, instructions have been requested.' } })
+    if (pathname === '/api/v1/auth/reset-password') return route.fulfill({ headers: cors, json: { message: 'Password has been reset successfully.' } })
     if (pathname === '/api/v1/patient/register') {
       return route.fulfill({ headers: cors, json: { user_id: request.postDataJSON().email, message: 'Check your email.' } })
     }
@@ -196,7 +198,7 @@ test('new signup owns its email, clears old drafts and can complete mocked OTP',
   await page.goto('/auth/sign-up')
   await page.getByLabel('Email Address').fill(beta)
   await page.getByLabel('Password', { exact: true }).fill(password)
-  await page.getByLabel('Confirm Password', { exact: true }).fill(password)
+  await page.getByLabel('Confirm New Password', { exact: true }).fill(password)
   await page.getByRole('checkbox').nth(0).click()
   await page.getByRole('checkbox').nth(1).click()
   await page.locator('button[type="submit"]').click()
@@ -298,7 +300,7 @@ test('prescription outage can be retried and only persisted instructions are ren
   const scenario = scenarios.get(context)!
   scenario.recordsStatus = 503
   await page.goto('/patient/prescription-care-plan')
-  await expect(page.getByRole('alert')).toContainText('We couldn’t load your records')
+  await expect(page.getByRole('heading', { name: 'We couldn’t load your records', exact: true })).toBeVisible()
   await expect(page.getByText('No medications recorded', { exact: true })).toHaveCount(0)
   scenario.recordsStatus = 200
   scenario.records = { medications: [{ id: 'synthetic-record', name: 'Synthetic medication record', instructions: 'Exact clinician instruction from the fixture' }], care_plans: [] }
@@ -379,7 +381,7 @@ test('all profile steps save, survive a fresh sign-in and keep funding distinct'
   await page.locator('#postalCode').fill('10115')
   await page.getByRole('button', { name: 'Email', exact: true }).click()
   await page.locator('#emergencyName').fill('Synthetic Contact')
-  await page.locator('#emergencyRelationship').selectOption('Friend')
+  await page.getByLabel('Relationship (Required)', { exact: true }).selectOption('Friend')
   await page.locator('#emergencyPhone').fill('+49301234567')
   await page.locator('button[type="submit"]').click()
   await expect(page).toHaveURL(/medical-history-allergies$/)
@@ -415,4 +417,20 @@ test('an unsaved account cannot claim a completed profile through a direct URL',
   await page.goto('/auth/profile-setup/profile-completed')
   await expect(page.getByRole('heading', { name: 'Your profile still needs a saved step' })).toBeVisible()
   await expect(page.getByText('100% Complete', { exact: true })).toHaveCount(0)
+})
+
+
+test('password recovery guides users through their email link and rejects a missing token', async ({ page }) => {
+  await page.goto('/auth/forgot-password')
+  await page.getByLabel('Email Address').fill(alpha)
+  await page.locator('button[type="submit"]').click()
+  await expect(page.getByText('If an eligible account exists', { exact: false })).toBeVisible()
+  await expect(page.locator('a[href="/auth/reset-password"]')).toHaveCount(0)
+  await page.goto('/auth/reset-password')
+  await expect(page.getByText('The password reset link is missing or invalid.', { exact: false })).toBeVisible()
+  await page.goto('/auth/reset-password?token=synthetic-reset-token')
+  await page.getByLabel('New Password', { exact: true }).fill('SyntheticNewPassword123!')
+  await page.getByLabel('Confirm New Password', { exact: true }).fill('SyntheticNewPassword123!')
+  await page.locator('button[type="submit"]').click()
+  await expect(page.getByText('Your password has been successfully updated.', { exact: false })).toBeVisible()
 })

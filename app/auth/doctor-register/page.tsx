@@ -314,7 +314,7 @@ export default function DoctorRegisterPage() {
     }
     
     if (!consentAccepted) {
-      setAuthError('You must accept the terms and consent to telehealth services')
+      setAuthError('Please acknowledge the development test conditions')
       return
     }
 
@@ -413,7 +413,7 @@ export default function DoctorRegisterPage() {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {['HIPAA', 'GDPR', 'ISO 27001'].map(b => (
+            {['Development', 'Synthetic data', 'Test accounts'].map(b => (
               <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.48)', letterSpacing: '0.04em' }}>{b}</span>
             ))}
           </div>
@@ -708,7 +708,7 @@ export default function DoctorRegisterPage() {
                   checked={consentAccepted}
                   onChange={() => setConsentAccepted(!consentAccepted)}
                 >
-                  I accept the <Link href="/terms" style={{ color: T.blue, textDecoration: 'underline' }}>Terms of Service</Link> and <Link href="/privacy" style={{ color: T.blue, textDecoration: 'underline' }}>Privacy Policy</Link>, and consent to telehealth services and virtual consultations
+                  I will use synthetic information only in this development test. The <Link href="/terms" style={{ color: T.blue, textDecoration: 'underline' }}>Terms of Service</Link> and <Link href="/privacy" style={{ color: T.blue, textDecoration: 'underline' }}>Privacy Policy</Link> are awaiting approval. This does not authorise real-patient care. (Required)
                 </Checkbox>
               </div>
 

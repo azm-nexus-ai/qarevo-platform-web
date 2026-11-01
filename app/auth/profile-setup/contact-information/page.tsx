@@ -546,8 +546,8 @@ export default function ContactInformationPage() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='relationship' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Relationship</label>
-                  <select id='relationship' value={form.emergencyRelationship} onChange={(e) => updateField('emergencyRelationship', e.target.value as Relationship)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyRelationship: true }))} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyRelationship'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}>
+                  <label htmlFor='relationship' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Relationship (Required)</label>
+                  <select required id='relationship' value={form.emergencyRelationship} onChange={(e) => updateField('emergencyRelationship', e.target.value as Relationship)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyRelationship: true }))} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyRelationship'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}>
                     <option value=''>Select</option>
                     <option value='Parent'>Parent</option>
                     <option value='Spouse'>Spouse</option>

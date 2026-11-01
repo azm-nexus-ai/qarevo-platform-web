@@ -2626,7 +2626,7 @@ export type AdminDashboardDoctorsSummary = {
     total: number;
     verified: number;
     pending: number;
-    by_specialty?: Record<string, number> | null;
+    by_specialty: Record<string, number>;
 };
 
 export type AdminDashboardPatientsSummary = {

@@ -328,8 +328,8 @@ function LeftDecor() {
 
         {/* Social proof strip */}
         {[
-          { icon: ICONS.shield, label: 'HIPAA Ready', color: 'rgba(165,224,218,0.85)' },
-          { icon: ICONS.lock, label: 'GDPR Compliant', color: 'rgba(147,197,253,0.85)' },
+          { icon: ICONS.shield, label: 'Synthetic Data Only', color: 'rgba(165,224,218,0.85)' },
+          { icon: ICONS.lock, label: 'Development Preview', color: 'rgba(147,197,253,0.85)' },
           { icon: ICONS.check, label: 'ISO 27001', color: 'rgba(251,191,36,0.85)' },
         ].map(({ icon, label, color }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
@@ -541,16 +541,16 @@ export default function SignUpPage() {
                 {/* Agreements */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: `1px solid ${agreementError ? 'rgba(220,38,38,0.3)' : T.borderFaint}` }}>
                   <Checkbox checked={terms} onChange={toggleTerms} error={submitted && !terms}>
-                    I agree to the{' '}
-                    <Link href="/terms" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>Terms of Service</Link>
+                    I understand this is a development test. Read the{' '}
+                    <Link href="/terms" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>terms status</Link> (Required)
                   </Checkbox>
                   <Checkbox checked={privacy} onChange={togglePrivacy} error={submitted && !privacy}>
-                    I agree to the{' '}
-                    <Link href="/privacy" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>Privacy Policy</Link>
-                    {' '}and data processing under GDPR
+                    I will use synthetic test information only. Read the{' '}
+                    <Link href="/privacy" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>privacy status</Link>
+                    {' '}(Required). Approved privacy and care consent texts are not yet published.
                   </Checkbox>
                   <Checkbox checked={marketing} onChange={toggleMarketing} error={false}>
-                    I agree to receive marketing communications from Qarevo Health
+                    Store my optional test marketing preference (Optional)
                   </Checkbox>
                 </div>
 
@@ -590,8 +590,8 @@ export default function SignUpPage() {
             {/* Trust row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)', flexWrap: 'wrap' }}>
               {[
-                { icon: ICONS.lock, label: 'HIPAA Ready' },
-                { icon: ICONS.shield, label: 'GDPR Compliant' },
+                { icon: ICONS.lock, label: 'Synthetic Data Only' },
+                { icon: ICONS.shield, label: 'Development Preview' },
                 { icon: ICONS.check, label: 'ISO 27001' },
               ].map(({ icon, label }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>

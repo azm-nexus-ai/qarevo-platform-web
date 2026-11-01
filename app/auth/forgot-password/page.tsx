@@ -678,10 +678,10 @@ export default function ForgotPasswordPage() {
                     Check your email
                   </h1>
                   <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
-                    We&apos;ve sent password reset instructions to your email address. If an account exists with this email, you&apos;ll receive a secure password reset link shortly.
+                    If an eligible account exists, we will attempt to send reset instructions. Check your inbox and spam folder; use the link in that email to continue.
                   </p>
                   <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2 }}>
-                    Sent to <span style={{ fontWeight: 700, color: T.navy }}>{sentTo}</span>
+                    Requested for <span style={{ fontWeight: 700, color: T.navy }}>{sentTo}</span>
                   </p>
                 </div>
 
@@ -689,7 +689,7 @@ export default function ForgotPasswordPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <Link
-                    href='/auth/reset-password'
+                    href='/auth/sign-in'
                     style={{
                       width: '100%',
                       padding: '13px 18px',
@@ -710,7 +710,7 @@ export default function ForgotPasswordPage() {
                       boxShadow: '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)',
                     }}
                   >
-                    Continue to Reset Password
+                    Back to Sign In
                     <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
                   </Link>
 
