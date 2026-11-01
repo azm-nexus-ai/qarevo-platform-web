@@ -15,7 +15,7 @@ const masked = (e: string) => e.replace(/(.{2}).+(@.+)/, '$1•••$2')
 function readSignupEmail() {
   if (typeof window === 'undefined') return ''
   try {
-    const raw = window.localStorage.getItem(SIGNUP_STORAGE_KEY)
+    const raw = window.sessionStorage.getItem(SIGNUP_STORAGE_KEY)
     const stored = raw ? (JSON.parse(raw) as { email?: string }) : null
     return stored?.email?.trim().toLowerCase() || ''
   } catch {

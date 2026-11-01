@@ -61,13 +61,7 @@ export default function PatientMobileNavigation() {
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem('qarevo_access_token')
-    localStorage.removeItem('qarevo_refresh_token')
-    localStorage.removeItem('qarevo_token_type')
-    localStorage.removeItem('qarevo_expires_in')
-    localStorage.removeItem('qarevo_user_id')
-    localStorage.removeItem('qarevo_provider_id')
-    localStorage.removeItem('qarevo_role')
+    clearAuthTokens()
     setShowLogoutModal(false)
     closeDrawer()
     router.push('/auth/sign-in')

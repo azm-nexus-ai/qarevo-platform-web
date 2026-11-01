@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { getApiErrorDetail, registerPatient } from '@/lib/api'
+import { clearAuthTokens, getApiErrorDetail, registerPatient } from '@/lib/api'
 
 // ─── Page background ──────────────────────────────────────────────────────────
 
@@ -407,16 +407,16 @@ export default function SignUpPage() {
         },
       })
 
+      clearAuthTokens()
       try {
-        window.localStorage.setItem(
+        window.sessionStorage.setItem(
           SIGNUP_STORAGE_KEY,
           JSON.stringify({
-            fullName: 'Patient',
             email,
           }),
         )
       } catch {
-        // Continue to verification even if local storage is unavailable.
+        // Continue to verification even if session storage is unavailable.
       }
       router.push('/auth/verify-email')
     } catch (error) {

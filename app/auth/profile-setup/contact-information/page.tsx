@@ -9,6 +9,7 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
 import { createEmergencyContact, getApiErrorDetail, getPatientSettings, updateProfile } from '@/lib/api'
+import { createAccountDraftStorage } from '@/lib/account-storage'
 
 const LEFT_BG = [
   'radial-gradient(ellipse 80% 60% at 18% 12%,  rgba(32,181,223,0.32) 0%, transparent 52%)',
@@ -19,8 +20,6 @@ const LEFT_BG = [
 ].join(', ')
 
 const STORAGE_KEY = 'qarevo.onboarding.contact-information.v1'
-const SIGNUP_STORAGE_KEY = 'qarevo.auth.signup.v1'
-const PERSONAL_INFO_STORAGE_KEY = 'qarevo.onboarding.personal-information.v1'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 type ContactMethod = 'Phone Call' | 'SMS' | 'Email' | 'WhatsApp' | ''
@@ -243,11 +242,12 @@ function SectionHeader({ title, body }: { title: string; body: string }) {
 
 export default function ContactInformationPage() {
   const router = useRouter()
+  const [draftStorage] = useState(createAccountDraftStorage)
   const [form, setForm] = useState<ContactForm>(INITIAL_FORM)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [savedTick, setSavedTick] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('Progress autosaves as you type')
+  const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
@@ -255,43 +255,51 @@ export default function ContactInformationPage() {
   const [showOptionalEmergency, setShowOptionalEmergency] = useState(false)
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY)
-      const signupRaw = window.localStorage.getItem(SIGNUP_STORAGE_KEY)
-      const personalRaw = window.localStorage.getItem(PERSONAL_INFO_STORAGE_KEY)
+    let cancelled = false
 
+    try {
+      const stored = draftStorage.getItem(STORAGE_KEY)
       if (stored) {
         const parsed = JSON.parse(stored)
-        queueMicrotask(() => setForm({ ...INITIAL_FORM, ...parsed }))
-        return
+        queueMicrotask(() => {
+          if (!cancelled) setForm({ ...INITIAL_FORM, ...parsed })
+        })
       }
-
-      const signup = signupRaw ? (JSON.parse(signupRaw) as { email?: string; country?: string; phone?: string }) : null
-      const personal = personalRaw ? (JSON.parse(personalRaw) as { fullName?: string }) : null
-
-      queueMicrotask(() => {
-        setForm((prev) => ({
-          ...prev,
-          email: signup?.email || '',
-          country: signup?.country || '',
-          primaryPhone: signup?.phone || '',
-          emergencyName: personal?.fullName || '',
-        }))
-      })
     } catch {
-      // Ignore storage parse issues in prototype mode.
+      // Invalid or inaccessible drafts are ignored.
     }
-  }, [])
+
+    getPatientSettings()
+      .then(settings => {
+        if (!cancelled) {
+          setForm(previous => ({
+            ...previous,
+            email: settings.email,
+            primaryPhone: previous.primaryPhone || settings.phone || '',
+          }))
+        }
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setSubmitError(
+            getApiErrorDetail(error) ||
+            'Could not load your contact details. Reload to try again.'
+          )
+        }
+      })
+
+    return () => { cancelled = true }
+  }, [draftStorage])
 
   useEffect(() => {
     const id = window.setTimeout(() => {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
+        draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
         setSavedTick(true)
-        setSaveMessage('Changes Saved')
+        setSaveMessage('Draft saved in this tab')
         window.setTimeout(() => {
           setSavedTick(false)
-          setSaveMessage('Progress autosaves as you type')
+          setSaveMessage('Draft autosaves in this tab')
         }, 1400)
       } catch {
         setSaveMessage('Could not autosave right now')
@@ -299,7 +307,7 @@ export default function ContactInformationPage() {
     }, 320)
 
     return () => window.clearTimeout(id)
-  }, [form])
+  }, [form, draftStorage])
 
   const helpText = useMemo(
     () =>

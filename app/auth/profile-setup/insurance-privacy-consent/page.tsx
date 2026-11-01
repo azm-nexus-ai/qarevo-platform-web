@@ -10,6 +10,7 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
 import { ApiError, createInsurance, getApiErrorDetail, updateInsurance } from '@/lib/api'
+import { createAccountDraftStorage } from '@/lib/account-storage'
 
 const LEFT_BG = [
   'radial-gradient(ellipse 80% 60% at 18% 12%,  rgba(32,181,223,0.32) 0%, transparent 52%)',
@@ -489,11 +490,12 @@ function SecurityPill({ icon, title }: { icon: string | readonly string[]; title
 
 export default function InsurancePrivacyConsentPage() {
   const router = useRouter()
+  const [draftStorage] = useState(createAccountDraftStorage)
   const insuranceFrontRef = useRef<HTMLInputElement | null>(null)
   const insuranceBackRef = useRef<HTMLInputElement | null>(null)
   const [form, setForm] = useState<InsuranceForm>(INITIAL_FORM)
   const [savedTick, setSavedTick] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('Progress autosaves as you type')
+  const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
   const [submitting, setSubmitting] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -502,22 +504,22 @@ export default function InsurancePrivacyConsentPage() {
 
   useEffect(() => {
     try {
-      const stored = parseStoredForm(window.localStorage.getItem(STORAGE_KEY))
+      const stored = parseStoredForm(draftStorage.getItem(STORAGE_KEY))
       if (stored) queueMicrotask(() => setForm(stored))
     } catch {
       // Ignore prototype storage issues.
     }
-  }, [])
+  }, [draftStorage])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
+        draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
         setSavedTick(true)
-        setSaveMessage('Progress Saved')
+        setSaveMessage('Draft saved in this tab')
         window.setTimeout(() => {
           setSavedTick(false)
-          setSaveMessage('Progress autosaves as you type')
+          setSaveMessage('Draft autosaves in this tab')
         }, 1400)
       } catch {
         setSaveMessage('Could not autosave right now')
@@ -525,7 +527,7 @@ export default function InsurancePrivacyConsentPage() {
     }, 320)
 
     return () => window.clearTimeout(timer)
-  }, [form])
+  }, [form, draftStorage])
 
   useEffect(() => {
     if (submitted) queueMicrotask(() => setErrors(validateForm(form)))

@@ -8,7 +8,7 @@ import { NAV_LINKS, NAV_ANCHORS } from '@/constants/navigation'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
-import { readAccessToken } from '@/lib/api'
+import { clearAuthTokens, readAccessToken } from '@/lib/api'
 
 export default function NavigationBar() {
   const [activeSection, setActiveSection] = useState<string>('Platform Overview')
@@ -52,13 +52,7 @@ export default function NavigationBar() {
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem('qarevo_access_token')
-    localStorage.removeItem('qarevo_refresh_token')
-    localStorage.removeItem('qarevo_token_type')
-    localStorage.removeItem('qarevo_expires_in')
-    localStorage.removeItem('qarevo_user_id')
-    localStorage.removeItem('qarevo_provider_id')
-    localStorage.removeItem('qarevo_role')
+    clearAuthTokens()
     setIsAuthenticated(false)
     setShowLogoutModal(false)
     router.push('/auth/sign-in')

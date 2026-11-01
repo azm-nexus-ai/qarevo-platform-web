@@ -8,10 +8,12 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node --test tests/account-storage.test.cjs && next build",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:privacy": "node --test tests/account-storage.test.cjs",
+    "test:e2e:privacy": "playwright test e2e/account-privacy.spec.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",

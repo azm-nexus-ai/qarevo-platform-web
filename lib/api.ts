@@ -1,3 +1,9 @@
+import {
+    accountChanged,
+    assertCurrentAccount,
+    readAccountScope,
+} from "@/lib/account-storage";
+
 const getBaseUrl = () => {
     const baseUrl = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
     if (!baseUrl) {
@@ -9,11 +15,13 @@ const getBaseUrl = () => {
 
 export function readAccessToken(): string | null {
     if (typeof window === "undefined") return null;
+    assertCurrentAccount();
     return window.localStorage.getItem("qarevo_access_token");
 }
 
 export function readRefreshToken(): string | null {
     if (typeof window === "undefined") return null;
+    assertCurrentAccount();
     return window.localStorage.getItem("qarevo_refresh_token");
 }
 
@@ -44,6 +52,7 @@ export function clearAuthTokens() {
         "qarevo_temp_auth",
         "qarevo_temp_token",
     ].forEach((key) => window.localStorage.removeItem(key));
+    accountChanged();
 }
 
 export class ApiError extends Error {
@@ -115,6 +124,16 @@ export function storeAuthTokens(payload: {
     role?: string;
 }) {
     if (typeof window === "undefined") return;
+    const newSession =
+        Boolean(payload.role) ||
+        Boolean(
+            payload.user_id &&
+            payload.user_id !== window.localStorage.getItem("qarevo_user_id")
+        );
+    if (newSession) {
+        window.localStorage.removeItem("qarevo_role");
+        window.localStorage.removeItem("qarevo_provider_id");
+    }
     window.localStorage.setItem("qarevo_access_token", payload.access_token);
     window.localStorage.setItem("qarevo_refresh_token", payload.refresh_token);
     window.localStorage.setItem("qarevo_token_type", payload.token_type ?? "bearer");
@@ -122,9 +141,11 @@ export function storeAuthTokens(payload: {
     if (payload.user_id) window.localStorage.setItem("qarevo_user_id", payload.user_id);
     if (payload.provider_id) window.localStorage.setItem("qarevo_provider_id", payload.provider_id);
     if (payload.role) window.localStorage.setItem("qarevo_role", payload.role);
+    if (newSession) accountChanged();
 }
 
 async function refreshAuthToken(): Promise<boolean> {
+    const scope = readAccountScope();
     const refreshToken = readRefreshToken();
     if (!refreshToken) return false;
 
@@ -137,6 +158,7 @@ async function refreshAuthToken(): Promise<boolean> {
             cache: "no-store",
         });
     } catch (error) {
+        if (scope !== readAccountScope()) return false;
         console.warn("Auth refresh request failed", error);
         clearAuthTokens();
         if (typeof window !== "undefined") {
@@ -145,6 +167,7 @@ async function refreshAuthToken(): Promise<boolean> {
         return false;
     }
 
+    if (scope !== readAccountScope()) return false;
     if (!res.ok) {
         clearAuthTokens();
         if (typeof window !== "undefined") {
@@ -162,6 +185,7 @@ async function refreshAuthToken(): Promise<boolean> {
         provider_id?: string;
         role?: string;
     };
+    if (scope !== readAccountScope()) return false;
     storeAuthTokens(payload);
     return true;
 }
@@ -174,20 +198,54 @@ function authHeaders(headers?: Record<string, string>): Record<string, string> {
     };
 }
 
-async function fetchWithAuthRetry(input: string, init: RequestInit): Promise<Response> {
+async function fetchWithAuthRetry(
+    input: string,
+    init: RequestInit
+): Promise<Response> {
+    assertCurrentAccount();
+
+    const scope = readAccountScope();
+    const accessAtStart = readAccessToken();
+    const sessionRequest =
+        Boolean(accessAtStart) &&
+        new Headers(init.headers).get("Authorization") ===
+        "Bearer " + accessAtStart;
+    const authRequest = new URL(input).pathname.startsWith("/api/v1/auth/");
+
+    const check = () => {
+        assertCurrentAccount();
+        if (scope !== readAccountScope()) {
+            throw new Error("Your session changed. Reload this page.");
+        }
+    };
+
     const res = await fetch(input, init);
-    if (res.status !== 401 || !readRefreshToken()) return res;
+    check();
+
+    if (
+        res.status !== 401 ||
+        !sessionRequest ||
+        authRequest ||
+        !readRefreshToken()
+    ) {
+        return res;
+    }
 
     const refreshed = await refreshAuthToken().catch(() => false);
+    check();
     if (!refreshed) return res;
 
-    return fetch(input, {
-        ...init,
-        headers: authHeaders(init.headers as Record<string, string> | undefined),
-    });
+    const headers = new Headers(init.headers);
+    const token = readAccessToken();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+
+    const retried = await fetch(input, { ...init, headers });
+    check();
+    return retried;
 }
 
 export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
+    const scope = readAccountScope();
     const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         headers: authHeaders(headers),
         cache: "no-store",
@@ -195,13 +253,25 @@ export async function apiGet<T>(path: string, headers?: Record<string, string>):
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
+        assertCurrentAccount();
+        if (scope !== readAccountScope()) {
+            throw new Error("Your session changed. Reload this page.");
+        }
         throw new ApiError(res.status, text);
     }
 
-    return res.json() as Promise<T>;
+    const result = (await res.json()) as T;
+    assertCurrentAccount();
+
+    if (scope !== readAccountScope()) {
+        throw new Error("Your session changed. Reload this page.");
+    }
+
+    return result;
 }
 
 export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
+    const scope = readAccountScope();
     const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "POST",
         headers: {
@@ -214,13 +284,25 @@ export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: 
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
+        assertCurrentAccount();
+        if (scope !== readAccountScope()) {
+            throw new Error("Your session changed. Reload this page.");
+        }
         throw new ApiError(res.status, text);
     }
 
-    return res.json() as Promise<T>;
+    const result = (await res.json()) as T;
+    assertCurrentAccount();
+
+    if (scope !== readAccountScope()) {
+        throw new Error("Your session changed. Reload this page.");
+    }
+
+    return result;
 }
 
 export async function apiPut<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
+    const scope = readAccountScope();
     const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "PUT",
         headers: {
@@ -233,13 +315,25 @@ export async function apiPut<T, B = unknown>(path: string, body?: B, headers?: R
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
+        assertCurrentAccount();
+        if (scope !== readAccountScope()) {
+            throw new Error("Your session changed. Reload this page.");
+        }
         throw new ApiError(res.status, text);
     }
 
-    return res.json() as Promise<T>;
+    const result = (await res.json()) as T;
+    assertCurrentAccount();
+
+    if (scope !== readAccountScope()) {
+        throw new Error("Your session changed. Reload this page.");
+    }
+
+    return result;
 }
 
 export async function apiPatch<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
+    const scope = readAccountScope();
     const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "PATCH",
         headers: {
@@ -252,13 +346,25 @@ export async function apiPatch<T, B = unknown>(path: string, body?: B, headers?:
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
+        assertCurrentAccount();
+        if (scope !== readAccountScope()) {
+            throw new Error("Your session changed. Reload this page.");
+        }
         throw new ApiError(res.status, text);
     }
 
-    return res.json() as Promise<T>;
+    const result = (await res.json()) as T;
+    assertCurrentAccount();
+
+    if (scope !== readAccountScope()) {
+        throw new Error("Your session changed. Reload this page.");
+    }
+
+    return result;
 }
 
 export async function apiDelete<T>(path: string, headers?: Record<string, string>): Promise<T> {
+    const scope = readAccountScope();
     const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "DELETE",
         headers: authHeaders(headers),
@@ -267,13 +373,25 @@ export async function apiDelete<T>(path: string, headers?: Record<string, string
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
+        assertCurrentAccount();
+        if (scope !== readAccountScope()) {
+            throw new Error("Your session changed. Reload this page.");
+        }
         throw new ApiError(res.status, text);
     }
 
-    return res.json() as Promise<T>;
+    const result = (await res.json()) as T;
+    assertCurrentAccount();
+
+    if (scope !== readAccountScope()) {
+        throw new Error("Your session changed. Reload this page.");
+    }
+
+    return result;
 }
 
 export async function apiUpload<T>(path: string, formData: FormData, headers?: Record<string, string>): Promise<T> {
+    const scope = readAccountScope();
     const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
         method: "POST",
         headers: authHeaders(headers),
@@ -283,10 +401,21 @@ export async function apiUpload<T>(path: string, formData: FormData, headers?: R
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
+        assertCurrentAccount();
+        if (scope !== readAccountScope()) {
+            throw new Error("Your session changed. Reload this page.");
+        }
         throw new ApiError(res.status, text);
     }
 
-    return res.json() as Promise<T>;
+    const result = (await res.json()) as T;
+    assertCurrentAccount();
+
+    if (scope !== readAccountScope()) {
+        throw new Error("Your session changed. Reload this page.");
+    }
+
+    return result;
 }
 
 export type CreateMeetingRequest = {
@@ -830,6 +959,7 @@ export async function loginAdmin(body: { email: string; password: string }): Pro
   return apiPost<AdminLoginResponse>("/api/v1/auth/admin/login", body);
 }
 export async function logoutCurrentUser(): Promise<void> {
+    const scope = readAccountScope();
     const refreshToken = readRefreshToken();
     try {
         if (refreshToken) {
@@ -838,7 +968,7 @@ export async function logoutCurrentUser(): Promise<void> {
             });
         }
     } finally {
-        clearAuthTokens();
+        if (scope === readAccountScope()) clearAuthTokens();
     }
 }
 
