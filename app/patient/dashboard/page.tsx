@@ -1590,10 +1590,10 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='AI Health Insights' sub='Informational recommendations based on your recent activity and care history.'>
+          <SectionCard title='Optional AI assistance' sub='Drafting support remains subject to clinician review.'>
             <div style={{ borderRadius: '16px', overflow: 'hidden', border: "1px solid var(--border)", background: "var(--surface-glass)" }}>
               {displayAIInsights.length === 0 && (
-                <EmptyState>No AI insights yet. They will appear after clinical intake or care activity is processed.</EmptyState>
+                <EmptyState>{text(dashboardData?.ai_insights_message, 'Optional AI drafting supports clinician review. Care recommendations are shared through your clinician-approved care record.')}</EmptyState>
               )}
               {displayAIInsights.map((item, index) => (
                 <AIItem

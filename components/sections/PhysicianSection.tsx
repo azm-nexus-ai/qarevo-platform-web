@@ -22,12 +22,12 @@ export default function PhysicianSection() {
       style={{
         position: 'relative',
         zIndex: 1,
-        background: 'rgba(255,255,255,0.52)',
+        background: 'var(--surface-subtle)',
         backdropFilter: 'blur(28px) saturate(160%)',
         WebkitBackdropFilter: 'blur(28px) saturate(160%)',
         borderTop: "1px solid var(--border)",
-        borderBottom: '1px solid rgba(255,255,255,0.56)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(4,53,77,0.02)',
+        borderBottom: '1px solid var(--border)',
+        boxShadow: 'none',
       }}
     >
       <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '88px 24px' }}>

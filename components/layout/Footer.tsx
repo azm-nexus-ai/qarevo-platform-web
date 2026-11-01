@@ -67,7 +67,7 @@ export default function Footer() {
                 letterSpacing: '-0.005em',
               }}
             >
-              European healthcare engineered for precision. Verified physicians, clinical AI, and enterprise-grade data governance.
+              Connecting patients and independent practices through clinician-led digital care. Development preview.
             </p>
           </div>
 
