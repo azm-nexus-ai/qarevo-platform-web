@@ -2657,50 +2657,49 @@ export async function getAdminDashboardPatientsSummary(): Promise<AdminDashboard
 
 // Admin Doctors Types
 export type AdminDoctor = {
+    id: string;
     provider_id: string;
     user_id: string;
     full_name: string;
     email: string;
-    phone: string;
-    specialty: string;
-    experience_years: number;
-    license_number: string;
+    email_verified: boolean;
+    phone: string | null;
+    specialty: string | null;
+    license_number: string | null;
     license_verified: boolean;
-    is_independent: boolean;
+    verification_status: string;
     status: string;
-    region?: string;
-    avatar_url?: string;
-    created_at: string;
-    updated_at?: string;
+    region?: string | null;
+    created_at: string | null;
 };
 
 export type AdminDoctorVerification = {
+    id: string;
     provider_id: string;
+    user_id: string;
     full_name: string;
     email: string;
-    phone: string;
-    specialty: string;
-    license_number: string;
-    license_document_url?: string;
-    medical_license_document_url?: string;
-    id_document_url?: string;
-    submission_date: string;
+    email_verified: boolean;
+    phone: string | null;
+    specialty: string | null;
+    license_number: string | null;
+    submitted_at: string | null;
+    verification_status: string;
     status: string;
 };
 
 export type AdminDoctorsListResponse = {
     doctors: AdminDoctor[];
-    total_count: number;
-    filtered_count: number;
-    page: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
+    total: number;
+    limit: number;
+    offset: number;
 };
 
 export type AdminVerifyDoctorRequest = {
     approve: boolean;
     rejection_reason?: string;
+    review_reference?: string;
+    review_confirmed?: boolean;
 };
 
 export type AdminUpdateDoctorStatusRequest = {

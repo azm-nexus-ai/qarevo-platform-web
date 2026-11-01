@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import DoctorReviewDialog from '@/components/admin/DoctorReviewDialog'
 import {
   clearAuthTokens,
   getAdminDoctors,
@@ -60,9 +61,9 @@ function DoctorCard({ doctor, onView, onVerify }: {
   onView: (id: string) => void
   onVerify?: (id: string) => void
 }) {
-  const isVerification = 'submission_date' in doctor
+  const isVerification = Boolean(onVerify)
   const providerId = isVerification ? (doctor as AdminDoctorVerification).provider_id : (doctor as AdminDoctor).provider_id
-  const status = isVerification ? 'pending_verification' : (doctor as AdminDoctor).status
+  const status = isVerification ? doctor.verification_status : doctor.status
 
   return (
     <div style={{
@@ -148,6 +149,8 @@ function DoctorCard({ doctor, onView, onVerify }: {
 
 export default function AdminDoctorsPage() {
   const router = useRouter()
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
+  const [revision, setRevision] = useState(0)
   const [activeTab, setActiveTab] = useState<Tab>('all')
   const [doctors, setDoctors] = useState<AdminDoctor[]>([])
   const [pendingDoctors, setPendingDoctors] = useState<AdminDoctorVerification[]>([])
@@ -199,14 +202,14 @@ export default function AdminDoctorsPage() {
     return () => {
       cancelled = true
     }
-  }, [router, statusFilter, searchQuery])
+  }, [router, statusFilter, searchQuery, revision])
 
   const handleViewDoctor = (providerId: string) => {
-    router.push(`/admin/doctors/${providerId}`)
+    setSelectedProvider(providerId)
   }
 
   const handleVerifyDoctor = (providerId: string) => {
-    router.push(`/admin/doctors/${providerId}/verify`)
+    setSelectedProvider(providerId)
   }
 
   if (loading) {
@@ -311,9 +314,9 @@ export default function AdminDoctorsPage() {
             }}
           >
             <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="suspended">Suspended</option>
+            <option value="ACTIVE">Active</option>
+            <option value="PENDING_VERIFICATION">Pending</option>
+            <option value="SUSPENDED">Suspended</option>
           </select>
         </div>
       )}
@@ -351,6 +354,8 @@ export default function AdminDoctorsPage() {
           )
         )}
       </div>
+      {selectedProvider && <DoctorReviewDialog key={selectedProvider} providerId={selectedProvider}
+        onClose={() => setSelectedProvider(null)} onSaved={() => { setSelectedProvider(null); setRevision(value => value + 1) }} />}
     </div>
   )
 }

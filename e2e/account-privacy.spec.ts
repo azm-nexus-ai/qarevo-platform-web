@@ -556,3 +556,48 @@ for (const portal of ['doctor', 'admin'] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   })
 }
+
+test('administrator can review credentials and suspend access with visible validation', async ({ page, context }) => {
+  await context.addInitScript(() => {
+    localStorage.setItem('qarevo_access_token', 'synthetic-admin-token')
+    localStorage.setItem('qarevo_refresh_token', 'synthetic-admin-refresh')
+    localStorage.setItem('qarevo_user_id', 'synthetic-admin-owner')
+    localStorage.setItem('qarevo_role', 'ADMIN')
+  })
+  const clinician = { id: 'synthetic-provider', provider_id: 'synthetic-provider', user_id: 'synthetic-doctor', full_name: 'Synthetic Clinician', email: 'clinician@example.invalid', email_verified: true, phone: null, specialty: 'General Practice', license_number: 'TEST-LICENCE', status: 'ACTIVE', verification_status: 'PENDING_VERIFICATION' }
+  const decisions: Record<string, unknown>[] = []
+  await context.route('**/api/v1/admin/**', route => {
+    const request = route.request(), path = new URL(request.url()).pathname
+    const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'Content-Type,Authorization', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' }
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+    if (request.method() === 'PUT') {
+      const body = request.postDataJSON(); decisions.push(body)
+      if (body.approve) clinician.verification_status = 'VERIFIED'
+      if (body.status) clinician.status = body.status
+      return route.fulfill({ headers, json: clinician })
+    }
+    if (path.endsWith('/pending')) return route.fulfill({ headers, json: clinician.verification_status === 'VERIFIED' ? [] : [clinician] })
+    if (path.endsWith('/verification')) return route.fulfill({ headers, json: clinician })
+    return route.fulfill({ headers, json: { doctors: [clinician], total: 1, limit: 50, offset: 0 } })
+  })
+  await page.goto('/admin/doctors')
+  await page.getByRole('button', { name: 'View', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Clinician review' })
+  await expect(dialog.getByText('TEST-LICENCE', { exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Save decision', exact: true }).click()
+  await expect(dialog.locator('#review-reference-error')).toContainText('4–500')
+  await expect(dialog.locator('#review-confirmed-error')).toBeVisible()
+  expect(decisions).toHaveLength(0)
+  await dialog.getByLabel('Review reference or reason (Required)').fill('Synthetic credential review reference 123')
+  await dialog.getByRole('checkbox').check()
+  await dialog.getByRole('button', { name: 'Save decision', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  expect(decisions[0]).toMatchObject({ approve: true, review_confirmed: true, review_reference: 'Synthetic credential review reference 123' })
+  await page.getByRole('button', { name: 'View', exact: true }).click()
+  await dialog.getByLabel('Decision (Required)').selectOption('suspend')
+  await dialog.getByLabel('Review reference or reason (Required)').fill('Synthetic suspension test')
+  await dialog.getByRole('button', { name: 'Save decision', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  expect(decisions[1]).toEqual({ status: 'SUSPENDED', reason: 'Synthetic suspension test' })
+  await expect(page.getByText('SUSPENDED', { exact: true })).toBeVisible()
+})

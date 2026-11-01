@@ -28,6 +28,7 @@ const LEFT_BG = [
 
 function getFriendlyDoctorLoginError(error: unknown) {
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+  if (detail.includes('administrator') || detail.includes('clinician_approval') || detail.includes('not active')) return getApiErrorDetail(error) || 'Administrator review is required.'
 
   if (detail.includes('phone not verified')) {
     return 'Phone verification is required. Please complete phone verification to continue.'

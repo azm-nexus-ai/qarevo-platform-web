@@ -242,8 +242,7 @@ function DoctorVerifyEmailPageContent() {
     setLoading(true)
     setAuthError('')
     try {
-      // In production, call the actual API
-      // await apiPost('/api/v1/auth/resend-doctor-verification', { email })
+      await apiPost('/api/v1/auth/resend-verification-email', { email })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (error) {
