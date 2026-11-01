@@ -16,6 +16,8 @@ type RenewalScenario = {
   recordsStatus?: number
   dashboardStatus?: number
   records?: Record<string, unknown>
+  settingsStatus?: number
+  holdSettings?: Promise<void>
   logoutCount?: number
 }
 const scenarios = new WeakMap<BrowserContext, RenewalScenario>()
@@ -67,6 +69,8 @@ async function mockApi(context: BrowserContext) {
       } })
     }
     if (pathname === '/api/v1/patient/settings') {
+      await scenario.holdSettings
+      if (scenario.settingsStatus) return route.fulfill({ headers: cors, status: scenario.settingsStatus, json: { detail: 'Settings unavailable' } })
       const authorization = request.headers().authorization || ''
       if (scenario.expireAccess && authorization.startsWith('Bearer test-access:')) {
         scenario.rejectedAccess++
@@ -198,7 +202,7 @@ test('new signup owns its email, clears old drafts and can complete mocked OTP',
   await page.goto('/auth/sign-up')
   await page.getByLabel('Email Address').fill(beta)
   await page.getByLabel('Password', { exact: true }).fill(password)
-  await page.getByLabel('Confirm New Password', { exact: true }).fill(password)
+  await page.getByLabel('Confirm Password', { exact: true }).fill(password)
   await page.getByRole('checkbox').nth(0).click()
   await page.getByRole('checkbox').nth(1).click()
   await page.locator('button[type="submit"]').click()
@@ -433,4 +437,24 @@ test('password recovery guides users through their email link and rejects a miss
   await page.getByLabel('Confirm New Password', { exact: true }).fill('SyntheticNewPassword123!')
   await page.locator('button[type="submit"]').click()
   await expect(page.getByText('Your password has been successfully updated.', { exact: false })).toBeVisible()
+})
+
+
+test('settings never expose editable defaults before loading and can retry an outage', async ({ page, context }) => {
+  await signIn(page, alpha)
+  const scenario = scenarios.get(context)!
+  let release!: () => void
+  scenario.holdSettings = new Promise<void>(resolve => { release = resolve })
+  scenario.settingsStatus = 503
+  await page.goto('/patient/settings')
+  try {
+    await expect(page.getByRole('button', { name: 'Save Changes', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Profile and contact identity' })).toHaveCount(0)
+  } finally { release() }
+  await expect(page.getByRole('heading', { name: 'We couldn’t load your settings' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save Changes', exact: true })).toHaveCount(0)
+  scenario.settingsStatus = undefined
+  await page.getByRole('button', { name: 'Try again', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Profile and contact identity' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save Changes', exact: true })).toBeEnabled()
 })

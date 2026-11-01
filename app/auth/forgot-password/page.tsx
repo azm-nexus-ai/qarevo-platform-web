@@ -212,7 +212,7 @@ function LeftPanel() {
         {[
           { icon: ICONS.lock, label: 'Encrypted Reset Flow', sub: 'Secure links with expiry safeguards' },
           { icon: ICONS.shield, label: 'Privacy by Default', sub: 'No account details exposed during recovery' },
-          { icon: ICONS.check, label: 'HIPAA · GDPR Ready', sub: 'Built for healthcare-grade trust' },
+          { icon: ICONS.check, label: 'Single-use Recovery Link', sub: 'Use the link sent to your mailbox' },
         ].map(({ icon, label, sub }, i) => (
           <div
             key={label}
@@ -806,7 +806,7 @@ export default function ForgotPasswordPage() {
                 {[
                   { icon: ICONS.lock, label: 'Secure Recovery' },
                   { icon: ICONS.shield, label: 'Encrypted Workflow' },
-                  { icon: ICONS.check, label: 'HIPAA · GDPR' },
+                  { icon: ICONS.check, label: 'Account Recovery' },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />

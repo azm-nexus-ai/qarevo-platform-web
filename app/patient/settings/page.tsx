@@ -7,7 +7,7 @@ import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/compone
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { T } from '@/lib/tokens'
-import { clearAuthTokens, createEmergencyContact, createInsurance, deactivatePatientAccount, deleteEmergencyContact, deletePatientPasskey, downloadPatientDataExport, getApiErrorDetail, getPatientActiveDevices, getPatientHealthInfo, getPatientLoginHistory, getPatientPasskeyStatus, getPatientPasskeys, getPatientSettings, isAuthError, readAccessToken, registerPatientPasskey, revokeOtherPatientActiveDevices, revokePatientActiveDevice, updateEmergencyContact, updateInsurance, updatePatientHealthInfo, updatePatientSettings, updateProfile, uploadMedicalRecord, type PatientActiveDevice, type PatientHealthInfoUpdate, type PatientLoginHistoryItem, type PatientPasskeyCredential, type PatientPasskeyStatus, type EmergencyContact, type Insurance, type EmergencyContactCreate } from '@/lib/api'
+import { clearAuthTokens, createEmergencyContact, createInsurance, deactivatePatientAccount, deleteEmergencyContact, deletePatientPasskey, downloadPatientDataExport, getApiErrorDetail, getPatientActiveDevices, getPatientHealthInfo, getPatientLoginHistory, getPatientPasskeyStatus, getPatientPasskeys, getPatientSettings, isAuthError, readAccessToken, registerPatientPasskey, revokeOtherPatientActiveDevices, revokePatientActiveDevice, updateEmergencyContact, updateInsurance, updatePatientSettings, updateProfile, uploadMedicalRecord, type PatientActiveDevice, type PatientLoginHistoryItem, type PatientPasskeyCredential, type PatientPasskeyStatus, type EmergencyContact, type Insurance, type EmergencyContactCreate } from '@/lib/api'
 
 type ToggleKey =
   | 'emailNotifications'
@@ -47,7 +47,7 @@ const DEFAULT_TOGGLES: Record<ToggleKey, boolean> = {
 
 const SECURITY_ITEMS = [
   { title: 'Change Password', body: 'Use password reset from the sign-in screen until in-app password change is added.', badge: 'Available', tone: 'info' as const },
-  { title: 'Two-Factor Authentication', body: 'Email verification is required during secure sign-in.', badge: 'Enabled', tone: 'success' as const },
+  { title: 'Email Verification', body: 'Verify your email address before accessing your account.', badge: 'Required', tone: 'success' as const },
   { title: 'Active Devices', body: 'Review current browser sessions and sign out devices you no longer use.', badge: 'Available', tone: 'info' as const },
   { title: 'Login History', body: 'Recent sign-in events are available from the audit log.', badge: 'Available', tone: 'info' as const },
   { title: 'Face ID / Biometrics', body: 'Set up passkeys so this browser can sign in with your device security.', badge: 'Available', tone: 'info' as const },
@@ -57,6 +57,8 @@ export default function PatientSettingsPage() {
   const router = useRouter()
   const insuranceCardInputRef = useRef<HTMLInputElement | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
   const [accountData, setAccountData] = useState({
@@ -70,11 +72,11 @@ export default function PatientSettingsPage() {
   const [savedToggles, setSavedToggles] = useState<Record<ToggleKey, boolean>>(DEFAULT_TOGGLES)
   const [fontSize, setFontSize] = useState('Medium')
   const [language, setLanguage] = useState('English')
-  const [timeZone, setTimeZone] = useState('Africa/Lagos (GMT+1)')
+  const [timeZone, setTimeZone] = useState('Europe/Berlin')
   const [savedDisplayPrefs, setSavedDisplayPrefs] = useState({
     fontSize: 'Medium',
     language: 'English',
-    timeZone: 'Africa/Lagos (GMT+1)',
+    timeZone: 'Europe/Berlin',
   })
   const [contacts, setContacts] = useState<EmergencyContact[]>([])
   const [insurance, setInsurance] = useState<Insurance | null>(null)
@@ -132,7 +134,9 @@ export default function PatientSettingsPage() {
   })
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 500)
+    let cancelled = false
+    setLoading(true)
+    setLoadError('')
 
     const hasAccessToken = Boolean(readAccessToken())
     const sessionTimer = window.setTimeout(() => {
@@ -142,7 +146,7 @@ export default function PatientSettingsPage() {
     if (!hasAccessToken) {
       router.replace('/auth/sign-in')
       return () => {
-        window.clearTimeout(timer)
+        cancelled = true
         window.clearTimeout(sessionTimer)
       }
     }
@@ -155,6 +159,7 @@ export default function PatientSettingsPage() {
           getPatientHealthInfo(),
         ])
         
+        if (cancelled) return
         const fullName = [settingsData.first_name, settingsData.last_name].filter(Boolean).join(' ')
         const formattedDate = settingsData.date_of_birth 
           ? new Date(settingsData.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -171,8 +176,8 @@ export default function PatientSettingsPage() {
         setContacts(settingsData.emergency_contacts || [])
         setInsurance(settingsData.insurance || null)
         getPatientPasskeyStatus()
-          .then(setPasskeyStatus)
-          .catch(() => setPasskeyStatus(null))
+          .then(value => { if (!cancelled) setPasskeyStatus(value) })
+          .catch(() => { if (!cancelled) setPasskeyStatus(null) })
         const loadedToggles = {
           emailNotifications: settingsData.email_notifications ?? DEFAULT_TOGGLES.emailNotifications,
           smsNotifications: settingsData.sms_notifications ?? DEFAULT_TOGGLES.smsNotifications,
@@ -191,7 +196,7 @@ export default function PatientSettingsPage() {
         const loadedDisplayPrefs = {
           fontSize: settingsData.font_size || 'Medium',
           language: settingsData.language || 'English',
-          timeZone: settingsData.time_zone || 'Africa/Lagos (GMT+1)',
+          timeZone: settingsData.time_zone || 'Europe/Berlin',
         }
         setFontSize(loadedDisplayPrefs.fontSize)
         setLanguage(loadedDisplayPrefs.language)
@@ -212,16 +217,18 @@ export default function PatientSettingsPage() {
           router.replace('/auth/sign-in')
           return
         }
-        console.error('Failed to load settings data:', error)
+        if (!cancelled) setLoadError('Your settings could not be loaded. No changes have been saved.')
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }
     loadData()
     
     return () => {
-      window.clearTimeout(timer)
+      cancelled = true
       window.clearTimeout(sessionTimer)
     }
-  }, [router])
+  }, [router, loadAttempt])
 
   const settingsAppearance = useMemo(() => ({
     darkMode: toggles.darkMode,
@@ -234,12 +241,12 @@ export default function PatientSettingsPage() {
   }, [])
 
   useEffect(() => {
-    if (loading) return
+    if (loading || loadError) return
     const timer = window.setTimeout(() => {
       broadcastAppearance(settingsAppearance)
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [broadcastAppearance, loading, settingsAppearance])
+  }, [broadcastAppearance, loading, loadError, settingsAppearance])
 
   function toggleSetting(key: ToggleKey) {
     setToggles((current) => ({ ...current, [key]: !current[key] }))
@@ -375,21 +382,13 @@ export default function PatientSettingsPage() {
   }
 
   async function handleSave() {
+    if (loading || loadError) return
     setSaving(true)
     setSaveMessage('')
     
     try {
-      // Save health info to backend
-      const healthUpdate: PatientHealthInfoUpdate = {
-        blood_pressure: healthInfo.bloodPressure || undefined,
-        weight: healthInfo.weight || undefined,
-        height: healthInfo.height || undefined,
-        blood_type: healthInfo.bloodType || undefined,
-        allergies: healthInfo.allergies || undefined,
-        medical_conditions: healthInfo.conditions || undefined,
-      }
-      const [updatedSettings] = await Promise.all([
-        updatePatientSettings({
+      // Saving preferences must not overwrite medical history loaded earlier.
+      const updatedSettings = await updatePatientSettings({
           email_notifications: toggles.emailNotifications,
           sms_notifications: toggles.smsNotifications,
           push_notifications: toggles.pushNotifications,
@@ -397,16 +396,12 @@ export default function PatientSettingsPage() {
           medication_reminders: toggles.medicationReminders,
           lab_result_alerts: toggles.labResultAlerts,
           marketing_emails: toggles.marketingEmails,
-          data_sharing: toggles.dataSharing,
-          physician_access: toggles.physicianAccess,
           dark_mode: toggles.darkMode,
           high_contrast: toggles.highContrast,
           font_size: fontSize,
           language,
           time_zone: timeZone,
-        }),
-        updatePatientHealthInfo(healthUpdate),
-      ])
+        })
 
       setSavedToggles({
         emailNotifications: updatedSettings.email_notifications,
@@ -659,8 +654,8 @@ export default function PatientSettingsPage() {
     <PatientPortalShell
       title='Settings'
       description='Manage account details, privacy, notifications, accessibility, insurance information, and the preferences that shape your care experience.'
-      headerActions={headerActions}
-      rightRail={rightRail}
+      headerActions={!loading && !loadError ? headerActions : undefined}
+      rightRail={!loading && !loadError ? rightRail : undefined}
       appearance={settingsAppearance}
     >
       <style>{`
@@ -735,6 +730,8 @@ export default function PatientSettingsPage() {
           <PortalSkeleton height={220} />
           <PortalSkeleton height={180} />
         </div>
+      ) : loadError ? (
+        <PortalCard><h2>We couldn’t load your settings</h2><p role='alert'>{loadError}</p><PortalButton onClick={() => setLoadAttempt(value => value + 1)}>Try again</PortalButton></PortalCard>
       ) : (
         <div className='settings-stack'>
           {saveMessage ? <PortalBadge tone='success'>{saveMessage}</PortalBadge> : null}
@@ -871,11 +868,11 @@ export default function PatientSettingsPage() {
               </div>
               <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
                 <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Allergies</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || 'None'}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || 'Not recorded'}</p>
               </div>
               <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
                 <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Medical Conditions</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || 'None'}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || 'Not recorded'}</p>
               </div>
             </div>
           </PortalCard>
@@ -935,8 +932,7 @@ export default function PatientSettingsPage() {
                 <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Control your health data</h2>
               </div>
               <div className='grid gap-3'>
-                <ToggleRow label='Data Sharing' enabled={toggles.dataSharing} onToggle={() => toggleSetting('dataSharing')} description='Allow anonymized usage insights to improve care workflows.' />
-                <ToggleRow label='Physician Access' enabled={toggles.physicianAccess} onToggle={() => toggleSetting('physicianAccess')} description='Keep authorized care teams connected to your profile and records.' />
+                <p style={{ color: T.slate, lineHeight: 1.6 }}>Privacy choices and consent withdrawal for a real-patient service are awaiting implementation and approved texts. This development environment is for synthetic test data only.</p>
                 <PreferenceActionRow label='Download My Data' buttonLabel='Open' onClick={handleDataExport} />
                 <PreferenceActionRow label='Delete Account' buttonLabel='Manage' tone='danger' onClick={() => setShowDeleteAccountConfirm(true)} />
                 <PreferenceActionRow label='Privacy Policy' buttonLabel='Open' onClick={() => router.push('/privacy')} />
@@ -952,8 +948,8 @@ export default function PatientSettingsPage() {
                 <ToggleRow label='Dark Mode' enabled={toggles.darkMode} onToggle={() => toggleSetting('darkMode')} description='Save this as your preferred display mode.' />
                 <ToggleRow label='High Contrast' enabled={toggles.highContrast} onToggle={() => toggleSetting('highContrast')} />
                 <SelectRow label='Font Size' value={fontSize} options={['Small', 'Medium', 'Large']} onChange={updateFontSizePreference} />
-                <SelectRow label='Language' value={language} options={['English', 'French', 'Arabic']} onChange={setLanguage} />
-                <SelectRow label='Time Zone' value={timeZone} options={['Africa/Lagos (GMT+1)', 'UTC', 'Europe/London (GMT)']} onChange={setTimeZone} />
+                <SelectRow label='Language' value={language} options={['German', 'English']} onChange={setLanguage} />
+                <SelectRow label='Time Zone' value={timeZone} options={['Europe/Berlin', 'UTC', 'Europe/London']} onChange={setTimeZone} />
               </div>
             </PortalCard>
           </div>

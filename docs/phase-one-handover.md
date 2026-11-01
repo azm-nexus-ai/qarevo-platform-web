@@ -1,0 +1,94 @@
+# Phase 1: stable development baseline
+
+Status: technical implementation and automated release checks; owner end-to-end acceptance remains required. This is a synthetic-data development environment, not approval for a real-patient pilot or a completed telemedicine MVP.
+
+## Delivered
+
+- Per-account, per-login, per-tab drafts; legacy ownerless drafts discarded. Cross-tab account changes and late requests cannot restore the previous account's data.
+- Coordinated session renewal, bounded retries, temporary failure preservation, and logout revocation.
+- Personal, contact, medical history and funding steps saved by authenticated APIs. Fresh logins restore server state. The completion screen checks saved steps rather than trusting navigation history.
+- Explicit required labels, styled country/nationality/language controls, all 16 German states, international phone and German postcode checks, conditional history validation. Format checks do not establish that an address, insurer or policy is genuine.
+- Separate SELF_PAY, GKV and PKV choices; `coverage_verified=false`. No reimbursement promise or simulated insurance-card upload.
+- Dashboard and care pages use authenticated account data with loading, empty and retry states. Sample prescriptions, referrals, consultation notes and recovery scores removed from these patient flows.
+- Clinician prescription/care-plan mutations persist after reload, use unique IDs, and require an assigned doctor-patient relationship. These are recorded instructions, not a certified electronic prescribing system.
+- Recovery links use the configured reset URL, otherwise the verification-email origin plus `/auth/reset-password`. Provider failure preserves the previous link. Public responses do not distinguish unknown, locked or eligible accounts. Successful recovery consumes the token and revokes refresh sessions.
+- Admin status contract: `healthy`, `warning`, `critical`; a stable `by_specialty` object. This is operational exception/verification status, not infrastructure uptime monitoring.
+- Disabled assessment fails closed; it does not invent urgency or video suitability. Enabling a real assessment/clinician review pathway belongs to the clinical journey work.
+- Settings wait for the actual response and show retry on failure; saving preferences does not write stale medical history. Unsupported privacy toggles no longer imply effective consent withdrawal or access control.
+
+## Data and contracts
+
+The Platform API owns these changes. CWS and AI service deployments are unchanged. Onboarding uses the existing patient-owned `portal_page_data` row with `page_key=onboarding-v1`; canonical names, phone, emergency contact, insurance and health summary also use existing models. Each step commits atomically under a user lock. No new schema migration is introduced by these releases; the existing profile migration must already be applied.
+
+`GET /api/v1/patient/settings/onboarding` returns completed steps, next step and saved values. `PUT` child routes `/contact`, `/health`, `/coverage` validate their complete step. Drafts remain unsaved until Continue/Complete succeeds. Patient-reported medication history is never added as a clinician prescription.
+
+The new onboarding JSON is not a replacement for a longitudinal clinical record. Existing settings editors and the onboarding snapshot need continued consolidation in the clinical-data phase. In particular, downstream insurance edits require the same validation and eligibility workflow; format validation in onboarding alone is not insurer verification.
+
+## Legal readiness — supplied drafts remain unpublished
+
+Source package: `Qarevo_Rechtstexte_fuer_Sadiq_2026-10-01`, including the 26-page legal draft PDF. No confidential draft wording or open company fields have been copied into this public repository. `/privacy` and `/terms` explain development-only status.
+
+Registration and onboarding acknowledgements are recorded as `TEST_ACK_*`, version `dev-test-20261101`; `legal_ready=false`. They are test evidence, not approved health-data or treatment consent. Existing historical records have not been relabelled. Marketing remains optional.
+
+The draft assumes a free adult patient portal, Qarevo as intermediary, and legally independent treating practices. Those assumptions still require owner confirmation against the actual offer; no age gate or treatment-contract model has been inferred from them.
+
+| Draft mapping / field register | Required before publication and real-patient use |
+| --- | --- |
+| A → privacy; B → patient terms; C → practice terms | Complete F01–F05: company, contacts, privacy contacts, scope, roles and contracts. Practice terms need their own approved destination, not a link to patient terms. |
+| D → history/triage, video and paid booking | Contextual explanations, distinct required/optional choices, approved versions, evidence and withdrawal handling (F07, F09–F11). No automatic triage or recording claims. |
+| E → cookies/footer/imprint | Actual storage/SDK inventory and controls, complete mandatory company and accessibility/consumer information (F12–F13). |
+| Privacy annexes | Verify active vendors, regions, subprocessors, transfers, retention, backups/deletion and external data sources (F06, F08, F14). Hosting target AWS is not evidence of current deployment. |
+
+Qualified medical/privacy legal review is still required. Strict input validation and acknowledgement timestamps do not resolve these legal prerequisites.
+
+## Build and release
+
+Repositories: `qarevo-platform-api` and `qarevo-platform-web`, branch `development` in `azm-nexus-ai`. Do not promote to main or change production databases as part of this acceptance.
+
+Backend, from its repository:
+
+```sh
+.venv/bin/python -m pip install -r requirements.txt
+QAREVO_LOAD_DOTENV=false ENVIRONMENT=development DEBUG=false DATABASE_URL=postgresql://ci:ci@127.0.0.1:5432/unused .venv/bin/python -m pytest -q tests
+```
+
+The database URL above is deliberately unused by fixture-based tests. `QAREVO_LOAD_DOTENV=false` prevents local credentials and flags from contaminating tests. Normal runtime still loads `.env` by default. The asyncio dependency includes greenlet for Apple Silicon.
+
+Frontend uses Node 22 and pnpm 10.28.0:
+
+```sh
+npx --yes pnpm@10.28.0 install --frozen-lockfile
+npx --yes pnpm@10.28.0 run build
+npx --yes pnpm@10.28.0 exec playwright install chromium
+npx --yes pnpm@10.28.0 run test:e2e:privacy
+```
+
+Backend CI runs all tests before FastAPI Cloud deployment and checks `/health`. Frontend CI runs Node regressions, a production build and Chromium with synthetic API fixtures. These browser fixtures do not prove live email delivery or live database integration. Browser checks run alongside Vercel and are not currently a promotion gate.
+
+For each release verify the exact Git SHA, CI result and Vercel READY deployment. A GitHub ref update through a connector may require explicitly deploying that SHA through Vercel; a green GitHub Pages job is not a Vercel deployment. Do not deploy uncommitted local changes.
+
+Live-dev frontend: https://qarevo-platform-web-git-development-azmnexus-projects.vercel.app
+
+Live-dev API: https://qarevo-platform-api-a20d63c3.fastapicloud.dev
+
+Keep API/Resend/Neon secrets in their existing secret stores. Confirm `EMAIL_VERIFICATION_LINK_BASE` and optional `PASSWORD_RESET_LINK_BASE` point to this environment. An explicitly configured old reset URL takes precedence and must be corrected in hosting settings. No secrets are needed in this document.
+
+## Owner acceptance checkpoint
+
+Reload existing tabs first so all use the new session coordination.
+
+1. Create one new synthetic patient; check received OTP and email link, expired/reused-code rejection and post-verification navigation. This is the promised fresh-registration checkpoint.
+2. Complete all four profile forms, including an invalid phone/postcode, Other under four characters and invalid GKV format. Required fields should be visibly labelled. Try SELF_PAY and insured paths; neither must claim verified coverage.
+3. Log out, sign back in and confirm saved values; open unfinished completion URLs and confirm they do not show success.
+4. Use two test accounts/tabs; verify no prior-account drafts, names or clinical records leak. Refresh an empty dashboard and prescriptions page: loading then genuine empty state, never sample treatment.
+5. Request a reset email and complete it yourself. Check its host, old-password rejection and single-use link behavior. Existing access JWTs can remain valid until their configured expiry (default 15 minutes); refresh sessions are revoked immediately.
+6. Change notification preferences, save and reload. Force a temporary API outage in browser developer tools and check retry rather than editable defaults. Optional health-data editing and attachment workflows remain separate work.
+7. Sign in as the existing admin and inspect real totals, specialty summary and operational status. Clinician record persistence is covered automatically; verify with an assigned synthetic patient if available.
+
+## Recovery and remaining work
+
+Revert the affected commit(s) on development, rerun CI and deploy the exact reverted SHA. For paired contracts revert the frontend before the API. No database rollback is required for these additive JSON changes; retain saved records and acknowledgement history. Browser draft cleanup is irreversible, so rollbacks cannot recover old unsaved browser drafts.
+
+Known limits: bearer tokens remain browser-accessible; this is not a completed penetration test. Lost refresh responses after token rotation can still require a new login. Existing dependency/deprecation warnings need a separate upgrade cycle. Open old tabs must be reloaded.
+
+Next phases retain booking/availability, document-upload integration, editable medical records, video consultation, consent withdrawal, real insurer eligibility, automated invoicing, complete German/English localisation, observability/alerting and AWS production migration. No claim of full clinical operation, approved legal text or insurance-funded launch is made by Phase 1.

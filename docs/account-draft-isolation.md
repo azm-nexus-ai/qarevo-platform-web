@@ -44,4 +44,4 @@ Do not submit personal/clinical test values into another patient's record. Brows
 
 Revert this release's commit on development to redeploy the previous code. A revert cannot recover discarded browser drafts; saved database records are unaffected.
 
-Separate follow-up work includes server-side recovery for lost rotation responses, complete server-backed onboarding persistence, honest dashboard states and removal of fabricated clinical content.
+Server-backed onboarding persistence, honest dashboard states and removal of fabricated clinical content have since been implemented. Server-side recovery for a lost rotation response remains follow-up work. See [Phase 1 handover](phase-one-handover.md) for current scope, acceptance and limitations.

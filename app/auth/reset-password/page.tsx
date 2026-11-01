@@ -661,7 +661,7 @@ function ResetPasswordPageContent() {
           >
             {!updated ? (
               <>
-                {errorKind === 'invalidToken' && !token ? (
+                {!token ? (
                   <div style={{ textAlign: 'center', padding: '20px 0' }}>
                     <div
                       style={{

@@ -34,7 +34,7 @@ const TRUST_FEATURES = [
   { icon: ICONS.lock,     label: 'Secure Medical Records',     sub: 'AES-256 encrypted at rest and in transit' },
   { icon: ICONS.brain,    label: 'AI-Assisted Healthcare',     sub: 'Personalised clinical intelligence' },
   { icon: ICONS.video,    label: 'Virtual Consultations',      sub: 'HD video with verified physicians' },
-  { icon: ICONS.shield,   label: 'End-to-End Encryption',      sub: 'HIPAA & GDPR compliant infrastructure' },
+  { icon: ICONS.shield,   label: 'Account-Based Access',      sub: 'Access your saved account information' },
 ]
 
 function WellnessVisual() {
@@ -650,7 +650,7 @@ export default function SignInPage() {
                 {[
                   { icon: ICONS.lock,     label: 'Secure Login'    },
                   { icon: ICONS.shield,   label: 'Encrypted Data'  },
-                  { icon: ICONS.check,    label: 'HIPAA · GDPR'    },
+                  { icon: ICONS.check,    label: 'Development Preview'    },
                   { icon: ICONS.activity, label: 'MFA Support'     },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>

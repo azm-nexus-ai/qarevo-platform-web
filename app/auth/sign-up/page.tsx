@@ -319,18 +319,18 @@ function LeftDecor() {
 
         {/* Text */}
         <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '22px', fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.2, margin: '0 0 12px', textAlign: 'center' }}>
-          Join 180,000 patients<br />
-          <span style={{ color: 'rgba(147,197,253,0.9)' }}>across Europe</span>
+          Create your patient account<br />
+          <span style={{ color: 'rgba(147,197,253,0.9)' }}>with Qarevo Health</span>
         </h2>
         <p style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, margin: '0 0 32px', textAlign: 'center', letterSpacing: '-0.01em' }}>
-          Verified physicians, AI-powered diagnostics, and seamless care — all in one secure platform.
+          Explore the patient experience using synthetic information in our development environment.
         </p>
 
         {/* Social proof strip */}
         {[
           { icon: ICONS.shield, label: 'Synthetic Data Only', color: 'rgba(165,224,218,0.85)' },
           { icon: ICONS.lock, label: 'Development Preview', color: 'rgba(147,197,253,0.85)' },
-          { icon: ICONS.check, label: 'ISO 27001', color: 'rgba(251,191,36,0.85)' },
+          { icon: ICONS.check, label: 'Test Accounts', color: 'rgba(251,191,36,0.85)' },
         ].map(({ icon, label, color }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
             <Ico p={icon} size={14} sw={1.75} color={color} />
@@ -592,7 +592,7 @@ export default function SignUpPage() {
               {[
                 { icon: ICONS.lock, label: 'Synthetic Data Only' },
                 { icon: ICONS.shield, label: 'Development Preview' },
-                { icon: ICONS.check, label: 'ISO 27001' },
+                { icon: ICONS.check, label: 'Test Accounts' },
               ].map(({ icon, label }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Ico p={icon} size={12} sw={1.75} color={T.slate2} />
