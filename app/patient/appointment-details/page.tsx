@@ -60,7 +60,7 @@ function AppointmentDetails() {
           <div><dt className="text-sm text-muted">Time zone</dt><dd className="mt-1">{appointment.time_zone || 'Europe/Berlin'}</dd></div>
           <div><dt className="text-sm text-muted">Booking reference</dt><dd className="mt-1 break-all">QRV-{appointment.id.slice(0, 8)}</dd></div>
         </dl>
-        <div className="border-t border-theme pt-6">
+        {active && <div className="border-t border-theme pt-6">
           <h3 className="text-lg font-semibold">Prepare for your consultation</h3>
           <p className="mt-2 max-w-2xl text-muted">Have your identification and medication list available. You can check your camera and microphone before the appointment. The video room opens 15 minutes before the scheduled time.</p>
           <div className="mt-5 flex flex-wrap gap-3">
@@ -68,7 +68,12 @@ function AppointmentDetails() {
             {active && appointment.consultation_id && <Link className="inline-flex min-h-11 items-center rounded-xl border border-theme px-4 text-link" href={`/patient/video-consultation/waiting-room?consultationId=${encodeURIComponent(appointment.consultation_id)}`}>Open video room</Link>}
             {active && <button className="min-h-11 rounded-xl border border-theme px-4 text-link" onClick={() => setReschedule(true)}>Reschedule appointment</button>}
           </div>
-        </div>
+        </div>}
+        {appointment.status === 'COMPLETED' && appointment.consultation_id && <div className="border-t border-theme pt-6">
+          <h3 className="text-lg font-semibold">Your care summary</h3>
+          <p className="mt-2 text-muted">Review your clinician’s published assessment, care plan and follow-up advice.</p>
+          <Link className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-theme px-4 text-link" href={`/patient/consultation-summary?consultationId=${encodeURIComponent(appointment.consultation_id)}`}>View care summary</Link>
+        </div>}
         <p className="mt-6 text-sm text-muted">Payment and insurance verification are not configured for this development preview. This page does not confirm a charge, refund or insurance coverage.</p>
       </>}
       <Link className="mt-6 inline-flex min-h-11 items-center text-link underline" href="/patient/appointments">Back to appointments</Link>

@@ -1,4 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
+import { clinicalFields, type PublishedClinicalRecord } from '../lib/clinical-record'
 
 const personal = '/auth/profile-setup/personal-information'
 const alpha = 'alpha@example.invalid'
@@ -892,3 +893,101 @@ for (const role of ['patient', 'doctor'] as const) {
     expect(joins).toBe(1)
   })
 }
+
+const recordConsultation = '66666666-6666-4666-8666-666666666666'
+const approvedRecord: PublishedClinicalRecord = {
+  id: '77777777-7777-4777-8777-777777777777', episode_id: '88888888-8888-4888-8888-888888888888',
+  consultation_id: recordConsultation, revision: 1, version: 2, language: 'en', summary: 'Synthetic patient summary',
+  history: 'Synthetic history', findings: 'Synthetic findings', assessment: 'Synthetic assessment', plan: 'Synthetic care plan',
+  safety_net: 'Synthetic safety advice', authored_by: 'synthetic-clinician', approved_by: 'synthetic-clinician',
+  published_at: '2030-07-10T08:00:00Z', created_at: '2030-07-10T07:45:00Z', updated_at: '2030-07-10T08:00:00Z', amendment_reason: null,
+}
+
+test('clinician draft persists and requires explicit review, with recoverable publication and amendments', async ({ page, context }) => {
+  const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
+  let draft: PublishedClinicalRecord | null = null
+  let published: PublishedClinicalRecord | null = null
+  let publicationFailure = true
+  let publications = 0
+  const savedBodies: Record<string, unknown>[] = []
+  await context.addInitScript(() => {
+    localStorage.setItem('qarevo_access_token', 'synthetic-role-token')
+    localStorage.setItem('qarevo_refresh_token', 'synthetic-role-refresh')
+    localStorage.setItem('qarevo_user_id', 'synthetic-role-owner')
+    localStorage.setItem('qarevo_role', 'PROVIDER')
+  })
+  await context.route('**/api/v1/doctor/profile', route => route.fulfill({ headers, json: { full_name: 'Synthetic Doctor', specialty: 'General Medicine' } }))
+  await context.route(`**/api/v1/doctor/workspace/${recordConsultation}**`, route => {
+    const request = route.request()
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+    const url = new URL(request.url()).pathname
+    if (url.endsWith('/clinical-record/publish')) {
+      publications++
+      if (publicationFailure) return route.fulfill({ status: 503, headers, json: { detail: 'Publication could not be confirmed. Retry to recover safely.' } })
+      expect(request.postDataJSON()).toMatchObject({ record_id: draft!.id, expected_version: draft!.version, reviewed: true })
+      published = { ...draft!, approved_by: 'synthetic-clinician', published_at: approvedRecord.published_at, version: draft!.version + 1 }
+      draft = null
+      return route.fulfill({ headers, json: published })
+    }
+    if (url.endsWith('/clinical-record')) {
+      if (request.method() === 'PUT') {
+        const body = request.postDataJSON(); savedBodies.push(body)
+        draft = { ...approvedRecord, ...body, id: published ? '99999999-9999-4999-8999-999999999999' : approvedRecord.id,
+          revision: published ? 2 : 1, version: draft ? draft.version + 1 : 1, published_at: null, approved_by: null }
+        return route.fulfill({ headers, json: draft })
+      }
+      return route.fulfill({ headers, json: { draft, published } })
+    }
+    return route.fulfill({ headers, json: { consultation: { consultation_id: recordConsultation, patient_name: 'Synthetic Patient', patient_id: 'synthetic-patient', status: published ? 'ENDED' : 'STARTED', started_at: '2030-07-10T07:00:00Z' }, can_join_video: false, can_complete: !published } })
+  })
+  await page.goto(`/doctor/workspace/${recordConsultation}`)
+  await page.getByRole('button', { name: 'Approve and publish', exact: true }).click()
+  await expect(page.getByText('Patient summary is required before publication.', { exact: true })).toBeVisible()
+  expect(publications).toBe(0)
+  for (const field of clinicalFields) await page.locator(`#record-${field.key}`).fill(approvedRecord[field.key])
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('It is not visible to the patient')
+  await page.reload()
+  await expect(page.locator('#record-summary')).toHaveValue(approvedRecord.summary)
+  await page.getByRole('button', { name: 'Approve and publish', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Confirm that you reviewed')
+  expect(publications).toBe(0)
+  await page.getByRole('checkbox', { name: /I have reviewed this saved record/ }).check()
+  await page.getByRole('button', { name: 'Approve and publish', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Publication could not be confirmed')
+  await expect(page.locator('#record-summary')).toHaveValue(approvedRecord.summary)
+  publicationFailure = false
+  await page.getByRole('button', { name: 'Approve and publish', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Published care summary' })).toBeVisible()
+  await page.getByRole('button', { name: 'Create amendment', exact: true }).click()
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByText('Enter an amendment reason of 4–500 characters.', { exact: true })).toBeVisible()
+  await page.getByLabel('Amendment reason (required)').fill('Synthetic correction')
+  await page.locator('#record-summary').fill('Corrected synthetic patient summary')
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('It is not visible to the patient')
+  expect(savedBodies[1]).toMatchObject({ record_id: approvedRecord.id, expected_version: 2, amendment_reason: 'Synthetic correction' })
+  expect(published!.summary).toBe(approvedRecord.summary)
+  const storageText = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))
+  expect(storageText).not.toContain('Synthetic patient summary')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+})
+
+test('patient sees no unsigned summary and reads the approved version after refresh', async ({ page, context }) => {
+  let published = false
+  await context.route('**/api/v1/patient/consultation-summary**', route => route.fulfill({
+    headers: { 'access-control-allow-origin': '*' }, status: published ? 200 : 404,
+    json: published ? approvedRecord : { detail: 'No published summary is available' },
+  }))
+  await signIn(page, alpha)
+  await page.goto(`/patient/consultation-summary?consultationId=${recordConsultation}`)
+  await expect(page.getByRole('heading', { name: 'No consultation summary available' })).toBeVisible()
+  await expect(page.getByText(approvedRecord.summary, { exact: true })).toHaveCount(0)
+  published = true
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Clinician-approved consultation summary' })).toBeVisible()
+  await expect(page.getByText(approvedRecord.safety_net, { exact: true })).toBeVisible()
+  await expect(page.getByText('Revision 1', { exact: false })).toBeVisible()
+})

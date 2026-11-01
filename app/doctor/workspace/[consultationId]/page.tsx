@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import ClinicalRecordEditor from '@/components/doctor/ClinicalRecordEditor'
 import {
   clearAuthTokens,
-  completeDoctorConsultation,
   getDoctorConsultation,
   isAuthError,
   readAccessToken,
@@ -18,7 +18,6 @@ export default function ConsultationDetailPage() {
 
   const [consultationData, setConsultationData] = useState<DoctorConsultationDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [completing, setCompleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -68,25 +67,6 @@ export default function ConsultationDetailPage() {
     router.push(`/doctor/video-consultation?consultationId=${encodeURIComponent(consultationId)}`)
   }
 
-  const handleComplete = async () => {
-    setCompleting(true)
-    setError(null)
-
-    try {
-      const data = await completeDoctorConsultation(consultationId)
-      setConsultationData(data)
-    } catch (err) {
-      if (isAuthError(err)) {
-        clearAuthTokens()
-        router.replace('/auth/sign-in')
-        return
-      }
-      setError(err instanceof Error ? err.message : 'Failed to complete consultation')
-    } finally {
-      setCompleting(false)
-    }
-  }
-
   const handleBack = () => {
     router.push('/doctor/workspace')
   }
@@ -115,7 +95,7 @@ export default function ConsultationDetailPage() {
 
   if (!consultationData) return null
 
-  const { consultation, can_join_video, can_complete } = consultationData
+  const { consultation, can_join_video } = consultationData
 
   return (
     <div className="space-y-6">
@@ -142,15 +122,7 @@ export default function ConsultationDetailPage() {
               Join Video
             </button>
           )}
-          {can_complete && (
-            <button
-              onClick={handleComplete}
-              disabled={completing}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              {completing ? 'Completing...' : 'Complete Consultation'}
-            </button>
-          )}
+
         </div>
       </div>
 
@@ -227,28 +199,8 @@ export default function ConsultationDetailPage() {
         </div>
       </div>
 
-      {/* Capabilities */}
-      <div className="bg-surface rounded-lg shadow-sm border border-theme">
-        <div className="p-6 border-b border-theme">
-          <h3 className="text-lg font-semibold text-ink">Available Actions</h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className={`p-4 rounded-lg ${can_join_video ? 'bg-green-50 border border-green-200' : 'bg-canvas border border-theme'}`}>
-              <p className="font-medium text-ink">Join Video Session</p>
-              <p className="text-sm text-secondary mt-1">
-                {can_join_video ? 'Available' : 'Not available'}
-              </p>
-            </div>
-            <div className={`p-4 rounded-lg ${can_complete ? 'bg-green-50 border border-green-200' : 'bg-canvas border border-theme'}`}>
-              <p className="font-medium text-ink">Complete Consultation</p>
-              <p className="text-sm text-secondary mt-1">
-                {can_complete ? 'Available' : 'Not available'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ClinicalRecordEditor key={consultationId} consultationId={consultationId} consultationStatus={consultation.status}
+        onPublished={async () => { setConsultationData(await getDoctorConsultation(consultationId)) }} />
     </div>
   )
 }

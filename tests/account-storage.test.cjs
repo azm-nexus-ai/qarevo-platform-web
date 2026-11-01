@@ -15,6 +15,16 @@ const apiCode = compile('api.ts')
 const slotModule = { exports: {} }
 vm.runInNewContext(compile('booking-slot.ts'), { module: slotModule, exports: slotModule.exports, Date, Error })
 
+test('clinical publication identifies every missing field and preserves bounded drafts', () => {
+  const recordModule = { exports: {} }
+  vm.runInNewContext(compile('clinical-record.ts'), { module: recordModule, exports: recordModule.exports })
+  const { recordErrors, emptyRecord, contentOf } = recordModule.exports
+  assert.equal(Object.keys(recordErrors(emptyRecord, true)).length, 6)
+  assert.equal(Object.keys(recordErrors(emptyRecord, false)).length, 0)
+  assert.match(recordErrors({ ...emptyRecord, summary: 'x'.repeat(5001) }, false).summary, /5,000/)
+  assert.equal(contentOf(null).summary, '')
+})
+
 test('booking retains server UTC instants and refuses missing, ambiguous or malformed slots', () => {
   const { resolveBookingSlot } = slotModule.exports
   const slot = { label: '9:00 AM', start_at: '2030-07-10T07:00:00+00:00', end_at: '2030-07-10T07:30:00+00:00', time_zone: 'Europe/Berlin', duration_minutes: 30 }
