@@ -1,5 +1,7 @@
 'use client'
 
+import { useEpisodeIntake } from '@/lib/use-episode-intake'
+
 import Link from 'next/link'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -306,7 +308,9 @@ function DeviceCheckPageContent() {
   const insurance = searchParams.get('insurance') ?? 'Axa'
   const date = searchParams.get('date') ?? 'Today'
   const slot = searchParams.get('slot') ?? '4:30 PM'
-  const notes = searchParams.get('notes') ?? ''
+  const clinicalEpisodeId = searchParams.get('episode_id') || searchParams.get('episodeId') || ''
+  const savedIntake = useEpisodeIntake(clinicalEpisodeId)
+  const notes = savedIntake.loading ? 'Loading saved intake…' : savedIntake.error || savedIntake.notes
 
   // ── State machine ────────────────────────────────────────────────────────
   const [phase, setPhase] = useState<TestPhase>('idle')
@@ -381,7 +385,7 @@ function DeviceCheckPageContent() {
       insurance,
       date,
       slot,
-      notes,
+      episode_id: clinicalEpisodeId,
       cameraReady: 'true',
       microphoneReady: 'true',
       speakerReady: 'true',

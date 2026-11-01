@@ -5,11 +5,12 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
-import { createPatientAppointment, getPatientDoctor, getPatientTimezone, type PatientDoctor } from '@/lib/api'
+import { createPatientAppointment, getPatientDoctor, getPatientTimezone, getPatientSettings, type PatientSettings, type PatientDoctor } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
+import { useEpisodeIntake } from '@/lib/use-episode-intake'
 
 function formatFee(value: number) {
   return value > 0 ? `$${value}` : 'Not configured'
@@ -92,13 +93,13 @@ function ReviewPageContent() {
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
   const [doctorLoadError, setDoctorLoadError] = useState('')
-  const [userTimeZone, setUserTimeZone] = useState('Africa/Lagos')
+  const [userTimeZone, setUserTimeZone] = useState('Europe/Berlin')
 
   useEffect(() => {
     async function loadTimezone() {
       try {
         const data = await getPatientTimezone()
-        setUserTimeZone(data.time_zone || 'Africa/Lagos')
+        setUserTimeZone(data.time_zone || 'Europe/Berlin')
       } catch (error) {
         console.error('Failed to load timezone, using default', error)
       }
@@ -117,20 +118,27 @@ function ReviewPageContent() {
   const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
   const date = searchParams.get('date') ?? 'Today'
   const slot = searchParams.get('slot') ?? '4:30 PM'
-  const notes = searchParams.get('notes') ?? ''
   const episodeId = searchParams.get('episode_id') ?? ''
   const intakeSubmitted = searchParams.get('intake_submitted') === 'true'
-  const patientName = 'A. Bello'
-  const email = 'abello@qarevo.health'
-  const phone = '+234 805 000 0000'
-  const emergencyContact = 'M. Bamidele · +234 810 123 4567'
-  const medicalConcern = 'Cardiovascular review and medication follow-up'
+  const [patient, setPatient] = useState<PatientSettings | null>(null)
+  const [patientError, setPatientError] = useState('')
+  const intake = useEpisodeIntake(episodeId)
+  const patientName = patient ? [patient.first_name, patient.last_name].filter(Boolean).join(' ') || 'Not provided' : 'Loading…'
+  const email = patient?.email || 'Not provided'
+  const phone = patient?.phone || 'Not provided'
+  const emergencyContact = patient?.emergency_contacts?.map(contact => [contact.name, contact.phone].filter(Boolean).join(' · ')).join('; ') || 'Not provided'
+  const medicalConcern = intake.loading ? 'Loading saved intake…' : intake.error || intake.notes || 'No saved intake available'
+  useEffect(() => {
+    let current = true
+    getPatientSettings().then(value => { if (current) setPatient(value) })
+      .catch(() => { if (current) setPatientError('Your patient details could not be loaded. Refresh to try again.') })
+    return () => { current = false }
+  }, [])
 
   const [agreed, setAgreed] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [showPolicy, setShowPolicy] = useState(false)
-  const [editableNotes, setEditableNotes] = useState(notes)
 
   useEffect(() => {
     if (!physicianId || physician) return
@@ -169,9 +177,8 @@ function ReviewPageContent() {
     const next = buildBookingQueryParams(searchParams, physicianData, service)
     next.set('date', date)
     next.set('slot', slot)
-    next.set('notes', editableNotes)
     return `/patient/consultation-booking/success?${next.toString()}`
-  }, [date, editableNotes, searchParams, physicianData, service, slot])
+  }, [date, searchParams, physicianData, service, slot])
 
   const backHref = useMemo(() => {
     const next = buildBookingQueryParams(searchParams, physicianData, service)
@@ -179,54 +186,24 @@ function ReviewPageContent() {
   }, [searchParams, physicianData, service])
 
   const handleConfirm = async () => {
-    if (!allAgreed || isSubmitting) return
+    if (isSubmitting) return
+    if (!allAgreed) { setSubmitError('Confirm the required booking review before continuing.'); return }
+    if (!episodeId || !intakeSubmitted) { setSubmitError('Complete and submit the required intake before confirming this booking.'); return }
+    if (!patient || patientError || intake.error || intake.loading) { setSubmitError(patientError || intake.error || 'Wait for your saved information to load before continuing.'); return }
     setIsSubmitting(true)
     setSubmitError('')
 
     try {
-      const insuranceType = /statutory|public|nhs|gkv/i.test(insurance) ? 'public' : 'private'
       const startAt = parseAppointmentStart(date, slot)
       const endAt = addDuration(startAt, duration)
-
-      // If intake was already submitted on the intake page, don't send intake data here
-      // to avoid overwriting the detailed intake fields (chief_complaint, symptoms, medical_history)
-      const intake = episodeId ? undefined : {
-        raw_text: editableNotes || medicalConcern,
-        reported_duration: duration,
-        reported_location: physicianData.hospital,
-        reported_onset: `${date} ${slot}`,
-        reported_severity: 'Not specified',
-        associated_factors: `${physicianData.specialty}; ${readLabel(service)}; selected doctor: ${physicianData.name}`,
-        booking_date: date,
-        booking_slot: slot,
-        consultation_type: readLabel(service),
-        selected_physician_id: physicianData.id,
-        selected_physician_name: physicianData.name,
-        insurance_provider: insurance,
-        consultation_fee: fee,
-      }
 
       const booking = await createPatientAppointment({
         provider_id: physicianData.id,
         start_at: startAt.toISOString(),
         end_at: endAt.toISOString(),
         consultation_modality: service,
-        intake,
         episode_id: episodeId || undefined,
-        episode: episodeId ? undefined : {
-          pack_id: 'patient-booking-intake',
-          pack_version: '1.0.0',
-          bundesland: searchParams.get('bundesland') ?? 'Berlin',
-          insurance_type: insuranceType,
-          flow_type: service === 'follow-up' ? 'follow_up' : 'consultation',
-          matching_mode: physicianData.id ? 'patient_selects' : 'matching_required',
-          insurance_provider: insurance,
-          consent_data_processing: agreed,
-          consent_ai_assistance: true,
-          recipient_email: email,
-          recipient_phone_e164: phone.replace(/\s/g, ''),
-          notification_channel: 'email',
-        },
+
       })
       const next = new URLSearchParams(successHref.split('?')[1] ?? '')
       if (booking.episode_id) next.set('episodeId', booking.episode_id)
@@ -375,21 +352,7 @@ function ReviewPageContent() {
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{value}</p>
                   </div>
                 ))}
-                <div style={{ gridColumn: '1 / -1', padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Notes</p>
-                  <textarea
-                    value={editableNotes}
-                    onChange={(event) => setEditableNotes(event.target.value.slice(0, 500))}
-                    maxLength={500}
-                    rows={4}
-                    placeholder='Describe your symptoms, concerns, or anything you would like your physician to know before the consultation.'
-                    style={{ width: '100%', borderRadius: '10px', border: "1px solid var(--border)", padding: '10px 12px', fontFamily: 'inherit', fontSize: '13px', color: T.navy, resize: 'vertical', outline: 'none', background: "var(--surface-glass)" }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: '6px', fontSize: "13px", color: T.slate2 }}>
-                    <span>Optional and private to your booking.</span>
-                    <span>{editableNotes.length}/500</span>
-                  </div>
-                </div>
+                <p style={{ gridColumn: '1 / -1' }}>Intake is loaded securely from your saved episode. Use Back to Intake to review your entries.</p>
               </div>
             </section>
 
@@ -441,7 +404,7 @@ function ReviewPageContent() {
               <div style={{ display: 'grid', gap: '10px' }}>
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consent & Agreements</p>
-                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Please confirm the final terms</h2>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Review your test booking</h2>
                 </div>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)", cursor: 'pointer' }}>
                   <input
@@ -450,7 +413,7 @@ function ReviewPageContent() {
                     onChange={() => setAgreed((value) => !value)}
                     style={{ marginTop: '2px', accentColor: T.blue }}
                   />
-                  <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>I confirm that the information provided is accurate, agree to the Terms & Conditions, consent to the Privacy Policy, and understand the consultation and cancellation policy.</span>
+                  <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>I have reviewed my synthetic booking information and want to continue the development test. (Required)</span>
                 </label>
               </div>
             </section>
@@ -502,7 +465,7 @@ function ReviewPageContent() {
                   fontSize: '14px',
                   fontWeight: 700,
                   letterSpacing: '-0.015em',
-                  cursor: allAgreed ? 'pointer' : 'not-allowed',
+                  cursor: isSubmitting ? 'wait' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -515,7 +478,7 @@ function ReviewPageContent() {
                 <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
               </HoverBtn>
               {submitError && (
-                <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', color: T.red, fontSize: "13px", lineHeight: 1.5 }}>
+                <div role="alert" style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', color: T.red, fontSize: "13px", lineHeight: 1.5 }}>
                   {submitError}
                 </div>
               )}
@@ -528,7 +491,7 @@ function ReviewPageContent() {
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {['Secure Booking', 'Encrypted Scheduling', 'Instant Confirmation', 'HIPAA-Compliant Platform', 'Verified Physicians'].map((item) => (
+                {['Review before booking', 'Optional AI assistance', 'Clinician-led care'].map((item) => (
                   <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: T.slate, fontSize: "13px", fontWeight: 600 }}>
                     <Ico p={ICONS.shield} size={12} sw={1.8} color={T.green} />
                     {item}

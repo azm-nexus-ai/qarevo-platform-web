@@ -1,5 +1,7 @@
 'use client'
 
+import { useEpisodeIntake } from '@/lib/use-episode-intake'
+
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PAGE_BG, T, Sh } from '@/lib/tokens'
@@ -158,7 +160,9 @@ function LiveConsultationPageContent() {
   const latency = searchParams.get('latency') ?? '12 ms'
   const duration = searchParams.get('duration') ?? '30 min'
   const insurance = searchParams.get('insurance') ?? 'Axa'
-  const notes = searchParams.get('notes') ?? ''
+  const clinicalEpisodeId = searchParams.get('episode_id') || searchParams.get('episodeId') || ''
+  const savedIntake = useEpisodeIntake(clinicalEpisodeId)
+  const notes = savedIntake.loading ? 'Loading saved intake…' : savedIntake.error || savedIntake.notes
 
   // ── Real media ──────────────────────────────────────────────────────────────
   const {
@@ -232,13 +236,13 @@ function LiveConsultationPageContent() {
   const handleEndConsultation = useCallback(() => {
     stopAll()
     const query = new URLSearchParams({
-      physicianId, date, slot, duration, insurance, notes,
+      physicianId, date, slot, duration, insurance, episode_id: clinicalEpisodeId,
       elapsed: String(elapsedSeconds), networkStatus, latency,
       physicianName: doctorName, specialty,
       messageCount: String(messages.length),
     })
     router.push(`/patient/consultation-summary?${query.toString()}`)
-  }, [stopAll, physicianId, date, slot, duration, insurance, notes, elapsedSeconds, networkStatus, latency, doctorName, specialty, messages.length, router])
+  }, [stopAll, physicianId, date, slot, duration, insurance, clinicalEpisodeId, elapsedSeconds, networkStatus, latency, doctorName, specialty, messages.length, router])
 
   // ── Camera button handler (async) ──────────────────────────────────────────
   const handleCameraClick = useCallback(() => {

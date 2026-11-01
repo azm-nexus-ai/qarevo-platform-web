@@ -601,3 +601,34 @@ test('administrator can review credentials and suspend access with visible valid
   expect(decisions[1]).toEqual({ status: 'SUSPENDED', reason: 'Synthetic suspension test' })
   await expect(page.getByText('SUSPENDED', { exact: true })).toBeVisible()
 })
+
+test('intake requires visible consent and keeps clinical text out of navigation URLs', async ({ page, context }) => {
+  const episodeId = '11111111-1111-4111-8111-111111111111'
+  const providerId = '22222222-2222-4222-8222-222222222222'
+  const created: Record<string, unknown>[] = []
+  await context.route('**/api/v1/patient/episodes**', async route => {
+    const path = new URL(route.request().url()).pathname
+    const method = route.request().method()
+    if (method === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
+    if (path.endsWith('/episodes') && method === 'POST') created.push(route.request().postDataJSON())
+    return route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: path.endsWith('/intake') ? { responses: { raw_text: 'Synthetic private concern' } } : { id: episodeId } })
+  })
+  await context.route(`**/api/v1/patient/doctors/${providerId}`, route => route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { id: providerId, name: 'Synthetic Clinician', specialty: 'General Practice', languages: [], insurance: [], services: [] } }))
+  await signIn(page, alpha)
+  await page.goto(`/patient/consultation-booking/intake?physicianId=${providerId}&date=2027-01-04&slot=09:00&notes=discard-legacy-query`)
+  await page.getByRole('button', { name: 'Continue to Review' }).click()
+  await expect(page.getByRole('alert')).toContainText('Confirm the required data-processing choice')
+  expect(created).toHaveLength(0)
+  await page.getByLabel('Chief Complaint (Required)').fill('Synthetic private concern')
+  await page.getByLabel('I agree to processing this synthetic intake').check()
+  await expect(page.getByLabel('Allow optional AI assistance')).not.toBeChecked()
+  await page.getByRole('button', { name: 'Continue to Review' }).click()
+  await expect(page).toHaveURL(/consultation-booking\/review\?/)
+  expect(created).toHaveLength(1)
+  expect(created[0].consent_data_processing).toBe(true)
+  expect(created[0].consent_ai_assistance).toBe(false)
+  expect(new URL(page.url()).searchParams.has('notes')).toBe(false)
+  expect(page.url()).not.toContain('Synthetic')
+  await expect(page.getByText('Synthetic private concern', { exact: true })).toBeVisible()
+  await expect(page.getByText('A. Bello', { exact: true })).toHaveCount(0)
+})

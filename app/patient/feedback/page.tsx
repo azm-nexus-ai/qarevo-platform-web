@@ -1,5 +1,7 @@
 'use client'
 
+import { useEpisodeIntake } from '@/lib/use-episode-intake'
+
 import Link from 'next/link'
 import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -141,7 +143,9 @@ function FeedbackPageContent() {
   const physicianName = searchParams.get('physicianName') ?? physician?.name ?? ''
   const specialty = searchParams.get('specialty') ?? physician?.specialty ?? ''
   const insurance = searchParams.get('insurance') ?? ''
-  const notes = searchParams.get('notes') ?? ''
+  const clinicalEpisodeId = searchParams.get('episode_id') || searchParams.get('episodeId') || ''
+  const savedIntake = useEpisodeIntake(clinicalEpisodeId)
+  const notes = savedIntake.loading ? 'Loading saved intake…' : savedIntake.error || savedIntake.notes
 
   const [overallRating, setOverallRating] = useState(4.5)
   const [physicianRatings, setPhysicianRatings] = useState<Record<string, number>>({
@@ -182,13 +186,13 @@ function FeedbackPageContent() {
       slot,
       duration,
       insurance,
-      notes,
+      episode_id: clinicalEpisodeId,
       feedback: 'submitted',
       overallRating: String(overallRating),
       followUp,
     })
     return `${PATIENT_ROUTES.dashboard}?${params.toString()}`
-  }, [date, duration, followUp, insurance, notes, overallRating, physicianId, physicianName, slot, specialty])
+  }, [date, duration, followUp, insurance, clinicalEpisodeId, overallRating, physicianId, physicianName, slot, specialty])
 
   const updateCriterion = (key: string, value: number) => {
     setPhysicianRatings((current) => ({ ...current, [key]: value }))

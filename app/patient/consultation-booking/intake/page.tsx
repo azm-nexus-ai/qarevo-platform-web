@@ -9,6 +9,7 @@ import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
+import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
 
 function readLabel(service: string | null) {
   switch (service) {
@@ -84,6 +85,13 @@ function IntakePageContent() {
   const [reportedSeverity, setReportedSeverity] = useState('')
   const [associatedFactors, setAssociatedFactors] = useState('')
 
+  const [processingConsent, setProcessingConsent] = useState(false)
+  const [aiConsent, setAiConsent] = useState(false)
+  const [attempted, setAttempted] = useState(false)
+  const errors = {
+    complaint: !chiefComplaint.trim() ? 'Describe the main reason for your visit.' : chiefComplaint.length > 2000 ? 'Use no more than 2,000 characters for the main concern.' : undefined,
+    processing: !processingConsent ? 'Confirm the required data-processing choice before submitting this intake.' : undefined,
+  }
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
@@ -111,13 +119,16 @@ function IntakePageContent() {
   }, [physicianId, physician])
 
   const handleBack = () => {
-    const params = new URLSearchParams(searchParams.toString())
+    const params = buildBookingQueryParams(searchParams, physicianData, service)
     router.push(`/patient/consultation-booking/date-time?${params.toString()}`)
   }
 
   const handleSubmit = async () => {
-    if (!chiefComplaint.trim()) {
-      setSubmitError('Please describe your chief complaint (what brings you here today).')
+    if (isSubmitting) return
+    setAttempted(true)
+    if (Object.values(errors).some(Boolean)) {
+      const form = document.getElementById('clinical-intake-form')
+      if (form) focusValidation(form)
       return
     }
 
@@ -134,8 +145,8 @@ function IntakePageContent() {
         matching_mode: 'patient_selects',
         insurance_provider: insurance !== 'Self pay' ? insurance : undefined,
         insurance_number: '',
-        consent_data_processing: true,
-        consent_ai_assistance: true,
+        consent_data_processing: processingConsent,
+        consent_ai_assistance: aiConsent,
         recipient_email: '',
         recipient_phone_e164: '',
         notification_channel: 'email',
@@ -164,7 +175,7 @@ function IntakePageContent() {
       router.push(`/patient/consultation-booking/review?${reviewParams.toString()}`)
     } catch (error) {
       console.error('Failed to submit intake:', error)
-      setSubmitError('Failed to submit your intake information. Please try again.')
+      setSubmitError(error instanceof Error ? error.message : 'Failed to submit your intake information. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -212,17 +223,23 @@ function IntakePageContent() {
           </p>
 
           {submitError && (
-            <div style={{ background: "var(--danger-soft)", border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
+            <div role="alert" style={{ background: "var(--danger-soft)", border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
               <p style={{ color: '#dc2626', margin: 0, fontSize: '14px' }}>{submitError}</p>
             </div>
           )}
 
-          <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <form id="clinical-intake-form" noValidate onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <p className="field-hint">Development testing only. Use synthetic information. The legal documents are drafts awaiting approval.</p>
+            {attempted && <ValidationSummary errors={errors} />}
             <div>
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Chief Complaint <span style={{ color: '#ef4444' }}>*</span>
+              <label htmlFor="chief-complaint" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+                Chief Complaint (Required)
               </label>
               <textarea
+                id="chief-complaint"
+                aria-invalid={attempted && Boolean(errors.complaint)}
+                aria-describedby={attempted && errors.complaint ? 'complaint-error complaint-hint' : 'complaint-hint'}
+                maxLength={2000}
                 value={chiefComplaint}
                 onChange={(e) => setChiefComplaint(e.target.value)}
                 placeholder="What is the main reason for your visit? (e.g., persistent headache, fever, chest pain)"
@@ -230,6 +247,8 @@ function IntakePageContent() {
                 style={{ width: '100%', minHeight: '100px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
             </div>
+
+            <FieldFeedback name="complaint" error={attempted ? errors.complaint : undefined} hint="Describe your main concern in up to 2,000 characters." />
 
             <div>
               <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
@@ -326,15 +345,27 @@ function IntakePageContent() {
               />
             </div>
 
+            <div>
+              <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <input type="checkbox" checked={processingConsent} onChange={e => setProcessingConsent(e.target.checked)} aria-invalid={attempted && Boolean(errors.processing)} aria-describedby="processing-hint processing-error" />
+                <span>I agree to processing this synthetic intake for development testing. (Required)</span>
+              </label>
+              <FieldFeedback name="processing" error={attempted ? errors.processing : undefined} hint="This is a development acknowledgement, not acceptance of final legal terms. See the draft status on the privacy page." />
+              <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 16 }}>
+                <input type="checkbox" checked={aiConsent} onChange={e => setAiConsent(e.target.checked)} />
+                <span>Allow optional AI assistance to prepare a draft for clinician review. Declining does not prevent clinician-led care.</span>
+              </label>
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
               <button
+                type="button"
                 onClick={handleBack}
                 style={{ padding: '12px 24px', borderRadius: '8px', background: "var(--canvas)", color: "var(--text-muted)", border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}
               >
                 Back
               </button>
               <button
-                onClick={handleSubmit}
+                type="submit"
                 disabled={isSubmitting}
                 style={{ padding: '12px 32px', borderRadius: '8px', background: '#348cea', color: '#fff', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: 600, opacity: isSubmitting ? 0.6 : 1 }}
               >

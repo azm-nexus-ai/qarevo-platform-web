@@ -1,5 +1,7 @@
 'use client'
 
+import { useEpisodeIntake } from '@/lib/use-episode-intake'
+
 import Link from 'next/link'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -94,7 +96,9 @@ function SuccessPageContent() {
   const insurance = searchParams.get('insurance')
   const date = searchParams.get('date')
   const slot = searchParams.get('slot')
-  const notes = searchParams.get('notes')
+  const clinicalEpisodeId = searchParams.get('episode_id') || searchParams.get('episodeId') || ''
+  const savedIntake = useEpisodeIntake(clinicalEpisodeId)
+  const notes = savedIntake.loading ? 'Loading saved intake…' : savedIntake.error || savedIntake.notes
   const [hoveredAction, setHoveredAction] = useState<string | null>(null)
   const [reminderEnabled, setReminderEnabled] = useState(true)
   const [userTimeZone, setUserTimeZone] = useState('Africa/Lagos')

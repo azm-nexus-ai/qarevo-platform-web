@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Suspense, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
-import { getBookingPhysician } from '@/lib/booking'
+import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -65,12 +65,12 @@ function ConfirmationPageContent() {
   const parsedFee = fee ? Number(fee) : (physicianData.consultationFee ?? 0)
 
   const successHref = useMemo(() => {
-    const next = new URLSearchParams(searchParams.toString())
+    const next = buildBookingQueryParams(searchParams, physicianData, service)
     return `/patient/consultation-booking/success?${next.toString()}`
   }, [searchParams])
 
   const backHref = useMemo(() => {
-    const next = new URLSearchParams(searchParams.toString())
+    const next = buildBookingQueryParams(searchParams, physicianData, service)
     return `/patient/consultation-booking/review?${next.toString()}`
   }, [searchParams])
 

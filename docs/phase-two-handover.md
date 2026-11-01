@@ -26,3 +26,17 @@ Regression evidence: backend tests cover legacy auto-approval, pending/suspended
 - Service credential/rate-limit verification and the final cross-role negative-access matrix.
 
 Booking/video completion, billing/insurance integration and AWS migration retain their later-phase scope. Legal source documents remain drafts and must not be published as approved policy.
+
+## Release 2: current authority and assignment
+
+Platform API resolves current accounts for CWS using scoped, signed service credentials. CWS rechecks human authority on every request and maps provider-user tokens to provider IDs. Authority outages return 503. Booking delegates PATIENT identity rather than impersonating ADMIN; only the owning patient's Platform API booking delegate or an administrator can create an assignment. A clinician cannot claim an unrelated episode.
+
+The API deployment workflow now runs PostgreSQL 16 tests in an isolated CI database: approval plus audit survive new connections, failed audit writes roll back approve/reject/suspend, and another transaction cannot read uncommitted changes. CWS deployment `5ff37b15-418b-4871-b171-653701c841ef` passed cloud deployment and database readiness checks. CWS CI currently tests but does not automatically deploy; this release was deployed through the authenticated CLI.
+
+## Release 3: consent and clinical URL privacy
+
+Intake requires an explicit development data-processing acknowledgement before submission. Optional AI is unchecked by default; backend eligibility uses persisted episode choices, not frontend assertions. Direct AI submission verifies episode ownership/assignment and both consent flags. The clinical consumer requires the AI service identity, consent, physician review and successful validation. AI delivery forwards actual validation results instead of labelling every result passed.
+
+Booking review reads the signed-in patient's profile and saved intake. Clinical narrative is retrieved through the authenticated API, not forwarded in query strings. Legacy `notes` parameters are discarded by booking navigation. Existing browser history or external logs are not retroactively erased. These acknowledgements remain `dev-test-20261101`; they do not publish or approve the supplied legal drafts.
+
+Remaining: full CWS audit/outbox atomicity and recovery, OTP/log privacy, hosted credential/rate-limit evidence, remaining UI consistency, and the final cross-role acceptance run. The video screen still contains prototype behavior; actual video integration remains Phase 3 and must not be represented as a completed clinical consultation.
