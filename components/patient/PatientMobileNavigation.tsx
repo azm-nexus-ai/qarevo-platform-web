@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
@@ -129,6 +130,9 @@ export default function PatientMobileNavigation() {
           border-bottom: 1px solid var(--border);
           box-shadow: 0 2px 12px rgba(4,53,77,0.06);
         }
+        @media(max-width:460px) {
+          .pmn-topbar button[aria-label="Open messages"], .pmn-topbar button[aria-label="Profile"] { display: none; }
+        }
         .pmn-hamburger {
           width: 40px;
           height: 40px;
@@ -254,10 +258,11 @@ export default function PatientMobileNavigation() {
             aria-label="Qarevo Health Patient Dashboard"
             style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
           >
-            <AuthenticatedLogo width={120} />
+            <AuthenticatedLogo width={100} />
           </Link>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+          <ThemeToggle />
           <button
             type="button"
             aria-label="Open messages"
@@ -324,7 +329,9 @@ export default function PatientMobileNavigation() {
         id="pmn-drawer"
         ref={drawerRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal={mobileOpen ? true : undefined}
+        aria-hidden={!mobileOpen}
+        inert={!mobileOpen}
         aria-label="Navigation menu"
         className={`pmn-drawer${mobileOpen ? ' pmn-drawer--open' : ''}`}
       >

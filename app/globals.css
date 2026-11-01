@@ -356,3 +356,6 @@ button:disabled { cursor: wait; }
   --color-theme: var(--border);
   --color-subtle: var(--border-subtle);
 }
+
+.patient-appearance-navigation { display: flex; justify-content: flex-end; align-items: center; gap: 16px; padding: 10px 24px; background: var(--surface); border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 14px; }
+@media(max-width:920px) { .patient-appearance-navigation { display: none; } }

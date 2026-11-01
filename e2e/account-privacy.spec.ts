@@ -683,3 +683,23 @@ test('main navigation exposes dark mode on desktop and mobile and synchronizes t
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await second.close()
 })
+
+
+test('patient dashboard and discovery retain the shared theme control outside the standard shell', async ({ page }) => {
+  await signIn(page, alpha)
+  for (const route of ['/patient/dashboard', '/patient/find-doctor']) {
+    await page.goto(route)
+    const toggle = page.getByRole('button', { name: 'Dark mode', exact: true })
+    await expect(toggle).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Navigation menu', exact: true })).toHaveCount(0)
+    await page.setViewportSize({ width: 320, height: 844 })
+    await expect(toggle).toBeVisible()
+    const bounds = await toggle.boundingBox()
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320)
+    await page.getByRole('button', { name: 'Open navigation menu', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Navigation menu', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Close navigation menu', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Navigation menu', exact: true })).toHaveCount(0)
+    await page.setViewportSize({ width: 1280, height: 900 })
+  }
+})

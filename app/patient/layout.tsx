@@ -1,5 +1,6 @@
 'use client'
 
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import PatientMobileNavigation from '@/components/patient/PatientMobileNavigation'
 import { useRouter } from 'next/navigation'
 import { isPatient, readAccessToken, clearAuthTokens } from '@/lib/api'
@@ -29,6 +30,9 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
   return (
     <>
       <PatientMobileNavigation />
+      <nav aria-label="Patient appearance" className="patient-appearance-navigation">
+        <span>Patient portal</span><ThemeToggle />
+      </nav>
       {mounted ? children : null}
     </>
   )

@@ -262,7 +262,9 @@ export default function DoctorMobileNavigation() {
         id="dmn-drawer"
         ref={drawerRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal={mobileOpen ? true : undefined}
+        aria-hidden={!mobileOpen}
+        inert={!mobileOpen}
         aria-label="Navigation menu"
         className={`dmn-drawer${mobileOpen ? ' dmn-drawer--open' : ''}`}
       >

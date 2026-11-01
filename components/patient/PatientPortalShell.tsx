@@ -1,7 +1,5 @@
 'use client'
 
-import { ThemeToggle } from '@/components/ui/ThemeProvider'
-
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -276,7 +274,6 @@ export default function PatientPortalShell({
                 <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '30px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>{title}</h1>
                 <p style={{ margin: 0, maxWidth: '760px', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>{description}</p>
               </div>
-              <ThemeToggle />
               {headerActions ? (
                 <div className='pps-header-actions' style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>{headerActions}</div>
               ) : null}
