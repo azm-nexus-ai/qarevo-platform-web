@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useId, useRef, useState } from 'react'
+import { Suspense, useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -528,17 +528,25 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
 
 function ResetPasswordPageContent() {
   const [token, setToken] = useState('')
-  const consumedLink = useRef(false)
   useEffect(() => {
-    if (consumedLink.current) return
-    consumedLink.current = true
-    const url = new URL(window.location.href)
-    const fragment = new URLSearchParams(url.hash.slice(1))
-    setToken(fragment.get('token') || url.searchParams.get('token') || '')
-    url.searchParams.delete('token')
-    fragment.delete('token')
-    url.hash = fragment.toString()
-    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+    const captureLink = () => {
+      const url = new URL(window.location.href)
+      const fragment = new URLSearchParams(url.hash.slice(1))
+      const incoming = fragment.get('token') || url.searchParams.get('token')
+      if (!incoming) return
+      setToken(incoming)
+      url.searchParams.delete('token')
+      fragment.delete('token')
+      url.hash = fragment.toString()
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+    }
+    captureLink()
+    window.addEventListener('hashchange', captureLink)
+    window.addEventListener('popstate', captureLink)
+    return () => {
+      window.removeEventListener('hashchange', captureLink)
+      window.removeEventListener('popstate', captureLink)
+    }
   }, [])
 
   const [newPassword, setNewPassword] = useState('')
