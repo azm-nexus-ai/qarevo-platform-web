@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { clearAuthTokens, getPatientDashboard, getPatientHealthInfo, isAuthError, markPatientMedicationTaken, readAccessToken, searchPatientDashboard, searchPatientDoctors } from '@/lib/api'
+import { apiGet, logoutCurrentUser, clearAuthTokens, getPatientDashboard, getPatientHealthInfo, isAuthError, markPatientMedicationTaken, readAccessToken, searchPatientDashboard, searchPatientDoctors } from '@/lib/api'
 import type { PatientDashboardResponse, PatientDashboardSearchResult, PatientDoctor } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
@@ -362,7 +362,12 @@ export default function PatientDashboardPage() {
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
-  const [loadingRightRail, setLoadingRightRail] = useState(true)
+  const [dashboardLoading, setDashboardLoading] = useState(true)
+  const [dashboardError, setDashboardError] = useState(false)
+  const [healthError, setHealthError] = useState(false)
+  const [reload, setReload] = useState(0)
+  const [doctorsLoading, setDoctorsLoading] = useState(true)
+  const [doctorsError, setDoctorsError] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [patientName, setPatientName] = useState('')
   const [carePlanStatus, setCarePlanStatus] = useState('Loading')
@@ -380,7 +385,7 @@ export default function PatientDashboardPage() {
   const patientInitials = getInitials(displayPatientName)
 
   const handleLogout = () => {
-    clearAuthTokens()
+    void logoutCurrentUser().catch(() => console.warn('Server logout could not be confirmed.'))
     setShowLogoutModal(false)
     router.push('/auth/sign-in')
   }
@@ -393,27 +398,14 @@ export default function PatientDashboardPage() {
         return
       }
 
-      const response = await fetch('/api/v1/patient/doctors/next-available?consultation_type=video', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const doctorId = text(data?.doctor?.id)
-        const recommendedSlot = text(data?.booking?.recommendedSlot ?? data?.doctor?.nextAvailable)
-
-        if (!doctorId || !recommendedSlot || recommendedSlot.toLowerCase() === 'not available') {
-          router.push(PATIENT_ROUTES.findDoctor)
-          return
-        }
-
-        router.push(`/patient/physicians/${doctorId}?from=dashboard&intent=book&slot=${encodeURIComponent(recommendedSlot)}`)
-      } else {
-        console.error('Failed to fetch next available doctor')
+      const data = await apiGet<{ doctor?: { id?: string; nextAvailable?: string }; booking?: { recommendedSlot?: string } }>('/api/v1/patient/doctors/next-available?consultation_type=video')
+      const doctorId = text(data?.doctor?.id)
+      const recommendedSlot = text(data?.booking?.recommendedSlot ?? data?.doctor?.nextAvailable)
+      if (!doctorId || !recommendedSlot || recommendedSlot.toLowerCase() === 'not available') {
         router.push(PATIENT_ROUTES.findDoctor)
+        return
       }
+      router.push(`/patient/physicians/${doctorId}?from=dashboard&intent=book&slot=${encodeURIComponent(recommendedSlot)}`)
     } catch (error) {
       console.error('Error booking next available:', error)
       router.push(PATIENT_ROUTES.findDoctor)
@@ -462,50 +454,51 @@ export default function PatientDashboardPage() {
       return
     }
 
+    let cancelled = false
+    setDashboardLoading(true)
+    setDashboardError(false)
+    setHealthError(false)
     const fetchDashboardProfile = async () => {
       try {
-        const userId = localStorage.getItem('qarevo_user_id')
-        const data = await getPatientDashboard(userId)
+        const data = await getPatientDashboard(localStorage.getItem('qarevo_user_id'))
+        if (cancelled) return
         setDashboardData(data)
-        if (data.patient_name) {
-          setPatientName(data.patient_name)
-        }
+        setPatientName(data.patient_name || '')
         const plans = data.care_plans ?? data.carePlans ?? []
-        const activePlan = plans.find((plan) => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
-        setCarePlanStatus(activePlan?.status || (plans.length ? 'Active' : 'Not started'))
+        const activePlan = plans.find(plan => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
+        setCarePlanStatus(activePlan?.status || (plans.length ? 'Status not recorded' : 'Not started'))
       } catch (error) {
+        if (cancelled) return
         if (isAuthError(error)) {
           clearAuthTokens()
           router.replace('/auth/sign-in')
           return
         }
-        console.error('Failed to fetch dashboard profile:', error)
+        setDashboardError(true)
         setCarePlanStatus('Unavailable')
+      } finally {
+        if (!cancelled) setDashboardLoading(false)
       }
     }
-
     const fetchHealthInfo = async () => {
       try {
         const data = await getPatientHealthInfo()
-        setHealthInfo(data)
-      } catch (error) {
-        if (isAuthError(error)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
-          return
-        }
-        console.error('Failed to fetch health info:', error)
+        if (!cancelled) setHealthInfo(data)
+      } catch {
+        if (!cancelled) setHealthError(true)
       }
     }
-
-    fetchDashboardProfile()
-    fetchHealthInfo()
-  }, [router])
+    void fetchDashboardProfile()
+    void fetchHealthInfo()
+    return () => { cancelled = true }
+  }, [router, reload])
 
   useEffect(() => {
     let cancelled = false
 
     const fetchRecommendedDoctors = async () => {
+      setDoctorsLoading(true)
+      setDoctorsError(false)
       try {
         const params = new URLSearchParams({ sort: 'highest-rated' })
         const data = await searchPatientDoctors(params)
@@ -515,8 +508,11 @@ export default function PatientDashboardPage() {
       } catch (error) {
         if (isAuthError(error)) {
           clearAuthTokens()
-          router.push('/patient/login')
+          router.push('/auth/sign-in')
         }
+        if (!cancelled) setDoctorsError(true)
+      } finally {
+        if (!cancelled) setDoctorsLoading(false)
       }
     }
 
@@ -525,18 +521,8 @@ export default function PatientDashboardPage() {
         const token = readAccessToken()
         if (!token) return
 
-        const response = await fetch('/api/v1/patient/doctors/recent', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          if (!cancelled) {
-            setRecentDoctors(data.recent_doctors || [])
-          }
-        }
+        const data = await apiGet<{ recent_doctors?: PatientDoctor[] }>('/api/v1/patient/doctors/recent')
+        if (!cancelled) setRecentDoctors(data.recent_doctors || [])
       } catch (error) {
         console.error('Failed to fetch recent doctors:', error)
       }
@@ -547,12 +533,7 @@ export default function PatientDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [router])
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setLoadingRightRail(false), 850)
-    return () => window.clearTimeout(t)
-  }, [])
+  }, [router, reload])
 
   useEffect(() => {
     const query = search.trim()
@@ -684,7 +665,7 @@ export default function PatientDashboardPage() {
         remaining: text(item.remaining ?? item.duration, fallback.remaining),
         progress: numberValue(item.progress, 0),
         due: text(item.due ?? item.nextDue ?? item.schedule, fallback.due),
-        status: text(item.status ?? item.refill, 'Active'),
+        status: text(item.status, 'Status not recorded'),
       }
     })
   }, [dashboardData])
@@ -763,19 +744,7 @@ export default function PatientDashboardPage() {
     // Use health info from profile instead of dashboard historical data
     if (healthInfo.blood_pressure) {
       const bp = healthInfo.blood_pressure
-      // Calculate trend based on blood pressure (simplified logic)
-      const systolic = parseInt(bp.split('/')[0]) || 120
-      const trend = systolic < 120 ? 'Normal' : systolic < 140 ? 'Elevated' : 'High'
-      const color = systolic < 120 ? '#10B981' : systolic < 140 ? '#F59E0B' : '#EF4444'
-
-      return [
-        {
-          label: 'Blood Pressure',
-          value: `${bp} mmHg`,
-          trend: trend,
-          color: color,
-        }
-      ]
+      return [{ label: 'Blood Pressure', value: `${bp} mmHg`, trend: 'Recorded measurement', color: '#20B5DF' }]
     }
 
     // Fallback to dashboard data if no health info
@@ -820,13 +789,7 @@ export default function PatientDashboardPage() {
 
   const displayAIInsights = useMemo<AIInsightCard[]>(() => {
     const source = dashboardArray(dashboardData, 'ai_insights', 'aiInsights')
-    if (!source.length && !dashboardHasKey(dashboardData, 'ai_insights', 'aiInsights')) {
-      return [
-        { icon: ICONS.info, title: 'Medication Adherence', body: 'Review your medication plan and reminders.', action: 'Review plan', href: PATIENT_ROUTES.prescriptions },
-        { icon: ICONS.heart, title: 'Health Trends', body: 'View follow-up insights from your recent care activity.', action: 'View insights', href: '/patient/follow-up' },
-        { icon: ICONS.calendar, title: 'Suggested Checkups', body: 'Find an available physician when you are ready for a checkup.', action: 'Book checkup', href: PATIENT_ROUTES.findDoctor },
-      ]
-    }
+    if (!source.length) return []
     return source.map((item) => ({
       title: text(item.title, 'Insight'),
       body: text(item.body ?? item.description, ''),
@@ -852,7 +815,7 @@ export default function PatientDashboardPage() {
     const messages = findCard('message')
     return [
       { label: 'Upcoming Appointments', value: appointment?.value ?? '0', sub: appointment?.sub ?? 'No upcoming appointments' },
-      { label: 'Active Prescriptions', value: prescriptions?.value ?? String(displayMedications.length), sub: prescriptions?.sub ?? 'Medication plan available' },
+      { label: 'Active Prescriptions', value: prescriptions?.value ?? String(displayMedications.length), sub: prescriptions?.sub ?? (displayMedications.length ? 'Recorded medications' : 'No medications recorded') },
       { label: 'Pending Lab Tests', value: String(labs.length || displayLabData.length), sub: labs[0]?.status ?? 'No pending tests' },
       { label: 'Unread Messages', value: messages?.value ?? String(displayMessageThreads.filter((item) => item.unread).length), sub: messages?.sub ?? 'Care team updates' },
     ]
@@ -1173,6 +1136,8 @@ export default function PatientDashboardPage() {
               </div>
             </div>
           </header>
+          {dashboardLoading ? <section role='status' aria-live='polite' style={{ padding: 32, background: 'white', borderRadius: 20 }}>Loading your dashboard…</section> : dashboardError ? <section role='alert' style={{ padding: 32, background: 'white', borderRadius: 20 }}><h2>We couldn’t load your dashboard</h2><p>Your records have not been changed.</p><button onClick={() => setReload(value => value + 1)}>Try again</button></section> : <>
+
 
           <section style={{ ...Glass.aiCard, position: 'relative', zIndex: specialtyMenuOpen ? 260 : 1, overflow: 'visible', borderRadius: '22px', padding: '22px', marginBottom: '14px', boxShadow: Sh.float }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '18px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1502,15 +1467,13 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Health Metrics' sub='Historical trends and your recent wellness signals.'>
+          <SectionCard title='Health Metrics' sub='Recorded measurements; no clinical interpretation is inferred.'>
+            {healthError && <p role='alert'>Health measurements could not be loaded. <button onClick={() => setReload(value => value + 1)}>Try again</button></p>}
             <div style={{ display: 'grid', gap: '10px' }}>
-              {displayMetrics.length === 0 && (
+              {!healthError && displayMetrics.length === 0 && (
                 <EmptyState>No health metrics have been added yet.</EmptyState>
               )}
               {displayMetrics.map((item) => {
-                const bp = healthInfo.blood_pressure
-                const systolic = bp ? parseInt(bp.split('/')[0]) || 120 : 120
-                const progress = Math.min((systolic / 180) * 100, 100)
 
                 return (
                   <div key={item.label} style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.82)', padding: '12px 14px' }}>
@@ -1521,9 +1484,7 @@ export default function PatientDashboardPage() {
                       </div>
                       <div style={{ fontSize: '12px', fontWeight: 700, color: item.color }}>{item.trend}</div>
                     </div>
-                    <div style={{ marginTop: '8px', height: '7px', borderRadius: '999px', background: 'rgba(4,53,77,0.08)', overflow: 'hidden' }}>
-                      <div style={{ width: `${progress}%`, height: '100%', borderRadius: 'inherit', background: `linear-gradient(90deg, ${item.color} 0%, rgba(255,255,255,0.9) 100%)` }} />
-                    </div>
+
                   </div>
                 )
               })}
@@ -1676,10 +1637,10 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Recommended Physicians' sub='Continue your care journey by discovering the right specialist.' action={<Link href='/patient/find-doctor' style={{ fontSize: '12.5px', color: '#348CEA', fontWeight: 700, textDecoration: 'none' }}>Open discovery →</Link>}>
+          <SectionCard title='Find a physician' sub='Listed by rating, without a clinical recommendation.' action={<Link href='/patient/find-doctor' style={{ fontSize: '12.5px', color: '#348CEA', fontWeight: 700, textDecoration: 'none' }}>Open discovery →</Link>}>
             <div style={{ display: 'grid', gap: '10px' }}>
               <div className='pd-doctor-carousel'>
-                {(recommendedDoctors ?? []).length === 0 && (
+                {doctorsLoading ? <p role='status'>Loading physicians…</p> : doctorsError ? <p role='alert'>Physicians could not be loaded. <button onClick={() => setReload(value => value + 1)}>Try again</button></p> : (recommendedDoctors ?? []).length === 0 && (
                   <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: '12px', fontWeight: 700 }}>Open Discovery</Link>}>
                     No verified physicians are available from the API yet.
                   </EmptyState>
@@ -1699,9 +1660,10 @@ export default function PatientDashboardPage() {
               </div>
             </div>
           </SectionCard>
+          </>}
         </section>
 
-        <aside className='pd-right'>
+        {!dashboardLoading && !dashboardError && <aside className='pd-right'>
           <div style={{ position: 'sticky', top: '18px', display: 'grid', gap: '14px' }}>
             <SectionCard title='Today’s Schedule' sub='The key moments and commitments for the day.'>
               {todayScheduleItems.length ? (
@@ -1720,7 +1682,7 @@ export default function PatientDashboardPage() {
             </SectionCard>
 
             <SectionCard title='Notifications' sub='Recent updates from your care team.'>
-              {loadingRightRail ? (
+              {dashboardLoading ? (
                 <SkeletonRow />
               ) : (
                 <div style={{ display: 'grid', gap: '8px' }}>
@@ -1754,10 +1716,10 @@ export default function PatientDashboardPage() {
               </div>
             </SectionCard>
 
-            <SectionCard title='Emergency Contact' sub='Support is always available when you need it.'>
+            <SectionCard title='Contact your care team' sub='Use your messages to contact your care team.'>
               <div style={{ borderRadius: '14px', padding: '14px', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 700, color: T.navy }}>Care Team Hotline</p>
-                <p style={{ margin: 0, fontSize: '12px', color: T.slate }}>Available 24/7 for urgent support and guidance.</p>
+                <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 700, color: T.navy }}>Messages</p>
+                <p style={{ margin: 0, fontSize: '12px', color: T.slate }}>Responses depend on your care team’s availability.</p>
               </div>
             </SectionCard>
 
@@ -1769,7 +1731,7 @@ export default function PatientDashboardPage() {
               </div>
             </SectionCard>
           </div>
-        </aside>
+        </aside>}
       </div>
 
       {showLogoutModal && (

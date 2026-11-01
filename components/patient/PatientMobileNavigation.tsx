@@ -9,7 +9,7 @@ import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
-import { clearAuthTokens, getPatientDashboard, getPatientSettings, isAuthError, readAccessToken } from '@/lib/api'
+import { logoutCurrentUser, clearAuthTokens, getPatientDashboard, getPatientSettings, isAuthError, readAccessToken } from '@/lib/api'
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -61,7 +61,7 @@ export default function PatientMobileNavigation() {
   }, [])
 
   const handleLogout = () => {
-    clearAuthTokens()
+    void logoutCurrentUser().catch(() => console.warn('Server logout could not be confirmed.'))
     setShowLogoutModal(false)
     closeDrawer()
     router.push('/auth/sign-in')
@@ -83,7 +83,7 @@ export default function PatientMobileNavigation() {
         }
         const plans = data.care_plans ?? data.carePlans ?? []
         const activePlan = plans.find((plan) => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
-        setCarePlanStatus(activePlan?.status || (plans.length ? 'Active' : 'Not started'))
+        setCarePlanStatus(activePlan?.status || (plans.length ? 'Status not recorded' : 'Not started'))
         setDarkMode(Boolean(settings.dark_mode))
       } catch (error) {
         if (isAuthError(error)) {

@@ -50,7 +50,7 @@ function tab(localStorage = storage(), fetch = async () => new Response('{}'), o
   }
   const shared = {
     window, fetch, Headers, Response, Event, URL, URLSearchParams,
-    crypto: webcrypto, console, AbortController, setTimeout, clearTimeout,
+    crypto: webcrypto, console, AbortController, AbortSignal, setTimeout, clearTimeout,
     navigator: { locks: locksFor(localStorage) },
     process: { env: { NEXT_PUBLIC_API_BASE_URL: 'https://qarevo.invalid' } },
     ...overrides,
@@ -215,9 +215,10 @@ test('late logout cannot clear a newer account', async () => {
   const t = tab(undefined, () => response.promise)
   login(t, 'A')
   const request = t.api.logoutCurrentUser()
+  assert.equal(t.api.readAccessToken(), null)
   login(t, 'B')
   response.resolve(new Response('{}'))
-  await assert.rejects(request, /session changed/i)
+  await request
   assert.equal(t.api.readAccessToken(), 'access-B')
 })
 
@@ -399,4 +400,16 @@ test('a protected request retries only once even if the renewed token is rejecte
   await assert.rejects(t.api.apiGet('/private'), error => t.api.isAuthError(error))
   assert.equal(rotations, 1)
   assert.equal(requests, 2)
+})
+
+test('network failure during logout still removes credentials and drafts', async () => {
+  let posted
+  const t = tab(undefined, async (url, init) => { posted = JSON.parse(init.body); throw new Error('Offline') })
+  login(t, 'A')
+  t.core.createAccountDraftStorage().setItem('health', 'Private')
+  await assert.rejects(t.api.logoutCurrentUser(), /Offline/)
+  assert.equal(posted.refresh_token, 'refresh-A')
+  assert.equal(t.api.readAccessToken(), null)
+  assert.equal(t.api.readRefreshToken(), null)
+  assert.equal(Object.keys(t.sessionStorage).length, 0)
 })

@@ -8,7 +8,7 @@ import { NAV_LINKS, NAV_ANCHORS } from '@/constants/navigation'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
-import { clearAuthTokens, readAccessToken } from '@/lib/api'
+import { logoutCurrentUser, clearAuthTokens, readAccessToken } from '@/lib/api'
 
 export default function NavigationBar() {
   const [activeSection, setActiveSection] = useState<string>('Platform Overview')
@@ -52,7 +52,7 @@ export default function NavigationBar() {
   }, [])
 
   const handleLogout = () => {
-    clearAuthTokens()
+    void logoutCurrentUser().catch(() => console.warn('Server logout could not be confirmed.'))
     setIsAuthenticated(false)
     setShowLogoutModal(false)
     router.push('/auth/sign-in')

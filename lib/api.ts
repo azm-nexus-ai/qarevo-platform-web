@@ -1041,17 +1041,19 @@ export async function loginAdmin(body: { email: string; password: string }): Pro
   return apiPost<AdminLoginResponse>("/api/v1/auth/admin/login", body);
 }
 export async function logoutCurrentUser(): Promise<void> {
-    const scope = readAccountScope();
     const refreshToken = readRefreshToken();
-    try {
-        if (refreshToken) {
-            await apiPost<{ message: string }, { refresh_token: string }>("/api/v1/auth/logout", {
-                refresh_token: refreshToken,
-            });
-        }
-    } finally {
-        if (scope === readAccountScope()) clearAuthTokens();
-    }
+    // End local access immediately, even when the network is unavailable.
+    clearAuthTokens();
+    if (!refreshToken) return;
+    const response = await fetch(`${getBaseUrl()}/api/v1/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        signal: AbortSignal.timeout(10_000),
+        keepalive: true,
+        cache: "no-store",
+    });
+    if (!response.ok) throw new ApiError(response.status, "Server logout could not be confirmed.");
 }
 
 export type DoctorDashboardStats = {

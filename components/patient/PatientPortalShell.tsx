@@ -3,13 +3,13 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import { ICONS } from '@/constants/icons'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
-import { getPatientSettings, isAuthError, clearAuthTokens, type PatientSettings } from '@/lib/api'
+import { getPatientSettings, isAuthError, clearAuthTokens, logoutCurrentUser, type PatientSettings } from '@/lib/api'
 
 type PatientPortalShellProps = {
   eyebrow?: string
@@ -29,6 +29,12 @@ type PatientPortalShellProps = {
 // Extracted so we can render it both inside the desktop aside and the mobile drawer.
 
 function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: string; onNavigate?: () => void; userSettings: PatientSettings | null }) {
+  const router = useRouter()
+  const signOut = () => {
+    void logoutCurrentUser().catch(() => console.warn('Server logout could not be confirmed.'))
+    onNavigate?.()
+    router.replace('/auth/sign-in')
+  }
   const fullName = userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'
   const initials = fullName ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'P'
   
@@ -71,7 +77,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
           </div>
           <div>
             <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{fullName}</p>
-            <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: Active</p>
+            <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Patient account</p>
           </div>
         </div>
       </section>
@@ -111,11 +117,11 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
 
       {/* Logout */}
       <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${T.borderFaint}` }}>
-        <Link
-          href={PATIENT_ROUTES.logout}
-          onClick={onNavigate}
+        <button
+          type="button"
+          onClick={signOut}
           style={{
-            display: 'flex',
+            border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', display: 'flex',
             alignItems: 'center',
             gap: '10px',
             padding: '10px 12px',
@@ -128,7 +134,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
         >
           <Ico p={ICONS.arrowSm} size={15} sw={1.7} color='#348CEA' />
           Logout
-        </Link>
+        </button>
       </div>
     </>
   )
@@ -314,6 +320,10 @@ export default function PatientPortalShell({
         .patient-portal-shell.pps-theme-contrast .pps-sidebar {
           filter: contrast(1.08) saturate(1.08);
         }
+        .patient-portal-shell.pps-theme-dark .pps-sidebar p,
+        .patient-portal-shell.pps-theme-dark .pps-sidebar nav a { color: #D7EAF5 !important; }
+        .patient-portal-shell.pps-theme-dark .pps-sidebar nav a[aria-current="page"] { color: #67E8F9 !important; }
+        .patient-portal-shell.pps-theme-dark .pps-sidebar nav svg { stroke: currentColor; }
         /* ── Responsive ── */
         @media (max-width: 1280px) {
           .pps-shell,

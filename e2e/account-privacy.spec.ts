@@ -11,6 +11,12 @@ type RenewalScenario = {
   refreshes: number
   rejectedAccess: number
   holdRefresh?: Promise<void>
+  holdRecords?: Promise<void>
+  holdDashboard?: Promise<void>
+  recordsStatus?: number
+  dashboardStatus?: number
+  records?: Record<string, unknown>
+  logoutCount?: number
 }
 const scenarios = new WeakMap<BrowserContext, RenewalScenario>()
 
@@ -64,7 +70,22 @@ async function mockApi(context: BrowserContext) {
       const email = authorization.replace(/^Bearer (test|renewed)-access:/, '')
       return route.fulfill({ headers: cors, json: { user_id: email, email, phone: '+4915112345678', emergency_contacts: [] } })
     }
-    if (pathname === '/api/v1/auth/logout') return route.fulfill({ headers: cors, json: { message: 'Logged out.' } })
+    if (pathname === '/api/v1/auth/logout') {
+      scenario.logoutCount = (scenario.logoutCount || 0) + 1
+      return route.fulfill({ headers: cors, json: { message: 'Logged out.' } })
+    }
+    if (pathname === '/api/v1/patient/prescription-care-plan') {
+      await scenario.holdRecords
+      return route.fulfill({ headers: cors, status: scenario.recordsStatus || 200, json: scenario.records || { medications: [], care_plans: [] } })
+    }
+    if (pathname === '/api/v1/patient/dashboard') {
+      await scenario.holdDashboard
+      return route.fulfill({ headers: cors, status: scenario.dashboardStatus || 200, json: { patient_name: 'Synthetic Patient', care_plans: [], medications: [], summary_cards: [], ai_insights: [], notifications: [] } })
+    }
+    if (pathname === '/api/v1/patient/settings/health-info') return route.fulfill({ headers: cors, json: {} })
+    if (pathname === '/api/v1/patient/doctors') return route.fulfill({ headers: cors, json: { doctors: [] } })
+    if (pathname === '/api/v1/patient/doctors/recent') return route.fulfill({ headers: cors, json: { recent_doctors: [] } })
+    if (pathname === '/api/v1/patient/referrals') return route.fulfill({ headers: cors, json: { providers: [] } })
     return route.fulfill({ status: 404, headers: cors, json: { detail: 'Unmocked test endpoint: ' + pathname } })
   })
 }
@@ -237,4 +258,80 @@ test('a rejected refresh ends the session and removes its private draft', async 
   await expect(page).toHaveURL(/\/auth\/sign-in$/)
   expect(await page.evaluate(() => localStorage.getItem('qarevo_refresh_token'))).toBeNull()
   expect(await page.evaluate(() => Object.keys(sessionStorage).filter(key => key.startsWith('qarevo.draft.v2:')))).toEqual([])
+})
+
+test('prescriptions wait for real data and never show sample medication', async ({ page, context }) => {
+  await signIn(page, alpha)
+  const scenario = scenarios.get(context)!
+  let release!: () => void
+  scenario.holdRecords = new Promise<void>(resolve => { release = resolve })
+  await page.goto('/patient/prescription-care-plan')
+  try {
+    await expect(page.getByText('Loading your records…')).toBeVisible()
+    await expect(page.getByText('No medications recorded', { exact: true })).toHaveCount(0)
+    await expect(page.getByText(/Lisinopril|Vitamin D3|Magnesium Glycinate/)).toHaveCount(0)
+  } finally { release() }
+  await expect(page.getByRole('heading', { name: 'No medications recorded', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No care plan recorded', exact: true })).toBeVisible()
+})
+
+test('prescription outage can be retried and only persisted instructions are rendered', async ({ page, context }) => {
+  await signIn(page, alpha)
+  const scenario = scenarios.get(context)!
+  scenario.recordsStatus = 503
+  await page.goto('/patient/prescription-care-plan')
+  await expect(page.getByRole('alert')).toContainText('We couldn’t load your records')
+  await expect(page.getByText('No medications recorded', { exact: true })).toHaveCount(0)
+  scenario.recordsStatus = 200
+  scenario.records = { medications: [{ id: 'synthetic-record', name: 'Synthetic medication record', instructions: 'Exact clinician instruction from the fixture' }], care_plans: [] }
+  await page.getByRole('button', { name: 'Try again', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Synthetic medication record' })).toBeVisible()
+  await expect(page.getByText('Exact clinician instruction from the fixture')).toBeVisible()
+  await expect(page.getByText(/Lisinopril|Refill ready|Same-day pickup/)).toHaveCount(0)
+})
+
+test('dashboard distinguishes slow and failed requests from an empty account', async ({ page, context }) => {
+  await signIn(page, alpha)
+  const scenario = scenarios.get(context)!
+  let release!: () => void
+  scenario.holdDashboard = new Promise<void>(resolve => { release = resolve })
+  scenario.dashboardStatus = 503
+  await page.goto('/patient/dashboard')
+  try {
+    await expect(page.getByText('Loading your dashboard…')).toBeVisible()
+    await expect(page.getByText('Medication plan available', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('No health metrics have been added yet.', { exact: true })).toHaveCount(0)
+  } finally { release() }
+  await expect(page.getByRole('heading', { name: 'We couldn’t load your dashboard' })).toBeVisible()
+  scenario.dashboardStatus = 200
+  await page.getByRole('button', { name: 'Try again', exact: true }).click()
+  await expect(page.getByText('Loading your dashboard…')).toHaveCount(0)
+  await expect(page.getByText('No health metrics have been added yet.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Medication plan available', { exact: true })).toHaveCount(0)
+})
+
+test('referrals and follow-up do not invent clinical records or recovery scores', async ({ page }) => {
+  await signIn(page, alpha)
+  await page.goto('/patient/referrals')
+  await expect(page.getByRole('heading', { name: 'No referrals recorded' })).toBeVisible()
+  await expect(page.getByText(/Naomi Mensah|Specialist appointment confirmed/)).toHaveCount(0)
+  await page.goto('/patient/follow-up')
+  await expect(page.getByRole('heading', { name: 'No follow-up instructions recorded' })).toBeVisible()
+  await expect(page.getByText(/74%|81%|Steady recovery trend|120\/78/)).toHaveCount(0)
+  await page.goto('/patient/consultation-summary?physicianId=fiction&appointmentId=fiction&doctorNotes=UNTRUSTED-URL-NOTES')
+  await expect(page.getByRole('heading', { name: 'No consultation summary available' })).toBeVisible()
+  await expect(page.getByText('UNTRUSTED-URL-NOTES')).toHaveCount(0)
+})
+
+test('sidebar logout clears private browser state and revokes the refresh session', async ({ page, context }) => {
+  await signIn(page, alpha)
+  await page.locator('#fullName').fill('Private logout draft')
+  await expect(page.getByText('Draft saved in this tab', { exact: true })).toBeVisible()
+  await page.goto('/patient/prescription-care-plan')
+  await expect(page.getByRole('heading', { name: 'No medications recorded' })).toBeVisible()
+  await page.locator('.pps-sidebar').getByRole('button', { name: 'Logout', exact: true }).click()
+  await expect(page).toHaveURL(/\/auth\/sign-in$/)
+  await expect.poll(() => scenarios.get(context)!.logoutCount || 0).toBe(1)
+  expect(await page.evaluate(() => localStorage.getItem('qarevo_access_token'))).toBeNull()
+  expect(await page.evaluate(() => Object.entries(sessionStorage).some(([key, value]) => key.includes(alpha) || value.includes('Private logout draft')))).toBe(false)
 })
