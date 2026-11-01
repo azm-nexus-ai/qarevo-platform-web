@@ -83,7 +83,12 @@ test('account switch in another tab removes the old view and never restores its 
   await expect(second.getByText('Draft saved in this tab', { exact: true })).toBeVisible()
   await second.reload()
   await expect(second.locator('#fullName')).toHaveValue('Synthetic Beta')
-  expect(await page.evaluate(() => Object.keys(sessionStorage).filter(key => key.startsWith('qarevo.draft.v2:')))).toEqual([])
+  // Redirecting may create an empty booking draft for the new account.
+  // No key or value belonging to the previous patient may remain.
+  const remaining = await page.evaluate(() => Object.entries(sessionStorage))
+  expect(remaining.some(([key, value]) => key.includes(alpha) || value.includes('Synthetic Alpha Private'))).toBe(false)
+  await page.goto(personal)
+  await expect(page.locator('#fullName')).toHaveValue('')
   expect(errors).toEqual([])
 })
 
