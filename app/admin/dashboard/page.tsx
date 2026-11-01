@@ -32,23 +32,23 @@ function StatCard({ title, value, subtitle, icon, color, trend }: {
 }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '20px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '24px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <p style={{ margin: 0, fontSize: '12.5px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{title}</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{title}</p>
           <p style={{ margin: '8px 0 0', fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{value}</p>
           {subtitle && (
-            <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate2 }}>{subtitle}</p>
+            <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate2 }}>{subtitle}</p>
           )}
           {trend && (
-            <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: 600, color: trend.positive ? T.green : T.red }}>
+            <p style={{ margin: '4px 0 0', fontSize: "13px", fontWeight: 600, color: trend.positive ? T.green : T.red }}>
               {trend.positive ? '↑' : '↓'} {trend.value}
             </p>
           )}
@@ -71,7 +71,7 @@ function HealthCard({ data }: { data: AdminDashboardHealth }) {
       case 'critical':
         return { bg: 'rgba(220,38,38,0.12)', color: T.red, text: 'Critical Issues' }
       default:
-        return { bg: 'rgba(32,181,223,0.12)', color: T.blue, text: status }
+        return { bg: 'rgba(32,181,223,0.12)', color: T.link, text: status }
     }
   }
 
@@ -79,11 +79,11 @@ function HealthCard({ data }: { data: AdminDashboardHealth }) {
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '20px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '24px',
     }}>
@@ -92,7 +92,7 @@ function HealthCard({ data }: { data: AdminDashboardHealth }) {
         <span style={{
           padding: '6px 12px',
           borderRadius: '999px',
-          fontSize: '11px',
+          fontSize: "13px",
           fontWeight: 700,
           background: statusStyle.bg,
           color: statusStyle.color
@@ -102,15 +102,15 @@ function HealthCard({ data }: { data: AdminDashboardHealth }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
         <div>
-          <p style={{ margin: 0, fontSize: '12px', color: T.slate2, marginBottom: '4px' }}>Pending Verifications</p>
+          <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>Pending Verifications</p>
           <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: T.navy }}>{data.pending_verifications}</p>
         </div>
         <div>
-          <p style={{ margin: 0, fontSize: '12px', color: T.slate2, marginBottom: '4px' }}>Critical Exceptions</p>
+          <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>Critical Exceptions</p>
           <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: data.critical_exceptions > 0 ? T.red : T.navy }}>{data.critical_exceptions}</p>
         </div>
         <div>
-          <p style={{ margin: 0, fontSize: '12px', color: T.slate2, marginBottom: '4px' }}>High Priority</p>
+          <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>High Priority</p>
           <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: data.high_exceptions > 0 ? T.amber : T.navy }}>{data.high_exceptions}</p>
         </div>
       </div>
@@ -121,31 +121,31 @@ function HealthCard({ data }: { data: AdminDashboardHealth }) {
 function ActivityCard({ data }: { data: AdminDashboardActivity }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '20px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '24px',
     }}>
       <div style={{ marginBottom: '16px' }}>
         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Activity</h3>
-        <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate2 }}>
+        <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate2 }}>
           Last {data.period_days} days ({new Date(data.date_from).toLocaleDateString()} - {new Date(data.date_to).toLocaleDateString()})
         </p>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
         <div>
-          <p style={{ margin: 0, fontSize: '12px', color: T.slate2, marginBottom: '4px' }}>New Patients</p>
+          <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>New Patients</p>
           <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: T.navy }}>{data.new_patients}</p>
         </div>
         <div>
-          <p style={{ margin: 0, fontSize: '12px', color: T.slate2, marginBottom: '4px' }}>New Doctors</p>
+          <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>New Doctors</p>
           <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: T.navy }}>{data.new_doctors}</p>
         </div>
         <div>
-          <p style={{ margin: 0, fontSize: '12px', color: T.slate2, marginBottom: '4px' }}>New Exceptions</p>
+          <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>New Exceptions</p>
           <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: T.navy }}>{data.new_exceptions}</p>
         </div>
       </div>
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+      <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         <p>{error}</p>
         <button type="button" onClick={() => setRetry(value => value + 1)} style={{ padding: 12, borderRadius: 10, cursor: 'pointer' }}>Try again</button>
       </div>
@@ -287,11 +287,11 @@ export default function AdminDashboard() {
       {/* Doctors Summary */}
       {doctorsSummary?.by_specialty && (
         <div style={{
-          background: 'rgba(255,255,255,0.88)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
           borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.88)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.card,
           padding: '24px',
         }}>
@@ -303,8 +303,8 @@ export default function AdminDashboard() {
               <div key={specialty} style={{
                 padding: '12px 16px',
                 borderRadius: '12px',
-                background: 'rgba(247,250,252,0.6)',
-                border: '1px solid rgba(4,53,77,0.04)',
+                background: "var(--surface-subtle)",
+                border: "1px solid var(--border)",
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',

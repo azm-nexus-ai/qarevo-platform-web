@@ -87,11 +87,11 @@ function LeftPanel() {
         </div>
 
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
+          <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
             Coverage, handled carefully.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Privacy stays in focus.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             We only ask for the information needed to verify coverage, protect your records, and deliver safe digital healthcare.
           </p>
         </div>
@@ -109,7 +109,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -153,7 +153,7 @@ function TextField({ label, value, onChange, placeholder, error, optional }: { l
           transition: 'all 0.15s ease',
         }}
       />
-      {error ? <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.45 }}>{error}</p> : null}
+      {error ? <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.45 }}>{error}</p> : null}
     </div>
   )
 }
@@ -216,7 +216,7 @@ export default function InsurancePrivacyConsentPage() {
           {missingStep && <Link href={onboardingPath(missingStep)}>Continue profile</Link>}
           <fieldset disabled={!ready || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <label htmlFor='coverage-type' style={{ display: 'block', color: T.navy, fontWeight: 700, marginBottom: 8 }}>Funding type (Required)</label>
-            <select id='coverage-type' className='coverage-field' required value={form.insurance_type} onChange={event => update('insurance_type', event.target.value as CoverageForm['insurance_type'])} style={{ width: '100%', minHeight: 48, padding: 12, border: '1px solid #B8CBD5', borderRadius: 12, color: T.navy, background: '#fff' }}>
+            <select id='coverage-type' className='coverage-field' required value={form.insurance_type} onChange={event => update('insurance_type', event.target.value as CoverageForm['insurance_type'])} style={{ width: '100%', minHeight: 48, padding: 12, border: '1px solid #B8CBD5', borderRadius: 12, color: T.navy, background: "var(--surface)" }}>
               <option value=''>Select a funding type</option><option value='SELF_PAY'>Self-pay</option><option value='GKV'>Statutory insurance (GKV)</option><option value='PKV'>Private insurance (PKV)</option>
             </select>
             {submitted && errors.insurance_type && <p role='alert'>{errors.insurance_type}</p>}

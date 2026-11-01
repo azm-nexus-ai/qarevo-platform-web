@@ -1,5 +1,7 @@
 'use client'
 
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
+
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -37,7 +39,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
   }
   const fullName = userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'
   const initials = fullName ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'P'
-  
+
   return (
     <>
       {/* Logo */}
@@ -64,7 +66,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
               height: '42px',
               borderRadius: '50%',
               background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))',
-              border: '1px solid rgba(4,53,77,0.11)',
+              border: "1px solid var(--border)",
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -77,7 +79,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
           </div>
           <div>
             <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{fullName}</p>
-            <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Patient account</p>
+            <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Patient account</p>
           </div>
         </div>
       </section>
@@ -100,7 +102,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
                   padding: '10px 12px',
                   borderRadius: '12px',
                   background: isActive ? 'rgba(32,181,223,0.14)' : 'transparent',
-                  color: isActive ? T.blue : T.slate,
+                  color: isActive ? T.link : T.slate,
                   fontSize: '13.5px',
                   fontWeight: isActive ? 700 : 500,
                   transition: 'all 0.15s ease',
@@ -127,7 +129,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
             padding: '10px 12px',
             borderRadius: '12px',
             textDecoration: 'none',
-            color: '#348CEA',
+            color: "var(--link)",
             fontSize: '13.5px',
             fontWeight: 600,
           }}
@@ -153,7 +155,6 @@ export default function PatientPortalShell({
 }: PatientPortalShellProps) {
   const pathname = usePathname()
   const [userSettings, setUserSettings] = useState<PatientSettings | null>(null)
-  const darkMode = appearance?.darkMode ?? userSettings?.dark_mode ?? false
   const highContrast = appearance?.highContrast ?? userSettings?.high_contrast ?? false
   const fontSize = (appearance?.fontSize ?? userSettings?.font_size ?? 'Medium').toLowerCase()
 
@@ -176,8 +177,8 @@ export default function PatientPortalShell({
 
   return (
     <main
-      className={`min-h-screen relative patient-portal-shell ${darkMode ? 'pps-theme-dark' : ''} ${highContrast ? 'pps-theme-contrast' : ''} pps-font-${fontSize}`}
-      style={{ background: darkMode ? '#071723' : PAGE_BG }}
+      className={`min-h-screen relative patient-portal-shell ${highContrast ? 'pps-theme-contrast' : ''} pps-font-${fontSize}`}
+      style={{ background: PAGE_BG }}
     >
       <style>{`
         /* ── Grid ── */
@@ -196,134 +197,10 @@ export default function PatientPortalShell({
         .pps-sidebar, .pps-right-rail { position: sticky; top: 18px; }
         .patient-portal-shell.pps-font-small { font-size: 14px; }
         .patient-portal-shell.pps-font-large { font-size: 16.5px; }
-        .patient-portal-shell.pps-theme-dark {
-          color-scheme: dark;
-        }
-        .patient-portal-shell.pps-theme-dark .pps-sidebar,
-        .patient-portal-shell.pps-theme-dark .pps-main > header,
-        .patient-portal-shell.pps-theme-dark .pps-right-rail > *,
-        .patient-portal-shell.pps-theme-dark .portal-card,
-        .patient-portal-shell.pps-theme-dark .portal-empty-state {
-          background: rgba(11, 32, 48, 0.94) !important;
-          border-color: rgba(125, 211, 252, 0.2) !important;
-          color: #E6F6FF !important;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 54px rgba(0,0,0,0.28) !important;
-        }
-        .patient-portal-shell.pps-theme-dark .pps-main > header h1,
-        .patient-portal-shell.pps-theme-dark .pps-main > header p,
-        .patient-portal-shell.pps-theme-dark .pps-right-rail h2,
-        .patient-portal-shell.pps-theme-dark .pps-right-rail p,
-        .patient-portal-shell.pps-theme-dark .pps-right-rail span,
-        .patient-portal-shell.pps-theme-dark .pps-right-rail strong,
-        .patient-portal-shell.pps-theme-dark .portal-card h1,
-        .patient-portal-shell.pps-theme-dark .portal-card h2,
-        .patient-portal-shell.pps-theme-dark .portal-card h3,
-        .patient-portal-shell.pps-theme-dark .portal-card p,
-        .patient-portal-shell.pps-theme-dark .portal-card span,
-        .patient-portal-shell.pps-theme-dark .portal-card strong,
-        .patient-portal-shell.pps-theme-dark .portal-card label,
-        .patient-portal-shell.pps-theme-dark .portal-empty-state p {
-          color: #E6F6FF !important;
-        }
-        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]),
-        .patient-portal-shell.pps-theme-dark .pps-main > div > section,
-        .patient-portal-shell.pps-theme-dark .pps-main article {
-          background: rgba(11, 32, 48, 0.88) !important;
-          border-color: rgba(125, 211, 252, 0.18) !important;
-        }
-        .patient-portal-shell.pps-theme-dark .pps-main [style*="background: #fff"],
-        .patient-portal-shell.pps-theme-dark .pps-main [style*="background: rgb(255, 255, 255)"],
-        .patient-portal-shell.pps-theme-dark .pps-main [style*="background: rgba(255,255,255"],
-        .patient-portal-shell.pps-theme-dark .pps-main [style*="background: rgba(255, 255, 255"],
-        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="background: #fff"],
-        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="background: rgb(255, 255, 255)"],
-        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="background: rgba(255,255,255"],
-        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="background: rgba(255, 255, 255"] {
-          background: rgba(10, 31, 45, 0.94) !important;
-          border-color: rgba(125, 211, 252, 0.2) !important;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 34px rgba(0,0,0,0.18) !important;
-        }
-        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: rgb(4, 53, 77)"],
-        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: #04354D"],
-        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: #04354d"],
-        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: rgb(4, 53, 77)"],
-        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: #04354D"],
-        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: #04354d"] {
-          color: #E6F6FF !important;
-        }
-        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: rgb(53, 84, 104)"],
-        .patient-portal-shell.pps-theme-dark .pps-main [style*="color: rgb(119, 145, 163)"],
-        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: rgb(53, 84, 104)"],
-        .patient-portal-shell.pps-theme-dark .pps-right-rail [style*="color: rgb(119, 145, 163)"] {
-          color: #B7D3E2 !important;
-        }
-        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) h1,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) h2,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) h3,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) p,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) span,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > div:not([role="dialog"]) label,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > section h1,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > section h2,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > section h3,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > section p,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > section span,
-        .patient-portal-shell.pps-theme-dark .pps-main > div > section label {
-          color: #E6F6FF !important;
-        }
-        .patient-portal-shell.pps-theme-dark .pps-main input,
-        .patient-portal-shell.pps-theme-dark .pps-main select,
-        .patient-portal-shell.pps-theme-dark .pps-main textarea,
-        .patient-portal-shell.pps-theme-dark .portal-card input,
-        .patient-portal-shell.pps-theme-dark .portal-card select,
-        .patient-portal-shell.pps-theme-dark .portal-card textarea {
-          background: rgba(7, 23, 35, 0.92) !important;
-          border-color: rgba(125, 211, 252, 0.22) !important;
-          color: #E6F6FF !important;
-        }
-        .patient-portal-shell.pps-theme-dark .pps-main input::placeholder,
-        .patient-portal-shell.pps-theme-dark .pps-main textarea::placeholder {
-          color: rgba(230,246,255,0.56) !important;
-        }
-        .patient-portal-shell.pps-theme-dark .portal-button-secondary,
-        .patient-portal-shell.pps-theme-dark .portal-card button:not(.portal-button-primary):not([style*="linear-gradient"]) {
-          background: rgba(7, 23, 35, 0.88) !important;
-          border-color: rgba(125, 211, 252, 0.22) !important;
-          color: #E6F6FF !important;
-        }
-        .patient-portal-shell.pps-theme-dark .portal-button-danger {
-          background: rgba(127, 29, 29, 0.34) !important;
-          border-color: rgba(248, 113, 113, 0.34) !important;
-          color: #FCA5A5 !important;
-        }
-        .patient-portal-shell.pps-theme-dark .portal-badge-neutral {
-          background: rgba(125, 211, 252, 0.12) !important;
-          color: #BAE6FD !important;
-        }
-        .patient-portal-shell.pps-theme-dark .portal-badge-info {
-          background: rgba(32,181,223,0.18) !important;
-          color: #67E8F9 !important;
-        }
-        .patient-portal-shell.pps-theme-dark .portal-badge-success {
-          background: rgba(15,158,119,0.22) !important;
-          color: #86EFAC !important;
-        }
-        .patient-portal-shell.pps-theme-dark .portal-badge-warning {
-          background: rgba(217,119,6,0.22) !important;
-          color: #FDBA74 !important;
-        }
-        .patient-portal-shell.pps-theme-dark .portal-badge-danger {
-          background: rgba(220,38,38,0.2) !important;
-          color: #FCA5A5 !important;
-        }
         .patient-portal-shell.pps-theme-contrast .pps-main,
         .patient-portal-shell.pps-theme-contrast .pps-sidebar {
           filter: contrast(1.08) saturate(1.08);
         }
-        .patient-portal-shell.pps-theme-dark .pps-sidebar p,
-        .patient-portal-shell.pps-theme-dark .pps-sidebar nav a { color: #D7EAF5 !important; }
-        .patient-portal-shell.pps-theme-dark .pps-sidebar nav a[aria-current="page"] { color: #67E8F9 !important; }
-        .patient-portal-shell.pps-theme-dark .pps-sidebar nav svg { stroke: currentColor; }
         /* ── Responsive ── */
         @media (max-width: 1280px) {
           .pps-shell,
@@ -364,11 +241,11 @@ export default function PatientPortalShell({
           <div
             className='pps-sidebar'
             style={{
-              background: 'rgba(255,255,255,0.82)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(22px) saturate(180%)',
               WebkitBackdropFilter: 'blur(22px) saturate(180%)',
               borderRadius: '22px',
-              border: '1px solid rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
               boxShadow: Sh.float,
               padding: '16px',
               display: 'flex',
@@ -385,7 +262,7 @@ export default function PatientPortalShell({
             style={{
               ...Glass.nav,
               borderRadius: '22px',
-              border: '1px solid rgba(255,255,255,0.82)',
+              border: "1px solid var(--border)",
               padding: '18px 18px 16px',
               marginBottom: '14px',
             }}
@@ -395,10 +272,11 @@ export default function PatientPortalShell({
               style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}
             >
               <div>
-                <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#348CEA' }}>{eyebrow}</p>
-                <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '30px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>{title}</h1>
+                <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: "var(--link)" }}>{eyebrow}</p>
+                <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '30px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>{title}</h1>
                 <p style={{ margin: 0, maxWidth: '760px', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>{description}</p>
               </div>
+              <ThemeToggle />
               {headerActions ? (
                 <div className='pps-header-actions' style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>{headerActions}</div>
               ) : null}

@@ -31,11 +31,11 @@ export function PortalCard({ children, style, ...props }: PortalCardProps) {
       {...props}
       className={className}
       style={{
-        background: 'rgba(255,255,255,0.9)',
+        background: "var(--surface-glass)",
         backdropFilter: 'blur(22px) saturate(180%)',
         WebkitBackdropFilter: 'blur(22px) saturate(180%)',
         borderRadius: '24px',
-        border: '1px solid rgba(255,255,255,0.94)',
+        border: "1px solid var(--border)",
         boxShadow: Sh.card,
         padding: '20px',
         ...style,
@@ -68,7 +68,7 @@ function getButtonStyles(tone: 'primary' | 'secondary' | 'danger', fullWidth?: b
       ...shared,
       border: 'none',
       color: '#fff',
-      background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+      background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
       boxShadow: '0 8px 22px rgba(32,181,223,0.24)',
     }
   }
@@ -84,9 +84,9 @@ function getButtonStyles(tone: 'primary' | 'secondary' | 'danger', fullWidth?: b
 
   return {
     ...shared,
-    border: '1px solid rgba(4,53,77,0.12)',
+    border: "1px solid var(--border)",
     color: T.navy,
-    background: 'rgba(255,255,255,0.92)',
+    background: "var(--surface-glass)",
   }
 }
 
@@ -123,10 +123,10 @@ export function PortalLinkButton({ children, href, tone = 'secondary', fullWidth
 
 export function PortalBadge({ children, tone = 'neutral' }: PortalBadgeProps) {
   const tones: Record<NonNullable<PortalBadgeProps['tone']>, CSSProperties> = {
-    info: { background: 'rgba(32,181,223,0.1)', color: T.blue },
+    info: { background: 'rgba(32,181,223,0.1)', color: T.link },
     success: { background: 'rgba(15,158,119,0.12)', color: T.green },
     warning: { background: 'rgba(217,119,6,0.12)', color: T.amber },
-    neutral: { background: 'rgba(4,53,77,0.06)', color: T.slate },
+    neutral: { background: "var(--surface-hover)", color: T.slate },
     danger: { background: 'rgba(220,38,38,0.1)', color: T.red },
   }
 
@@ -139,7 +139,7 @@ export function PortalBadge({ children, tone = 'neutral' }: PortalBadgeProps) {
         gap: '6px',
         padding: '6px 10px',
         borderRadius: '999px',
-        fontSize: '11px',
+        fontSize: "13px",
         fontWeight: 700,
         letterSpacing: '0.02em',
         ...tones[tone],
@@ -156,14 +156,14 @@ export function PortalEmptyState({ title, description }: { title: string; descri
       className='portal-empty-state'
       style={{
         borderRadius: '18px',
-        border: '1px dashed rgba(4,53,77,0.14)',
-        background: 'rgba(247,250,252,0.82)',
+        border: "1px dashed var(--border)",
+        background: "var(--surface-subtle)",
         padding: '20px',
         textAlign: 'center',
       }}
     >
       <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{title}</p>
-      <p style={{ margin: 0, fontSize: '12.5px', color: T.slate, lineHeight: 1.6 }}>{description}</p>
+      <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>{description}</p>
     </div>
   )
 }

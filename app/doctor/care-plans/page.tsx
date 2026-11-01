@@ -57,7 +57,7 @@ export default function DoctorCarePlansPage() {
 
   const fetchCarePlans = async () => {
     if (!selectedPatientId) return
-    
+
     setLoading(true)
     setError(null)
     try {
@@ -67,11 +67,11 @@ export default function DoctorCarePlansPage() {
           'Authorization': `Bearer ${token}`,
         },
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch care plans')
       }
-      
+
       const data = await response.json()
       setCarePlans(data.care_plans || [])
     } catch (err) {
@@ -88,8 +88,8 @@ export default function DoctorCarePlansPage() {
   }
 
   const handleAddCarePlan = async () => {
-    if (!selectedPatientId || !newPlan.title) return
-    
+    if (!selectedPatientId || !newPlan.title) { setError('Select a patient and enter a care plan title.'); return }
+
     setLoading(true)
     try {
       const token = readAccessToken()
@@ -104,11 +104,11 @@ export default function DoctorCarePlansPage() {
           ...newPlan,
         }),
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to create care plan')
       }
-      
+
       const data = await response.json()
       setCarePlans(data.care_plans || [])
       setNewPlan({ title: '', status: 'Active', progress: 0, description: '', episode_id: '' })
@@ -123,7 +123,7 @@ export default function DoctorCarePlansPage() {
 
   const handleDeleteCarePlan = async (planId: string) => {
     if (!selectedPatientId) return
-    
+
     setLoading(true)
     try {
       const token = readAccessToken()
@@ -133,11 +133,11 @@ export default function DoctorCarePlansPage() {
           'Authorization': `Bearer ${token}`,
         },
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to delete care plan')
       }
-      
+
       const data = await response.json()
       setCarePlans(data.care_plans || [])
     } catch (err) {
@@ -153,13 +153,13 @@ export default function DoctorCarePlansPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Care Plans</h1>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Care Plans</h1>
           <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage patient care plans</p>
         </div>
       </div>
 
       {/* Patient Selection */}
-      <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
+      <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
         <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
         <select
           value={selectedPatientId}
@@ -171,7 +171,7 @@ export default function DoctorCarePlansPage() {
             border: '1px solid rgba(0,0,0,0.1)',
             fontSize: '15px',
             outline: 'none',
-            background: 'white',
+            background: "var(--surface)",
             color: T.navy,
             fontWeight: 500,
             cursor: 'pointer',
@@ -212,7 +212,7 @@ export default function DoctorCarePlansPage() {
       </div>
 
       {error && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
+        <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
       )}
 
       {/* Add Care Plan Button */}
@@ -236,9 +236,9 @@ export default function DoctorCarePlansPage() {
 
       {/* Add Care Plan Form */}
       {showAddForm && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
+        <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
           <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 700, color: T.navy }}>New Care Plan</h3>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Episode ID (Optional)</label>
@@ -257,7 +257,7 @@ export default function DoctorCarePlansPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Title</label>
               <input
@@ -275,7 +275,7 @@ export default function DoctorCarePlansPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Status</label>
               <select
@@ -296,7 +296,7 @@ export default function DoctorCarePlansPage() {
                 <option value="On Hold">On Hold</option>
               </select>
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Progress ({newPlan.progress}%)</label>
               <input
@@ -308,7 +308,7 @@ export default function DoctorCarePlansPage() {
                 style={{ width: '100%' }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Description</label>
               <textarea
@@ -327,10 +327,10 @@ export default function DoctorCarePlansPage() {
                 }}
               />
             </div>
-            
+
             <button
               onClick={handleAddCarePlan}
-              disabled={loading || !newPlan.title}
+              disabled={loading}
               style={{
                 padding: '12px 24px',
                 borderRadius: '12px',
@@ -356,11 +356,11 @@ export default function DoctorCarePlansPage() {
             <div
               key={plan.id}
               style={{
-                background: 'rgba(255,255,255,0.88)',
+                background: "var(--surface-glass)",
                 backdropFilter: 'blur(22px) saturate(175%)',
                 WebkitBackdropFilter: 'blur(22px) saturate(175%)',
                 borderRadius: '16px',
-                border: '1px solid rgba(255,255,255,0.88)',
+                border: "1px solid var(--border)",
                 boxShadow: Sh.card,
                 padding: '20px',
               }}
@@ -370,8 +370,8 @@ export default function DoctorCarePlansPage() {
                   <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700, color: T.navy }}>{plan.title}</h3>
                   <p style={{ margin: '0 0 12px', fontSize: '14px', color: T.slate2 }}>{plan.description}</p>
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Status: {plan.status}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Progress: {plan.progress}%</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Status: {plan.status}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Progress: {plan.progress}%</span>
                   </div>
                   <div style={{ marginTop: '12px', height: '6px', background: 'rgba(0,0,0,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', background: 'rgba(32,181,223,1)', borderRadius: '3px', width: `${plan.progress}%` }} />
@@ -385,7 +385,7 @@ export default function DoctorCarePlansPage() {
                     border: 'none',
                     background: 'rgba(220,38,38,0.1)',
                     color: T.red,
-                    fontSize: '12px',
+                    fontSize: "13px",
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}

@@ -119,7 +119,7 @@ export default function VerifyEmailLinkPage() {
 
     const buttonStyle: CSSProperties = {
         width: '100%', padding: '14px 18px', borderRadius: '12px',
-        border: 'none', background: T.navy, color: '#fff',
+        border: 'none', background: T.brandNavy, color: '#fff',
         font: 'inherit', fontWeight: 700,
         cursor: waiting ? 'wait' : 'pointer',
         opacity: waiting ? 0.65 : 1,

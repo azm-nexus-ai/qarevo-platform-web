@@ -39,11 +39,11 @@ export default function CookiesPage() {
         {/* Header card */}
         <div
           style={{
-            background: 'rgba(255,255,255,0.9)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(30px)',
             WebkitBackdropFilter: 'blur(30px)',
             borderRadius: '22px',
-            border: '1px solid rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
             boxShadow: Sh.float,
             padding: '36px 40px',
             marginBottom: '16px',
@@ -56,9 +56,9 @@ export default function CookiesPage() {
               gap: '6px',
               padding: '4px 12px',
               borderRadius: '100px',
-              fontSize: '10px',
+              fontSize: "13px",
               fontWeight: 700,
-              color: T.blue,
+              color: T.link,
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               marginBottom: '16px',
@@ -71,7 +71,7 @@ export default function CookiesPage() {
           <h1
             style={{
               margin: '0 0 12px',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontSize: 'clamp(22px, 4vw, 30px)',
               fontWeight: 800,
               color: T.navy,
@@ -91,7 +91,7 @@ export default function CookiesPage() {
             Qarevo Health uses a minimal set of cookies to operate the platform securely and improve your experience.
             We never sell data or use tracking cookies for advertising purposes.
           </p>
-          <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>
+          <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>
             Last updated: 1 August 2025
           </p>
         </div>
@@ -101,11 +101,11 @@ export default function CookiesPage() {
           <div
             key={title}
             style={{
-              background: 'rgba(255,255,255,0.82)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               borderRadius: '16px',
-              border: '1px solid rgba(255,255,255,0.86)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 14px rgba(4,53,77,0.07)',
               padding: '24px 32px',
               marginBottom: '12px',
@@ -113,7 +113,7 @@ export default function CookiesPage() {
           >
             <h2
               style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                 fontSize: '15.5px',
                 fontWeight: 700,
                 color: T.navy,
@@ -131,7 +131,7 @@ export default function CookiesPage() {
 
         {/* Back link */}
         <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <Link href="/" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none', fontSize: '14px' }}>
+          <Link href="/" style={{ color: T.link, fontWeight: 700, textDecoration: 'none', fontSize: '14px' }}>
             ← Return to Home
           </Link>
           <span style={{ color: T.slate2, fontSize: '14px' }}>·</span>

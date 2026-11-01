@@ -21,11 +21,11 @@ import {
 function AuditLogCard({ log }: { log: AdminAuditLog }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '20px',
       display: 'flex',
@@ -34,18 +34,18 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '12px', color: T.slate2 }}>
+          <span style={{ fontSize: "13px", color: T.slate2 }}>
             {new Date(log.created_at).toLocaleString()}
           </span>
-          <span style={{ fontSize: '12px', color: T.slate }}>
+          <span style={{ fontSize: "13px", color: T.slate }}>
             #{log.log_id.slice(-8)}
           </span>
         </div>
-        <span style={{ fontSize: '12px', fontWeight: 600, color: T.blue }}>
+        <span style={{ fontSize: "13px", fontWeight: 600, color: T.link }}>
           {log.action}
         </span>
       </div>
-      
+
       <div>
         <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: T.navy }}>
           {log.admin_user_name || log.admin_user_id}
@@ -54,7 +54,7 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
           Target: {log.target_type} {log.target_id && `#${log.target_id.slice(-8)}`}
         </p>
         {log.ip_address && (
-          <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate }}>
+          <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate }}>
             IP: {log.ip_address}
           </p>
         )}
@@ -62,9 +62,9 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
 
       {log.changes && Object.keys(log.changes).length > 0 && (
         <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.18)' }}>
-          <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.blue }}>Changes:</p>
+          <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.link }}>Changes:</p>
           {Object.entries(log.changes).map(([field, change]) => (
-            <div key={field} style={{ marginBottom: '8px', fontSize: '12px', color: T.slate }}>
+            <div key={field} style={{ marginBottom: '8px', fontSize: "13px", color: T.slate }}>
               <span style={{ fontWeight: 600 }}>{field}:</span> {String(change.old)} → {String(change.new)}
             </div>
           ))}
@@ -150,7 +150,7 @@ export default function AuditLogsPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+      <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         {error}
       </div>
     )
@@ -188,11 +188,11 @@ export default function AuditLogsPage() {
 
       {actionSummary.length > 0 && (
         <div style={{
-          background: 'rgba(255,255,255,0.88)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
           borderRadius: '16px',
-          border: '1px solid rgba(255,255,255,0.88)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.card,
           padding: '20px',
         }}>
@@ -223,8 +223,8 @@ export default function AuditLogsPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -243,8 +243,8 @@ export default function AuditLogsPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -264,8 +264,8 @@ export default function AuditLogsPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -278,8 +278,8 @@ export default function AuditLogsPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',

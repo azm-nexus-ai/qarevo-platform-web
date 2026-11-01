@@ -92,3 +92,16 @@ Revert the affected commit(s) on development, rerun CI and deploy the exact reve
 Known limits: bearer tokens remain browser-accessible; this is not a completed penetration test. Lost refresh responses after token rotation can still require a new login. Existing dependency/deprecation warnings need a separate upgrade cycle. Open old tabs must be reloaded.
 
 Next phases retain booking/availability, document-upload integration, editable medical records, video consultation, consent withdrawal, real insurer eligibility, automated invoicing, complete German/English localisation, observability/alerting and AWS production migration. No claim of full clinical operation, approved legal text or insurance-funded launch is made by Phase 1.
+
+
+## UI and validation extension — November 2026
+
+Shared semantic colour tokens now cover patient, clinician, admin and public layouts, including legacy Tailwind surfaces. A single root theme provider applies the browser preference before paint and synchronises tabs. `qarevo.theme.v1` stores only light/dark; it survives logout and never contains health or identity data. Patient appearance settings use that same preference; delayed profile responses cannot reverse a new choice. Browser persistence is unavailable when storage is blocked. High contrast and font size retain their existing patient preferences.
+
+Inter 4.1 is bundled with its OFL licence in `public/fonts`; builds and visitors no longer need Google Fonts. Source: https://github.com/rsms/inter/releases/tag/v4.1 . Loading follows Next.js local-font support: https://nextjs.org/docs/app/api-reference/components/font . Small labels use a 13px minimum, controls retain visible keyboard focus, mobile fields use 16px, reduced-motion preferences are respected, and native select controls inherit the current theme. Admin now has mobile navigation.
+
+Onboarding Continue is available once data loads; invalid submissions expose a summary, inline messages and focus. Germany postcodes require five digits (including leading zero), telephone numbers require + and 7–15 digits after formatting is removed, and addresses require a street name and house number. Optional invalid contact fields are expanded on submission. Format checks do not verify a real address or subscriber. The server enforces the address requirement.
+
+Clinician registration displays required labels and expected formats; clinician service editors reject fractional/truncated price or duration values. The existing service contract stores whole currency units; currency/decimal billing changes remain a coordinated contract change. Admin creation validates name, email and role inline and on the API. Emergency-contact settings use the same international-phone format as onboarding. These changes do not replace insurer eligibility or clinical validation.
+
+Regression additions cover invalid-Continue feedback, physician registration, admin creation, mobile doctor/admin layouts, theme persistence after reload and a fresh browser session, and cross-tab appearance changes. The full service and clinical-integration audit is recorded in the private architecture repository; confidential infrastructure details do not belong here.

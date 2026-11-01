@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { FieldFeedback, ValidationSummary } from '@/components/ui/ValidationFeedback'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import {
   clearAuthTokens,
+  getApiErrorDetail,
   getAdminUsers,
   createAdminUser,
   updateAdminUser,
@@ -32,7 +34,7 @@ function StatusBadge({ status }: { status: string }) {
       case 'pending':
         return { bg: 'rgba(217,119,6,0.12)', color: T.amber }
       default:
-        return { bg: 'rgba(32,181,223,0.12)', color: T.blue }
+        return { bg: 'rgba(32,181,223,0.12)', color: T.link }
     }
   }
 
@@ -42,7 +44,7 @@ function StatusBadge({ status }: { status: string }) {
     <span style={{
       padding: '4px 10px',
       borderRadius: '999px',
-      fontSize: '11px',
+      fontSize: "13px",
       fontWeight: 700,
       background: style.bg,
       color: style.color
@@ -52,7 +54,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function AdminUserCard({ user, onEdit, onDeactivate, onDelete }: { 
+function AdminUserCard({ user, onEdit, onDeactivate, onDelete }: {
   user: AdminUser
   onEdit: (id: string) => void
   onDeactivate: (id: string) => void
@@ -60,11 +62,11 @@ function AdminUserCard({ user, onEdit, onDeactivate, onDelete }: {
 }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '20px',
       display: 'flex',
@@ -73,13 +75,13 @@ function AdminUserCard({ user, onEdit, onDeactivate, onDelete }: {
       gap: '16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-        <div style={{ 
-          width: '48px', 
-          height: '48px', 
-          borderRadius: '12px', 
-          background: 'rgba(165,224,218,0.2)', 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '12px',
+          background: 'rgba(165,224,218,0.2)',
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           color: T.purple,
           fontSize: '16px',
@@ -91,9 +93,9 @@ function AdminUserCard({ user, onEdit, onDeactivate, onDelete }: {
           <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{user.full_name}</p>
           <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.slate2 }}>{user.email}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <span style={{ fontSize: '12px', color: T.slate }}>{user.role}</span>
-            <span style={{ fontSize: '12px', color: T.slate2 }}>•</span>
-            <span style={{ fontSize: '12px', color: T.slate }}>
+            <span style={{ fontSize: "13px", color: T.slate }}>{user.role}</span>
+            <span style={{ fontSize: "13px", color: T.slate2 }}>•</span>
+            <span style={{ fontSize: "13px", color: T.slate }}>
               {new Date(user.created_at).toLocaleDateString()}
             </span>
           </div>
@@ -107,8 +109,8 @@ function AdminUserCard({ user, onEdit, onDeactivate, onDelete }: {
           style={{
             padding: '8px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: '#fff',
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
             color: T.navy,
             fontSize: '13px',
             fontWeight: 600,
@@ -168,6 +170,8 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({})
+  const [creating, setCreating] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createForm, setCreateForm] = useState<AdminCreateAdminUserRequest>({
     email: '',
@@ -217,6 +221,13 @@ export default function AdminUsersPage() {
   }, [router, roleFilter, statusFilter, searchQuery])
 
   const handleCreateAdmin = async () => {
+    const errors: Record<string, string> = {}
+    if (!createForm.full_name.trim()) errors.full_name = 'Full name is required.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createForm.email)) errors.email = 'Enter a valid email address, for example name@example.com.'
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(createForm.role)) errors.role = 'Select Admin or Super Admin.'
+    setCreateErrors(errors)
+    if (Object.keys(errors).length) return
+    setCreating(true)
     try {
       await createAdminUser(createForm)
       setShowCreateModal(false)
@@ -225,13 +236,13 @@ export default function AdminUsersPage() {
       setAdminUsers(data.admin_users)
     } catch (err) {
       console.error('Failed to create admin user', err)
-      alert('Failed to create admin user')
-    }
+      setCreateErrors({ server: getApiErrorDetail(err) || 'Could not create this admin. Please try again.' })
+    } finally { setCreating(false) }
   }
 
   const handleDeactivate = async (adminId: string) => {
     if (!confirm('Are you sure you want to deactivate this admin user?')) return
-    
+
     try {
       await updateAdminUserStatus(adminId, { status: 'inactive', reason: 'Deactivated by admin' })
       const data = await getAdminUsers(roleFilter, statusFilter, searchQuery)
@@ -244,7 +255,7 @@ export default function AdminUsersPage() {
 
   const handleDelete = async (adminId: string) => {
     if (!confirm('Are you sure you want to delete this admin user? This action cannot be undone.')) return
-    
+
     try {
       await deleteAdminUser(adminId)
       const data = await getAdminUsers(roleFilter, statusFilter, searchQuery)
@@ -269,7 +280,7 @@ export default function AdminUsersPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+      <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         {error}
       </div>
     )
@@ -317,8 +328,8 @@ export default function AdminUsersPage() {
               width: '100%',
               padding: '10px 12px 10px 40px',
               borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              background: 'rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-glass)",
               fontSize: '14px',
               color: T.navy,
               outline: 'none',
@@ -331,8 +342,8 @@ export default function AdminUsersPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -348,8 +359,8 @@ export default function AdminUsersPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -391,7 +402,7 @@ export default function AdminUsersPage() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px',
-            background: 'rgba(4,53,77,0.32)',
+            background: "var(--surface-hover)",
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
           }}
@@ -400,68 +411,74 @@ export default function AdminUsersPage() {
             width: '100%',
             maxWidth: '480px',
             borderRadius: '18px',
-            border: '1px solid rgba(255,255,255,0.88)',
-            background: 'rgba(255,255,255,0.96)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             boxShadow: '0 24px 64px rgba(4,53,77,0.2)',
             padding: '24px',
           }}>
             <h2 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 800, color: T.navy }}>
               Add Admin User
             </h2>
+            <ValidationSummary errors={createErrors} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Full Name
+                  Full Name (Required)
                 </label>
                 <input
                   type="text"
+                  id='admin-full_name' aria-label='Full Name (Required)' required aria-invalid={!!createErrors.full_name} aria-describedby={createErrors.full_name ? 'admin-full_name-error' : undefined}
                   value={createForm.full_name}
-                  onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })}
+                  onChange={(e) => { setCreateForm({ ...createForm, full_name: e.target.value }); setCreateErrors(previous => ({ ...previous, full_name: '' })) }}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-glass)",
                     fontSize: '14px',
                     color: T.navy,
                     outline: 'none',
                   }}
                 />
+                <FieldFeedback name='admin-full_name' error={createErrors.full_name} />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Email
+                  Email (Required)
                 </label>
                 <input
                   type="email"
+                  id='admin-email' aria-label='Email (Required)' required aria-invalid={!!createErrors.email} aria-describedby={createErrors.email ? 'admin-email-error' : undefined}
                   value={createForm.email}
-                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  onChange={(e) => { setCreateForm({ ...createForm, email: e.target.value }); setCreateErrors(previous => ({ ...previous, email: '' })) }}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-glass)",
                     fontSize: '14px',
                     color: T.navy,
                     outline: 'none',
                   }}
                 />
+                <FieldFeedback name='admin-email' error={createErrors.email} />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Role
+                  Role (Required)
                 </label>
                 <select
+                  id='admin-role' aria-label='Role (Required)' required aria-invalid={!!createErrors.role} aria-describedby={createErrors.role ? 'admin-role-error' : undefined}
                   value={createForm.role}
-                  onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+                  onChange={(e) => { setCreateForm({ ...createForm, role: e.target.value }); setCreateErrors(previous => ({ ...previous, role: '' })) }}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-glass)",
                     fontSize: '14px',
                     color: T.navy,
                     cursor: 'pointer',
@@ -470,6 +487,7 @@ export default function AdminUsersPage() {
                   <option value="ADMIN">Admin</option>
                   <option value="SUPER_ADMIN">Super Admin</option>
                 </select>
+                <FieldFeedback name='admin-role' error={createErrors.role} />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '24px' }}>
@@ -479,13 +497,14 @@ export default function AdminUsersPage() {
                   setShowCreateModal(false)
                   setCreateForm({ email: '', full_name: '', role: 'ADMIN' })
                 }}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleCreateAdmin}
+                disabled={creating}
                 style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Create Admin

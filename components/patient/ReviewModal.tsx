@@ -37,7 +37,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div aria-hidden onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(4,53,77,0.28)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
+      <div aria-hidden onClick={onClose} style={{ position: 'absolute', inset: 0, background: "var(--surface-hover)", backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
       <div
         role="dialog"
         aria-modal="true"
@@ -47,11 +47,11 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
           zIndex: 1,
           width: '100%',
           maxWidth: '480px',
-          background: 'rgba(255,255,255,0.97)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(30px)',
           WebkitBackdropFilter: 'blur(30px)',
           borderRadius: '24px',
-          border: '1px solid rgba(255,255,255,0.9)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.float,
           padding: '28px',
           maxHeight: '90vh',
@@ -60,16 +60,16 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div>
-            <h2 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>
+            <h2 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>
               Write a Review
             </h2>
             <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>{physicianName}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: '1px solid rgba(4,53,77,0.12)', borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: "1px solid var(--border)", borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <p style={{ margin: '0 0 12px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: T.slate2 }}>
+          <p style={{ margin: '0 0 12px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: T.slate2 }}>
             Your Rating
           </p>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -99,14 +99,14 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
             ))}
           </div>
           {rating > 0 && (
-            <p style={{ margin: '8px 0 0', fontSize: '13px', color: T.blue, fontWeight: 600 }}>
+            <p style={{ margin: '8px 0 0', fontSize: '13px', color: T.link, fontWeight: 600 }}>
               {rating === 5 ? 'Excellent' : rating === 4 ? 'Very Good' : rating === 3 ? 'Good' : rating === 2 ? 'Fair' : 'Poor'}
             </p>
           )}
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <p style={{ margin: '0 0 12px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: T.slate2 }}>
+          <p style={{ margin: '0 0 12px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: T.slate2 }}>
             Your Review
           </p>
           <textarea
@@ -118,13 +118,13 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
               width: '100%',
               padding: '14px',
               borderRadius: '12px',
-              border: '1px solid rgba(4,53,77,0.15)',
-              background: 'rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-glass)",
               color: T.navy,
               fontSize: '14px',
               lineHeight: 1.6,
               resize: 'vertical',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
             }}
           />
         </div>
@@ -139,7 +139,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
               padding: '0 16px',
               borderRadius: '12px',
               border: 'none',
-              background: rating > 0 && !isSubmitting ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(4,53,77,0.1)',
+              background: rating > 0 && !isSubmitting ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)",
               color: rating > 0 && !isSubmitting ? '#fff' : T.slate2,
               fontSize: '13.5px',
               fontWeight: 700,
@@ -156,14 +156,14 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
               minHeight: '46px',
               padding: '0 16px',
               borderRadius: '12px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              background: 'rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-glass)",
               color: T.navy,
               fontSize: '13.5px',
               fontWeight: 600,
               cursor: 'pointer',
             }}
-            on={{ background: 'rgba(255,255,255,0.98)', transform: 'translateY(-1px)' }}
+            on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
           >
             Cancel
           </HoverBtn>

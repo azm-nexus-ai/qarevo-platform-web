@@ -14,7 +14,7 @@ function SecHead({ icon, label }: { icon: string | readonly string[]; label: str
       <Ico p={icon} size={14} sw={1.75} style={{ color: T.slate2 }} />
       <span
         style={{
-          fontSize: '11px',
+          fontSize: "13px",
           fontWeight: 700,
           color: T.slate2,
           letterSpacing: '0.09em',
@@ -41,8 +41,8 @@ export default function PhysicianConsultationSection() {
       <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '52px 32px 0' }}>
         <div
           style={{
-            background: '#FFFFFF',
-            border: '1px solid rgba(4,53,77,0.06)',
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: '20px',
             boxShadow: Sh.float,
             marginBottom: '20px',
@@ -80,7 +80,7 @@ export default function PhysicianConsultationSection() {
                 width: '100%',
                 padding: '14px 24px',
                 borderRadius: '11px',
-                background: T.navy,
+                background: T.brandNavy,
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: '14.5px',

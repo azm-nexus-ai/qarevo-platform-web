@@ -23,9 +23,9 @@ function ConsultationBookingPageContent() {
 
 function ConsultationBookingPageFallback() {
   return (
-    <main style={{ minHeight: '100vh', background: '#f8fafc', display: 'grid', placeItems: 'center' }}>
+    <main style={{ minHeight: '100vh', background: "var(--canvas)", display: 'grid', placeItems: 'center' }}>
       <div style={{ textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>Redirecting to scheduling...</p>
+        <p style={{ margin: 0, fontSize: '14px', color: "var(--text-muted)" }}>Redirecting to scheduling...</p>
       </div>
     </main>
   )

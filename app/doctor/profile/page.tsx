@@ -1,5 +1,7 @@
 'use client'
 
+import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
@@ -105,6 +107,7 @@ interface ConsultationServiceFormProps {
 }
 
 function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServiceFormProps) {
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [serviceType, setServiceType] = useState(service?.service_type || 'video')
   const [name, setName] = useState(service?.name || '')
   const [price, setPrice] = useState(service?.price?.toString() || '')
@@ -114,6 +117,12 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const errors: Record<string, string> = {}
+    if (!name.trim() || name.trim().length > 200) errors.name = 'Enter a service name (1–200 characters).'
+    if (!/^\d+$/.test(price) || !Number.isSafeInteger(Number(price))) errors.price = 'Enter a non-negative whole amount; decimal prices are not supported by the current service contract.'
+    if (!/^\d+$/.test(duration) || !Number.isSafeInteger(Number(duration)) || Number(duration) < 5) errors.duration = 'Enter a whole number of minutes, at least 5.'
+    setFormErrors(errors)
+    if (Object.keys(errors).length) { focusValidation(e.currentTarget); return }
     const data: ConsultationServiceCreate | ConsultationServiceUpdate = {
       service_type: serviceType,
       name,
@@ -130,8 +139,8 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
     minHeight: '42px',
     padding: '10px 12px',
     borderRadius: '10px',
-    border: '1px solid rgba(4,53,77,0.12)',
-    background: 'rgba(255,255,255,0.92)',
+    border: "1px solid var(--border)",
+    background: "var(--surface-glass)",
     color: T.navy,
     fontSize: '13px',
     outline: 'none',
@@ -140,7 +149,7 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
   const labelStyle = {
     display: 'block',
     marginBottom: '6px',
-    fontSize: '12px',
+    fontSize: "13px",
     fontWeight: 700,
     color: T.slate2,
     letterSpacing: '0.04em',
@@ -148,7 +157,8 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '12px' }}>
+    <form noValidate onSubmit={handleSubmit} style={{ display: 'grid', gap: '12px' }}>
+      <ValidationSummary errors={formErrors} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <div>
           <label style={labelStyle}>Service Type</label>
@@ -164,39 +174,45 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
           </select>
         </div>
         <div>
-          <label style={labelStyle}>Service Name</label>
+          <label htmlFor="service-name" style={labelStyle}>Service Name (Required)</label>
           <input
             type="text"
+            id="service-name" aria-invalid={!!formErrors.name} aria-describedby={formErrors.name ? "service-name-error" : undefined}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); setFormErrors(previous => ({ ...previous, name: "" })) } }
             placeholder="e.g., General Video Consultation"
             style={inputStyle}
             required
           />
+          <FieldFeedback name="service-name" error={formErrors.name} />
         </div>
         <div>
-          <label style={labelStyle}>Price ($)</label>
+          <label htmlFor="service-price" style={labelStyle}>Price ($) (Required)</label>
           <input
             type="number"
             min="0"
+            id="service-price" aria-invalid={!!formErrors.price} aria-describedby={formErrors.price ? "service-price-error" : undefined}
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e) => { setPrice(e.target.value); setFormErrors(previous => ({ ...previous, price: "" })) } }
             placeholder="140"
             style={inputStyle}
             required
           />
+          <FieldFeedback name="service-price" error={formErrors.price} />
         </div>
         <div>
-          <label style={labelStyle}>Duration (min)</label>
+          <label htmlFor="service-duration" style={labelStyle}>Duration (min) (Required)</label>
           <input
             type="number"
             min="5"
+            id="service-duration" aria-invalid={!!formErrors.duration} aria-describedby={formErrors.duration ? "service-duration-error" : undefined}
             value={duration}
-            onChange={(e) => setDuration(e.target.value)}
+            onChange={(e) => { setDuration(e.target.value); setFormErrors(previous => ({ ...previous, duration: "" })) } }
             placeholder="30"
             style={inputStyle}
             required
           />
+          <FieldFeedback name="service-duration" error={formErrors.duration} />
         </div>
       </div>
       <div>
@@ -223,13 +239,13 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
         <button
           type="button"
           onClick={onCancel}
-          style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+          style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
         >
           Cancel
         </button>
         <button
           type="submit"
-          style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+          style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
         >
           {service ? 'Update Service' : 'Add Service'}
         </button>
@@ -302,7 +318,7 @@ export default function DoctorProfilePage() {
   }
 
   if (error) {
-    return <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>{error}</div>
+    return <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>{error}</div>
   }
 
   if (!profileData) return null
@@ -400,8 +416,8 @@ export default function DoctorProfilePage() {
     minHeight: '42px',
     padding: '10px 12px',
     borderRadius: '10px',
-    border: '1px solid rgba(4,53,77,0.12)',
-    background: 'rgba(255,255,255,0.92)',
+    border: "1px solid var(--border)",
+    background: "var(--surface-glass)",
     color: T.navy,
     fontSize: '13px',
     outline: 'none',
@@ -410,7 +426,7 @@ export default function DoctorProfilePage() {
   const labelStyle = {
     display: 'block',
     marginBottom: '6px',
-    fontSize: '12px',
+    fontSize: "13px",
     fontWeight: 700,
     color: T.slate2,
     letterSpacing: '0.04em',
@@ -427,22 +443,22 @@ export default function DoctorProfilePage() {
       `}</style>
       {/* Header */}
       <div>
-        <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Profile</h1>
+        <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Profile</h1>
         <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage your doctor profile information</p>
       </div>
 
       {/* Profile Card */}
       <div style={{
-        background: 'rgba(255,255,255,0.88)',
+        background: "var(--surface-glass)",
         backdropFilter: 'blur(22px) saturate(175%)',
         WebkitBackdropFilter: 'blur(22px) saturate(175%)',
         borderRadius: '20px',
-        border: '1px solid rgba(255,255,255,0.88)',
+        border: "1px solid var(--border)",
         boxShadow: Sh.card,
         padding: '32px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(4,53,77,0.06)', flexWrap: 'wrap' }}>
-          <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 24px rgba(32,181,223,0.3)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: "1px solid var(--border)", flexWrap: 'wrap' }}>
+          <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 24px rgba(32,181,223,0.3)' }}>
             {profileData.avatar_url ? (
               <img src={profileData.avatar_url} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
@@ -450,18 +466,18 @@ export default function DoctorProfilePage() {
             )}
           </div>
           <div style={{ flex: 1 }}>
-            <h2 style={{ margin: '0 0 4px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{displayName}</h2>
+            <h2 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{displayName}</h2>
             <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{profileData.specialty || 'General Practice'} · {profileData.hospital || 'Qarevo Virtual Clinic'}</p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <span style={{ padding: '6px 12px', borderRadius: '999px', background: 'rgba(15,158,119,0.12)', color: T.green, fontSize: '12px', fontWeight: 700 }}>
+              <span style={{ padding: '6px 12px', borderRadius: '999px', background: 'rgba(15,158,119,0.12)', color: T.green, fontSize: "13px", fontWeight: 700 }}>
                 {profileData.license_verified ? 'VERIFIED' : 'UNVERIFIED'}
               </span>
-              <span style={{ padding: '6px 12px', borderRadius: '999px', background: 'rgba(32,181,223,0.12)', color: T.blue, fontSize: '12px', fontWeight: 700 }}>
+              <span style={{ padding: '6px 12px', borderRadius: '999px', background: 'rgba(32,181,223,0.12)', color: T.link, fontSize: "13px", fontWeight: 700 }}>
                 {profileData.experience_years ?? 0} YEARS EXPERIENCE
               </span>
             </div>
           </div>
-          <button onClick={() => document.getElementById('doctor-profile-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => document.getElementById('doctor-profile-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} style={{ padding: '12px 20px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
             Edit Profile
           </button>
         </div>
@@ -469,60 +485,60 @@ export default function DoctorProfilePage() {
         {/* Profile Details */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Specialty</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Specialty</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.specialty || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>License Number</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>License Number</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.license_number || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.email}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Phone</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Phone</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.phone || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Location</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Location</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.city && profileData.state ? `${profileData.city}, ${profileData.state}` : 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Languages</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Languages</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.languages || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Certifications</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Certifications</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.certifications || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Accepted</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Accepted</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.insurance || 'Not provided'}</p>
           </div>
         </div>
       </div>
 
       <div id="doctor-profile-editor" style={{
-        background: 'rgba(255,255,255,0.88)',
+        background: "var(--surface-glass)",
         backdropFilter: 'blur(22px) saturate(175%)',
         WebkitBackdropFilter: 'blur(22px) saturate(175%)',
         borderRadius: '20px',
-        border: '1px solid rgba(255,255,255,0.88)',
+        border: "1px solid var(--border)",
         boxShadow: Sh.card,
         padding: '28px',
         scrollMarginTop: '96px',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '22px' }}>
           <div>
-            <h2 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Professional Profile</h2>
+            <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Professional Profile</h2>
             <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate2, lineHeight: 1.6 }}>Complete the clinical profile patients and care operations use for discovery, booking, and assignment.</p>
           </div>
           <button
             type="button"
             disabled={saving}
             onClick={saveProfile}
-            style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.72 : 1, whiteSpace: 'nowrap' }}
+            style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.72 : 1, whiteSpace: 'nowrap' }}
           >
             {saving ? 'Saving...' : 'Save Profile'}
           </button>
@@ -542,9 +558,9 @@ export default function DoctorProfilePage() {
             gap: '12px',
             padding: '12px 16px',
             borderRadius: '12px',
-            background: 'rgba(255,255,255,0.95)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(4,53,77,0.12)',
+            border: "1px solid var(--border)",
             boxShadow: '0 8px 32px rgba(4,53,77,0.15)',
             animation: 'slideIn 0.3s ease'
           }}>
@@ -553,7 +569,7 @@ export default function DoctorProfilePage() {
               type="button"
               disabled={saving}
               onClick={saveProfile}
-              style={{ minHeight: '36px', padding: '0 16px', borderRadius: '8px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '12px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.72 : 1, whiteSpace: 'nowrap' }}
+              style={{ minHeight: '36px', padding: '0 16px', borderRadius: '8px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: "13px", fontWeight: 700, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.72 : 1, whiteSpace: 'nowrap' }}
             >
               {saving ? 'Saving...' : 'Save Now'}
             </button>
@@ -593,8 +609,8 @@ export default function DoctorProfilePage() {
               style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}
             >
               <span>{draft.is_independent ? 'Independent practitioner' : 'Clinic or hospital affiliated'}</span>
-              <span style={{ width: '36px', height: '20px', borderRadius: '999px', background: draft.is_independent ? T.green : 'rgba(4,53,77,0.16)', position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-                <span style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: draft.is_independent ? '18px' : '2px', transition: 'left 0.15s ease' }} />
+              <span style={{ width: '36px', height: '20px', borderRadius: '999px', background: draft.is_independent ? T.green : "var(--surface-hover)", position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+                <span style={{ width: '16px', height: '16px', borderRadius: '50%', background: "var(--surface)", position: 'absolute', top: '2px', left: draft.is_independent ? '18px' : '2px', transition: 'left 0.15s ease' }} />
               </span>
             </button>
           </div>
@@ -664,8 +680,8 @@ export default function DoctorProfilePage() {
                 style={{
                   padding: '10px 16px',
                   borderRadius: '8px',
-                  border: '1px solid rgba(4,53,77,0.12)',
-                  background: 'rgba(255,255,255,0.9)',
+                  border: "1px solid var(--border)",
+                  background: "var(--surface-glass)",
                   color: T.navy,
                   fontSize: '13px',
                   fontWeight: 600,
@@ -678,7 +694,7 @@ export default function DoctorProfilePage() {
                 {draft.avatar_file ? 'Change Profile Picture' : 'Upload Profile Picture'}
               </label>
               {draft.avatar_file && (
-                <span style={{ fontSize: '12px', color: T.slate2 }}>{draft.avatar_file.name}</span>
+                <span style={{ fontSize: "13px", color: T.slate2 }}>{draft.avatar_file.name}</span>
               )}
             </div>
           </div>
@@ -686,15 +702,15 @@ export default function DoctorProfilePage() {
       </div>
 
       <div style={{
-        background: 'rgba(255,255,255,0.88)',
+        background: "var(--surface-glass)",
         backdropFilter: 'blur(22px) saturate(175%)',
         WebkitBackdropFilter: 'blur(22px) saturate(175%)',
         borderRadius: '20px',
-        border: '1px solid rgba(255,255,255,0.88)',
+        border: "1px solid var(--border)",
         boxShadow: Sh.card,
         padding: '32px',
       }}>
-        <h3 style={{ margin: '0 0 20px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Availability Settings</h3>
+        <h3 style={{ margin: '0 0 20px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Availability Settings</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
           <div>
             <label style={labelStyle}>Working Hours Start</label>
@@ -718,8 +734,8 @@ export default function DoctorProfilePage() {
                       gap: '8px',
                       padding: '8px 12px',
                       borderRadius: '8px',
-                      border: isSelected ? `2px solid ${T.blue}` : '1px solid rgba(4,53,77,0.12)',
-                      background: isSelected ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.9)',
+                      border: isSelected ? `2px solid ${T.blue}` : "1px solid var(--border)",
+                      background: isSelected ? 'rgba(32,181,223,0.08)' : "var(--surface-glass)",
                       cursor: 'pointer',
                       fontSize: '13px',
                       fontWeight: isSelected ? 600 : 400,
@@ -758,17 +774,17 @@ export default function DoctorProfilePage() {
       </div>
 
       <div style={{
-        background: 'rgba(255,255,255,0.88)',
+        background: "var(--surface-glass)",
         backdropFilter: 'blur(22px) saturate(175%)',
         WebkitBackdropFilter: 'blur(22px) saturate(175%)',
         borderRadius: '20px',
-        border: '1px solid rgba(255,255,255,0.88)',
+        border: "1px solid var(--border)",
         boxShadow: Sh.card,
         padding: '32px',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div>
-            <h3 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Consultation Services</h3>
+            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Consultation Services</h3>
             <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate2 }}>Manage individual pricing, duration, and availability for each consultation type.</p>
           </div>
           <button
@@ -777,14 +793,14 @@ export default function DoctorProfilePage() {
               setEditingService(null)
               setShowServiceForm(true)
             }}
-            style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+            style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
           >
             Add Service
           </button>
         </div>
 
         {showServiceForm && (
-          <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '14px', border: '1px solid rgba(4,53,77,0.12)', padding: '20px', marginBottom: '20px' }}>
+          <div style={{ background: "var(--surface-glass)", borderRadius: '14px', border: "1px solid var(--border)", padding: '20px', marginBottom: '20px' }}>
             <h4 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 700, color: T.navy }}>
               {editingService ? 'Edit Service' : 'Add New Service'}
             </h4>
@@ -825,9 +841,9 @@ export default function DoctorProfilePage() {
               <div
                 key={service.id}
                 style={{
-                  background: 'rgba(255,255,255,0.86)',
+                  background: "var(--surface-glass)",
                   borderRadius: '12px',
-                  border: '1px solid rgba(4,53,77,0.1)',
+                  border: "1px solid var(--border)",
                   padding: '16px',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -848,7 +864,7 @@ export default function DoctorProfilePage() {
                     </p>
                   )}
                   {service.description && (
-                    <p style={{ margin: '0', fontSize: '12px', color: T.slate2 }}>{service.description}</p>
+                    <p style={{ margin: '0', fontSize: "13px", color: T.slate2 }}>{service.description}</p>
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -858,7 +874,7 @@ export default function DoctorProfilePage() {
                       setEditingService(service)
                       setShowServiceForm(true)
                     }}
-                    style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                    style={{ padding: '8px 14px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 600, cursor: 'pointer' }}
                   >
                     Edit
                   </button>
@@ -876,7 +892,7 @@ export default function DoctorProfilePage() {
                         }
                       }
                     }}
-                    style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(255,255,255,0.9)', color: T.red, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                    style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(220,38,38,0.2)', background: "var(--surface-glass)", color: T.red, fontSize: "13px", fontWeight: 600, cursor: 'pointer' }}
                   >
                     Delete
                   </button>
@@ -890,40 +906,40 @@ export default function DoctorProfilePage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
         <div style={{
-          background: 'rgba(255,255,255,0.88)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
           borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.88)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Total Consultations</p>
-          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{profileData.total_consultations}</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Total Consultations</p>
+          <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{profileData.total_consultations}</p>
         </div>
         <div style={{
-          background: 'rgba(255,255,255,0.88)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
           borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.88)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Rating</p>
-          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.green }}>{profileData.patient_rating}</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Rating</p>
+          <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.green }}>{profileData.patient_rating}</p>
         </div>
         <div style={{
-          background: 'rgba(255,255,255,0.88)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
           borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.88)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Years Active</p>
-          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.blue }}>{profileData.years_active}</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Years Active</p>
+          <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.link }}>{profileData.years_active}</p>
         </div>
       </div>
     </div>

@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
+import { THEME_BOOTSTRAP } from '@/lib/theme'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { BookingProvider } from '@/contexts/BookingContext'
 
-const inter = Inter({
+const inter = localFont({
+  src: '../public/fonts/InterVariable.woff2',
   variable: '--font-inter',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: '100 900',
   display: 'swap',
 })
 
@@ -31,9 +33,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html suppressHydrationWarning lang="en" className={inter.variable}>
+      <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body>
-        <BookingProvider>{children}</BookingProvider>
+        <ThemeProvider><BookingProvider>{children}</BookingProvider></ThemeProvider>
       </body>
     </html>
   )

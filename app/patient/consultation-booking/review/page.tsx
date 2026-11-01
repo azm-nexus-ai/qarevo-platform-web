@@ -187,7 +187,7 @@ function ReviewPageContent() {
       const insuranceType = /statutory|public|nhs|gkv/i.test(insurance) ? 'public' : 'private'
       const startAt = parseAppointmentStart(date, slot)
       const endAt = addDuration(startAt, duration)
-      
+
       // If intake was already submitted on the intake page, don't send intake data here
       // to avoid overwriting the detailed intake fields (chief_complaint, symptoms, medical_history)
       const intake = episodeId ? undefined : {
@@ -247,45 +247,45 @@ function ReviewPageContent() {
       <div style={{ maxWidth: '1460px', margin: '0 auto', padding: '24px 20px 40px' }}>
         <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: '280px minmax(0, 1fr) 340px', alignItems: 'start' }}>
           <aside style={{ display: 'grid', gap: '12px' }}>
-            <section style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.84)', padding: '18px' }}>
+            <section style={{ ...Glass.nav, borderRadius: '20px', border: "1px solid var(--border)", padding: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Booking Progress</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.blue }}>80%</p>
+                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Booking Progress</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.link }}>80%</p>
               </div>
-              <div style={{ width: '100%', height: '6px', borderRadius: '999px', background: 'rgba(4,53,77,0.08)', marginBottom: '12px', overflow: 'hidden' }}>
-                <div style={{ width: '80%', height: '100%', background: 'linear-gradient(90deg, #20B5DF 0%, #348CEA 100%)', borderRadius: '999px', transition: 'width 0.3s ease' }} />
+              <div style={{ width: '100%', height: '6px', borderRadius: '999px', background: "var(--surface-hover)", marginBottom: '12px', overflow: 'hidden' }}>
+                <div style={{ width: '80%', height: '100%', background: 'linear-gradient(90deg, #20B5DF 0%, var(--primary-end) 100%)', borderRadius: '999px', transition: 'width 0.3s ease' }} />
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {['Doctor Selected', 'Date & Time', 'Intake', 'Review', 'Confirmation'].map((step, index) => {
                   const completed = index < 3
                   const active = index === 3
                   return (
-                    <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: active ? 'rgba(32,181,223,0.08)' : completed ? 'rgba(15,158,119,0.08)' : 'rgba(255,255,255,0.7)', border: `1px solid ${active ? 'rgba(32,181,223,0.16)' : completed ? 'rgba(15,158,119,0.16)' : 'rgba(4,53,77,0.08)'}` }}>
-                      <span style={{ width: '20px', height: '20px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: completed ? T.greenLight : active ? T.blueLight : 'rgba(255,255,255,0.8)', color: completed ? T.green : active ? T.blue : T.slate2, fontSize: '11px', fontWeight: 700 }}>
+                    <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: active ? 'rgba(32,181,223,0.08)' : completed ? 'rgba(15,158,119,0.08)' : "var(--surface-glass)", border: `1px solid ${active ? 'rgba(32,181,223,0.16)' : completed ? 'rgba(15,158,119,0.16)' : "var(--border)"}` }}>
+                      <span style={{ width: '20px', height: '20px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: completed ? T.greenLight : active ? T.blueLight : "var(--surface-glass)", color: completed ? T.green : active ? T.link : T.slate2, fontSize: "13px", fontWeight: 700 }}>
                         {completed ? <Ico p={ICONS.check} size={10} sw={2.2} color={T.green} /> : index + 1}
                       </span>
-                      <span style={{ fontSize: '12px', color: active ? T.navy : T.slate, fontWeight: active ? 700 : 600 }}>{step}</span>
+                      <span style={{ fontSize: "13px", color: active ? T.navy : T.slate, fontWeight: active ? 700 : 600 }}>{step}</span>
                     </div>
                   )
                 })}
               </div>
             </section>
 
-            <section style={{ ...Glass.pill, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.84)', padding: '18px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 9px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px' }}>
+            <section style={{ ...Glass.pill, borderRadius: '20px', border: "1px solid var(--border)", padding: '18px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 9px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px' }}>
                 <Ico p={ICONS.lock} size={11} sw={2.2} color={T.blue} />
                 Protected review
               </div>
-              <h2 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{physicianData.name}</h2>
+              <h2 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{physicianData.name}</h2>
               <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
-              <div style={{ display: 'grid', gap: '7px', fontSize: '12px', color: T.slate2 }}>
+              <div style={{ display: 'grid', gap: '7px', fontSize: "13px", color: T.slate2 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Consultation</span><strong style={{ color: T.navy }}>{readLabel(service)}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Date</span><strong style={{ color: T.navy }}>{date}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Time</span><strong style={{ color: T.navy }}>{slot}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Fee</span><strong style={{ color: T.navy }}>{formatFee(fee)}</strong></div>
               </div>
               {doctorLoadError && (
-                <div style={{ marginTop: '10px', borderRadius: '12px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(254,242,242,0.9)', color: '#B91C1C', padding: '10px 11px', fontSize: '12px', fontWeight: 700, lineHeight: 1.5 }}>
+                <div style={{ marginTop: '10px', borderRadius: '12px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(254,242,242,0.9)', color: '#B91C1C', padding: '10px 11px', fontSize: "13px", fontWeight: 700, lineHeight: 1.5 }}>
                   {doctorLoadError}
                 </div>
               )}
@@ -293,24 +293,24 @@ function ReviewPageContent() {
           </aside>
 
           <section style={{ display: 'grid', gap: '14px' }}>
-            <header style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.float, padding: '22px 24px' }}>
+            <header style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '22px 24px' }}>
               <div style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
                   <Ico p={ICONS.check} size={11} sw={2.2} color={T.blue} />
                   Final review
                 </div>
-                <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '28px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Review Your Appointment</h1>
+                <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Review Your Appointment</h1>
                 <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7, maxWidth: '760px' }}>Please review every detail before confirming your booking. This final step is designed to give you complete clarity, confidence, and reassurance.</p>
               </div>
             </header>
 
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ marginBottom: '12px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Physician Summary</p>
-                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your care team at a glance</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Physician Summary</p>
+                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your care team at a glance</h2>
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ width: '84px', height: '84px', borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(4,53,77,0.12)', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', display: 'grid', placeItems: 'center' }}>
+                <div style={{ width: '84px', height: '84px', borderRadius: '18px', overflow: 'hidden', border: "1px solid var(--border)", background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', display: 'grid', placeItems: 'center' }}>
                   {physicianData.imageUrl ? (
                     <img src={physicianData.imageUrl} alt={physicianData.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -318,13 +318,13 @@ function ReviewPageContent() {
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: '220px' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
                     <Ico p={ICONS.check} size={10} sw={2.2} color={T.blue} />
                     Verified Physician
                   </div>
-                  <h3 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
+                  <h3 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
                   <p style={{ margin: '0 0 6px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: T.slate2 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: "13px", color: T.slate2 }}>
 	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.activity} size={12} sw={1.75} color={T.blue} />{physicianData.experienceYears} years experience</span>
 	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.steth} size={12} sw={1.75} color={T.blue} />{remoteDoctor && remoteDoctor.reviews > 0 ? `${remoteDoctor.rating.toFixed(1)} rating` : 'No ratings yet'}</span>
 	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.lock} size={12} sw={1.75} color={T.blue} />{physicianData.languages.length ? physicianData.languages.join(', ') : 'Languages not listed'}</span>
@@ -333,10 +333,10 @@ function ReviewPageContent() {
               </div>
             </section>
 
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ marginBottom: '12px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment Details</p>
-                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your selected consultation details</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment Details</p>
+                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your selected consultation details</h2>
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
                 {[
@@ -349,18 +349,18 @@ function ReviewPageContent() {
                   ['Insurance Coverage', insurance],
                   ['Expected End Time', appointmentEnd],
                 ].map(([label, value]) => (
-                  <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
+                  <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                    <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{value}</p>
                   </div>
                 ))}
               </div>
             </section>
 
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ marginBottom: '12px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Information</p>
-                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your details are ready for review</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Information</p>
+                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your details are ready for review</h2>
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
                 {[
@@ -370,22 +370,22 @@ function ReviewPageContent() {
                   ['Emergency Contact', emergencyContact],
                   ['Primary Medical Concern', medicalConcern],
                 ].map(([label, value]) => (
-                  <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
+                  <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                    <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{value}</p>
                   </div>
                 ))}
-                <div style={{ gridColumn: '1 / -1', padding: '12px 13px', borderRadius: '14px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Notes</p>
+                <div style={{ gridColumn: '1 / -1', padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Notes</p>
                   <textarea
                     value={editableNotes}
                     onChange={(event) => setEditableNotes(event.target.value.slice(0, 500))}
                     maxLength={500}
                     rows={4}
                     placeholder='Describe your symptoms, concerns, or anything you would like your physician to know before the consultation.'
-                    style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', padding: '10px 12px', fontFamily: 'inherit', fontSize: '13px', color: T.navy, resize: 'vertical', outline: 'none', background: 'rgba(255,255,255,0.9)' }}
+                    style={{ width: '100%', borderRadius: '10px', border: "1px solid var(--border)", padding: '10px 12px', fontFamily: 'inherit', fontSize: '13px', color: T.navy, resize: 'vertical', outline: 'none', background: "var(--surface-glass)" }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: '6px', fontSize: '12px', color: T.slate2 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: '6px', fontSize: "13px", color: T.slate2 }}>
                     <span>Optional and private to your booking.</span>
                     <span>{editableNotes.length}/500</span>
                   </div>
@@ -393,15 +393,15 @@ function ReviewPageContent() {
               </div>
             </section>
 
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'grid', gap: '10px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation Preparation</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A calm, ready experience</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation Preparation</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A calm, ready experience</h2>
                 </div>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {['Join the consultation 5 minutes early', 'Ensure a stable internet connection', 'Upload any remaining medical documents', 'Prepare questions for your physician', 'Keep previous prescriptions available'].map((tip) => (
-                    <div key={tip} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                    <div key={tip} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <Ico p={ICONS.check} size={12} sw={2.4} color={T.green} />
                       <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{tip}</span>
                     </div>
@@ -410,13 +410,13 @@ function ReviewPageContent() {
               </div>
             </section>
 
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Cancellation Policy</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Clear, flexible terms</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Cancellation Policy</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Clear, flexible terms</h2>
                 </div>
-                <button type='button' onClick={() => setShowPolicy((value) => !value)} style={{ border: 'none', background: 'none', color: T.blue, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>{showPolicy ? 'Hide' : 'Show Details'}</button>
+                <button type='button' onClick={() => setShowPolicy((value) => !value)} style={{ border: 'none', background: 'none', color: T.link, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>{showPolicy ? 'Hide' : 'Show Details'}</button>
               </div>
               {showPolicy ? (
                 <div style={{ display: 'grid', gap: '8px' }}>
@@ -426,9 +426,9 @@ function ReviewPageContent() {
                     ['Missed appointments', 'Missed visits are subject to the standard care-team rescheduling policy.'],
                     ['Refund eligibility', 'Eligible refunds are reviewed based on the consultation type and provider availability.'],
                   ].map(([label, value]) => (
-                    <div key={label} style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                    <div key={label} style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 3px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{label}</p>
-                      <p style={{ margin: 0, fontSize: '12px', color: T.slate, lineHeight: 1.6 }}>{value}</p>
+                      <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>{value}</p>
                     </div>
                   ))}
                 </div>
@@ -437,13 +437,13 @@ function ReviewPageContent() {
               )}
             </section>
 
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '18px' }}>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'grid', gap: '10px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consent & Agreements</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Please confirm the final terms</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consent & Agreements</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Please confirm the final terms</h2>
                 </div>
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)", cursor: 'pointer' }}>
                   <input
                     type='checkbox'
                     checked={agreed}
@@ -457,7 +457,7 @@ function ReviewPageContent() {
           </section>
 
           <aside style={{ position: 'sticky', top: '18px', display: 'grid', gap: '12px' }}>
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.float, padding: '18px' }}>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <div style={{ width: '50px', height: '50px', borderRadius: '14px', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.3))', display: 'grid', placeItems: 'center' }}>
                   {physician ? (
@@ -467,8 +467,8 @@ function ReviewPageContent() {
                   )}
                 </div>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Booking Summary</p>
-                  <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Booking Summary</p>
+                  <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
                 </div>
               </div>
 
@@ -482,9 +482,9 @@ function ReviewPageContent() {
                   ['Insurance', insurance],
                   ['Estimated Total', formatFee(fee)],
                 ].map(([label, value]) => (
-                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: '1px solid rgba(4,53,77,0.06)' }}>
-                    <span style={{ fontSize: '12px', color: T.slate2 }}>{label}</span>
-                    <span style={{ fontSize: '12px', color: T.navy, fontWeight: 700, textAlign: 'right' }}>{value}</span>
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
+                    <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
+                    <span style={{ fontSize: "13px", color: T.navy, fontWeight: 700, textAlign: 'right' }}>{value}</span>
                   </div>
                 ))}
               </div>
@@ -496,7 +496,7 @@ function ReviewPageContent() {
                   minHeight: '46px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: allAgreed ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(109,135,151,0.28)',
+                  background: allAgreed ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : 'rgba(109,135,151,0.28)',
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '14px',
@@ -515,7 +515,7 @@ function ReviewPageContent() {
                 <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
               </HoverBtn>
               {submitError && (
-                <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: '#FFF5F5', border: '1px solid rgba(220,38,38,0.25)', color: T.red, fontSize: '12px', lineHeight: 1.5 }}>
+                <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', color: T.red, fontSize: "13px", lineHeight: 1.5 }}>
                   {submitError}
                 </div>
               )}
@@ -526,10 +526,10 @@ function ReviewPageContent() {
               </Link>
             </section>
 
-            <section style={{ background: 'rgba(255,255,255,0.92)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.card, padding: '16px' }}>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {['Secure Booking', 'Encrypted Scheduling', 'Instant Confirmation', 'HIPAA-Compliant Platform', 'Verified Physicians'].map((item) => (
-                  <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: T.slate, fontSize: '12px', fontWeight: 600 }}>
+                  <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: T.slate, fontSize: "13px", fontWeight: 600 }}>
                     <Ico p={ICONS.shield} size={12} sw={1.8} color={T.green} />
                     {item}
                   </div>
@@ -547,9 +547,9 @@ function ReviewPageFallback() {
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG }}>
       <div style={{ maxWidth: '1460px', margin: '0 auto', padding: '24px 20px 40px' }}>
-        <div style={{ background: 'rgba(255,255,255,0.9)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.94)', boxShadow: Sh.float, padding: '24px' }}>
-          <p style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preparing your review</p>
-          <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Loading your appointment summary</h1>
+        <div style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '24px' }}>
+          <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preparing your review</p>
+          <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Loading your appointment summary</h1>
           <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>We are bringing over the latest slot and consultation details.</p>
         </div>
       </div>

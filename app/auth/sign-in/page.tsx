@@ -17,7 +17,7 @@ const PAGE_BG = [
   'radial-gradient(ellipse 65% 55% at 12% 8%,   rgba(32,181,223,0.08) 0%, transparent 55%)',
   'radial-gradient(ellipse 55% 50% at 90% 18%,  rgba(32,181,223,0.06) 0%, transparent 52%)',
   'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(52,140,234,0.06) 0%, transparent 58%)',
-  '#EDF2FA',
+  'var(--canvas)',
 ].join(', ')
 
 // ─── Left panel ────────────────────────────────────────────────────────────────
@@ -27,7 +27,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 const TRUST_FEATURES = [
@@ -126,11 +126,11 @@ function LeftPanel() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <WellnessVisual />
         <div style={{ marginTop: '32px', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
+          <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
             Welcome back.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your care awaits.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Continue managing your health with trusted physicians and AI-powered clinical intelligence.
           </p>
         </div>
@@ -145,7 +145,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -176,7 +176,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, onBlur, err
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{label}</label>
       <div style={{ position: 'relative' }}>
         {icon && (
-          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.blue : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
+          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.link : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
             <Ico p={icon} size={14} sw={1.75} />
           </span>
         )}
@@ -207,7 +207,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, onBlur, err
           </span>
         )}
       </div>
-      {error && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{error}</p>}
+      {error && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
     </div>
   )
 }
@@ -223,8 +223,8 @@ function Checkbox({ checked, onChange, children }: { checked: boolean; onChange:
         onKeyDown={e => e.key === ' ' && onChange()}
         style={{
           width: '17px', height: '17px', borderRadius: '5px', flexShrink: 0,
-          border: `1.5px solid ${checked ? T.blue : 'rgba(4,53,77,0.18)'}`,
-          background: checked ? T.blue : '#fff',
+          border: `1.5px solid ${checked ? T.blue : "var(--border)"}`,
+          background: checked ? T.blue : "var(--surface)",
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'all 0.14s', boxShadow: checked ? '0 1px 4px rgba(32,181,223,0.25)' : 'none',
           outline: 'none',
@@ -265,10 +265,10 @@ function SocialBtn({ provider, onClick }: { provider: 'google' | 'apple'; onClic
       onMouseLeave={() => setH(false)}
       style={{
         flex: 1, padding: '11px 14px', borderRadius: '11px', cursor: 'pointer',
-        border: isApple ? 'none' : `1.5px solid ${h ? 'rgba(4,53,77,0.13)' : T.border}`,
+        border: isApple ? 'none' : `1.5px solid ${h ? "var(--border)" : T.border}`,
         background: isApple
-          ? h ? T.navy2 : T.navy
-          : h ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.75)',
+          ? h ? T.brandNavy : T.brandNavy
+          : h ? "var(--surface-glass)" : "var(--surface-glass)",
         backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px',
         fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 600,
@@ -394,7 +394,7 @@ export default function SignInPage() {
     <div className="signin-page" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', width: '100%', overflowX: 'hidden' }}>
       <style>{`
         * { box-sizing: border-box; }
-        input::placeholder { color: rgba(4,53,77,0.3); }
+        input::placeholder { color: var(--text-muted); }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shake { 0%,100% { transform:translateX(0); } 20%,60% { transform:translateX(-5px); } 40%,80% { transform:translateX(5px); } }
         @media (max-width: 860px) {
@@ -485,11 +485,11 @@ export default function SignInPage() {
 
           {/* Card */}
           <div className="signin-card" style={{
-            background: 'rgba(255,255,255,0.88)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(28px) saturate(200%)',
             WebkitBackdropFilter: 'blur(28px) saturate(200%)',
             borderRadius: '22px',
-            border: '1px solid rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
             padding: '40px 40px 36px',
             animation: authError ? 'shake 0.35s ease' : 'none',
@@ -498,21 +498,21 @@ export default function SignInPage() {
             {/* Logo mark */}
             <div className="signin-logo-row" style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
-                <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
+                <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
                   Sign in to Qarevo
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
                   Welcome back - your care ecosystem is ready.
                 </p>
               </div>
-              <div className="signin-card-mark" style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="signin-card-mark" style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.heart} size={20} sw={1.25} color="#fff" />
               </div>
             </div>
 
             {/* Auth error banner */}
             {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: '#FFF5F5', border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} style={{ marginTop: '1px', flexShrink: 0 }} />
                 <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.5, letterSpacing: '-0.005em' }}>{authError}</span>
               </div>
@@ -539,7 +539,7 @@ export default function SignInPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Password</label>
-                    <Link href="/auth/forgot-password" style={{ fontSize: '12.5px', fontWeight: 600, color: T.blue, textDecoration: 'none', letterSpacing: '-0.01em' }}>
+                    <Link href="/auth/forgot-password" style={{ fontSize: "13px", fontWeight: 600, color: T.link, textDecoration: 'none', letterSpacing: '-0.01em' }}>
                       Forgot password?
                     </Link>
                   </div>
@@ -568,7 +568,7 @@ export default function SignInPage() {
                   disabled={loading}
                   style={{
                     width: '100%', padding: '14px 20px', borderRadius: '13px', border: 'none',
-                    background: loading ? 'rgba(32,181,223,0.5)' : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                    background: loading ? 'rgba(32,181,223,0.5)' : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                     color: '#fff', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700,
                     letterSpacing: '-0.02em', cursor: loading ? 'not-allowed' : 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -590,8 +590,8 @@ export default function SignInPage() {
                     width: '100%',
                     padding: '12px 18px',
                     borderRadius: '13px',
-                    border: '1.5px solid rgba(4,53,77,0.1)',
-                    background: passkeyLoading ? 'rgba(247,250,252,0.72)' : 'rgba(255,255,255,0.78)',
+                    border: "1.5px solid var(--border)",
+                    background: passkeyLoading ? "var(--surface-subtle)" : "var(--surface-glass)",
                     color: T.navy,
                     fontFamily: 'inherit',
                     fontSize: '14px',
@@ -607,14 +607,14 @@ export default function SignInPage() {
                   }}
                 >
                   {passkeyLoading
-                    ? <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(4,53,77,0.18)', borderTopColor: T.blue, borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Checking passkey…</>
+                    ? <><span style={{ width: '14px', height: '14px', border: "2px solid var(--border)", borderTopColor: T.blue, borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Checking passkey…</>
                     : <><Ico p={ICONS.shield} size={15} sw={1.8} /> Sign in with passkey</>}
                 </button>
 
                 {/* Create account */}
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '2px 0 0', letterSpacing: '-0.01em' }}>
                   {"Don't have an account? "}
-                  <Link href="/auth/sign-up" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>Create Account</Link>
+                  <Link href="/auth/sign-up" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>Create Account</Link>
                 </p>
               </div>
             </form>
@@ -622,9 +622,9 @@ export default function SignInPage() {
             {/* Social */}
             <div style={{ marginTop: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(4,53,77,0.08)' }} />
-                <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(4,53,77,0.08)' }} />
+                <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
+                <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
+                <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
               </div>
               <div className="signin-social-row" style={{ display: 'flex', gap: '10px' }}>
                 <SocialBtn provider="google" onClick={() => {
@@ -645,7 +645,7 @@ export default function SignInPage() {
             </div>
 
             {/* Trust indicators */}
-            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
               <div className="signin-trust-grid" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
                 {[
                   { icon: ICONS.lock,     label: 'Secure Login'    },
@@ -655,7 +655,7 @@ export default function SignInPage() {
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
-                    <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -663,11 +663,11 @@ export default function SignInPage() {
           </div>
 
           {/* Footer */}
-          <p style={{ textAlign: 'center', fontSize: '12px', color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
+          <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
             By signing in you agree to our{' '}
-            <Link href="/terms" style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
+            <Link href="/terms" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
             {' '}and{' '}
-            <Link href="/privacy" style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
+            <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
           </p>
         </div>
       </div>

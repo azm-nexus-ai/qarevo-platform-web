@@ -20,8 +20,8 @@ function WPCard({
   return (
     <div
       style={{
-        background: '#FFFFFF',
-        border: '1px solid rgba(4,53,77,0.06)',
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: '20px',
         boxShadow: Sh.float,
         padding: '28px 32px',
@@ -31,9 +31,9 @@ function WPCard({
         <span
           style={{
             display: 'inline-block',
-            fontSize: '10px',
+            fontSize: "13px",
             fontWeight: 700,
-            color: T.blue,
+            color: T.link,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
             background: 'rgba(32,181,223,0.08)',
@@ -48,7 +48,7 @@ function WPCard({
       )}
       <h2
         style={{
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
           fontSize: 'clamp(17px, 2.2vw, 22px)',
           fontWeight: 700,
           color: T.navy,
@@ -85,10 +85,10 @@ function Stat({ value, label }: { value: string; label: string }) {
     >
       <div
         style={{
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
           fontSize: 'clamp(28px, 4vw, 42px)',
           fontWeight: 800,
-          color: T.blue,
+          color: T.link,
           letterSpacing: '-0.04em',
           lineHeight: 1,
           marginBottom: '8px',
@@ -96,7 +96,7 @@ function Stat({ value, label }: { value: string; label: string }) {
       >
         {value}
       </div>
-      <div style={{ fontSize: '12.5px', fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>
+      <div style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>
         {label}
       </div>
     </div>
@@ -152,9 +152,9 @@ export default function WhitepaperPage() {
             >
               <span
                 style={{
-                  fontSize: '10px',
+                  fontSize: "13px",
                   fontWeight: 700,
-                  color: T.blue,
+                  color: T.link,
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
                 }}
@@ -165,7 +165,7 @@ export default function WhitepaperPage() {
 
             <h1
               style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                 fontSize: 'clamp(30px, 5.5vw, 60px)',
                 fontWeight: 800,
                 lineHeight: 1.06,
@@ -233,7 +233,7 @@ export default function WhitepaperPage() {
                   letterSpacing: '-0.015em',
                   ...Glass.pill,
                 }}
-                on={{ background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(4,53,77,0.13)' }}
+                on={{ background: "var(--surface-glass)", border: "1px solid var(--border)" }}
               >
                 Download PDF
               </HoverBtn>
@@ -247,7 +247,7 @@ export default function WhitepaperPage() {
             background: 'rgba(255,255,255,0.46)',
             backdropFilter: 'blur(32px) saturate(150%)',
             WebkitBackdropFilter: 'blur(32px) saturate(150%)',
-            borderTop: '1px solid rgba(255,255,255,0.68)',
+            borderTop: "1px solid var(--border)",
             borderBottom: '1px solid rgba(255,255,255,0.52)',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)',
           }}
@@ -381,7 +381,7 @@ export default function WhitepaperPage() {
                 <div>
                   <h3
                     style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                       fontSize: '14px',
                       fontWeight: 700,
                       color: T.navy,
@@ -401,7 +401,7 @@ export default function WhitepaperPage() {
                 <div>
                   <h3
                     style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                       fontSize: '14px',
                       fontWeight: 700,
                       color: T.navy,
@@ -433,7 +433,7 @@ export default function WhitepaperPage() {
             >
               <h2
                 style={{
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                   fontSize: 'clamp(20px, 3vw, 28px)',
                   fontWeight: 800,
                   color: T.navy,
@@ -488,7 +488,7 @@ export default function WhitepaperPage() {
                     letterSpacing: '-0.015em',
                     ...Glass.pill,
                   }}
-                  on={{ background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(4,53,77,0.13)' }}
+                  on={{ background: "var(--surface-glass)", border: "1px solid var(--border)" }}
                 >
                   View Platform
                 </HoverBtn>

@@ -59,7 +59,7 @@ export default function Sidebar({
   mobileOpen,
   setMobileOpen,
 }: SidebarProps) {
-  
+
   const [internalActive, setInternalActive] = useState<string>("appointments");
   const activeId = activeIdProp ?? internalActive;
 
@@ -92,7 +92,7 @@ export default function Sidebar({
           height={25}
         />
 
-        {!collapsed && <span className="truncate">{label}</span>}  
+        {!collapsed && <span className="truncate">{label}</span>}
       </button>
     );
   };
@@ -100,7 +100,7 @@ export default function Sidebar({
   return (
     <>
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-[#F7FAFC] px-4 py-3 shadow-sm">
-        
+
       {/* Menu */}
       <button onClick={() => setMobileOpen(true)}>
         <Menu size={24} />
@@ -118,7 +118,7 @@ export default function Sidebar({
       <div className="bg-[#B2DDFF] w-10 h-10 rounded-full flex items-center justify-center">
         <h1 className="text-[#074360] font-bold">AN</h1>
       </div>
-    </div>    
+    </div>
 
       {/* Overlay */}
       {mobileOpen && (
@@ -127,7 +127,7 @@ export default function Sidebar({
           className="fixed inset-0 bg-black/40 z-40 lg:hidden"
         />
       )}
-    
+
       <div
         className={`
           fixed top-0 left-0 z-50 h-screen bg-[#F7FAFC]
@@ -149,7 +149,7 @@ export default function Sidebar({
       >
         <X size={24} />
       </button>
-      
+
       <div
         className={[
           "flex items-center h-22 pt-5 shrink-0 border-slate-200",
@@ -178,7 +178,7 @@ export default function Sidebar({
         </button>
       </div>
 
-       <button className="flex justify-center bg-white border border-[#94B5C7] rounded-lg px-2 py-2.5 mx-2 mt-6 gap-2 items-center">
+       <button className="flex justify-center bg-surface border border-[#94B5C7] rounded-lg px-2 py-2.5 mx-2 mt-6 gap-2 items-center">
         <Image
           src={plusLogo}
           alt="Plus Logo"

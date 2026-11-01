@@ -117,17 +117,17 @@ export default function DoctorMobileNavigation() {
           gap: 12px;
           padding: 0 16px;
           height: 56px;
-          background: rgba(247,250,252,0.97);
+          background: var(--surface-subtle);
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border-bottom: 1px solid rgba(4,53,77,0.08);
+          border-bottom: 1px solid var(--border);
           box-shadow: 0 2px 12px rgba(4,53,77,0.06);
         }
         .dmn-hamburger {
           width: 40px;
           height: 40px;
           border-radius: 10px;
-          border: 1px solid rgba(4,53,77,0.12);
+          border: 1px solid var(--border);
           background: transparent;
           cursor: pointer;
           display: flex;
@@ -164,7 +164,7 @@ export default function DoctorMobileNavigation() {
           max-width: min(88vw, 360px);
           z-index: 1001;
           background: #f8fbfd;
-          border-right: 1px solid rgba(255,255,255,0.8);
+          border-right: 1px solid var(--border);
           box-shadow: 14px 0 44px rgba(4,53,77,0.2);
           padding: 20px 16px;
           display: flex;
@@ -184,7 +184,7 @@ export default function DoctorMobileNavigation() {
           width: 34px;
           height: 34px;
           border-radius: 8px;
-          border: 1px solid rgba(4,53,77,0.12);
+          border: 1px solid var(--border);
           background: transparent;
           color: ${T.slate};
           cursor: pointer;
@@ -233,7 +233,7 @@ export default function DoctorMobileNavigation() {
               width: '38px',
               height: '38px',
               borderRadius: '50%',
-              border: '1px solid rgba(4,53,77,0.11)',
+              border: "1px solid var(--border)",
               background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))',
               color: T.navy,
               fontWeight: 700,
@@ -284,7 +284,7 @@ export default function DoctorMobileNavigation() {
                 height: '42px',
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))',
-                border: '1px solid rgba(4,53,77,0.11)',
+                border: "1px solid var(--border)",
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -296,7 +296,7 @@ export default function DoctorMobileNavigation() {
             </div>
             <div>
               <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{displayName}</p>
-              <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>{specialty}</p>
+              <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{specialty}</p>
             </div>
           </div>
         </section>
@@ -348,7 +348,7 @@ export default function DoctorMobileNavigation() {
                       padding: '10px 12px',
                       borderRadius: '12px',
                       background: isActive ? 'rgba(32,181,223,0.14)' : 'transparent',
-                      color: isActive ? T.blue : T.slate,
+                      color: isActive ? T.link : T.slate,
                       fontSize: '13.5px',
                       fontWeight: isActive ? 700 : 500,
                       transition: 'all 0.15s',

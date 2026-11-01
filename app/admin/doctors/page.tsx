@@ -35,7 +35,7 @@ function StatusBadge({ status }: { status: string }) {
       case 'rejected':
         return { bg: 'rgba(220,38,38,0.12)', color: T.red }
       default:
-        return { bg: 'rgba(32,181,223,0.12)', color: T.blue }
+        return { bg: 'rgba(32,181,223,0.12)', color: T.link }
     }
   }
 
@@ -45,7 +45,7 @@ function StatusBadge({ status }: { status: string }) {
     <span style={{
       padding: '4px 10px',
       borderRadius: '999px',
-      fontSize: '11px',
+      fontSize: "13px",
       fontWeight: 700,
       background: style.bg,
       color: style.color
@@ -55,7 +55,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function DoctorCard({ doctor, onView, onVerify }: { 
+function DoctorCard({ doctor, onView, onVerify }: {
   doctor: AdminDoctor | AdminDoctorVerification
   onView: (id: string) => void
   onVerify?: (id: string) => void
@@ -66,11 +66,11 @@ function DoctorCard({ doctor, onView, onVerify }: {
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '20px',
       display: 'flex',
@@ -79,15 +79,15 @@ function DoctorCard({ doctor, onView, onVerify }: {
       gap: '16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-        <div style={{ 
-          width: '48px', 
-          height: '48px', 
-          borderRadius: '12px', 
-          background: 'rgba(32,181,223,0.1)', 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '12px',
+          background: 'rgba(32,181,223,0.1)',
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
-          color: T.blue,
+          color: T.link,
           fontSize: '16px',
           fontWeight: 700
         }}>
@@ -97,9 +97,9 @@ function DoctorCard({ doctor, onView, onVerify }: {
           <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{doctor.full_name}</p>
           <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.slate2 }}>{doctor.email}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <span style={{ fontSize: '12px', color: T.slate }}>{doctor.specialty}</span>
-            <span style={{ fontSize: '12px', color: T.slate2 }}>•</span>
-            <span style={{ fontSize: '12px', color: T.slate }}>{doctor.phone}</span>
+            <span style={{ fontSize: "13px", color: T.slate }}>{doctor.specialty}</span>
+            <span style={{ fontSize: "13px", color: T.slate2 }}>•</span>
+            <span style={{ fontSize: "13px", color: T.slate }}>{doctor.phone}</span>
           </div>
         </div>
       </div>
@@ -111,8 +111,8 @@ function DoctorCard({ doctor, onView, onVerify }: {
           style={{
             padding: '8px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: '#fff',
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
             color: T.navy,
             fontSize: '13px',
             fontWeight: 600,
@@ -219,7 +219,7 @@ export default function AdminDoctorsPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+      <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         {error}
       </div>
     )
@@ -238,7 +238,7 @@ export default function AdminDoctorsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(4,53,77,0.08)', paddingBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '8px', borderBottom: "1px solid var(--border)", paddingBottom: '16px' }}>
         <button
           type="button"
           onClick={() => setActiveTab('all')}
@@ -247,7 +247,7 @@ export default function AdminDoctorsPage() {
             borderRadius: '10px',
             border: 'none',
             background: activeTab === 'all' ? 'rgba(32,181,223,0.12)' : 'transparent',
-            color: activeTab === 'all' ? T.blue : T.slate,
+            color: activeTab === 'all' ? T.link : T.slate,
             fontSize: '14px',
             fontWeight: 600,
             cursor: 'pointer',
@@ -264,7 +264,7 @@ export default function AdminDoctorsPage() {
             borderRadius: '10px',
             border: 'none',
             background: activeTab === 'pending' ? 'rgba(32,181,223,0.12)' : 'transparent',
-            color: activeTab === 'pending' ? T.blue : T.slate,
+            color: activeTab === 'pending' ? T.link : T.slate,
             fontSize: '14px',
             fontWeight: 600,
             cursor: 'pointer',
@@ -289,8 +289,8 @@ export default function AdminDoctorsPage() {
                 width: '100%',
                 padding: '10px 12px 10px 40px',
                 borderRadius: '10px',
-                border: '1px solid rgba(4,53,77,0.12)',
-                background: 'rgba(255,255,255,0.9)',
+                border: "1px solid var(--border)",
+                background: "var(--surface-glass)",
                 fontSize: '14px',
                 color: T.navy,
                 outline: 'none',
@@ -303,8 +303,8 @@ export default function AdminDoctorsPage() {
             style={{
               padding: '10px 16px',
               borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              background: 'rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-glass)",
               fontSize: '14px',
               color: T.navy,
               cursor: 'pointer',

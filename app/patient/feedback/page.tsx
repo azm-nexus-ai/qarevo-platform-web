@@ -216,24 +216,24 @@ function FeedbackPageContent() {
     <>
       <style>{`
         * { box-sizing: border-box; }
-        .fb-hero, .fb-card { background: rgba(255,255,255,0.9); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); border: 1px solid rgba(255,255,255,0.94); box-shadow: ${Sh.card}; }
+        .fb-hero, .fb-card { background: var(--surface); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); border: 1px solid var(--border); box-shadow: ${Sh.card}; }
         .fb-hero { border-radius: 28px; padding: 24px; position: relative; overflow: hidden; }
         .fb-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at top left, rgba(32,181,223,0.16), transparent 34%); pointer-events: none; }
         .fb-card { border-radius: 24px; padding: 20px; margin-top: 14px; }
         .fb-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: rgba(32,181,223,0.1); color: ${T.blue}; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-        .action-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid rgba(4,53,77,0.12); background: rgba(255,255,255,0.92); color: ${T.navy}; font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.2s ease; cursor: pointer; }
+        .action-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.2s ease; cursor: pointer; }
         .action-btn:hover, .action-btn:focus-visible { transform: translateY(-1px); box-shadow: ${Sh.glow}; outline: none; }
         .action-btn.primary { background: linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%); color: #fff; border: none; box-shadow: 0 8px 22px rgba(32,181,223,0.24); }
-        .action-btn.secondary { background: rgba(247,250,252,0.95); }
+        .action-btn.secondary { background: var(--surface-subtle); }
         .star-btn { background: none; border: none; cursor: pointer; padding: 2px; line-height: 1; font-size: 22px; transition: transform 0.15s ease; }
         .star-btn:hover { transform: scale(1.15); }
-        .tag-btn { display: inline-flex; align-items: center; padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(4,53,77,0.1); background: rgba(255,255,255,0.9); color: ${T.navy}; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
+        .tag-btn { display: inline-flex; align-items: center; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
         .tag-btn.selected { background: rgba(32,181,223,0.12); color: ${T.blue}; border-color: rgba(32,181,223,0.26); }
-        .nps-btn { min-width: 40px; min-height: 40px; border-radius: 10px; border: 1px solid rgba(4,53,77,0.1); background: rgba(255,255,255,0.9); color: ${T.navy}; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
+        .nps-btn { min-width: 40px; min-height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
         .nps-btn.selected { background: rgba(32,181,223,0.14); color: ${T.blue}; border-color: rgba(32,181,223,0.28); }
-        .fb-textarea { width: 100%; min-height: 120px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(4,53,77,0.1); background: rgba(255,255,255,0.96); color: ${T.navy}; font-size: 13px; line-height: 1.6; resize: vertical; outline: none; transition: border-color 0.2s ease; }
+        .fb-textarea { width: 100%; min-height: 120px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; font-size: 13px; line-height: 1.6; resize: vertical; outline: none; transition: border-color 0.2s ease; }
         .fb-textarea:focus { border-color: rgba(32,181,223,0.4); }
-        .outcome-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; border-radius: 16px; border: 1px solid rgba(4,53,77,0.1); background: rgba(255,255,255,0.9); color: ${T.navy}; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; text-align: center; }
+        .outcome-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; text-align: center; }
         .outcome-btn.selected { background: rgba(32,181,223,0.12); color: ${T.blue}; border-color: rgba(32,181,223,0.26); }
         .criteria-grid { display: grid; gap: 10px; }
         .outcome-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
@@ -277,7 +277,7 @@ function FeedbackPageContent() {
             <section className='feedback-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Overall experience</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Overall experience</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>How would you rate your overall consultation experience?</h2>
                 </div>
                 <div className='feedback-chip'>{feedbackLabel}</div>
@@ -291,7 +291,7 @@ function FeedbackPageContent() {
             <section className='feedback-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Physician rating</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Physician rating</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>How would you rate your physician?</h2>
                 </div>
                 <div className='feedback-chip'>Verified care team</div>
@@ -306,8 +306,8 @@ function FeedbackPageContent() {
                 </div>
                 <div>
                   <div style={{ fontSize: '15px', fontWeight: 800, color: T.navy }}>{physicianName}</div>
-                  <div style={{ fontSize: '12px', color: T.slate, marginTop: '4px' }}>{specialty} • {physician?.hospital ?? 'Qarevo Care Network'}</div>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', padding: '5px 10px', borderRadius: 999, background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '11px', fontWeight: 700 }}>
+                  <div style={{ fontSize: "13px", color: T.slate, marginTop: '4px' }}>{specialty} • {physician?.hospital ?? 'Qarevo Care Network'}</div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', padding: '5px 10px', borderRadius: 999, background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700 }}>
                     <Ico p={ICONS.check} size={10} sw={2.2} color={T.blue} /> Verified physician
                   </div>
                 </div>
@@ -329,7 +329,7 @@ function FeedbackPageContent() {
             <section className='feedback-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation experience</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation experience</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Rate your experience across the key moments</h2>
                 </div>
                 <div className='feedback-chip'>Premium experience</div>
@@ -351,7 +351,7 @@ function FeedbackPageContent() {
             <section className='feedback-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient outcome</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient outcome</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Did today’s consultation address your health concerns?</h2>
                 </div>
                 <div className='feedback-chip'>Clear response</div>
@@ -368,7 +368,7 @@ function FeedbackPageContent() {
             <section className='feedback-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Written feedback</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Written feedback</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Share what felt helpful, confusing, or worth improving</h2>
                 </div>
                 <div className='feedback-chip'>{charCount}/600</div>
@@ -384,7 +384,7 @@ function FeedbackPageContent() {
             <section className='feedback-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Quick feedback tags</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Quick feedback tags</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Choose the moments that mattered most</h2>
                 </div>
                 <div className='feedback-chip'>Multi-select</div>
@@ -401,7 +401,7 @@ function FeedbackPageContent() {
             <section className='feedback-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Technical feedback</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Technical feedback</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Did you experience any technical issues?</h2>
                 </div>
                 <div className='feedback-chip'>Optional</div>
@@ -413,14 +413,14 @@ function FeedbackPageContent() {
                   </button>
                 ))}
               </div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: T.navy, marginBottom: '8px' }}>Additional comments</label>
+              <label style={{ display: 'block', fontSize: "13px", fontWeight: 700, color: T.navy, marginBottom: '8px' }}>Additional comments</label>
               <input type='text' value={technicalComment} onChange={(event) => setTechnicalComment(event.target.value)} className='field' placeholder='Share what happened and how we can improve it' />
             </section>
 
             <section className='feedback-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Likelihood to recommend</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Likelihood to recommend</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>How likely are you to recommend Qarevo Health to friends or family?</h2>
                 </div>
                 <div className='feedback-chip'>NPS-style</div>
@@ -437,7 +437,7 @@ function FeedbackPageContent() {
             <section className='feedback-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Follow-up</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Follow-up</p>
                   <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Would you like someone from our team to contact you regarding your feedback?</h2>
                 </div>
                 <div className='feedback-chip'>Optional</div>
@@ -452,8 +452,8 @@ function FeedbackPageContent() {
             </section>
 
             <section className='feedback-card'>
-              <div style={{ padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(247,250,252,0.96) 0%, rgba(255,255,255,0.92) 100%)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <div style={{ fontSize: '12px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Rewards placeholder</div>
+              <div style={{ padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(247,250,252,0.96) 0%, rgba(255,255,255,0.92) 100%)', border: "1px solid var(--border)" }}>
+                <div style={{ fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Rewards placeholder</div>
                 <h3 style={{ margin: '6px 0 6px', fontSize: '17px', fontWeight: 800, color: T.navy }}>Thank you for helping improve Qarevo Health</h3>
                 <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.7 }}>A future loyalty or rewards program may be introduced to recognize patients who help shape the quality of care.</p>
               </div>

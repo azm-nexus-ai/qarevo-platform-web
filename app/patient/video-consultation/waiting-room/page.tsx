@@ -220,21 +220,21 @@ function WaitingRoomPageContent() {
 
   const rightRailContent = (
     <section className='waiting-card'>
-      <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Ready to join</p>
-      <h2 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A smooth handoff to your consultation</h2>
+      <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Ready to join</p>
+      <h2 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A smooth handoff to your consultation</h2>
       <p style={{ margin: '0 0 12px', fontSize: '13px', color: T.slate, lineHeight: 1.7 }}>Review the key info, complete the preparation items, and open the consultation room when you are ready.</p>
 
       <div style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
         <div style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.16)' }}>
-          <div style={{ fontSize: '11px', color: T.slate2, textTransform: 'uppercase', marginBottom: '4px' }}>Appointment</div>
+          <div style={{ fontSize: "13px", color: T.slate2, textTransform: 'uppercase', marginBottom: '4px' }}>Appointment</div>
           <div style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{date} · {slot}</div>
         </div>
-        <div style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
-          <div style={{ fontSize: '11px', color: T.slate2, textTransform: 'uppercase', marginBottom: '4px' }}>Physician</div>
+        <div style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: "13px", color: T.slate2, textTransform: 'uppercase', marginBottom: '4px' }}>Physician</div>
           <div style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{physician?.name ?? 'Selected physician'}</div>
         </div>
-        <div style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
-          <div style={{ fontSize: '11px', color: T.slate2, textTransform: 'uppercase', marginBottom: '4px' }}>Preparation</div>
+        <div style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: "13px", color: T.slate2, textTransform: 'uppercase', marginBottom: '4px' }}>Preparation</div>
           <div style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{progressPercent}% complete</div>
         </div>
       </div>
@@ -247,14 +247,14 @@ function WaitingRoomPageContent() {
         ].map((action) => {
           const active = hoveredAction === action.label
           const content = (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '11px 12px', borderRadius: '12px', background: active ? 'rgba(255,255,255,0.98)' : 'rgba(247,250,252,0.82)', border: '1px solid rgba(4,53,77,0.08)', textDecoration: 'none', transition: 'all 0.18s ease' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '11px 12px', borderRadius: '12px', background: active ? "var(--surface-glass)" : "var(--surface-subtle)", border: "1px solid var(--border)", textDecoration: 'none', transition: 'all 0.18s ease' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ width: '34px', height: '34px', borderRadius: '10px', display: 'grid', placeItems: 'center', background: active ? 'rgba(32,181,223,0.14)' : 'rgba(165,224,218,0.2)', color: T.blue }}>
+                <span style={{ width: '34px', height: '34px', borderRadius: '10px', display: 'grid', placeItems: 'center', background: active ? 'rgba(32,181,223,0.14)' : 'rgba(165,224,218,0.2)', color: T.link }}>
                   <Ico p={action.icon} size={14} sw={1.8} />
                 </span>
                 <div>
                   <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{action.label}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate }}>{action.sub}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>{action.sub}</p>
                 </div>
               </div>
               <Ico p={ICONS.arrowSm} size={14} sw={1.8} color={active ? '#348CEA' : T.slate2} />
@@ -283,14 +283,14 @@ function WaitingRoomPageContent() {
     <>
       <style>{`
         * { box-sizing: border-box; }
-        .waiting-hero { position: relative; overflow: hidden; padding: 28px; border-radius: 28px; background: linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(247,250,252,0.92) 100%); border: 1px solid rgba(255,255,255,0.94); box-shadow: ${Sh.float}; }
+        .waiting-hero { position: relative; overflow: hidden; padding: 28px; border-radius: 28px; background: linear-gradient(135deg, var(--surface) 0%, var(--surface-subtle) 100%); border: 1px solid var(--border); box-shadow: ${Sh.float}; }
         .waiting-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at top left, rgba(32,181,223,0.12), transparent 36%), radial-gradient(circle at 85% 10%, rgba(52,140,234,0.1), transparent 28%); pointer-events: none; }
         .waiting-grid { display: grid; gap: 14px; margin-top: 14px; }
-        .waiting-card { background: rgba(255,255,255,0.9); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); border-radius: 24px; border: 1px solid rgba(255,255,255,0.94); box-shadow: ${Sh.card}; padding: 20px; }
+        .waiting-card { background: var(--surface); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); border-radius: 24px; border: 1px solid var(--border); box-shadow: ${Sh.card}; padding: 20px; }
         .waiting-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: rgba(32,181,223,0.1); color: ${T.blue}; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
         .waiting-countdown { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-        .waiting-countdown > div { padding: 10px; border-radius: 14px; background: rgba(247,250,252,0.9); border: 1px solid rgba(4,53,77,0.08); text-align: center; }
-        .waiting-check-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(247,250,252,0.86); border: 1px solid rgba(4,53,77,0.08); transition: all 0.2s ease; }
+        .waiting-countdown > div { padding: 10px; border-radius: 14px; background: var(--surface-subtle); border: 1px solid var(--border); text-align: center; }
+        .waiting-check-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-subtle); border: 1px solid var(--border); transition: all 0.2s ease; }
         .waiting-check-item.completed { background: rgba(165,224,218,0.18); border-color: rgba(32,181,223,0.16); }
         .waiting-float { animation: qarevo-float 3.4s ease-in-out infinite; }
         .mobile-join { display: none; }
@@ -309,39 +309,39 @@ function WaitingRoomPageContent() {
                   <Ico p={ICONS.video} size={10} sw={2.2} color={T.blue} />
                   Video Consultation
                 </div>
-                <h1 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '30px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your consultation is almost ready to begin</h1>
+                <h1 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '30px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your consultation is almost ready to begin</h1>
                 <p style={{ margin: '0 0 16px', maxWidth: '720px', fontSize: '14px', color: T.slate, lineHeight: 1.75 }}>
                   Please review your appointment details and complete the quick preparation checklist before joining. Your care team is ready, and everything is in place for a calm, confident visit.
                 </p>
                 <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '10px' }}>
-                  <button type='button' onClick={handleJoin} disabled={!canJoin} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 16px', borderRadius: '12px', background: canJoin ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(4,53,77,0.08)', color: canJoin ? '#fff' : T.slate2, fontSize: '13px', fontWeight: 700, border: 'none', boxShadow: canJoin ? '0 8px 22px rgba(32,181,223,0.26)' : 'none', cursor: canJoin ? 'pointer' : 'not-allowed', opacity: canJoin ? 1 : 0.8 }}>
+                  <button type='button' onClick={handleJoin} disabled={!canJoin} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 16px', borderRadius: '12px', background: canJoin ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", color: canJoin ? '#fff' : T.slate2, fontSize: '13px', fontWeight: 700, border: 'none', boxShadow: canJoin ? '0 8px 22px rgba(32,181,223,0.26)' : 'none', cursor: canJoin ? 'pointer' : 'not-allowed', opacity: canJoin ? 1 : 0.8 }}>
                     Join Consultation
                   </button>
-                  <Link href='/patient/appointment-details' style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+                  <Link href='/patient/appointment-details' style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 16px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
                     Review Details
                   </Link>
                 </div>
-                <p style={{ margin: '10px 0 0', fontSize: '12px', color: T.slate2, lineHeight: 1.6 }}>
+                <p style={{ margin: '10px 0 0', fontSize: "13px", color: T.slate2, lineHeight: 1.6 }}>
                   The Join Consultation button becomes available 10 minutes before your scheduled appointment.
                 </p>
               </div>
-              <div style={{ minWidth: '240px', width: '280px', borderRadius: '24px', padding: '16px', background: 'rgba(255,255,255,0.74)', border: '1px solid rgba(255,255,255,0.8)', boxShadow: Sh.glow }}>
-                <p style={{ margin: '0 0 10px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation begins in</p>
+              <div style={{ minWidth: '240px', width: '280px', borderRadius: '24px', padding: '16px', background: "var(--surface-glass)", border: "1px solid var(--border)", boxShadow: Sh.glow }}>
+                <p style={{ margin: '0 0 10px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation begins in</p>
                 <div className='waiting-countdown' style={{ marginBottom: '10px' }}>
                   <div>
                     <strong style={{ fontSize: '18px', color: T.navy }}>{String(countdown.hours).padStart(2, '0')}</strong>
-                    <div style={{ fontSize: '10px', color: T.slate2, marginTop: '3px' }}>Hours</div>
+                    <div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>Hours</div>
                   </div>
                   <div>
                     <strong style={{ fontSize: '18px', color: T.navy }}>{String(countdown.minutes).padStart(2, '0')}</strong>
-                    <div style={{ fontSize: '10px', color: T.slate2, marginTop: '3px' }}>Minutes</div>
+                    <div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>Minutes</div>
                   </div>
                   <div>
                     <strong style={{ fontSize: '18px', color: T.navy }}>{String(countdown.seconds).padStart(2, '0')}</strong>
-                    <div style={{ fontSize: '10px', color: T.slate2, marginTop: '3px' }}>Seconds</div>
+                    <div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>Seconds</div>
                   </div>
                 </div>
-                <div style={{ fontSize: '12px', color: T.slate, lineHeight: 1.55 }}>
+                <div style={{ fontSize: "13px", color: T.slate, lineHeight: 1.55 }}>
                   {countdown.isLive ? 'Your consultation window is now open.' : `Your appointment is scheduled for ${slot} on ${date}.`}
                 </div>
               </div>
@@ -352,13 +352,13 @@ function WaitingRoomPageContent() {
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Physician</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your care partner</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Physician</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your care partner</h2>
                 </div>
-                <div style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 700, color: T.green }}>Verified</div>
+                <div style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: "13px", fontWeight: 700, color: T.green }}>Verified</div>
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ width: '92px', height: '92px', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(4,53,77,0.12)', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', display: 'grid', placeItems: 'center' }}>
+                <div style={{ width: '92px', height: '92px', borderRadius: '20px', overflow: 'hidden', border: "1px solid var(--border)", background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', display: 'grid', placeItems: 'center' }}>
                   {physician ? (
                     <img src={physician.imageUrl} alt={physician.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -366,9 +366,9 @@ function WaitingRoomPageContent() {
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: '220px' }}>
-                  <h3 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physician?.name ?? 'Selected physician'}</h3>
+                  <h3 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physician?.name ?? 'Selected physician'}</h3>
                   <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physician?.specialty ?? 'Care Team'} · {physician?.hospital ?? 'Qarevo Care Network'}</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: T.slate2 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: "13px", color: T.slate2 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.activity} size={12} sw={1.75} color={T.blue} />{physician?.experienceYears ?? 0} years experience</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.lock} size={12} sw={1.75} color={T.blue} />{physician?.languages.join(', ') ?? 'Languages not listed'}</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.zap} size={12} sw={1.75} color={T.blue} />{physician && physician.reviews > 0 ? `${physician.rating} rating` : 'No ratings yet'}</span>
@@ -380,8 +380,8 @@ function WaitingRoomPageContent() {
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation summary</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your visit details at a glance</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation summary</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your visit details at a glance</h2>
                 </div>
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
@@ -395,9 +395,9 @@ function WaitingRoomPageContent() {
                   ['Insurance Status', insurance],
                   ['Appointment ID', appointmentId],
                 ].map(([label, value]) => (
-                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: '1px solid rgba(4,53,77,0.06)' }}>
-                    <span style={{ fontSize: '12px', color: T.slate2 }}>{label}</span>
-                    <span style={{ fontSize: '12px', color: T.navy, fontWeight: 700, textAlign: 'right' }}>{value}</span>
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
+                    <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
+                    <span style={{ fontSize: "13px", color: T.navy, fontWeight: 700, textAlign: 'right' }}>{value}</span>
                   </div>
                 ))}
               </div>
@@ -406,22 +406,22 @@ function WaitingRoomPageContent() {
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preparation checklist</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Everything is set for a calm visit</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preparation checklist</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Everything is set for a calm visit</h2>
                 </div>
-                <div style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 700, color: T.blue }}>{progressPercent}% ready</div>
+                <div style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: "13px", fontWeight: 700, color: T.link }}>{progressPercent}% ready</div>
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {checklistItems.map((item) => {
                   const completed = checklistState[item.key]
                   return (
                     <button key={item.key} type='button' onClick={() => handleToggleChecklist(item.key)} className={`waiting-check-item ${completed ? 'completed' : ''}`} style={{ textAlign: 'left', cursor: 'pointer' }}>
-                      <div style={{ width: '28px', height: '28px', minWidth: '28px', borderRadius: '10px', display: 'grid', placeItems: 'center', background: completed ? 'rgba(32,181,223,0.14)' : 'rgba(4,53,77,0.06)', color: completed ? T.green : T.slate2 }}>
+                      <div style={{ width: '28px', height: '28px', minWidth: '28px', borderRadius: '10px', display: 'grid', placeItems: 'center', background: completed ? 'rgba(32,181,223,0.14)' : "var(--surface-hover)", color: completed ? T.green : T.slate2 }}>
                         <Ico p={ICONS.check} size={12} sw={2.4} color={completed ? T.green : T.slate2} />
                       </div>
                       <div style={{ flex: 1 }}>
                         <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{item.label}</p>
-                        <p style={{ margin: 0, fontSize: '12px', color: T.slate, lineHeight: 1.5 }}>{item.hint}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.5 }}>{item.hint}</p>
                       </div>
                     </button>
                   )
@@ -432,18 +432,18 @@ function WaitingRoomPageContent() {
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Device status</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A quick check before you enter</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Device status</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A quick check before you enter</h2>
                 </div>
-                <button type='button' onClick={handleRunDeviceTest} style={{ border: 'none', background: 'rgba(32,181,223,0.12)', color: T.blue, padding: '7px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                <button type='button' onClick={handleRunDeviceTest} style={{ border: 'none', background: 'rgba(32,181,223,0.12)', color: T.link, padding: '7px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>
                   Run Device Test
                 </button>
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {deviceStatuses.map((item) => (
-                  <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                  <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <span style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{item.label}</span>
-                    <span style={{ fontSize: '12px', color: item.tone, fontWeight: 700 }}>{item.status}</span>
+                    <span style={{ fontSize: "13px", color: item.tone, fontWeight: 700 }}>{item.status}</span>
                   </div>
                 ))}
               </div>
@@ -452,20 +452,20 @@ function WaitingRoomPageContent() {
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Upload documents</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Share anything new before your visit</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Upload documents</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Share anything new before your visit</h2>
                 </div>
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {['Medical Reports', 'Lab Results', 'X-Ray Images', 'Prescriptions', 'Insurance Documents'].map((title) => (
-                  <div key={title} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                  <div key={title} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <div>
                       <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{title}</p>
-                      <p style={{ margin: 0, fontSize: '12px', color: T.slate }}>Optional upload</p>
+                      <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>Optional upload</p>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button type='button' style={{ border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.92)', color: T.navy, padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Upload</button>
-                      <button type='button' style={{ border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.92)', color: T.navy, padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Preview</button>
+                      <button type='button' style={{ border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>Upload</button>
+                      <button type='button' style={{ border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>Preview</button>
                     </div>
                   </div>
                 ))}
@@ -475,29 +475,29 @@ function WaitingRoomPageContent() {
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient notes</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Share anything you would like reviewed</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient notes</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Share anything you would like reviewed</h2>
                 </div>
               </div>
-              <textarea placeholder='Add any additional information or questions you would like your physician to review before the consultation begins.' style={{ width: '100%', minHeight: '130px', borderRadius: '16px', border: '1px solid rgba(4,53,77,0.1)', padding: '12px 14px', fontSize: '13px', color: T.navy, background: 'rgba(247,250,252,0.86)', resize: 'vertical' }} defaultValue={notes} />
+              <textarea placeholder='Add any additional information or questions you would like your physician to review before the consultation begins.' style={{ width: '100%', minHeight: '130px', borderRadius: '16px', border: "1px solid var(--border)", padding: '12px 14px', fontSize: '13px', color: T.navy, background: "var(--surface-subtle)", resize: 'vertical' }} defaultValue={notes} />
             </section>
 
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation guidelines</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A premium, calm start</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation guidelines</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A premium, calm start</h2>
                 </div>
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {guidelineItems.map((item) => (
-                  <div key={item.title} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', display: 'grid', placeItems: 'center', background: 'rgba(32,181,223,0.12)', color: T.blue }}>
+                  <div key={item.title} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', display: 'grid', placeItems: 'center', background: 'rgba(32,181,223,0.12)', color: T.link }}>
                       <Ico p={item.icon} size={13} sw={1.8} />
                     </div>
                     <div>
                       <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{item.title}</p>
-                      <p style={{ margin: 0, fontSize: '12px', color: T.slate, lineHeight: 1.5 }}>{item.hint}</p>
+                      <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.5 }}>{item.hint}</p>
                     </div>
                   </div>
                 ))}
@@ -507,22 +507,22 @@ function WaitingRoomPageContent() {
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Messages</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Recent conversation</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Messages</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Recent conversation</h2>
                 </div>
-                <div style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 700, color: T.blue }}>2 unread</div>
+                <div style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: "13px", fontWeight: 700, color: T.link }}>2 unread</div>
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {[
                   { title: 'Pre-consultation note', body: 'Please keep your medication list close by and join a few minutes early.', time: 'Just now' },
                   { title: 'Insurance confirmed', body: 'Your selected plan is ready for today’s appointment.', time: '1h ago' },
                 ].map((item) => (
-                  <div key={item.title} style={{ padding: '12px', borderRadius: '14px', background: 'rgba(4,53,77,0.025)', border: '1px solid rgba(4,53,77,0.06)' }}>
+                  <div key={item.title} style={{ padding: '12px', borderRadius: '14px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
                       <strong style={{ fontSize: '13px', color: T.navy }}>{item.title}</strong>
-                      <span style={{ fontSize: '11px', color: T.slate2 }}>{item.time}</span>
+                      <span style={{ fontSize: "13px", color: T.slate2 }}>{item.time}</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '12px', color: T.slate, lineHeight: 1.55 }}>{item.body}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.55 }}>{item.body}</p>
                   </div>
                 ))}
               </div>
@@ -531,18 +531,18 @@ function WaitingRoomPageContent() {
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Reminders</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Stay informed without overwhelm</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Reminders</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Stay informed without overwhelm</h2>
                 </div>
-                <button type='button' onClick={() => setReminderEnabled((value) => !value)} style={{ border: 'none', background: reminderEnabled ? 'rgba(32,181,223,0.12)' : 'rgba(4,53,77,0.06)', color: reminderEnabled ? T.blue : T.slate2, padding: '7px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                <button type='button' onClick={() => setReminderEnabled((value) => !value)} style={{ border: 'none', background: reminderEnabled ? 'rgba(32,181,223,0.12)' : "var(--surface-hover)", color: reminderEnabled ? T.link : T.slate2, padding: '7px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>
                   {reminderEnabled ? 'Preferences on' : 'Preferences off'}
                 </button>
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {reminderOptions.map((item) => (
-                  <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                  <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <span style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{item.label}</span>
-                    <span style={{ fontSize: '12px', color: reminderEnabled ? T.blue : T.slate2, fontWeight: 700 }}>{reminderEnabled ? item.value : 'Paused'}</span>
+                    <span style={{ fontSize: "13px", color: reminderEnabled ? T.link : T.slate2, fontWeight: 700 }}>{reminderEnabled ? item.value : 'Paused'}</span>
                   </div>
                 ))}
               </div>
@@ -551,13 +551,13 @@ function WaitingRoomPageContent() {
             <section className='waiting-card'>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Support</p>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Need help before your consultation?</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Support</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Need help before your consultation?</h2>
                 </div>
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {['Need Help?', 'Live Chat', 'Contact Support', 'Technical Assistance', 'Frequently Asked Questions'].map((label) => (
-                  <Link key={label} href='/support' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(247,250,252,0.86)', border: '1px solid rgba(4,53,77,0.08)', textDecoration: 'none', color: T.navy, fontSize: '13px', fontWeight: 700 }}>
+                  <Link key={label} href='/support' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)", textDecoration: 'none', color: T.navy, fontSize: '13px', fontWeight: 700 }}>
                     <span>{label}</span>
                     <Ico p={ICONS.arrowSm} size={13} sw={1.8} color={T.blue} />
                   </Link>
@@ -567,10 +567,10 @@ function WaitingRoomPageContent() {
           </div>
 
           <div className='mobile-join'>
-            <button type='button' onClick={handleJoin} disabled={!canJoin} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 14px', borderRadius: '12px', background: canJoin ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(4,53,77,0.08)', color: canJoin ? '#fff' : T.slate2, fontSize: '13px', fontWeight: 700, border: 'none', boxShadow: canJoin ? '0 8px 22px rgba(32,181,223,0.26)' : 'none', cursor: canJoin ? 'pointer' : 'not-allowed' }}>
+            <button type='button' onClick={handleJoin} disabled={!canJoin} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 14px', borderRadius: '12px', background: canJoin ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", color: canJoin ? '#fff' : T.slate2, fontSize: '13px', fontWeight: 700, border: 'none', boxShadow: canJoin ? '0 8px 22px rgba(32,181,223,0.26)' : 'none', cursor: canJoin ? 'pointer' : 'not-allowed' }}>
               Join Consultation
             </button>
-            <Link href='/patient/appointment-details' style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.94)', color: T.navy, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+            <Link href='/patient/appointment-details' style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px', padding: '0 14px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
               Review Details
             </Link>
           </div>

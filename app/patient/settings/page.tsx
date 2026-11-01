@@ -1,5 +1,8 @@
 'use client'
 
+import { FieldFeedback } from '@/components/ui/ValidationFeedback'
+import { useTheme } from '@/components/ui/ThemeProvider'
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
@@ -54,6 +57,8 @@ const SECURITY_ITEMS = [
 ]
 
 export default function PatientSettingsPage() {
+  const [contactErrors, setContactErrors] = useState<Record<string, string>>({})
+  const { theme, setTheme } = useTheme()
   const router = useRouter()
   const insuranceCardInputRef = useRef<HTMLInputElement | null>(null)
   const [loading, setLoading] = useState(true)
@@ -150,7 +155,7 @@ export default function PatientSettingsPage() {
         window.clearTimeout(sessionTimer)
       }
     }
-    
+
     // Load account data and health info from API
     const loadData = async () => {
       try {
@@ -158,13 +163,13 @@ export default function PatientSettingsPage() {
           getPatientSettings(),
           getPatientHealthInfo(),
         ])
-        
+
         if (cancelled) return
         const fullName = [settingsData.first_name, settingsData.last_name].filter(Boolean).join(' ')
-        const formattedDate = settingsData.date_of_birth 
+        const formattedDate = settingsData.date_of_birth
           ? new Date(settingsData.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
           : ''
-        
+
         setAccountData({
           fullName: fullName || 'Not set',
           email: settingsData.email || '',
@@ -172,7 +177,7 @@ export default function PatientSettingsPage() {
           dateOfBirth: formattedDate || 'Not set',
           gender: settingsData.gender || 'Not set',
         })
-        
+
         setContacts(settingsData.emergency_contacts || [])
         setInsurance(settingsData.insurance || null)
         getPatientPasskeyStatus()
@@ -202,7 +207,7 @@ export default function PatientSettingsPage() {
         setLanguage(loadedDisplayPrefs.language)
         setTimeZone(loadedDisplayPrefs.timeZone)
         setSavedDisplayPrefs(loadedDisplayPrefs)
-        
+
         setHealthInfo({
           bloodPressure: healthData.blood_pressure || '',
           weight: healthData.weight || '',
@@ -223,7 +228,7 @@ export default function PatientSettingsPage() {
       }
     }
     loadData()
-    
+
     return () => {
       cancelled = true
       window.clearTimeout(sessionTimer)
@@ -231,10 +236,10 @@ export default function PatientSettingsPage() {
   }, [router, loadAttempt])
 
   const settingsAppearance = useMemo(() => ({
-    darkMode: toggles.darkMode,
+    darkMode: theme === 'dark',
     highContrast: toggles.highContrast,
     fontSize,
-  }), [fontSize, toggles.darkMode, toggles.highContrast])
+  }), [fontSize, theme, toggles.highContrast])
 
   const broadcastAppearance = useCallback((appearance: typeof settingsAppearance) => {
     window.dispatchEvent(new CustomEvent('qarevo:patient-appearance-changed', { detail: appearance }))
@@ -277,7 +282,18 @@ export default function PatientSettingsPage() {
     }
   }
 
+  function validateContact(value: { name: string; relationship: string; phone: string }) {
+    const errors: Record<string, string> = {}
+    for (const key of ['name', 'relationship'] as const) {
+      if (value[key].trim().length < 2 || value[key].trim().length > 100 || !/\p{L}/u.test(value[key]) || /[<>]/.test(value[key])) errors[key] = `Enter the contact’s ${key} using 2–100 characters without HTML.`
+    }
+    if (!/^\+[1-9][0-9]{6,14}$/.test(value.phone.replace(/[\s().-]/g, ''))) errors.phone = 'Use + and a country code followed by the number (7–15 digits), for example +49 151 23456789.'
+    setContactErrors(errors)
+    return !Object.keys(errors).length
+  }
+
   async function handleAddContact() {
+    if (!validateContact(newContact)) return
     setContactSaving(true)
     try {
       const created = await createEmergencyContact(newContact)
@@ -293,6 +309,7 @@ export default function PatientSettingsPage() {
   }
 
   function openContactEdit(contact: EmergencyContact) {
+    setContactErrors({})
     setEditingContactId(contact.id)
     setContactEdit({
       name: contact.name,
@@ -302,7 +319,7 @@ export default function PatientSettingsPage() {
   }
 
   async function handleContactEditSave() {
-    if (!editingContactId) return
+    if (!editingContactId || !validateContact(contactEdit)) return
     setContactSaving(true)
     try {
       const updated = await updateEmergencyContact(editingContactId, contactEdit)
@@ -320,10 +337,10 @@ export default function PatientSettingsPage() {
     try {
       const updated = await updateProfile(profileEdit)
       const fullName = [updated.first_name, updated.last_name].filter(Boolean).join(' ')
-      const formattedDate = updated.date_of_birth 
+      const formattedDate = updated.date_of_birth
         ? new Date(updated.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
         : ''
-      
+
       setAccountData({
         fullName: fullName || 'Not set',
         email: updated.email || '',
@@ -385,7 +402,7 @@ export default function PatientSettingsPage() {
     if (loading || loadError) return
     setSaving(true)
     setSaveMessage('')
-    
+
     try {
       // Saving preferences must not overwrite medical history loaded earlier.
       const updatedSettings = await updatePatientSettings({
@@ -396,7 +413,7 @@ export default function PatientSettingsPage() {
           medication_reminders: toggles.medicationReminders,
           lab_result_alerts: toggles.labResultAlerts,
           marketing_emails: toggles.marketingEmails,
-          dark_mode: toggles.darkMode,
+          dark_mode: theme === 'dark',
           high_contrast: toggles.highContrast,
           font_size: fontSize,
           language,
@@ -619,7 +636,7 @@ export default function PatientSettingsPage() {
   const rightRail = (
     <div className='grid gap-3'>
       <PortalCard>
-        <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Profile Health</p>
+        <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Profile Health</p>
         <h2 style={{ margin: '0 0 10px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Your preferences are current</h2>
         <div className='grid gap-2'>
           {[
@@ -627,9 +644,9 @@ export default function PatientSettingsPage() {
             ['Notification setup', `${enabledNotificationCount} of 7 enabled`],
             ['Insurance coverage', insurance ? 'On file' : 'Not added'],
           ].map(([label, value]) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(4,53,77,0.03)', border: '1px solid rgba(4,53,77,0.06)' }}>
-              <span style={{ fontSize: '12px', color: T.slate2 }}>{label}</span>
-              <span style={{ fontSize: '12px', color: T.navy, fontWeight: 700 }}>{value}</span>
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
+              <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
+              <span style={{ fontSize: "13px", color: T.navy, fontWeight: 700 }}>{value}</span>
             </div>
           ))}
         </div>
@@ -642,7 +659,7 @@ export default function PatientSettingsPage() {
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>Trusted access</p>
-            <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate }}>Review sign-ins and privacy controls regularly.</p>
+            <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>Review sign-ins and privacy controls regularly.</p>
           </div>
         </div>
         <PortalButton tone='secondary' fullWidth onClick={handleOpenLoginHistory}>Review Login History</PortalButton>
@@ -666,7 +683,7 @@ export default function PatientSettingsPage() {
         .settings-profile-grid { display: grid; gap: 16px; grid-template-columns: 96px minmax(0, 1fr); }
         .settings-wide { grid-column: 1 / -1; }
         .settings-field-value { overflow-wrap: anywhere; word-break: break-word; }
-        .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 16px; border: 1px solid rgba(4,53,77,0.08); background: rgba(247,250,252,0.9); padding: 12px; }
+        .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface-subtle); padding: 12px; }
         .settings-row-control { flex: 0 0 auto; }
         .pps-theme-dark .settings-card {
           background: rgba(11, 32, 48, 0.96) !important;
@@ -739,7 +756,7 @@ export default function PatientSettingsPage() {
           <PortalCard className='settings-card'>
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Account Information</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Account Information</p>
                 <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Profile and contact identity</h2>
               </div>
               <PortalButton tone='secondary' onClick={() => { if (!showProfileEdit) openProfileEdit(); else setShowProfileEdit(false) }}>
@@ -748,56 +765,56 @@ export default function PatientSettingsPage() {
             </div>
             <div className='settings-profile-grid'>
               <div className='settings-profile-avatar flex items-center justify-center md:justify-start'>
-                <div style={{ width: '88px', height: '88px', borderRadius: '24px', background: 'linear-gradient(135deg, rgba(32,181,223,0.18), rgba(52,140,234,0.22))', border: '1px solid rgba(4,53,77,0.1)', display: 'grid', placeItems: 'center', color: T.navy, fontSize: '26px', fontWeight: 800 }}>
+                <div style={{ width: '88px', height: '88px', borderRadius: '24px', background: 'linear-gradient(135deg, rgba(32,181,223,0.18), rgba(52,140,234,0.22))', border: "1px solid var(--border)", display: 'grid', placeItems: 'center', color: T.navy, fontSize: '26px', fontWeight: 800 }}>
                   {accountData.fullName.charAt(0).toUpperCase()}
                 </div>
               </div>
               <div className='settings-info-grid'>
                 {showProfileEdit ? (
                   <>
-                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>First Name</label>
+                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>First Name</label>
                       <input
                         type='text'
                         value={profileEdit.first_name}
                         onChange={(e) => setProfileEdit({ ...profileEdit, first_name: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
-                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Last Name</label>
+                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Last Name</label>
                       <input
                         type='text'
                         value={profileEdit.last_name}
                         onChange={(e) => setProfileEdit({ ...profileEdit, last_name: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</label>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</label>
                       <input
                         type='text'
                         value={profileEdit.phone}
                         onChange={(e) => setProfileEdit({ ...profileEdit, phone: e.target.value })}
-                        placeholder='+234 XXX XXX XXXX'
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        placeholder='+49 151 23456789'
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</label>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</label>
                       <input
                         type='date'
                         value={profileEdit.date_of_birth}
                         onChange={(e) => setProfileEdit({ ...profileEdit, date_of_birth: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</label>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</label>
                       <select
                         value={profileEdit.gender}
                         onChange={(e) => setProfileEdit({ ...profileEdit, gender: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       >
                         <option value=''>Select</option>
                         <option value='MALE'>Male</option>
@@ -805,8 +822,8 @@ export default function PatientSettingsPage() {
                         <option value='OTHER'>Other</option>
                       </select>
                     </div>
-                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</label>
+                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</label>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.email}</p>
                     </div>
                     <div className='settings-wide flex gap-2'>
@@ -816,24 +833,24 @@ export default function PatientSettingsPage() {
                   </>
                 ) : (
                   <>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Full Name</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Full Name</p>
                       <p className='settings-field-value' style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.fullName}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</p>
                       <p className='settings-field-value' style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.email}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.phone}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.dateOfBirth}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.gender}</p>
                     </div>
                   </>
@@ -845,33 +862,33 @@ export default function PatientSettingsPage() {
           <PortalCard className='settings-card'>
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Health Information</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Health Information</p>
               <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Vital signs and medical details</h2>
               </div>
             </div>
             <div className='settings-info-grid'>
-              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Pressure</p>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Pressure</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodPressure ? `${healthInfo.bloodPressure} mmHg` : 'Not set'}</p>
               </div>
-              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Weight</p>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Weight</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.weight ? `${healthInfo.weight} kg` : 'Not set'}</p>
               </div>
-              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Height</p>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Height</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.height ? `${healthInfo.height} cm` : 'Not set'}</p>
               </div>
-              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Type</p>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Type</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodType || 'Not set'}</p>
               </div>
-              <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Allergies</p>
+              <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Allergies</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || 'Not recorded'}</p>
               </div>
-              <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Medical Conditions</p>
+              <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Medical Conditions</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || 'Not recorded'}</p>
               </div>
             </div>
@@ -879,16 +896,16 @@ export default function PatientSettingsPage() {
 
           <PortalCard className='settings-card'>
             <div className='mb-4'>
-              <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Security</p>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Security</p>
               <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Secure access controls</h2>
             </div>
             <div className='grid gap-3'>
               {SECURITY_ITEMS.map((item) => (
-                <div key={item.title} style={{ padding: '14px', borderRadius: '16px', background: 'rgba(247,250,252,0.9)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                <div key={item.title} style={{ padding: '14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                   <div className='flex flex-wrap items-start justify-between gap-2 mb-2'>
                     <div>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{item.title}</p>
-                      <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.55 }}>{item.body}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.55 }}>{item.body}</p>
                     </div>
                     <PortalBadge tone={item.tone}>{item.badge}</PortalBadge>
                   </div>
@@ -907,7 +924,7 @@ export default function PatientSettingsPage() {
 
           <PortalCard className='settings-card'>
             <div className='mb-4'>
-              <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Notification Preferences</p>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Notification Preferences</p>
               <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Care communication and reminders</h2>
             </div>
             <div className='grid gap-3'>
@@ -928,7 +945,7 @@ export default function PatientSettingsPage() {
           <div className='settings-two-up'>
             <PortalCard className='settings-card'>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Privacy</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Privacy</p>
                 <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Control your health data</h2>
               </div>
               <div className='grid gap-3'>
@@ -941,11 +958,11 @@ export default function PatientSettingsPage() {
 
             <PortalCard className='settings-card'>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Accessibility</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Accessibility</p>
                 <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Personalize readability and comfort</h2>
               </div>
               <div className='grid gap-3'>
-                <ToggleRow label='Dark Mode' enabled={toggles.darkMode} onToggle={() => toggleSetting('darkMode')} description='Save this as your preferred display mode.' />
+                <ToggleRow label='Dark Mode' enabled={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} description='Saved automatically in this browser across every Qarevo portal, including after sign-out.' />
                 <ToggleRow label='High Contrast' enabled={toggles.highContrast} onToggle={() => toggleSetting('highContrast')} />
                 <SelectRow label='Font Size' value={fontSize} options={['Small', 'Medium', 'Large']} onChange={updateFontSizePreference} />
                 <SelectRow label='Language' value={language} options={['German', 'English']} onChange={setLanguage} />
@@ -958,49 +975,55 @@ export default function PatientSettingsPage() {
             <PortalCard className='settings-card'>
               <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Emergency Contacts</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Emergency Contacts</p>
                   <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>People to contact quickly</h2>
                 </div>
                 <PortalButton tone='primary' onClick={() => setShowAddContactForm(!showAddContactForm)}>
                   {showAddContactForm ? 'Cancel' : 'Add Contact'}
                 </PortalButton>
               </div>
-              
+
               {showAddContactForm && (
-                <div style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.95)', padding: '16px', marginBottom: '16px' }}>
+                <div style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', marginBottom: '16px' }}>
                   <div className='grid gap-3'>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Name</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Name</label>
                       <input
                         type='text'
-                        value={newContact.name}
-                        onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                        id='newContact-name' aria-label='Contact name (Required)' required aria-invalid={!!contactErrors.name} aria-describedby={contactErrors.name ? 'newContact-name-error' : undefined}
+                            value={newContact.name}
+                        onChange={(e) => { setNewContact({ ...newContact, name: e.target.value }); setContactErrors(previous => ({ ...previous, name: '' })) }}
                         placeholder='Contact name'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
+                          <FieldFeedback name='newContact-name' error={contactErrors.name} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Relationship</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Relationship</label>
                       <input
                         type='text'
-                        value={newContact.relationship}
-                        onChange={(e) => setNewContact({ ...newContact, relationship: e.target.value })}
+                        id='newContact-relationship' aria-label='Relationship (Required)' required aria-invalid={!!contactErrors.relationship} aria-describedby={contactErrors.relationship ? 'newContact-relationship-error' : undefined}
+                            value={newContact.relationship}
+                        onChange={(e) => { setNewContact({ ...newContact, relationship: e.target.value }); setContactErrors(previous => ({ ...previous, relationship: '' })) }}
                         placeholder='e.g., Spouse, Parent, Sibling'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
+                          <FieldFeedback name='newContact-relationship' error={contactErrors.relationship} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Phone Number</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Phone Number</label>
                       <input
                         type='text'
-                        value={newContact.phone}
-                        onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-                        placeholder='+234 XXX XXX XXXX'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        id='newContact-phone' aria-label='Phone number (Required)' required aria-invalid={!!contactErrors.phone} aria-describedby={contactErrors.phone ? 'newContact-phone-error' : undefined}
+                            value={newContact.phone}
+                        onChange={(e) => { setNewContact({ ...newContact, phone: e.target.value }); setContactErrors(previous => ({ ...previous, phone: '' })) }}
+                        placeholder='+49 151 23456789'
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
+                          <FieldFeedback name='newContact-phone' error={contactErrors.phone} hint='Include the country code, for example +49 151 23456789.' />
                     </div>
                     <div className='flex gap-2'>
-                      <PortalButton tone='primary' onClick={handleAddContact} disabled={contactSaving || !newContact.name || !newContact.relationship || !newContact.phone}>
+                      <PortalButton tone='primary' onClick={handleAddContact} disabled={contactSaving}>
                         {contactSaving ? 'Saving…' : 'Add Contact'}
                       </PortalButton>
                       <PortalButton tone='secondary' onClick={() => setShowAddContactForm(false)}>
@@ -1010,41 +1033,47 @@ export default function PatientSettingsPage() {
                   </div>
                 </div>
               )}
-              
+
               <div className='grid gap-3'>
                 {contacts.length === 0 ? (
-                  <div style={{ borderRadius: '18px', border: '1px dashed rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.82)', padding: '20px', textAlign: 'center' }}>
+                  <div style={{ borderRadius: '18px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '20px', textAlign: 'center' }}>
                     <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: T.navy }}>No emergency contacts saved</p>
-                    <p style={{ margin: 0, fontSize: '12.5px', color: T.slate, lineHeight: 1.6 }}>Add a trusted contact for faster response during urgent situations.</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>Add a trusted contact for faster response during urgent situations.</p>
                   </div>
                 ) : (
                   contacts.map((contact) => (
-                    <div key={contact.id} className='rounded-2xl border p-4' style={{ borderColor: 'rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)' }}>
+                    <div key={contact.id} className='rounded-2xl border p-4' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)" }}>
                       {editingContactId === contact.id ? (
                         <div className='grid gap-3'>
                           <input
                             type='text'
+                            id='contactEdit-name' aria-label='Contact name (Required)' required aria-invalid={!!contactErrors.name} aria-describedby={contactErrors.name ? 'contactEdit-name-error' : undefined}
                             value={contactEdit.name}
-                            onChange={(e) => setContactEdit({ ...contactEdit, name: e.target.value })}
+                            onChange={(e) => { setContactEdit({ ...contactEdit, name: e.target.value }); setContactErrors(previous => ({ ...previous, name: '' })) }}
                             placeholder='Contact name'
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
+                          <FieldFeedback name='contactEdit-name' error={contactErrors.name} />
                           <input
                             type='text'
+                            id='contactEdit-relationship' aria-label='Relationship (Required)' required aria-invalid={!!contactErrors.relationship} aria-describedby={contactErrors.relationship ? 'contactEdit-relationship-error' : undefined}
                             value={contactEdit.relationship}
-                            onChange={(e) => setContactEdit({ ...contactEdit, relationship: e.target.value })}
+                            onChange={(e) => { setContactEdit({ ...contactEdit, relationship: e.target.value }); setContactErrors(previous => ({ ...previous, relationship: '' })) }}
                             placeholder='Relationship'
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
+                          <FieldFeedback name='contactEdit-relationship' error={contactErrors.relationship} />
                           <input
                             type='text'
+                            id='contactEdit-phone' aria-label='Phone number (Required)' required aria-invalid={!!contactErrors.phone} aria-describedby={contactErrors.phone ? 'contactEdit-phone-error' : undefined}
                             value={contactEdit.phone}
-                            onChange={(e) => setContactEdit({ ...contactEdit, phone: e.target.value })}
+                            onChange={(e) => { setContactEdit({ ...contactEdit, phone: e.target.value }); setContactErrors(previous => ({ ...previous, phone: '' })) }}
                             placeholder='Phone number'
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
+                          <FieldFeedback name='contactEdit-phone' error={contactErrors.phone} hint='Include the country code, for example +49 151 23456789.' />
                           <div className='flex flex-wrap gap-2'>
-                            <PortalButton tone='primary' onClick={handleContactEditSave} disabled={contactSaving || !contactEdit.name || !contactEdit.relationship || !contactEdit.phone}>
+                            <PortalButton tone='primary' onClick={handleContactEditSave} disabled={contactSaving}>
                               {contactSaving ? 'Saving…' : 'Save'}
                             </PortalButton>
                             <PortalButton tone='secondary' onClick={() => setEditingContactId(null)}>Cancel</PortalButton>
@@ -1054,7 +1083,7 @@ export default function PatientSettingsPage() {
                         <div className='flex flex-wrap items-start justify-between gap-3'>
                           <div>
                             <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{contact.name}</p>
-                            <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: T.slate }}>{contact.relationship} • {contact.phone}</p>
+                            <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate }}>{contact.relationship} • {contact.phone}</p>
                           </div>
                           <div className='flex gap-2'>
                             <PortalButton tone='secondary' onClick={() => openContactEdit(contact)}>Edit</PortalButton>
@@ -1071,7 +1100,7 @@ export default function PatientSettingsPage() {
             <PortalCard className='settings-card'>
               <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Information</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Information</p>
                   <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Coverage and card upload</h2>
                 </div>
                 <div className='flex gap-2'>
@@ -1081,16 +1110,16 @@ export default function PatientSettingsPage() {
                   </PortalButton>
                 </div>
               </div>
-              
+
               {showInsuranceEdit && (
-                <div style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.95)', padding: '16px', marginBottom: '16px' }}>
+                <div style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', marginBottom: '16px' }}>
                   <div className='settings-info-grid'>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Insurance Type</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Insurance Type</label>
                       <select
                         value={insuranceEdit.insurance_type}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_type: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       >
                         <option value='SELF_PAY'>Self Pay (Private)</option>
                         <option value='GKV'>Statutory (GKV)</option>
@@ -1098,31 +1127,31 @@ export default function PatientSettingsPage() {
                       </select>
                     </div>
                     <div className='settings-wide'>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Insurance Provider</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Insurance Provider</label>
                       <input
                         type='text'
                         value={insuranceEdit.insurance_provider_name}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_provider_name: e.target.value })}
                         placeholder='e.g., Axa Mansard, HMO'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Policy Number</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Policy Number</label>
                       <input
                         type='text'
                         value={insuranceEdit.insurance_number}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_number: e.target.value })}
                         placeholder='e.g., QH-8892-4481'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Coverage Status</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Coverage Status</label>
                       <select
                         value={insuranceEdit.insured_status}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insured_status: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       >
                         <option value=''>Select</option>
                         <option value='SELF_INSURED'>Self Insured</option>
@@ -1133,21 +1162,21 @@ export default function PatientSettingsPage() {
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Valid From</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Valid From</label>
                       <input
                         type='date'
                         value={insuranceEdit.validity_start}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, validity_start: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Valid Until</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Valid Until</label>
                       <input
                         type='date'
                         value={insuranceEdit.validity_end}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, validity_end: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div className='settings-wide flex gap-2'>
@@ -1157,37 +1186,37 @@ export default function PatientSettingsPage() {
                   </div>
                 </div>
               )}
-              
+
               <div className='settings-info-grid'>
                 {insurance ? (
                   <>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Type</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Type</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_type || 'Self Pay'}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Provider</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Provider</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_provider_name || 'Not set'}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Policy Number</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Policy Number</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_number || 'Not set'}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coverage Status</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coverage Status</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insured_status || 'Not set'}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Valid Until</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Valid Until</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>
-                        {insurance.validity_end 
+                        {insurance.validity_end
                           ? new Date(insurance.validity_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
                           : 'Not set'}
                       </p>
                     </div>
                   </>
                 ) : (
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: '1 / -1' }}>
+                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)", gridColumn: '1 / -1' }}>
                     <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>No insurance information on file</p>
                   </div>
                 )}
@@ -1270,7 +1299,7 @@ function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { tit
         display: 'grid',
         placeItems: 'center',
         padding: '20px',
-        background: 'rgba(4, 53, 77, 0.34)',
+        background: "var(--surface-hover)",
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
@@ -1283,8 +1312,8 @@ function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { tit
         style={{
           width: 'min(100%, 420px)',
           borderRadius: '18px',
-          border: '1px solid rgba(255,255,255,0.9)',
-          background: '#fff',
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
           boxShadow: '0 24px 70px rgba(4,53,77,0.24)',
           padding: '20px',
         }}
@@ -1312,7 +1341,7 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
         display: 'grid',
         placeItems: 'center',
         padding: '20px',
-        background: 'rgba(4, 53, 77, 0.34)',
+        background: "var(--surface-hover)",
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
@@ -1327,8 +1356,8 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
           maxHeight: 'min(680px, calc(100vh - 40px))',
           overflow: 'auto',
           borderRadius: '18px',
-          border: '1px solid rgba(255,255,255,0.9)',
-          background: '#fff',
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
           boxShadow: '0 24px 70px rgba(4,53,77,0.24)',
           padding: '20px',
         }}
@@ -1346,8 +1375,8 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
               width: '38px',
               height: '38px',
               borderRadius: '12px',
-              border: '1px solid rgba(4,53,77,0.1)',
-              background: 'rgba(247,250,252,0.92)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-subtle)",
               color: T.navy,
               display: 'grid',
               placeItems: 'center',
@@ -1362,22 +1391,22 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
         {loading ? (
           <PortalSkeleton height={120} />
         ) : items.length === 0 ? (
-          <div style={{ borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.9)', padding: '18px', textAlign: 'center' }}>
+          <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '18px', textAlign: 'center' }}>
             <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>No login history yet</p>
             <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Your future sign-in audit events will appear here.</p>
           </div>
         ) : (
           <div className='grid gap-2'>
             {items.map((item) => (
-              <div key={item.id} style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)', padding: '12px' }}>
+              <div key={item.id} style={{ borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '12px' }}>
                 <div className='flex flex-wrap items-center justify-between gap-2'>
                   <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: T.navy }}>{formatAuditEvent(item.event_type)}</p>
                   <PortalBadge tone={item.success ? 'success' : 'danger'}>{item.success ? 'Successful' : 'Failed'}</PortalBadge>
                 </div>
-                <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.slate }}>
+                <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
                   {new Date(item.created_at).toLocaleString()} {item.ip_address ? `• ${item.ip_address}` : ''}
                 </p>
-                {item.failure_reason ? <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.red }}>{item.failure_reason}</p> : null}
+                {item.failure_reason ? <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.red }}>{item.failure_reason}</p> : null}
               </div>
             ))}
           </div>
@@ -1411,7 +1440,7 @@ function ActiveDevicesDialog({
         display: 'grid',
         placeItems: 'center',
         padding: '20px',
-        background: 'rgba(4, 53, 77, 0.34)',
+        background: "var(--surface-hover)",
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
@@ -1426,8 +1455,8 @@ function ActiveDevicesDialog({
           maxHeight: 'min(720px, calc(100vh - 40px))',
           overflow: 'auto',
           borderRadius: '18px',
-          border: '1px solid rgba(255,255,255,0.9)',
-          background: '#fff',
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
           boxShadow: '0 24px 70px rgba(4,53,77,0.24)',
           padding: '20px',
         }}
@@ -1445,8 +1474,8 @@ function ActiveDevicesDialog({
               width: '38px',
               height: '38px',
               borderRadius: '12px',
-              border: '1px solid rgba(4,53,77,0.1)',
-              background: 'rgba(247,250,252,0.92)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-subtle)",
               color: T.navy,
               display: 'grid',
               placeItems: 'center',
@@ -1461,7 +1490,7 @@ function ActiveDevicesDialog({
         {loading ? (
           <PortalSkeleton height={150} />
         ) : items.length === 0 ? (
-          <div style={{ borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.9)', padding: '18px', textAlign: 'center' }}>
+          <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '18px', textAlign: 'center' }}>
             <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>No active devices found</p>
             <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Your current browser may need to sign in again.</p>
           </div>
@@ -1473,17 +1502,17 @@ function ActiveDevicesDialog({
               </PortalButton>
             </div>
             {items.map((item) => (
-              <div key={item.id} style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.08)', background: item.is_current ? 'rgba(32,181,223,0.06)' : 'rgba(247,250,252,0.9)', padding: '14px' }}>
+              <div key={item.id} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: item.is_current ? 'rgba(32,181,223,0.06)' : "var(--surface-subtle)", padding: '14px' }}>
                 <div className='flex flex-wrap items-start justify-between gap-3'>
                   <div>
                     <div className='flex flex-wrap items-center gap-2'>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: T.navy }}>{item.device_name}</p>
                       {item.is_current ? <PortalBadge tone='success'>Current</PortalBadge> : null}
                     </div>
-                    <p style={{ margin: '6px 0 0', fontSize: '12.5px', color: T.slate }}>
+                    <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
                       {[item.browser_name, item.operating_system, item.ip_address].filter(Boolean).join(' • ') || 'Device details unavailable'}
                     </p>
-                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.slate2 }}>
+                    <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>
                       Last active {item.last_seen_at ? new Date(item.last_seen_at).toLocaleString() : 'recently'}
                     </p>
                   </div>
@@ -1526,7 +1555,7 @@ function PasskeysDialog({
         display: 'grid',
         placeItems: 'center',
         padding: '20px',
-        background: 'rgba(4, 53, 77, 0.34)',
+        background: "var(--surface-hover)",
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
@@ -1541,8 +1570,8 @@ function PasskeysDialog({
           maxHeight: 'min(720px, calc(100vh - 40px))',
           overflow: 'auto',
           borderRadius: '18px',
-          border: '1px solid rgba(255,255,255,0.9)',
-          background: '#fff',
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
           boxShadow: '0 24px 70px rgba(4,53,77,0.24)',
           padding: '20px',
         }}
@@ -1560,8 +1589,8 @@ function PasskeysDialog({
               width: '38px',
               height: '38px',
               borderRadius: '12px',
-              border: '1px solid rgba(4,53,77,0.1)',
-              background: 'rgba(247,250,252,0.92)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-subtle)",
               color: T.navy,
               display: 'grid',
               placeItems: 'center',
@@ -1582,21 +1611,21 @@ function PasskeysDialog({
         {loading ? (
           <PortalSkeleton height={130} />
         ) : items.length === 0 ? (
-          <div style={{ borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.9)', padding: '18px', textAlign: 'center' }}>
+          <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '18px', textAlign: 'center' }}>
             <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>No passkeys added</p>
             <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Add this device as a passkey to enable faster sign-in.</p>
           </div>
         ) : (
           <div className='grid gap-3'>
             {items.map((item) => (
-              <div key={item.id} style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)', padding: '14px' }}>
+              <div key={item.id} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '14px' }}>
                 <div className='flex flex-wrap items-start justify-between gap-3'>
                   <div>
                     <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: T.navy }}>{item.device_name || 'Passkey'}</p>
-                    <p style={{ margin: '6px 0 0', fontSize: '12.5px', color: T.slate }}>
+                    <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
                       Added {item.created_at ? new Date(item.created_at).toLocaleString() : 'recently'}
                     </p>
-                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.slate2 }}>
+                    <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>
                       Last used {item.last_used_at ? new Date(item.last_used_at).toLocaleString() : 'not yet'}
                     </p>
                   </div>
@@ -1625,18 +1654,18 @@ function ToggleRow({ label, enabled, onToggle, description }: { label: string; e
       aria-pressed={enabled}
       className='settings-row text-left transition hover:-translate-y-px focus:outline-none focus:ring-2'
       style={{
-        borderColor: enabled ? 'rgba(32,181,223,0.2)' : 'rgba(4,53,77,0.08)',
-        background: enabled ? 'rgba(32,181,223,0.06)' : 'rgba(247,250,252,0.9)',
+        borderColor: enabled ? 'rgba(32,181,223,0.2)' : "var(--border)",
+        background: enabled ? 'rgba(32,181,223,0.06)' : "var(--surface-subtle)",
         boxShadow: enabled ? '0 8px 20px rgba(32,181,223,0.08)' : 'none',
         width: '100%',
       }}
     >
       <div>
         <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{label}</p>
-        {description ? <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate, lineHeight: 1.5 }}>{description}</p> : null}
+        {description ? <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.5 }}>{description}</p> : null}
       </div>
-      <span className='settings-row-control' style={{ width: '44px', height: '24px', borderRadius: '999px', background: enabled ? T.blue : 'rgba(4,53,77,0.12)', padding: '2px', display: 'inline-flex', justifyContent: enabled ? 'flex-end' : 'flex-start', transition: 'all 0.18s ease' }}>
-        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#fff', boxShadow: '0 2px 6px rgba(4,53,77,0.16)' }} />
+      <span className='settings-row-control' style={{ width: '44px', height: '24px', borderRadius: '999px', background: enabled ? T.blue : "var(--surface-hover)", padding: '2px', display: 'inline-flex', justifyContent: enabled ? 'flex-end' : 'flex-start', transition: 'all 0.18s ease' }}>
+        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: "var(--surface)", boxShadow: '0 2px 6px rgba(4,53,77,0.16)' }} />
       </span>
     </button>
   )
@@ -1646,7 +1675,7 @@ function SelectRow({ label, value, options, onChange }: { label: string; value: 
   return (
     <label className='settings-row'>
       <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className='settings-row-control rounded-xl border px-3 py-2 text-sm' style={{ borderColor: 'rgba(4,53,77,0.12)', color: T.navy, background: '#fff' }}>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className='settings-row-control rounded-xl border px-3 py-2 text-sm' style={{ borderColor: "var(--border)", color: T.navy, background: "var(--surface)" }}>
         {options.map((option) => (
           <option key={option} value={option}>{option}</option>
         ))}

@@ -13,7 +13,7 @@ const PAGE_BG = [
   'radial-gradient(ellipse 65% 55% at 12% 8%,   rgba(32,181,223,0.08) 0%, transparent 55%)',
   'radial-gradient(ellipse 55% 50% at 90% 18%,  rgba(32,181,223,0.06) 0%, transparent 52%)',
   'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(52,140,234,0.06) 0%, transparent 58%)',
-  '#EDF2FA',
+  'var(--canvas)',
 ].join(', ')
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -88,7 +88,7 @@ export default function AdminLoginPage() {
       <div style={{
         width: '100%',
         maxWidth: '420px',
-        background: '#FFFFFF',
+        background: "var(--surface)",
         backdropFilter: 'blur(22px) saturate(180%)',
         WebkitBackdropFilter: 'blur(22px) saturate(180%)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.92), 0 2px 8px rgba(4,53,77,0.06), 0 14px 34px rgba(4,53,77,0.10), 0 40px 84px rgba(4,53,77,0.08)',
@@ -155,8 +155,8 @@ export default function AdminLoginPage() {
                   width: '100%',
                   padding: '12px 14px 12px 38px',
                   borderRadius: '11px',
-                  border: `1.5px solid ${emailErr ? 'rgba(220,38,38,0.55)' : 'rgba(4,53,77,0.1)'}`,
-                  background: emailErr ? '#FFF5F5' : '#fff',
+                  border: `1.5px solid ${emailErr ? 'rgba(220,38,38,0.55)' : "var(--border)"}`,
+                  background: emailErr ? "var(--danger-soft)" : "var(--surface)",
                   color: T.navy,
                   fontSize: '14px',
                   fontFamily: 'inherit',
@@ -166,7 +166,7 @@ export default function AdminLoginPage() {
                 }}
               />
             </div>
-            {emailErr && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{emailErr}</p>}
+            {emailErr && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{emailErr}</p>}
           </div>
 
           {/* Password */}
@@ -190,8 +190,8 @@ export default function AdminLoginPage() {
                   width: '100%',
                   padding: '12px 40px 12px 38px',
                   borderRadius: '11px',
-                  border: `1.5px solid ${passErr ? 'rgba(220,38,38,0.55)' : 'rgba(4,53,77,0.1)'}`,
-                  background: passErr ? '#FFF5F5' : '#fff',
+                  border: `1.5px solid ${passErr ? 'rgba(220,38,38,0.55)' : "var(--border)"}`,
+                  background: passErr ? "var(--danger-soft)" : "var(--surface)",
                   color: T.navy,
                   fontSize: '14px',
                   fontFamily: 'inherit',
@@ -205,7 +205,7 @@ export default function AdminLoginPage() {
                 {pwToggle}
               </span>
             </div>
-            {passErr && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{passErr}</p>}
+            {passErr && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{passErr}</p>}
           </div>
 
           {/* Error message */}

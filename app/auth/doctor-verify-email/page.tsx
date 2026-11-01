@@ -14,7 +14,7 @@ const PAGE_BG = [
   'radial-gradient(ellipse 65% 55% at 12% 8%,   rgba(32,181,223,0.08) 0%, transparent 55%)',
   'radial-gradient(ellipse 55% 50% at 90% 18%,  rgba(32,181,223,0.06) 0%, transparent 52%)',
   'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(52,140,234,0.06) 0%, transparent 58%)',
-  '#EDF2FA',
+  'var(--canvas)',
 ].join(', ')
 
 // Left panel background
@@ -23,7 +23,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 function getFriendlyDoctorEmailVerificationError(error: unknown) {
@@ -108,7 +108,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
       </label>
       <div style={{ position: 'relative' }}>
         {icon && (
-          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.blue : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
+          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.link : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
             <Ico p={icon} size={14} sw={1.75} />
           </span>
         )}
@@ -142,7 +142,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
           </span>
         )}
       </div>
-      {error && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{error}</p>}
+      {error && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
     </div>
   )
 }
@@ -182,10 +182,10 @@ function LeftPanel() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-        <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
+        <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
           Email Verification
         </h2>
-        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+        <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
           Verify your email address to activate your physician account
         </p>
       </div>
@@ -193,7 +193,7 @@ function LeftPanel() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {['Secure', 'Encrypted', 'HIPAA'].map(b => (
-            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.48)', letterSpacing: '0.04em' }}>{b}</span>
+            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
           ))}
         </div>
       </div>
@@ -206,7 +206,7 @@ function DoctorVerifyEmailPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
-  
+
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
@@ -255,7 +255,7 @@ function DoctorVerifyEmailPageContent() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`* { box-sizing: border-box; } input::placeholder { color: rgba(4,53,77,0.3); } @media (max-width: 860px) { .doctor-verify-left { display: none !important; } }`}</style>
+      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } @media (max-width: 860px) { .doctor-verify-left { display: none !important; } }`}</style>
 
       {/* Left panel */}
       <div className="doctor-verify-left">
@@ -276,32 +276,32 @@ function DoctorVerifyEmailPageContent() {
 
           {/* Form card */}
           <div style={{
-            background: 'rgba(255,255,255,0.88)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(28px) saturate(200%)',
             WebkitBackdropFilter: 'blur(28px) saturate(200%)',
             borderRadius: '22px',
-            border: '1px solid rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
             padding: '40px 40px 36px',
           }}>
             {/* Header */}
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
-                <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
+                <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
                   Verify Your Email
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
                   Enter the 6-digit code sent to your email
                 </p>
               </div>
-              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.ema} size={20} sw={1.25} color="#fff" />
               </div>
             </div>
 
             {/* Error banner */}
             {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: '#FFF5F5', border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={16} sw={1.75} color={T.red} />
                 <span style={{ fontSize: '13px', color: '#991B1B', lineHeight: 1.4 }}>{authError}</span>
               </div>
@@ -309,7 +309,7 @@ function DoctorVerifyEmailPageContent() {
 
             {/* Success banner */}
             {success && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: '#F0FDF8', border: '1px solid rgba(9,173,112,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--success-soft)", border: '1px solid rgba(9,173,112,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.check} size={16} sw={2.5} color={T.green} />
                 <span style={{ fontSize: '13px', color: '#166534', lineHeight: 1.4 }}>Verification code sent successfully</span>
               </div>
@@ -317,7 +317,7 @@ function DoctorVerifyEmailPageContent() {
 
             {/* Email display */}
             <div style={{ padding: '12px 16px', borderRadius: '11px', background: 'rgba(32,181,223,0.06)', border: '1px solid rgba(32,181,223,0.12)', marginBottom: '20px' }}>
-              <p style={{ margin: 0, fontSize: '12px', color: T.slate2, fontWeight: 600, marginBottom: '4px' }}>Email address</p>
+              <p style={{ margin: 0, fontSize: "13px", color: T.slate2, fontWeight: 600, marginBottom: '4px' }}>Email address</p>
               <p style={{ margin: 0, fontSize: '14px', color: T.navy, fontWeight: 600 }}>{email || 'doctor@example.com'}</p>
             </div>
 
@@ -345,7 +345,7 @@ function DoctorVerifyEmailPageContent() {
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,#348CEA 100%)`,
+                  background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,var(--primary-end) 100%)`,
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',
@@ -374,7 +374,7 @@ function DoctorVerifyEmailPageContent() {
                   border: 'none',
                   padding: 0,
                   fontSize: '13px',
-                  color: T.blue,
+                  color: T.link,
                   fontWeight: 600,
                   cursor: loading ? 'not-allowed' : 'pointer',
                   textDecoration: 'none',
@@ -388,7 +388,7 @@ function DoctorVerifyEmailPageContent() {
             {/* Help link */}
             <p style={{ textAlign: 'center', fontSize: '13px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
               Didn&apos;t receive the code?{' '}
-              <Link href="/support" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>
+              <Link href="/support" style={{ color: T.link, fontWeight: 600, textDecoration: 'none' }}>
                 Contact Support
               </Link>
             </p>

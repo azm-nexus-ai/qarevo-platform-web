@@ -43,7 +43,7 @@ function ContactAvatar({ name, avatar, size = 44, online = false }: { name: stri
       {avatar ? (
         <Image src={avatar} alt={name} width={size} height={size} style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover' }} />
       ) : (
-        <div style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.16), rgba(52,140,234,0.24))', border: '1px solid rgba(4,53,77,0.11)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontSize: `${Math.max(12, size * 0.32)}px`, fontWeight: 800 }}>
+        <div style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.16), rgba(52,140,234,0.24))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontSize: `${Math.max(12, size * 0.32)}px`, fontWeight: 800 }}>
           {initialsFor(name)}
         </div>
       )}
@@ -56,10 +56,10 @@ function ReplyPreview({ message, onClear }: { message: PortalMessage; onClear: (
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.16)' }}>
       <div style={{ flex: 1, minWidth: 0, borderLeft: `3px solid ${T.blue}`, paddingLeft: '10px' }}>
-        <p style={{ margin: '0 0 2px', color: T.navy, fontSize: '12px', fontWeight: 800 }}>{message.senderId === 'patient' ? 'Replying to you' : 'Replying to doctor'}</p>
-        <p style={{ margin: 0, color: T.slate, fontSize: '12.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.text || message.attachmentName || 'Message'}</p>
+        <p style={{ margin: '0 0 2px', color: T.navy, fontSize: "13px", fontWeight: 800 }}>{message.senderId === 'patient' ? 'Replying to you' : 'Replying to doctor'}</p>
+        <p style={{ margin: 0, color: T.slate, fontSize: "13px", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.text || message.attachmentName || 'Message'}</p>
       </div>
-      <button type="button" aria-label="Cancel reply" onClick={onClear} style={{ width: '30px', height: '30px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', display: 'grid', placeItems: 'center', color: T.slate, cursor: 'pointer' }}>
+      <button type="button" aria-label="Cancel reply" onClick={onClear} style={{ width: '30px', height: '30px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", display: 'grid', placeItems: 'center', color: T.slate, cursor: 'pointer' }}>
         <Ico p={ICONS.x} size={15} sw={2} />
       </button>
     </div>
@@ -80,12 +80,12 @@ function saveBlob(blob: Blob, filename: string) {
 function NoticeDialog({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="message-notice-title" style={{ position: 'fixed', inset: 0, zIndex: 320, display: 'grid', placeItems: 'center', padding: '20px' }}>
-      <button type="button" aria-label="Close notice" onClick={onClose} style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(4,53,77,0.28)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', cursor: 'default' }} />
-      <section style={{ position: 'relative', width: '100%', maxWidth: '430px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.88)', background: 'rgba(255,255,255,0.98)', boxShadow: Sh.float, padding: '24px' }}>
-        <button type="button" aria-label="Close" onClick={onClose} style={{ position: 'absolute', right: '14px', top: '14px', width: '36px', height: '36px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+      <button type="button" aria-label="Close notice" onClick={onClose} style={{ position: 'absolute', inset: 0, border: 'none', background: "var(--surface-hover)", backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', cursor: 'default' }} />
+      <section style={{ position: 'relative', width: '100%', maxWidth: '430px', borderRadius: '20px', border: "1px solid var(--border)", background: "var(--surface-glass)", boxShadow: Sh.float, padding: '24px' }}>
+        <button type="button" aria-label="Close" onClick={onClose} style={{ position: 'absolute', right: '14px', top: '14px', width: '36px', height: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
           <Ico p={ICONS.x} size={18} sw={2} />
         </button>
-        <h2 id="message-notice-title" style={{ margin: '0 42px 8px 0', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '19px', fontWeight: 800, color: T.navy }}>{title}</h2>
+        <h2 id="message-notice-title" style={{ margin: '0 42px 8px 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '19px', fontWeight: 800, color: T.navy }}>{title}</h2>
         <p style={{ margin: 0, color: T.slate, fontSize: '14px', lineHeight: 1.65 }}>{body}</p>
       </section>
     </div>
@@ -105,30 +105,30 @@ function ContactDetailsDialog({
 }) {
   return (
     <div className="msg-contact-details-modal" role="dialog" aria-modal="true" aria-labelledby="contact-details-title" style={{ position: 'fixed', inset: 0, zIndex: 320, placeItems: 'center', padding: '20px' }}>
-      <button type="button" aria-label="Close contact details" onClick={onClose} style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(4,53,77,0.28)', backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', cursor: 'default' }} />
-      <section style={{ position: 'relative', width: '100%', maxWidth: '420px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.88)', background: 'rgba(255,255,255,0.98)', boxShadow: Sh.float, padding: '26px' }}>
-        <button type="button" aria-label="Close" onClick={onClose} style={{ position: 'absolute', right: '14px', top: '14px', width: '38px', height: '38px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '0 6px 18px rgba(4,53,77,0.08)' }}>
+      <button type="button" aria-label="Close contact details" onClick={onClose} style={{ position: 'absolute', inset: 0, border: 'none', background: "var(--surface-hover)", backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', cursor: 'default' }} />
+      <section style={{ position: 'relative', width: '100%', maxWidth: '420px', borderRadius: '22px', border: "1px solid var(--border)", background: "var(--surface-glass)", boxShadow: Sh.float, padding: '26px' }}>
+        <button type="button" aria-label="Close" onClick={onClose} style={{ position: 'absolute', right: '14px', top: '14px', width: '38px', height: '38px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '0 6px 18px rgba(4,53,77,0.08)' }}>
           <Ico p={ICONS.x} size={18} sw={2} />
         </button>
-        <div style={{ display: 'grid', justifyItems: 'center', textAlign: 'center', gap: '12px', padding: '18px 12px 20px', borderBottom: '1px solid rgba(4,53,77,0.08)' }}>
+        <div style={{ display: 'grid', justifyItems: 'center', textAlign: 'center', gap: '12px', padding: '18px 12px 20px', borderBottom: "1px solid var(--border)" }}>
           <ContactAvatar name={conversation.contactName} avatar={conversation.contactAvatar} size={72} online={conversation.isOnline} />
           <div>
             <h2 id="contact-details-title" style={{ margin: '0 0 4px', color: T.navy, fontSize: '20px', fontWeight: 800 }}>{conversation.contactName}</h2>
             <p style={{ margin: 0, color: T.slate, fontSize: '14px' }}>{conversation.contactRole}</p>
           </div>
-          <span style={{ borderRadius: '999px', padding: '7px 12px', background: conversation.isOnline ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.12)', color: conversation.isOnline ? T.green : T.amber, fontSize: '12px', fontWeight: 800 }}>
+          <span style={{ borderRadius: '999px', padding: '7px 12px', background: conversation.isOnline ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.12)', color: conversation.isOnline ? T.green : T.amber, fontSize: "13px", fontWeight: 800 }}>
             {conversation.lastSeenLabel || (conversation.isOnline ? 'Active now' : 'Offline')}
           </span>
         </div>
         <div style={{ display: 'grid', gap: '12px', paddingTop: '18px' }}>
           {profileHref ? (
-            <HoverBtn onClick={onViewProfile} base={{ width: '100%', minHeight: '44px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 800, cursor: 'pointer' }} on={{ border: '1px solid rgba(32,181,223,0.3)', color: T.blue }}>
+            <HoverBtn onClick={onViewProfile} base={{ width: '100%', minHeight: '44px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 800, cursor: 'pointer' }} on={{ border: '1px solid rgba(32,181,223,0.3)', color: T.link }}>
               View Doctor Profile
             </HoverBtn>
           ) : null}
           <div style={{ borderRadius: '16px', background: 'rgba(32,181,223,0.07)', border: '1px solid rgba(32,181,223,0.13)', padding: '14px' }}>
             <p style={{ margin: '0 0 5px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>Conversation access</p>
-            <p style={{ margin: 0, color: T.slate, fontSize: '12.5px', lineHeight: 1.55 }}>Only you and authorized care-team users connected to this conversation can view these messages and attachments.</p>
+            <p style={{ margin: 0, color: T.slate, fontSize: "13px", lineHeight: 1.55 }}>Only you and authorized care-team users connected to this conversation can view these messages and attachments.</p>
           </div>
         </div>
       </section>
@@ -160,25 +160,25 @@ function NewMessageModal({
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div aria-hidden onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(4,53,77,0.28)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
+      <div aria-hidden onClick={onClose} style={{ position: 'absolute', inset: 0, background: "var(--surface-hover)", backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="New Message"
-        style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '520px', background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.float, padding: '28px' }}
+        style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '520px', background: "var(--surface-glass)", backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '28px' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>New Message</h2>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: '1px solid rgba(4,53,77,0.12)', borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
+          <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>New Message</h2>
+          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: "1px solid var(--border)", borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', margin: '0 0 6px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.slate2 }}>To:</label>
+          <label style={{ display: 'block', margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.slate2 }}>To:</label>
           <select
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
             disabled={contacts.length === 0}
-            style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none' }}
+            style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '14px', outline: 'none' }}
           >
             <option value="" disabled>{contacts.length === 0 ? 'No eligible physicians yet' : 'Select a recipient...'}</option>
             {contacts.map(c => (
@@ -186,27 +186,27 @@ function NewMessageModal({
             ))}
           </select>
           {contacts.length === 0 ? (
-            <p style={{ margin: '8px 0 0', color: T.slate2, fontSize: '12.5px', lineHeight: 1.5 }}>
+            <p style={{ margin: '8px 0 0', color: T.slate2, fontSize: "13px", lineHeight: 1.5 }}>
               You can start a message after a doctor is connected through an appointment, consultation, or existing care conversation.
             </p>
           ) : null}
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', margin: '0 0 6px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.slate2 }}>Message:</label>
+          <label style={{ display: 'block', margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.slate2 }}>Message:</label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type your message..."
             rows={5}
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none', resize: 'none' }}
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '14px', outline: 'none', resize: 'none' }}
           />
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <HoverBtn
             onClick={handleSend}
-            base={{ flex: 1, minHeight: '46px', padding: '0 16px', borderRadius: '12px', border: 'none', background: canSend ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(4,53,77,0.1)', color: canSend ? '#fff' : T.slate2, fontSize: '13.5px', fontWeight: 700, cursor: canSend ? 'pointer' : 'not-allowed', boxShadow: canSend ? '0 5px 16px rgba(32,181,223,0.28)' : 'none' }}
+            base={{ flex: 1, minHeight: '46px', padding: '0 16px', borderRadius: '12px', border: 'none', background: canSend ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", color: canSend ? '#fff' : T.slate2, fontSize: '13.5px', fontWeight: 700, cursor: canSend ? 'pointer' : 'not-allowed', boxShadow: canSend ? '0 5px 16px rgba(32,181,223,0.28)' : 'none' }}
             on={canSend ? { transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(52,140,234,0.34)' } : {}}
           >
             {sending ? 'Sending...' : 'Send Message'}
@@ -318,12 +318,12 @@ function MessagesPageInner() {
   // Filter conversations
   const filteredConversations = useMemo(() => {
     return conversations.filter(c => {
-      const matchesSearch = c.contactName.toLowerCase().includes(search.toLowerCase()) || 
+      const matchesSearch = c.contactName.toLowerCase().includes(search.toLowerCase()) ||
                             c.contactRole.toLowerCase().includes(search.toLowerCase()) ||
                             c.lastMessage.toLowerCase().includes(search.toLowerCase()) ||
                             c.messages.some((message) => `${message.text ?? ''} ${message.attachmentName ?? ''}`.toLowerCase().includes(search.toLowerCase()))
-      
-      const matchesFilter = 
+
+      const matchesFilter =
         activeFilter === 'All' ? true :
         activeFilter === 'Unread' ? c.unreadCount > 0 :
         activeFilter === c.contactType
@@ -417,7 +417,7 @@ function MessagesPageInner() {
     setActiveConvId(id)
     threadDismissedRef.current = false
     setReplyToMessage(null)
-    setConversations(prev => prev.map(c => 
+    setConversations(prev => prev.map(c =>
       c.id === id ? { ...c, unreadCount: 0, messages: c.messages.map(m => ({ ...m, isRead: true })) } : c
     ))
     try {
@@ -447,7 +447,7 @@ function MessagesPageInner() {
       headerActions={
         <HoverBtn
           onClick={() => setIsComposing(true)}
-          base={{ minHeight: '44px', padding: '0 18px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 16px rgba(32,181,223,0.3)', whiteSpace: 'nowrap' }}
+          base={{ minHeight: '44px', padding: '0 18px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 16px rgba(32,181,223,0.3)', whiteSpace: 'nowrap' }}
           on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.34)' }}
         >
           + New Message
@@ -469,11 +469,11 @@ function MessagesPageInner() {
         .msg-list-panel {
           display: flex;
           flex-direction: column;
-          background: rgba(255,255,255,0.88);
+          background: var(--surface);
           backdrop-filter: blur(24px) saturate(180%);
           -webkit-backdrop-filter: blur(24px) saturate(180%);
           border-radius: 20px;
-          border: 1px solid rgba(255,255,255,0.92);
+          border: 1px solid var(--border);
           box-shadow: ${Sh.card};
           overflow: hidden;
           min-width: 280px;
@@ -481,11 +481,11 @@ function MessagesPageInner() {
         .msg-thread-panel {
           display: flex;
           flex-direction: column;
-          background: rgba(255,255,255,0.88);
+          background: var(--surface);
           backdrop-filter: blur(24px) saturate(180%);
           -webkit-backdrop-filter: blur(24px) saturate(180%);
           border-radius: 20px;
-          border: 1px solid rgba(255,255,255,0.92);
+          border: 1px solid var(--border);
           box-shadow: ${Sh.card};
           overflow: hidden;
           min-width: 0;
@@ -505,8 +505,8 @@ function MessagesPageInner() {
         }
         .msg-composer {
           padding: 18px;
-          border-top: 1px solid rgba(4,53,77,0.08);
-          background: rgba(255,255,255,0.7);
+          border-top: 1px solid var(--border);
+          background: var(--surface);
         }
         .msg-composer-input {
           flex: 1;
@@ -514,8 +514,8 @@ function MessagesPageInner() {
           max-height: 140px;
           padding: 14px 18px;
           border-radius: 14px;
-          border: 1px solid rgba(4,53,77,0.12);
-          background: #fff;
+          border: 1px solid var(--border);
+          background: var(--surface);
           color: ${T.navy};
           font-size: 14px;
           outline: none;
@@ -529,11 +529,11 @@ function MessagesPageInner() {
         .msg-details-panel {
           display: flex;
           flex-direction: column;
-          background: rgba(255,255,255,0.88);
+          background: var(--surface);
           backdrop-filter: blur(24px) saturate(180%);
           -webkit-backdrop-filter: blur(24px) saturate(180%);
           border-radius: 20px;
-          border: 1px solid rgba(255,255,255,0.92);
+          border: 1px solid var(--border);
           box-shadow: ${Sh.card};
           padding: 18px;
           overflow: hidden;
@@ -587,7 +587,7 @@ function MessagesPageInner() {
       ) : null}
 
       {/* Inject CSS vars to control visibility on mobile */}
-      <div 
+      <div
         className={`msg-grid ${detailsOpen && activeConversation ? 'msg-grid-details-open' : ''}`}
         style={{
           '--list-display': activeConvId ? 'none' : 'flex',
@@ -596,7 +596,7 @@ function MessagesPageInner() {
       >
         {/* ─── Conversation List Panel ───────────────────────────── */}
         <div className="msg-list-panel">
-          <div style={{ padding: '16px', borderBottom: '1px solid rgba(4,53,77,0.08)' }}>
+          <div style={{ padding: '16px', borderBottom: "1px solid var(--border)" }}>
             <div style={{ position: 'relative', marginBottom: '12px' }}>
               <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: T.slate2, pointerEvents: 'none' }}>
                 <Ico p={ICONS.search} size={15} sw={1.8} />
@@ -606,10 +606,10 @@ function MessagesPageInner() {
                 placeholder="Search names or messages..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ width: '100%', height: '40px', borderRadius: '11px', border: '1px solid rgba(4,53,77,0.12)', padding: '0 12px 0 38px', fontSize: '13.5px', color: T.navy, background: '#fff', outline: 'none' }}
+                style={{ width: '100%', height: '40px', borderRadius: '11px', border: "1px solid var(--border)", padding: '0 12px 0 38px', fontSize: '13.5px', color: T.navy, background: "var(--surface)", outline: 'none' }}
               />
             </div>
-            
+
             {/* Filters scroll horizontally */}
             <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
               {(['All', 'Unread', 'Physicians', 'Care Team', 'Support'] as FilterType[]).map(f => (
@@ -619,10 +619,10 @@ function MessagesPageInner() {
                   style={{
                     padding: '6px 12px',
                     borderRadius: '999px',
-                    border: `1px solid ${activeFilter === f ? T.blue : 'rgba(4,53,77,0.1)'}`,
+                    border: `1px solid ${activeFilter === f ? T.blue : "var(--border)"}`,
                     background: activeFilter === f ? 'rgba(32,181,223,0.1)' : 'transparent',
-                    color: activeFilter === f ? T.blue : T.slate,
-                    fontSize: '12px',
+                    color: activeFilter === f ? T.link : T.slate,
+                    fontSize: "13px",
                     fontWeight: activeFilter === f ? 700 : 500,
                     cursor: 'pointer',
                     whiteSpace: 'nowrap'
@@ -659,7 +659,7 @@ function MessagesPageInner() {
                         padding: '12px',
                         borderRadius: '14px',
                         border: 'none',
-                        background: isActive ? 'rgba(255,255,255,0.9)' : 'transparent',
+                        background: isActive ? "var(--surface-glass)" : 'transparent',
                         boxShadow: isActive ? '0 2px 10px rgba(4,53,77,0.06)' : 'none',
                         cursor: 'pointer',
                         textAlign: 'left',
@@ -670,13 +670,13 @@ function MessagesPageInner() {
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2px' }}>
                           <span style={{ fontSize: '14px', fontWeight: 700, color: T.navy, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.contactName}</span>
-                          <span style={{ fontSize: '11px', color: conv.unreadCount > 0 ? T.blue : T.slate2, fontWeight: conv.unreadCount > 0 ? 700 : 500, flexShrink: 0 }}>{conv.lastMessageTime}</span>
+                          <span style={{ fontSize: "13px", color: conv.unreadCount > 0 ? T.link : T.slate2, fontWeight: conv.unreadCount > 0 ? 700 : 500, flexShrink: 0 }}>{conv.lastMessageTime}</span>
                         </div>
-                        <div style={{ fontSize: '12px', color: T.slate2, marginBottom: '2px' }}>{conv.contactRole}</div>
+                        <div style={{ fontSize: "13px", color: T.slate2, marginBottom: '2px' }}>{conv.contactRole}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '13px', color: conv.unreadCount > 0 ? T.navy : T.slate, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: conv.unreadCount > 0 ? 600 : 400 }}>{conv.lastMessage}</span>
                           {conv.unreadCount > 0 && (
-                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '18px', height: '18px', borderRadius: '999px', background: T.blue, color: '#fff', fontSize: '10px', fontWeight: 700, marginLeft: '6px' }}>{conv.unreadCount}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '18px', height: '18px', borderRadius: '999px', background: T.blue, color: '#fff', fontSize: "13px", fontWeight: 700, marginLeft: '6px' }}>{conv.unreadCount}</span>
                           )}
                         </div>
                       </div>
@@ -687,13 +687,13 @@ function MessagesPageInner() {
             )}
           </div>
           {!loading && conversationMeta.totalCount > conversationMeta.pageSize ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '12px 14px', borderTop: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.55)' }}>
-              <span style={{ fontSize: '12px', color: T.slate2, fontWeight: 700 }}>Page {conversationMeta.page}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '12px 14px', borderTop: "1px solid var(--border)", background: 'rgba(255,255,255,0.55)' }}>
+              <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 700 }}>Page {conversationMeta.page}</span>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="button" disabled={!conversationMeta.hasPrevious || loading} onClick={() => setConversationPage((current) => Math.max(1, current - 1))} style={{ minHeight: '32px', padding: '0 10px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', color: T.navy, fontSize: '12px', fontWeight: 700, cursor: conversationMeta.hasPrevious && !loading ? 'pointer' : 'not-allowed', opacity: conversationMeta.hasPrevious && !loading ? 1 : 0.48 }}>
+                <button type="button" disabled={!conversationMeta.hasPrevious || loading} onClick={() => setConversationPage((current) => Math.max(1, current - 1))} style={{ minHeight: '32px', padding: '0 10px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: conversationMeta.hasPrevious && !loading ? 'pointer' : 'not-allowed', opacity: conversationMeta.hasPrevious && !loading ? 1 : 0.48 }}>
                   Prev
                 </button>
-                <button type="button" disabled={!conversationMeta.hasNext || loading} onClick={() => setConversationPage((current) => current + 1)} style={{ minHeight: '32px', padding: '0 10px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', color: T.navy, fontSize: '12px', fontWeight: 700, cursor: conversationMeta.hasNext && !loading ? 'pointer' : 'not-allowed', opacity: conversationMeta.hasNext && !loading ? 1 : 0.48 }}>
+                <button type="button" disabled={!conversationMeta.hasNext || loading} onClick={() => setConversationPage((current) => current + 1)} style={{ minHeight: '32px', padding: '0 10px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: conversationMeta.hasNext && !loading ? 'pointer' : 'not-allowed', opacity: conversationMeta.hasNext && !loading ? 1 : 0.48 }}>
                   Next
                 </button>
               </div>
@@ -706,9 +706,9 @@ function MessagesPageInner() {
           {activeConversation ? (
             <>
               {/* Thread Header */}
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(4,53,77,0.08)', display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(255,255,255,0.6)' }}>
-                <button 
-                  className="show-on-mobile" 
+              <div style={{ padding: '16px 20px', borderBottom: "1px solid var(--border)", display: 'flex', alignItems: 'center', gap: '14px', background: "var(--surface-glass)" }}>
+                <button
+                  className="show-on-mobile"
                   onClick={() => { setActiveConvId(null); threadDismissedRef.current = true; setReplyToMessage(null); setSelectedAttachment(null) }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: T.slate2, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '4px' }}
                 >
@@ -727,15 +727,15 @@ function MessagesPageInner() {
                     {activeConversation.context && (
                       <>
                         <span>·</span>
-                        <span style={{ color: T.blue, fontWeight: 600 }}>{activeConversation.context}</span>
+                        <span style={{ color: T.link, fontWeight: 600 }}>{activeConversation.context}</span>
                       </>
                     )}
                   </div>
                 </div>
                 <HoverBtn
                   onClick={() => setDetailsOpen(true)}
-                  base={{ marginLeft: 'auto', minHeight: '38px', padding: '0 12px', borderRadius: '11px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', color: T.navy, fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  on={{ border: '1px solid rgba(32,181,223,0.3)', color: T.blue, transform: 'translateY(-1px)' }}
+                  base={{ marginLeft: 'auto', minHeight: '38px', padding: '0 12px', borderRadius: '11px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  on={{ border: '1px solid rgba(32,181,223,0.3)', color: T.link, transform: 'translateY(-1px)' }}
                 >
                   Details
                 </HoverBtn>
@@ -745,11 +745,11 @@ function MessagesPageInner() {
               <div className="msg-thread-scroll">
                 {activeConversation.messages.map((msg) => {
                   const isPatient = msg.senderId === 'patient'
-                  
+
                   if (msg.type === 'system') {
                     return (
                       <div key={msg.id} style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
-                        <span style={{ padding: '4px 12px', borderRadius: '999px', background: 'rgba(4,53,77,0.06)', fontSize: '11px', fontWeight: 600, color: T.slate2 }}>
+                        <span style={{ padding: '4px 12px', borderRadius: '999px', background: "var(--surface-hover)", fontSize: "13px", fontWeight: 600, color: T.slate2 }}>
                           {msg.text} • {msg.timestamp}
                         </span>
                       </div>
@@ -758,7 +758,7 @@ function MessagesPageInner() {
 
                   return (
                     <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isPatient ? 'flex-end' : 'flex-start', margin: '4px 0' }}>
-                      
+
                       {msg.type === 'text' && (
                         <div style={{
                           maxWidth: '75%',
@@ -766,17 +766,17 @@ function MessagesPageInner() {
                           borderRadius: '18px',
                           borderTopLeftRadius: !isPatient ? '4px' : '18px',
                           borderTopRightRadius: isPatient ? '4px' : '18px',
-                          background: isPatient ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : '#fff',
+                          background: isPatient ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface)",
                           color: isPatient ? '#fff' : T.navy,
-                          border: isPatient ? 'none' : '1px solid rgba(4,53,77,0.1)',
+                          border: isPatient ? 'none' : "1px solid var(--border)",
                           boxShadow: isPatient ? '0 4px 12px rgba(32,181,223,0.2)' : '0 2px 8px rgba(4,53,77,0.04)',
                           fontSize: '14px',
                           lineHeight: 1.5,
                         }}>
                           {msg.replyToText ? (
-                            <div style={{ margin: '0 0 8px', padding: '7px 9px', borderRadius: '10px', background: isPatient ? 'rgba(255,255,255,0.18)' : 'rgba(32,181,223,0.08)', borderLeft: `3px solid ${isPatient ? 'rgba(255,255,255,0.65)' : T.blue}` }}>
-                              <p style={{ margin: '0 0 2px', fontSize: '11px', fontWeight: 800, color: isPatient ? '#fff' : T.navy }}>{msg.replyToSenderId === 'patient' ? 'Patient' : 'Doctor'}</p>
-                              <p style={{ margin: 0, fontSize: '12px', color: isPatient ? 'rgba(255,255,255,0.86)' : T.slate, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.replyToText}</p>
+                            <div style={{ margin: '0 0 8px', padding: '7px 9px', borderRadius: '10px', background: isPatient ? 'rgba(255,255,255,0.18)' : 'rgba(32,181,223,0.08)', borderLeft: `3px solid ${isPatient ? "var(--border)" : T.blue}` }}>
+                              <p style={{ margin: '0 0 2px', fontSize: "13px", fontWeight: 800, color: isPatient ? '#fff' : T.navy }}>{msg.replyToSenderId === 'patient' ? 'Patient' : 'Doctor'}</p>
+                              <p style={{ margin: 0, fontSize: "13px", color: isPatient ? 'rgba(255,255,255,0.86)' : T.slate, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.replyToText}</p>
                             </div>
                           ) : null}
                           {msg.text}
@@ -790,31 +790,31 @@ function MessagesPageInner() {
                           borderRadius: '16px',
                           borderTopLeftRadius: !isPatient ? '4px' : '16px',
                           borderTopRightRadius: isPatient ? '4px' : '16px',
-                          background: isPatient ? 'rgba(32,181,223,0.1)' : '#fff',
-                          border: `1px solid ${isPatient ? 'rgba(32,181,223,0.2)' : 'rgba(4,53,77,0.1)'}`,
+                          background: isPatient ? 'rgba(32,181,223,0.1)' : "var(--surface)",
+                          border: `1px solid ${isPatient ? 'rgba(32,181,223,0.2)' : "var(--border)"}`,
                           boxShadow: '0 2px 8px rgba(4,53,77,0.04)',
                           display: 'grid',
                           gap: '10px'
                         }}>
                           {msg.text ? <p style={{ margin: 0, color: T.navy, fontSize: '13px', lineHeight: 1.45 }}>{msg.text}</p> : null}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isPatient ? 'rgba(32,181,223,0.15)' : 'rgba(4,53,77,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isPatient ? T.blue : T.slate }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isPatient ? 'rgba(32,181,223,0.15)' : "var(--surface-hover)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: isPatient ? T.link : T.slate }}>
                               <Ico p={ICONS.paperclip} size={20} sw={1.8} />
                             </div>
                             <div style={{ minWidth: 0, flex: 1 }}>
                               <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.attachmentName}</p>
-                              <p style={{ margin: 0, fontSize: '11.5px', color: T.slate }}>{msg.attachmentSize} • {msg.attachmentContentType || 'File'}</p>
+                              <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{msg.attachmentSize} • {msg.attachmentContentType || 'File'}</p>
                             </div>
                           </div>
-                          <button type="button" onClick={() => handleDownloadAttachment(msg)} style={{ minHeight: '34px', borderRadius: '10px', border: '1px solid rgba(32,181,223,0.18)', background: '#fff', color: T.blue, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                          <button type="button" onClick={() => handleDownloadAttachment(msg)} style={{ minHeight: '34px', borderRadius: '10px', border: '1px solid rgba(32,181,223,0.18)', background: "var(--surface)", color: T.link, fontSize: "13px", fontWeight: 800, cursor: 'pointer' }}>
                             Download
                           </button>
                         </div>
                       )}
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', padding: '0 4px' }}>
-                        <span style={{ fontSize: '11px', color: T.slate2 }}>{msg.timestamp}</span>
-                        <button type="button" onClick={() => setReplyToMessage(msg)} style={{ border: 'none', background: 'transparent', color: T.blue, fontSize: '11px', fontWeight: 800, cursor: 'pointer', padding: '2px 4px' }}>
+                        <span style={{ fontSize: "13px", color: T.slate2 }}>{msg.timestamp}</span>
+                        <button type="button" onClick={() => setReplyToMessage(msg)} style={{ border: 'none', background: 'transparent', color: T.link, fontSize: "13px", fontWeight: 800, cursor: 'pointer', padding: '2px 4px' }}>
                           Reply
                         </button>
                         {isPatient && msg.isRead && (
@@ -836,7 +836,7 @@ function MessagesPageInner() {
                     aria-label="Add attachment"
                     title="Add attachment"
                     onClick={() => fileInputRef.current?.click()}
-                    style={{ width: '48px', height: '48px', borderRadius: '14px', border: '1px solid rgba(4,53,77,0.12)', background: '#fff', color: T.slate, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                    style={{ width: '48px', height: '48px', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
                   >
                     <Ico p={ICONS.paperclip} size={19} sw={1.8} />
                   </button>
@@ -847,7 +847,7 @@ function MessagesPageInner() {
                     onChange={(event) => setSelectedAttachment(event.target.files?.[0] ?? null)}
                     style={{ display: 'none' }}
                   />
-                  
+
                   <textarea
                     className="msg-composer-input"
                     placeholder="Type your message..."
@@ -864,7 +864,7 @@ function MessagesPageInner() {
                   <HoverBtn
                     onClick={handleSendMessage}
                     title="Send message"
-                    base={{ width: '48px', height: '48px', borderRadius: '14px', border: 'none', background: newMessageText.trim() || selectedAttachment ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(4,53,77,0.1)', color: newMessageText.trim() || selectedAttachment ? '#fff' : T.slate2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: newMessageText.trim() || selectedAttachment ? 'pointer' : 'not-allowed', flexShrink: 0, boxShadow: newMessageText.trim() || selectedAttachment ? '0 4px 12px rgba(32,181,223,0.3)' : 'none' }}
+                    base={{ width: '48px', height: '48px', borderRadius: '14px', border: 'none', background: newMessageText.trim() || selectedAttachment ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", color: newMessageText.trim() || selectedAttachment ? '#fff' : T.slate2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: newMessageText.trim() || selectedAttachment ? 'pointer' : 'not-allowed', flexShrink: 0, boxShadow: newMessageText.trim() || selectedAttachment ? '0 4px 12px rgba(32,181,223,0.3)' : 'none' }}
                     on={newMessageText.trim() || selectedAttachment ? { transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(52,140,234,0.35)' } : {}}
                   >
                     <Ico p={ICONS.arrowFwd} size={18} sw={1.9} />
@@ -873,8 +873,8 @@ function MessagesPageInner() {
                 {selectedAttachment ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', padding: '9px 10px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.16)' }}>
                     <Ico p={ICONS.paperclip} size={15} sw={1.8} color={T.blue} />
-                    <span style={{ flex: 1, minWidth: 0, color: T.navy, fontSize: '12.5px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedAttachment.name}</span>
-                    <button type="button" aria-label="Remove attachment" onClick={() => { setSelectedAttachment(null); if (fileInputRef.current) fileInputRef.current.value = '' }} style={{ width: '28px', height: '28px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+                    <span style={{ flex: 1, minWidth: 0, color: T.navy, fontSize: "13px", fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedAttachment.name}</span>
+                    <button type="button" aria-label="Remove attachment" onClick={() => { setSelectedAttachment(null); if (fileInputRef.current) fileInputRef.current.value = '' }} style={{ width: '28px', height: '28px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
                       <Ico p={ICONS.x} size={14} sw={2} />
                     </button>
                   </div>
@@ -883,16 +883,16 @@ function MessagesPageInner() {
             </>
           ) : (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(32,181,223,0.1)', border: '1px solid rgba(32,181,223,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', color: T.blue }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(32,181,223,0.1)', border: '1px solid rgba(32,181,223,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', color: T.link }}>
                 <Ico p={ICONS.ema} size={28} sw={1.5} />
               </div>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 700, color: T.navy }}>Your Secure Inbox</h3>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 700, color: T.navy }}>Your Secure Inbox</h3>
               <p style={{ margin: '0 0 24px', fontSize: '14px', color: T.slate, maxWidth: '300px', lineHeight: 1.6 }}>
                 Select a conversation from the list to view your messages or start a new conversation.
               </p>
               <HoverBtn
                 onClick={() => setIsComposing(true)}
-                base={{ minHeight: '44px', padding: '0 20px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 16px rgba(32,181,223,0.28)' }}
+                base={{ minHeight: '44px', padding: '0 20px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 16px rgba(32,181,223,0.28)' }}
                 on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.32)' }}
               >
                 + Start a Conversation
@@ -904,29 +904,29 @@ function MessagesPageInner() {
         {detailsOpen && activeConversation ? (
           <aside className="msg-details-panel">
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-              <button type="button" aria-label="Close contact details" onClick={() => setDetailsOpen(false)} style={{ width: '36px', height: '36px', borderRadius: '11px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '0 6px 18px rgba(4,53,77,0.08)' }}>
+              <button type="button" aria-label="Close contact details" onClick={() => setDetailsOpen(false)} style={{ width: '36px', height: '36px', borderRadius: '11px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '0 6px 18px rgba(4,53,77,0.08)' }}>
                 <Ico p={ICONS.x} size={17} sw={2} />
               </button>
             </div>
-            <div style={{ display: 'grid', justifyItems: 'center', textAlign: 'center', gap: '10px', padding: '8px 0 16px', borderBottom: '1px solid rgba(4,53,77,0.08)' }}>
+            <div style={{ display: 'grid', justifyItems: 'center', textAlign: 'center', gap: '10px', padding: '8px 0 16px', borderBottom: "1px solid var(--border)" }}>
               <ContactAvatar name={activeConversation.contactName} avatar={activeConversation.contactAvatar} size={68} online={activeConversation.isOnline} />
               <div>
                 <h3 style={{ margin: '0 0 4px', color: T.navy, fontSize: '18px', fontWeight: 800 }}>{activeConversation.contactName}</h3>
                 <p style={{ margin: 0, color: T.slate, fontSize: '13px' }}>{activeConversation.contactRole}</p>
               </div>
-              <span style={{ borderRadius: '999px', padding: '6px 10px', background: activeConversation.isOnline ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.12)', color: activeConversation.isOnline ? T.green : T.amber, fontSize: '12px', fontWeight: 800 }}>
+              <span style={{ borderRadius: '999px', padding: '6px 10px', background: activeConversation.isOnline ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.12)', color: activeConversation.isOnline ? T.green : T.amber, fontSize: "13px", fontWeight: 800 }}>
                 {activeConversation.lastSeenLabel || (activeConversation.isOnline ? 'Active now' : 'Offline')}
               </span>
             </div>
             <div style={{ display: 'grid', gap: '12px', paddingTop: '16px' }}>
               {activeContactProfileHref ? (
-                <HoverBtn onClick={() => router.push(activeContactProfileHref)} base={{ width: '100%', minHeight: '42px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 800, cursor: 'pointer' }} on={{ border: '1px solid rgba(32,181,223,0.3)', color: T.blue }}>
+                <HoverBtn onClick={() => router.push(activeContactProfileHref)} base={{ width: '100%', minHeight: '42px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 800, cursor: 'pointer' }} on={{ border: '1px solid rgba(32,181,223,0.3)', color: T.link }}>
                   View Doctor Profile
                 </HoverBtn>
               ) : null}
               <div style={{ borderRadius: '14px', background: 'rgba(32,181,223,0.07)', border: '1px solid rgba(32,181,223,0.13)', padding: '12px' }}>
                 <p style={{ margin: '0 0 4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>Conversation access</p>
-                <p style={{ margin: 0, color: T.slate, fontSize: '12.5px', lineHeight: 1.5 }}>Only you and authorized care-team users connected to this conversation can view these messages and attachments.</p>
+                <p style={{ margin: 0, color: T.slate, fontSize: "13px", lineHeight: 1.5 }}>Only you and authorized care-team users connected to this conversation can view these messages and attachments.</p>
               </div>
             </div>
           </aside>

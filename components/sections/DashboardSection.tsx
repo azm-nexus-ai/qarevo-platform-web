@@ -53,7 +53,7 @@ export default function DashboardSection() {
           />
           <span
             style={{
-              fontSize: '11px',
+              fontSize: "13px",
               fontWeight: 700,
               color: T.slate2,
               letterSpacing: '0.1em',
@@ -69,8 +69,8 @@ export default function DashboardSection() {
           {/* Clinical Intelligence Dashboard */}
           <div
             style={{
-              background: '#FFFFFF',
-              border: '1px solid rgba(4,53,77,0.06)',
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: '20px',
               boxShadow: Sh.float,
               overflow: 'hidden',
@@ -101,9 +101,9 @@ export default function DashboardSection() {
                   cursor: 'pointer',
                   padding: '7px 14px',
                   borderRadius: '8px',
-                  fontSize: '12px',
+                  fontSize: "13px",
                   fontWeight: 600,
-                  color: T.blue,
+                  color: T.link,
                   letterSpacing: '-0.01em',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,

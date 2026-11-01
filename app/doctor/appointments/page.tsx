@@ -77,7 +77,7 @@ export default function DoctorAppointments() {
       case 'no_show':
         return 'bg-yellow-100 text-yellow-800'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-surface-subtle text-ink'
     }
   }
 
@@ -86,7 +86,7 @@ export default function DoctorAppointments() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-500">Loading appointments...</div>
+    return <div className="flex items-center justify-center h-64 text-muted">Loading appointments...</div>
   }
 
   if (error) {
@@ -100,8 +100,8 @@ export default function DoctorAppointments() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900 truncate">Appointments</h1>
-          <p className="text-gray-500 mt-1 text-sm truncate">Manage your scheduled appointments</p>
+          <h1 className="text-2xl font-bold text-ink truncate">Appointments</h1>
+          <p className="text-muted mt-1 text-sm truncate">Manage your scheduled appointments</p>
         </div>
         <div className="flex items-center space-x-4 flex-shrink-0">
           <select
@@ -110,7 +110,7 @@ export default function DoctorAppointments() {
               setStatusFilter(e.target.value)
               setPage(1)
             }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
+            className="px-4 py-2 border border-theme rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
           >
             <option value="">All Statuses</option>
             <option value="booked">Booked</option>
@@ -123,37 +123,37 @@ export default function DoctorAppointments() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm font-medium text-gray-600">Total Appointments</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{appointmentsData.total_count}</p>
+        <div className="bg-surface rounded-lg shadow-sm border border-theme p-6">
+          <p className="text-sm font-medium text-secondary">Total Appointments</p>
+          <p className="text-3xl font-bold text-ink mt-2">{appointmentsData.total_count}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm font-medium text-gray-600">Filtered Results</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{appointmentsData.filtered_count}</p>
+        <div className="bg-surface rounded-lg shadow-sm border border-theme p-6">
+          <p className="text-sm font-medium text-secondary">Filtered Results</p>
+          <p className="text-3xl font-bold text-ink mt-2">{appointmentsData.filtered_count}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm font-medium text-gray-600">Upcoming</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">
+        <div className="bg-surface rounded-lg shadow-sm border border-theme p-6">
+          <p className="text-sm font-medium text-secondary">Upcoming</p>
+          <p className="text-3xl font-bold text-ink mt-2">
             {appointmentsData.appointments.filter(a => a.status === 'booked').length}
           </p>
         </div>
       </div>
 
       {/* Appointments List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Scheduled Appointments</h3>
+      <div className="bg-surface rounded-lg shadow-sm border border-theme">
+        <div className="p-6 border-b border-theme">
+          <h3 className="text-lg font-semibold text-ink">Scheduled Appointments</h3>
         </div>
         <div className="p-6">
           {appointmentsData.appointments.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No appointments found</p>
+            <p className="text-muted text-center py-8">No appointments found</p>
           ) : (
             <div className="space-y-4">
               {appointmentsData.appointments.map((appointment) => (
                 <div
                   key={appointment.appointment_id}
                   onClick={() => handleViewDetails(appointment.appointment_id)}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors flex-col sm:flex-row gap-4"
+                  className="flex items-center justify-between p-4 bg-canvas rounded-lg hover:bg-surface-subtle cursor-pointer transition-colors flex-col sm:flex-row gap-4"
                 >
                   <div className="flex items-center space-x-4 w-full sm:w-auto">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -162,10 +162,10 @@ export default function DoctorAppointments() {
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{appointment.patient_name}</p>
-                      <p className="text-sm text-gray-500">{formatDate(appointment.start_at)}</p>
+                      <p className="font-medium text-ink">{appointment.patient_name}</p>
+                      <p className="text-sm text-muted">{formatDate(appointment.start_at)}</p>
                       {appointment.consultation_modality && (
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-muted mt-1">
                           {appointment.consultation_modality}
                         </p>
                       )}
@@ -175,14 +175,14 @@ export default function DoctorAppointments() {
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
                       {appointment.status.replace('_', ' ').toUpperCase()}
                     </span>
-                    <span className="text-gray-400">→</span>
+                    <span className="text-muted">→</span>
                   </div>
                 </div>
               ))}
             </div>
           )}
-          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4 flex-col sm:flex-row gap-4">
-            <p className="text-sm text-gray-500">
+          <div className="mt-6 flex items-center justify-between border-t border-theme pt-4 flex-col sm:flex-row gap-4">
+            <p className="text-sm text-muted">
               Page {appointmentsData.page} · Showing {appointmentsData.appointments.length} of {appointmentsData.filtered_count}
             </p>
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -190,7 +190,7 @@ export default function DoctorAppointments() {
                 type="button"
                 disabled={!appointmentsData.has_previous || loading}
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45"
+                className="rounded-lg border border-theme px-3 py-2 text-sm font-semibold text-secondary disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Previous
               </button>
@@ -198,7 +198,7 @@ export default function DoctorAppointments() {
                 type="button"
                 disabled={!appointmentsData.has_next || loading}
                 onClick={() => setPage((current) => current + 1)}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-45"
+                className="rounded-lg border border-theme px-3 py-2 text-sm font-semibold text-secondary disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Next
               </button>

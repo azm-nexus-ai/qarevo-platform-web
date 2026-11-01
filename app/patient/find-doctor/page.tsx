@@ -337,7 +337,7 @@ export default function FindDoctorPage() {
 
       <div className='fd-shell'>
         <aside className='fd-left'>
-          <div className='fd-sidebar' style={{ background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.float, padding: '16px' }}>
+          <div className='fd-sidebar' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '16px' }}>
             <div style={{ marginBottom: '18px' }}>
               <Link href='/' aria-label='Qarevo Health home' style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
                 <AuthenticatedLogo priority />
@@ -346,14 +346,14 @@ export default function FindDoctorPage() {
 
             <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: '1px solid rgba(4,53,77,0.11)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>
                   {userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'P'}
                 </div>
                 <div>
                   <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>
                     {userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'}
                   </p>
-                  <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: Active</p>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Care Plan: Active</p>
                 </div>
               </div>
             </section>
@@ -373,7 +373,7 @@ export default function FindDoctorPage() {
                       textDecoration: 'none',
                       borderRadius: '11px',
                       background: isActive ? 'rgba(32,181,223,0.14)' : 'transparent',
-                      color: isActive ? T.blue : T.slate,
+                      color: isActive ? T.link : T.slate,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
@@ -392,7 +392,7 @@ export default function FindDoctorPage() {
             </nav>
 
             <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${T.borderFaint}` }}>
-              <Link href={PATIENT_ROUTES.logout} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '11px', textDecoration: 'none', color: '#348CEA', fontSize: '13px', fontWeight: 600 }}>
+              <Link href={PATIENT_ROUTES.logout} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '11px', textDecoration: 'none', color: "var(--link)", fontSize: '13px', fontWeight: 600 }}>
                 <Ico p={ICONS.arrowSm} size={15} sw={1.8} color='#348CEA' />
                 Logout
               </Link>
@@ -401,16 +401,16 @@ export default function FindDoctorPage() {
         </aside>
 
         <section className='fd-main' aria-label='Find a doctor'>
-          <header style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.82)', padding: '14px 14px 12px', marginBottom: '14px' }}>
+          <header style={{ ...Glass.nav, borderRadius: '20px', border: "1px solid var(--border)", padding: '14px 14px 12px', marginBottom: '14px' }}>
             <div className='fd-head-row'>
               <div>
-                <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '25px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Find the Right Doctor</h1>
+                <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '25px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Find the Right Doctor</h1>
                 <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>Search thousands of verified healthcare professionals across multiple specialties.</p>
               </div>
               <button
                 type='button'
                 onClick={() => setShowFiltersMobile((prev) => !prev)}
-                style={{ minHeight: '38px', padding: '0 12px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.85)', color: T.navy, fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ minHeight: '38px', padding: '0 12px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}
               >
                 {showFiltersMobile ? 'Hide Filters' : 'Show Filters'}
               </button>
@@ -418,11 +418,11 @@ export default function FindDoctorPage() {
           </header>
 
           <section style={{ ...Glass.aiCard, borderRadius: '20px', padding: '16px', marginBottom: '14px', boxShadow: Sh.card }}>
-            <label htmlFor='doctor-global-search' style={{ display: 'block', marginBottom: '8px', fontSize: '11.5px', color: T.slate2, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            <label htmlFor='doctor-global-search' style={{ display: 'block', marginBottom: '8px', fontSize: "13px", color: T.slate2, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
               Global Search
             </label>
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: q ? '#348CEA' : T.slate2 }}>
+              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: q ? "var(--link)" : T.slate2 }}>
                 <Ico p={ICONS.search} size={16} sw={1.8} />
               </span>
               <input
@@ -439,19 +439,19 @@ export default function FindDoctorPage() {
                   if (e.key === 'Enter') applySearch(q)
                 }}
                 placeholder='Search by doctor name, specialty, condition or hospital...'
-                style={{ width: '100%', minHeight: '52px', borderRadius: '14px', border: `1px solid ${q ? 'rgba(32,181,223,0.45)' : 'rgba(4,53,77,0.12)'}`, background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', padding: '0 130px 0 44px', boxShadow: q ? '0 0 0 4px rgba(32,181,223,0.1)' : 'none', transition: 'all 0.16s ease' }}
+                style={{ width: '100%', minHeight: '52px', borderRadius: '14px', border: `1px solid ${q ? 'rgba(32,181,223,0.45)' : "var(--border)"}`, background: "var(--surface-glass)", color: T.navy, fontSize: '14px', padding: '0 130px 0 44px', boxShadow: q ? '0 0 0 4px rgba(32,181,223,0.1)' : 'none', transition: 'all 0.16s ease' }}
               />
               <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button type='button' aria-label='Voice search placeholder' style={{ width: '34px', height: '34px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.85)', color: T.slate, cursor: 'pointer' }}>
+                <button type='button' aria-label='Voice search placeholder' style={{ width: '34px', height: '34px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate, cursor: 'pointer' }}>
                   <Ico p={ICONS.activity} size={14} sw={1.8} />
                 </button>
-                <span style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: '11px', color: '#348CEA', fontWeight: 700, letterSpacing: '0.03em' }}>AI Search</span>
+                <span style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", color: "var(--link)", fontWeight: 700, letterSpacing: '0.03em' }}>AI Search</span>
               </div>
             </div>
 
             {searchFocused && (
-              <div style={{ marginTop: '10px', borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.9)', boxShadow: '0 10px 24px rgba(4,53,77,0.12)', padding: '10px' }}>
-                <p style={{ margin: '0 0 6px', fontSize: '11px', color: T.slate2, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent searches</p>
+              <div style={{ marginTop: '10px', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-glass)", boxShadow: '0 10px 24px rgba(4,53,77,0.12)', padding: '10px' }}>
+                <p style={{ margin: '0 0 6px', fontSize: "13px", color: T.slate2, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent searches</p>
                 <div style={{ display: 'grid', gap: '6px' }}>
                   {(searchSuggestions.length > 0 ? searchSuggestions : recentSearches).map((item) => (
                     <button
@@ -470,11 +470,11 @@ export default function FindDoctorPage() {
 
           <section style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <p style={{ margin: 0, fontSize: '12px', color: T.slate2, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Quick Specialties</p>
+              <p style={{ margin: 0, fontSize: "13px", color: T.slate2, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Quick Specialties</p>
               <button
                 type='button'
                 onClick={() => setShowAllSpecialties((prev) => !prev)}
-                style={{ border: 'none', background: 'transparent', color: '#348CEA', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ border: 'none', background: 'transparent', color: "var(--link)", fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}
               >
                 {showAllSpecialties ? 'Show Less' : 'View All'}
               </button>
@@ -491,13 +491,13 @@ export default function FindDoctorPage() {
                       setPage(1)
                     }}
                     style={{
-                      border: active ? '1px solid rgba(32,181,223,0.45)' : '1px solid rgba(4,53,77,0.12)',
-                      background: active ? 'rgba(32,181,223,0.16)' : 'rgba(255,255,255,0.8)',
-                      color: active ? T.blue : T.slate,
+                      border: active ? '1px solid rgba(32,181,223,0.45)' : "1px solid var(--border)",
+                      background: active ? 'rgba(32,181,223,0.16)' : "var(--surface-glass)",
+                      color: active ? T.link : T.slate,
                       borderRadius: '999px',
                       padding: '7px 12px',
                       cursor: 'pointer',
-                      fontSize: '12.5px',
+                      fontSize: "13px",
                       fontWeight: active ? 700 : 500,
                     }}
                   >
@@ -510,16 +510,16 @@ export default function FindDoctorPage() {
 
           <div className='fd-content'>
             <aside className={`fd-filter-panel ${showFiltersMobile ? 'fd-open' : ''}`}>
-              <section style={{ background: 'rgba(255,255,255,0.84)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '14px' }}>
+              <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Smart Filters</h2>
-                  <button type='button' onClick={resetFilters} style={{ border: 'none', background: 'transparent', color: '#348CEA', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Reset</button>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Smart Filters</h2>
+                  <button type='button' onClick={resetFilters} style={{ border: 'none', background: 'transparent', color: "var(--link)", fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>Reset</button>
                 </div>
 
                 <div style={{ display: 'grid', gap: '10px' }}>
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
+                  <label style={{ fontSize: "13px", color: T.slate2 }}>
                     Availability
-                    <select value={availability} onChange={(e) => { setAvailability(e.target.value as typeof availability); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={availability} onChange={(e) => { setAvailability(e.target.value as typeof availability); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
 	                      <option value='any'>Any</option>
 	                      <option value='today'>Available Today</option>
 	                      <option value='tomorrow'>Available Tomorrow</option>
@@ -527,9 +527,9 @@ export default function FindDoctorPage() {
                     </select>
                   </label>
 
-                  <label style={{ fontSize: '12px', color: T.slate2 }}>
+                  <label style={{ fontSize: "13px", color: T.slate2 }}>
                     Consultation Type
-                    <select value={consultationType} onChange={(e) => { setConsultationType(e.target.value as typeof consultationType); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                    <select value={consultationType} onChange={(e) => { setConsultationType(e.target.value as typeof consultationType); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                       <option value='any'>Any</option>
                       <option value='video'>Video Consultation</option>
                       <option value='physical'>Physical Visit</option>
@@ -543,10 +543,10 @@ export default function FindDoctorPage() {
                       width: '100%',
                       minHeight: '36px',
                       borderRadius: '9px',
-                      border: '1px solid rgba(4,53,77,0.13)',
-                      background: showAdvancedFilters ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.9)',
-                      color: showAdvancedFilters ? '#348CEA' : T.navy,
-                      fontSize: '12px',
+                      border: "1px solid var(--border)",
+                      background: showAdvancedFilters ? 'rgba(32,181,223,0.08)' : "var(--surface-glass)",
+                      color: showAdvancedFilters ? "var(--link)" : T.navy,
+                      fontSize: "13px",
                       fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
@@ -562,25 +562,25 @@ export default function FindDoctorPage() {
 
                   {showAdvancedFilters && (
                     <div style={{ display: 'grid', gap: '10px', marginTop: '8px', paddingTop: '8px', borderTop: `1px solid ${T.borderFaint}` }}>
-                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                      <label style={{ fontSize: "13px", color: T.slate2 }}>
                         Gender
-                        <select value={gender} onChange={(e) => { setGender(e.target.value as typeof gender); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                        <select value={gender} onChange={(e) => { setGender(e.target.value as typeof gender); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           <option value='any'>Any</option>
                           <option value='female'>Female</option>
                           <option value='male'>Male</option>
                         </select>
                       </label>
 
-                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                      <label style={{ fontSize: "13px", color: T.slate2 }}>
                         Language
-                        <select value={language} onChange={(e) => { setLanguage(e.target.value as typeof language); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                        <select value={language} onChange={(e) => { setLanguage(e.target.value as typeof language); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           {LANGUAGE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
                         </select>
                       </label>
 
-                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                      <label style={{ fontSize: "13px", color: T.slate2 }}>
                         Experience
-                        <select value={experience} onChange={(e) => { setExperience(e.target.value as typeof experience); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                        <select value={experience} onChange={(e) => { setExperience(e.target.value as typeof experience); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           <option value='any'>Any</option>
                           <option value='0-5'>0-5 years</option>
                           <option value='6-10'>6-10 years</option>
@@ -588,16 +588,16 @@ export default function FindDoctorPage() {
                         </select>
                       </label>
 
-                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                      <label style={{ fontSize: "13px", color: T.slate2 }}>
                         Insurance Accepted
-                        <select value={insurance} onChange={(e) => { setInsurance(e.target.value as typeof insurance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                        <select value={insurance} onChange={(e) => { setInsurance(e.target.value as typeof insurance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           {INSURANCE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
                         </select>
                       </label>
 
-                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                      <label style={{ fontSize: "13px", color: T.slate2 }}>
                         Rating
-                        <select value={rating} onChange={(e) => { setRating(e.target.value as typeof rating); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                        <select value={rating} onChange={(e) => { setRating(e.target.value as typeof rating); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           <option value='any'>Any</option>
                           <option value='4.0'>4.0+</option>
                           <option value='4.5'>4.5+</option>
@@ -605,9 +605,9 @@ export default function FindDoctorPage() {
                         </select>
                       </label>
 
-                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                      <label style={{ fontSize: "13px", color: T.slate2 }}>
                         Price Range
-                        <select value={price} onChange={(e) => { setPrice(e.target.value as typeof price); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                        <select value={price} onChange={(e) => { setPrice(e.target.value as typeof price); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           <option value='any'>Any</option>
                           <option value='under-130'>Under $130</option>
                           <option value='130-180'>$130 - $180</option>
@@ -615,9 +615,9 @@ export default function FindDoctorPage() {
                         </select>
                       </label>
 
-                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                      <label style={{ fontSize: "13px", color: T.slate2 }}>
                         Distance
-                        <select value={distance} onChange={(e) => { setDistance(e.target.value as typeof distance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                        <select value={distance} onChange={(e) => { setDistance(e.target.value as typeof distance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           <option value='any'>Any</option>
                           <option value='under-5'>Under 5 km</option>
                           <option value='under-10'>Under 10 km</option>
@@ -625,9 +625,9 @@ export default function FindDoctorPage() {
                         </select>
                       </label>
 
-                      <label style={{ fontSize: '12px', color: T.slate2 }}>
+                      <label style={{ fontSize: "13px", color: T.slate2 }}>
                         Sort By
-                        <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.13)', background: '#fff', color: T.navy }}>
+                        <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           <option value='highest-rated'>Highest Rated</option>
                           <option value='nearest'>Nearest</option>
                           <option value='most-experienced'>Most Experienced</option>
@@ -644,15 +644,15 @@ export default function FindDoctorPage() {
               {!recommendedLoading && recommendedDoctors.length > 0 && (
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>
-                      <span style={{ color: '#348CEA' }}>Recommended for You</span>
+                    <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>
+                      <span style={{ color: "var(--link)" }}>Recommended for You</span>
                     </h2>
-                    <span style={{ fontSize: '12px', color: T.slate2 }}>Based on your preferences</span>
+                    <span style={{ fontSize: "13px", color: T.slate2 }}>Based on your preferences</span>
                   </div>
                   <div className='fd-results' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
                     {recommendedDoctors.slice(0, 3).map((physician) => (
                       <div key={physician.id} style={{ position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: '-8px', left: '-8px', background: 'linear-gradient(135deg, #348CEA 0%, #20B5DF 100%)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px', boxShadow: '0 2px 8px rgba(52,140,234,0.3)' }}>
+                        <div style={{ position: 'absolute', top: '-8px', left: '-8px', background: 'linear-gradient(135deg, var(--primary-end) 0%, #20B5DF 100%)', color: '#fff', fontSize: "13px", fontWeight: 700, padding: '4px 10px', borderRadius: '999px', boxShadow: '0 2px 8px rgba(52,140,234,0.3)' }}>
                           Recommended
                         </div>
                         <DoctorCard
@@ -669,11 +669,11 @@ export default function FindDoctorPage() {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Featured Physicians</h2>
-                <span style={{ fontSize: '12px', color: T.slate2 }}>{totalDoctors} doctors</span>
+                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Featured Physicians</h2>
+                <span style={{ fontSize: "13px", color: T.slate2 }}>{totalDoctors} doctors</span>
               </div>
               {loadError && (
-                <div style={{ marginBottom: '10px', borderRadius: '12px', border: '1px solid rgba(217,119,6,0.22)', background: 'rgba(255,251,235,0.86)', color: T.slate, padding: '10px 12px', fontSize: '12.5px' }}>
+                <div style={{ marginBottom: '10px', borderRadius: '12px', border: '1px solid rgba(217,119,6,0.22)', background: 'rgba(255,251,235,0.86)', color: T.slate, padding: '10px 12px', fontSize: "13px" }}>
                   {loadError}
                 </div>
               )}
@@ -681,14 +681,14 @@ export default function FindDoctorPage() {
               <div className='fd-results'>
                 {loading ? (
                   [1, 2, 3].map((k) => (
-                    <div key={k} style={{ borderRadius: '18px', border: '1px solid rgba(4,53,77,0.09)', background: 'linear-gradient(90deg, rgba(4,53,77,0.06) 0%, rgba(32,181,223,0.12) 50%, rgba(4,53,77,0.06) 100%)', backgroundSize: '220% 100%', animation: 'fd-shimmer 1.2s infinite linear', minHeight: '208px' }} />
+                    <div key={k} style={{ borderRadius: '18px', border: "1px solid var(--border)", background: 'linear-gradient(90deg, rgba(4,53,77,0.06) 0%, rgba(32,181,223,0.12) 50%, rgba(4,53,77,0.06) 100%)', backgroundSize: '220% 100%', animation: 'fd-shimmer 1.2s infinite linear', minHeight: '208px' }} />
                   ))
                 ) : filteredPhysicians.length === 0 ? (
-                  <article style={{ borderRadius: '20px', border: '1px solid rgba(4,53,77,0.11)', background: 'rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '26px', textAlign: 'center' }}>
-                    <div style={{ width: '68px', height: '68px', borderRadius: '18px', margin: '0 auto 12px', background: 'rgba(165,224,218,0.35)', border: '1px solid rgba(4,53,77,0.08)', color: '#348CEA', display: 'grid', placeItems: 'center' }}>
+                  <article style={{ borderRadius: '20px', border: "1px solid var(--border)", background: "var(--surface-glass)", boxShadow: Sh.card, padding: '26px', textAlign: 'center' }}>
+                    <div style={{ width: '68px', height: '68px', borderRadius: '18px', margin: '0 auto 12px', background: 'rgba(165,224,218,0.35)', border: "1px solid var(--border)", color: "var(--link)", display: 'grid', placeItems: 'center' }}>
                       <Ico p={ICONS.search} size={30} sw={1.6} />
                     </div>
-                    <h3 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '23px', letterSpacing: '-0.03em', color: T.navy }}>No physicians found.</h3>
+                    <h3 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '23px', letterSpacing: '-0.03em', color: T.navy }}>No physicians found.</h3>
                     <p style={{ margin: '0 0 14px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>Try adjusting your filters or searching another specialty.</p>
                     <HoverBtn
                       base={{
@@ -711,14 +711,14 @@ export default function FindDoctorPage() {
                   </article>
                 ) : (
                   filteredPhysicians.map((doctor) => (
-                    <article key={doctor.id} style={{ background: 'rgba(255,255,255,0.88)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.card, padding: '14px' }}>
+                    <article key={doctor.id} style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '14px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
-	                        <span style={{ ...Glass.chip, color: doctor.verification === 'Pending' ? T.amber : T.navy, fontSize: '11px', fontWeight: 700, padding: '4px 9px', borderRadius: '999px' }}>{doctor.verification === 'Pending' ? 'Pending Verification' : 'Verified Physician'}</span>
+	                        <span style={{ ...Glass.chip, color: doctor.verification === 'Pending' ? T.amber : T.navy, fontSize: "13px", fontWeight: 700, padding: '4px 9px', borderRadius: '999px' }}>{doctor.verification === 'Pending' ? 'Pending Verification' : 'Verified Physician'}</span>
                         <button
                           type='button'
                           onClick={() => toggleFavorite(doctor.id)}
                           aria-label={`Toggle favorite for ${doctor.name}`}
-                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.1)', background: favorites[doctor.id] ? 'rgba(32,181,223,0.16)' : 'rgba(255,255,255,0.8)', color: favorites[doctor.id] ? '#348CEA' : T.slate2, cursor: 'pointer', transition: 'all 0.16s ease' }}
+                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: "1px solid var(--border)", background: favorites[doctor.id] ? 'rgba(32,181,223,0.16)' : "var(--surface-glass)", color: favorites[doctor.id] ? "var(--link)" : T.slate2, cursor: 'pointer', transition: 'all 0.16s ease' }}
                         >
                           <Ico p={ICONS.heart} size={15} sw={1.8} />
                         </button>
@@ -733,25 +733,25 @@ export default function FindDoctorPage() {
                       />
 
                       <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
-                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {doctor.hospital}</p>
-                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {doctor.experienceYears} years</p>
-                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatDoctorRating(doctor)}</p>
-                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {doctor.nextAvailable}</p>
-                        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Distance:</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : 'Not available'}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {doctor.hospital}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {doctor.experienceYears} years</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatDoctorRating(doctor)}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {doctor.nextAvailable}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Distance:</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : 'Not available'}</p>
                         {doctor.services && doctor.services.length > 0 && (
-                          <p style={{ margin: 0, fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Fee:</strong> ${Math.min(...doctor.services.map(s => s.price))} - ${Math.max(...doctor.services.map(s => s.price))}</p>
+                          <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Fee:</strong> ${Math.min(...doctor.services.map(s => s.price))} - ${Math.max(...doctor.services.map(s => s.price))}</p>
                         )}
                       </div>
 
-                      <p style={{ margin: '8px 0 0', fontSize: '12px', color: T.slate2 }}>
+                      <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate2 }}>
                         Languages: {doctor.languages.join(', ')}
                       </p>
-                      <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate2 }}>
+                      <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate2 }}>
                         Insurance: {doctor.insurance.join(', ')}
                       </p>
 
                       <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <Link href={buildProfileHref(doctor, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: '1px solid rgba(4,53,77,0.14)', background: 'rgba(255,255,255,0.88)', color: T.navy, fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>
+                        <Link href={buildProfileHref(doctor, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>
                           View Profile
                         </Link>
                         <Link href={buildBookingHref(doctor, { consultationType, insurance })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', display: 'inline-flex', alignItems: 'center' }}>
@@ -763,14 +763,14 @@ export default function FindDoctorPage() {
                 )}
               </div>
 
-              <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,255,255,0.84)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2 }}>Page {page} · Showing {filteredPhysicians.length} of {totalDoctors}</p>
+              <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', borderRadius: '14px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Page {page} · Showing {filteredPhysicians.length} of {totalDoctors}</p>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     type='button'
                     disabled={!hasPreviousPage || loading}
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
-                    style={{ minHeight: '36px', padding: '0 12px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.88)', color: T.navy, fontSize: '12px', fontWeight: 700, cursor: hasPreviousPage && !loading ? 'pointer' : 'not-allowed', opacity: hasPreviousPage && !loading ? 1 : 0.5 }}
+                    style={{ minHeight: '36px', padding: '0 12px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: hasPreviousPage && !loading ? 'pointer' : 'not-allowed', opacity: hasPreviousPage && !loading ? 1 : 0.5 }}
                   >
                     Previous
                   </button>
@@ -778,7 +778,7 @@ export default function FindDoctorPage() {
                     type='button'
                     disabled={!hasNextPage || loading}
                     onClick={() => setPage((current) => current + 1)}
-                    style={{ minHeight: '36px', padding: '0 12px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.88)', color: T.navy, fontSize: '12px', fontWeight: 700, cursor: hasNextPage && !loading ? 'pointer' : 'not-allowed', opacity: hasNextPage && !loading ? 1 : 0.5 }}
+                    style={{ minHeight: '36px', padding: '0 12px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: hasNextPage && !loading ? 'pointer' : 'not-allowed', opacity: hasNextPage && !loading ? 1 : 0.5 }}
                   >
                     Next
                   </button>
@@ -787,8 +787,8 @@ export default function FindDoctorPage() {
 
               <div style={{ height: '14px' }} />
 
-              <section style={{ background: 'rgba(255,255,255,0.84)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.card, padding: '16px' }}>
-                <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Trust Signals</h3>
+              <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+                <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Trust Signals</h3>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   <TrustCard label='Verified Physicians' sub='Every doctor is identity-verified.' icon={ICONS.check} accent='#20B5DF' />
                   <TrustCard label='Licensed Professionals' sub='Credentials are clinically reviewed.' icon={ICONS.shield} accent='#348CEA' />
@@ -803,19 +803,19 @@ export default function FindDoctorPage() {
 
         <aside className='fd-right'>
           <div style={{ position: 'sticky', top: '18px', display: 'grid', gap: '14px' }}>
-            <section style={{ background: 'rgba(255,255,255,0.84)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Search Insights</h3>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Search Insights</h3>
               <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>Use specialty plus condition to improve match quality. Example: Cardiology and Hypertension.</p>
             </section>
 
-            <section style={{ background: 'rgba(255,255,255,0.84)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Saved Doctors</h3>
+            <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Saved Doctors</h3>
               <div style={{ marginTop: '10px', display: 'grid', gap: '8px' }}>
                 {Object.entries(favorites).filter(([, val]) => val).length === 0 ? (
                   <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Tap the heart icon on any doctor card to save favorites.</p>
                 ) : (
                   physicians.filter((p) => favorites[p.id]).map((p) => (
-                    <Link key={p.id} href={buildProfileHref(p, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ textDecoration: 'none', border: '1px solid rgba(4,53,77,0.08)', borderRadius: '11px', padding: '9px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: T.navy, fontSize: '12.5px', fontWeight: 600 }}>
+                    <Link key={p.id} href={buildProfileHref(p, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ textDecoration: 'none', border: "1px solid var(--border)", borderRadius: '11px', padding: '9px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: T.navy, fontSize: "13px", fontWeight: 600 }}>
                       {p.name}
                       <Ico p={ICONS.arrowSm} size={13} sw={1.8} color={T.slate2} />
                     </Link>

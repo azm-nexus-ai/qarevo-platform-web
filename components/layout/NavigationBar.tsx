@@ -1,5 +1,7 @@
 'use client'
 
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -139,7 +141,7 @@ export default function NavigationBar() {
 
   const navHeight = scrolled ? '52px' : '60px'
   const navBg = scrolled
-    ? { ...Glass.nav, background: 'rgba(247,250,252,0.92)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94), 0 1px 0 rgba(4,53,77,0.10), 0 8px 30px rgba(4,53,77,0.10)' }
+    ? { ...Glass.nav, background: "var(--surface-subtle)", boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94), 0 1px 0 rgba(4,53,77,0.10), 0 8px 30px rgba(4,53,77,0.10)' }
     : Glass.nav
 
   return (
@@ -206,7 +208,7 @@ export default function NavigationBar() {
                           borderRadius: '8px',
                           fontSize: '13.5px',
                           fontWeight: isActive ? 600 : 400,
-                          color: isActive ? T.blue : hoverNav === label ? '#348CEA' : T.slate,
+                          color: isActive ? T.link : hoverNav === label ? "var(--link)" : T.slate,
                           letterSpacing: '-0.01em',
                           transition: 'color 0.12s, background 0.12s',
                           whiteSpace: 'nowrap',
@@ -243,7 +245,7 @@ export default function NavigationBar() {
                         onClick={() => setShowLogoutModal(true)}
                         base={{
                           background: 'none',
-                          border: '1px solid rgba(4,53,77,0.12)',
+                          border: "1px solid var(--border)",
                           cursor: 'pointer',
                           padding: '8px 18px',
                           borderRadius: '9px',
@@ -253,7 +255,7 @@ export default function NavigationBar() {
                           letterSpacing: '-0.01em',
                         }}
                         on={{
-                          background: 'rgba(4,53,77,0.04)',
+                          background: "var(--surface-hover)",
                           transform: 'translateY(-1px)',
                         }}
                       >
@@ -347,7 +349,7 @@ export default function NavigationBar() {
                   onClick={() => setMobileOpen(prev => !prev)}
                   style={{
                     background: 'none',
-                    border: '1px solid rgba(4,53,77,0.12)',
+                    border: "1px solid var(--border)",
                     borderRadius: '8px',
                     cursor: 'pointer',
                     padding: '8px 10px',
@@ -363,7 +365,7 @@ export default function NavigationBar() {
                       display: 'block',
                       width: '18px',
                       height: '2px',
-                      background: T.navy,
+                      background: T.brandNavy,
                       borderRadius: '2px',
                       transition: 'transform 0.2s ease, opacity 0.2s ease',
                       transform: mobileOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none',
@@ -374,7 +376,7 @@ export default function NavigationBar() {
                       display: 'block',
                       width: '18px',
                       height: '2px',
-                      background: T.navy,
+                      background: T.brandNavy,
                       borderRadius: '2px',
                       transition: 'opacity 0.2s ease',
                       opacity: mobileOpen ? 0 : 1,
@@ -385,7 +387,7 @@ export default function NavigationBar() {
                       display: 'block',
                       width: '18px',
                       height: '2px',
-                      background: T.navy,
+                      background: T.brandNavy,
                       borderRadius: '2px',
                       transition: 'transform 0.2s ease, opacity 0.2s ease',
                       transform: mobileOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none',
@@ -397,6 +399,7 @@ export default function NavigationBar() {
           )}
         </div>
       </nav>
+      <div className="public-appearance"><ThemeToggle /></div>
 
       {/* Mobile drawer overlay */}
       <div
@@ -406,7 +409,7 @@ export default function NavigationBar() {
           position: 'fixed',
           inset: 0,
           zIndex: 48,
-          background: 'rgba(4,53,77,0.18)',
+          background: "var(--surface-hover)",
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
           opacity: mobileOpen ? 1 : 0,
@@ -431,10 +434,10 @@ export default function NavigationBar() {
           width: '280px',
           maxWidth: '85vw',
           zIndex: 49,
-          background: 'rgba(247,250,252,0.97)',
+          background: "var(--surface-subtle)",
           backdropFilter: 'blur(24px) saturate(180%)',
           WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-          borderLeft: '1px solid rgba(255,255,255,0.76)',
+          borderLeft: "1px solid var(--border)",
           boxShadow: '-8px 0 40px rgba(4,53,77,0.15)',
           transform: mobileOpen ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -452,7 +455,7 @@ export default function NavigationBar() {
             onClick={() => { setMobileOpen(false); hamburgerRef.current?.focus() }}
             style={{
               background: 'none',
-              border: '1px solid rgba(4,53,77,0.12)',
+              border: "1px solid var(--border)",
               borderRadius: '8px',
               cursor: 'pointer',
               padding: '6px 8px',
@@ -488,7 +491,7 @@ export default function NavigationBar() {
                   borderRadius: '10px',
                   fontSize: '15px',
                   fontWeight: isActive ? 600 : 400,
-                  color: isActive ? T.blue : T.slate,
+                  color: isActive ? T.link : T.slate,
                   letterSpacing: '-0.01em',
                   marginBottom: '4px',
                   transition: 'background 0.12s, color 0.12s',
@@ -501,7 +504,7 @@ export default function NavigationBar() {
         </nav>
 
         {/* Drawer auth buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(4,53,77,0.08)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '24px', paddingTop: '24px', borderTop: "1px solid var(--border)" }}>
           {isAuthenticated ? (
             <>
               <Link
@@ -512,7 +515,7 @@ export default function NavigationBar() {
                   textAlign: 'center',
                   padding: '12px 20px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(4,53,77,0.12)',
+                  border: "1px solid var(--border)",
                   fontSize: '14px',
                   fontWeight: 500,
                   color: T.slate,
@@ -534,7 +537,7 @@ export default function NavigationBar() {
                   textAlign: 'center',
                   padding: '12px 20px',
                   borderRadius: '10px',
-                  background: 'rgba(4,53,77,0.04)',
+                  background: "var(--surface-hover)",
                   fontSize: '14px',
                   fontWeight: 600,
                   color: T.slate,
@@ -556,7 +559,7 @@ export default function NavigationBar() {
                   textAlign: 'center',
                   padding: '12px 20px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(4,53,77,0.12)',
+                  border: "1px solid var(--border)",
                   fontSize: '14px',
                   fontWeight: 500,
                   color: T.slate,
@@ -574,7 +577,7 @@ export default function NavigationBar() {
                   textAlign: 'center',
                   padding: '12px 20px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(4,53,77,0.12)',
+                  border: "1px solid var(--border)",
                   fontSize: '14px',
                   fontWeight: 500,
                   color: T.slate,

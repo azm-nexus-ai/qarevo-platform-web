@@ -16,7 +16,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 function WellnessShield() {
@@ -173,7 +173,7 @@ function LeftPanel() {
           </div>
           <span
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontWeight: 800,
               fontSize: '15.5px',
               color: '#fff',
@@ -190,7 +190,7 @@ function LeftPanel() {
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontSize: '24px',
               fontWeight: 800,
               color: '#fff',
@@ -202,7 +202,7 @@ function LeftPanel() {
             Recover access safely.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your care remains protected.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Account recovery is encrypted end-to-end and designed to be quick, calm, and trustworthy.
           </p>
         </div>
@@ -244,7 +244,7 @@ function LeftPanel() {
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>
                 {label}
               </div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -280,7 +280,7 @@ function AlertBanner({ kind }: { kind: Exclude<ErrorKind, 'empty' | 'invalid' | 
       style={{
         padding: '12px 16px',
         borderRadius: '11px',
-        background: '#FFF5F5',
+        background: "var(--danger-soft)",
         border: '1px solid rgba(220,38,38,0.24)',
         display: 'flex',
         gap: '10px',
@@ -291,7 +291,7 @@ function AlertBanner({ kind }: { kind: Exclude<ErrorKind, 'empty' | 'invalid' | 
       <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} style={{ marginTop: '1px', flexShrink: 0 }} />
       <div>
         <div style={{ fontSize: '13px', fontWeight: 700, color: T.red, lineHeight: 1.4, letterSpacing: '-0.005em' }}>{content.title}</div>
-        <div style={{ fontSize: '12.5px', color: '#B93434', lineHeight: 1.5, letterSpacing: '-0.005em' }}>{content.body}</div>
+        <div style={{ fontSize: "13px", color: '#B93434', lineHeight: 1.5, letterSpacing: '-0.005em' }}>{content.body}</div>
       </div>
     </div>
   )
@@ -343,7 +343,7 @@ function EmailField({
             left: '13px',
             top: '50%',
             transform: 'translateY(-50%)',
-            color: focused ? T.blue : T.slate2,
+            color: focused ? T.link : T.slate2,
             display: 'flex',
             transition: 'color 0.15s',
             pointerEvents: 'none',
@@ -383,7 +383,7 @@ function EmailField({
           {success ? <Ico p={ICONS.check} size={14} sw={2.5} color={T.green} /> : error ? <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} /> : null}
         </span>
       </div>
-      {error ? <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{error}</p> : null}
+      {error ? <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p> : null}
     </div>
   )
 }
@@ -427,7 +427,7 @@ export default function ForgotPasswordPage() {
     } catch (error) {
       setLoading(false)
       const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
-      
+
       if (error instanceof ApiError && error.status === 429) {
         setErrorKind('rate')
       } else if (detail.includes('network') || detail.includes('fetch')) {
@@ -456,7 +456,7 @@ export default function ForgotPasswordPage() {
     } catch (error) {
       setLoading(false)
       const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
-      
+
       if (error instanceof ApiError && error.status === 429) {
         setErrorKind('rate')
       } else if (detail.includes('network') || detail.includes('fetch')) {
@@ -477,7 +477,7 @@ export default function ForgotPasswordPage() {
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
       <style>{`
         * { box-sizing: border-box; }
-        input::placeholder { color: rgba(4,53,77,0.3); }
+        input::placeholder { color: var(--text-muted); }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(8px); }
@@ -513,11 +513,11 @@ export default function ForgotPasswordPage() {
           <section
             aria-live='polite'
             style={{
-              background: 'rgba(255,255,255,0.88)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(28px) saturate(200%)',
               WebkitBackdropFilter: 'blur(28px) saturate(200%)',
               borderRadius: '22px',
-              border: '1px solid rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
               padding: '40px 40px 36px',
               animation: 'fadeUp 0.3s ease',
@@ -529,7 +529,7 @@ export default function ForgotPasswordPage() {
                   <div>
                     <h1
                       style={{
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                        fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                         fontSize: '24px',
                         fontWeight: 800,
                         color: T.navy,
@@ -550,7 +550,7 @@ export default function ForgotPasswordPage() {
                       width: '44px',
                       height: '44px',
                       borderRadius: '13px',
-                      background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                      background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                       boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)',
                       display: 'flex',
                       alignItems: 'center',
@@ -589,7 +589,7 @@ export default function ForgotPasswordPage() {
                         background:
                           loading || !emailValue
                             ? 'rgba(32,181,223,0.5)'
-                            : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                            : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                         color: '#fff',
                         fontFamily: 'inherit',
                         fontSize: '15px',
@@ -636,7 +636,7 @@ export default function ForgotPasswordPage() {
                       </Link>
                       <p style={{ margin: 0, fontSize: '13.5px', color: T.slate2, letterSpacing: '-0.01em' }}>
                         Need a new account?{' '}
-                        <Link href='/auth/sign-up' style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>
+                        <Link href='/auth/sign-up' style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>
                           Create New Account
                         </Link>
                       </p>
@@ -666,7 +666,7 @@ export default function ForgotPasswordPage() {
 
                   <h1
                     style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                       fontSize: '24px',
                       fontWeight: 800,
                       color: T.navy,
@@ -680,7 +680,7 @@ export default function ForgotPasswordPage() {
                   <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
                     If an eligible account exists, we will attempt to send reset instructions. Check your inbox and spam folder; use the link in that email to continue.
                   </p>
-                  <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2 }}>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>
                     Requested for <span style={{ fontWeight: 700, color: T.navy }}>{sentTo}</span>
                   </p>
                 </div>
@@ -695,7 +695,7 @@ export default function ForgotPasswordPage() {
                       padding: '13px 18px',
                       borderRadius: '12px',
                       border: 'none',
-                      background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                      background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                       color: '#fff',
                       textDecoration: 'none',
                       display: 'flex',
@@ -722,8 +722,8 @@ export default function ForgotPasswordPage() {
                       width: '100%',
                       padding: '12px 18px',
                       borderRadius: '12px',
-                      border: `1.5px solid ${loading ? 'rgba(4,53,77,0.08)' : 'rgba(4,53,77,0.12)'}`,
-                      background: loading ? 'rgba(4,53,77,0.02)' : 'rgba(255,255,255,0.78)',
+                      border: `1.5px solid ${loading ? "var(--border)" : "var(--border)"}`,
+                      background: loading ? "var(--surface-hover)" : "var(--surface-glass)",
                       backdropFilter: 'blur(12px)',
                       WebkitBackdropFilter: 'blur(12px)',
                       cursor: loading ? 'not-allowed' : 'pointer',
@@ -745,7 +745,7 @@ export default function ForgotPasswordPage() {
                           style={{
                             width: '14px',
                             height: '14px',
-                            border: '2px solid rgba(4,53,77,0.18)',
+                            border: "2px solid var(--border)",
                             borderTopColor: T.navy,
                             borderRadius: '50%',
                             animation: 'spin 0.7s linear infinite',
@@ -770,8 +770,8 @@ export default function ForgotPasswordPage() {
                       width: '100%',
                       padding: '11px 16px',
                       borderRadius: '11px',
-                      border: '1px solid rgba(4,53,77,0.08)',
-                      background: 'rgba(4,53,77,0.02)',
+                      border: "1px solid var(--border)",
+                      background: "var(--surface-hover)",
                       color: T.slate,
                       fontFamily: 'inherit',
                       fontSize: '13.5px',
@@ -787,7 +787,7 @@ export default function ForgotPasswordPage() {
                     href='/auth/sign-in'
                     style={{
                       textAlign: 'center',
-                      color: T.blue,
+                      color: T.link,
                       fontSize: '13.5px',
                       fontWeight: 700,
                       textDecoration: 'none',
@@ -801,7 +801,7 @@ export default function ForgotPasswordPage() {
               </div>
             )}
 
-            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
                 {[
                   { icon: ICONS.lock, label: 'Secure Recovery' },
@@ -810,20 +810,20 @@ export default function ForgotPasswordPage() {
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
-                    <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          <p style={{ textAlign: 'center', fontSize: '12px', color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
+          <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
             By continuing you agree to our{' '}
-            <Link href='/terms' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
+            <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
               Terms
             </Link>{' '}
             and{' '}
-            <Link href='/privacy' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
+            <Link href='/privacy' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
               Privacy Policy
             </Link>
           </p>

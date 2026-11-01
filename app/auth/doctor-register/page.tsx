@@ -4,6 +4,7 @@ import { useEffect, useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { focusValidation } from '@/components/ui/ValidationFeedback'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -14,7 +15,7 @@ const PAGE_BG = [
   'radial-gradient(ellipse 70% 55% at 15% 10%,  rgba(32,181,223,0.08)  0%, transparent 55%)',
   'radial-gradient(ellipse 55% 50% at 88% 20%,  rgba(32,181,223,0.06)  0%, transparent 52%)',
   'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(52,140,234,0.06) 0%, transparent 58%)',
-  '#EDF2FA',
+  'var(--canvas)',
 ].join(', ')
 
 // Password strength checker
@@ -34,8 +35,8 @@ function getStrength(pw: string) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const USERNAME_RE = /^[a-z0-9._-]+$/
-const COUNTRY_CODE_RE = /^\+\d{1,4}$/
-const PHONE_RE = /^\d+$/
+const COUNTRY_CODE_RE = /^\+[1-9]\d{0,2}$/
+const PHONE_RE = /^\d{4,14}$/
 
 function getFriendlyDoctorRegisterError(error: unknown) {
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
@@ -119,19 +120,22 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, hint
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-          {label}
+          {label}{!optional && ' (Required)'}
         </label>
-        {optional && <span style={{ fontSize: '11.5px', color: T.slate2, fontWeight: 400 }}>Optional</span>}
+        {optional && <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 400 }}>Optional</span>}
       </div>
       <div style={{ position: 'relative' }}>
         {icon && (
-          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.blue : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
+          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.link : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
             <Ico p={icon} size={14} sw={1.75} />
           </span>
         )}
         <input
           id={id}
           type={type}
+          required={!optional}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
           value={value}
           placeholder={placeholder}
           autoComplete={autoComplete}
@@ -164,8 +168,8 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, hint
           </span>
         )}
       </div>
-      {error && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{error}</p>}
-      {hint && !error && <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2, lineHeight: 1.4 }}>{hint}</p>}
+      {error && <p id={`${id}-error`} className="field-error" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
+      {hint && !error && <p id={`${id}-hint`} style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1.4 }}>{hint}</p>}
     </div>
   )
 }
@@ -185,8 +189,8 @@ function Checkbox({ checked, onChange, children }: { checked: boolean; onChange:
           height: '17px',
           borderRadius: '5px',
           flexShrink: 0,
-          border: `1.5px solid ${checked ? T.blue : 'rgba(4,53,77,0.18)'}`,
-          background: checked ? T.blue : '#fff',
+          border: `1.5px solid ${checked ? T.blue : "var(--border)"}`,
+          background: checked ? T.blue : "var(--surface)",
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -205,7 +209,7 @@ function Checkbox({ checked, onChange, children }: { checked: boolean; onChange:
 // Main page
 export default function DoctorRegisterPage() {
   const router = useRouter()
-  
+
   const [firstName, setFirstName] = useState('')
   const [middleName, setMiddleName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -225,9 +229,9 @@ export default function DoctorRegisterPage() {
   const [experienceYears, setExperienceYears] = useState('')
   const [licenseNumber, setLicenseNumber] = useState('')
   const [isIndependent, setIsIndependent] = useState(false)
-  
+
   const [consentAccepted, setConsentAccepted] = useState(false)
-  
+
   const [touched, setTouched] = useState({
     firstName: false,
     lastName: false,
@@ -240,8 +244,9 @@ export default function DoctorRegisterPage() {
     gender: false,
     licenseNumber: false,
   })
-  
+
   const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [authError, setAuthError] = useState('')
 
   const normalizedUsername = username.trim().toLowerCase()
@@ -253,10 +258,12 @@ export default function DoctorRegisterPage() {
     ? 'This username is already taken'
     : ''
   const emailErr = touched.email && !EMAIL_RE.test(email) ? 'Enter a valid email address' : ''
-  const passErr = touched.password && password.length < 8 ? 'Password must be at least 8 characters' : ''
+  const passErr = touched.password && (password.length < 8 || password.length > 128 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^a-zA-Z0-9\s]/.test(password)) ? 'Use 8–128 characters with uppercase and lowercase letters, a number and a special character.' : ''
   const countryCodeErr = touched.countryCode && !COUNTRY_CODE_RE.test(countryCode.trim()) ? 'Use a valid country code, like +49' : ''
-  const phoneErr = touched.phone && !PHONE_RE.test(phone.trim()) ? 'Phone number is required and must contain digits only' : ''
-  const dateOfBirthErr = touched.dateOfBirth && !dateOfBirth ? 'Date of birth is required' : ''
+  const phoneErr = touched.phone && !PHONE_RE.test(phone.trim()) ? 'Enter 4–14 digits without spaces or the country code.' : ''
+  const dateOfBirthErr = touched.dateOfBirth && (!dateOfBirth || dateOfBirth >= new Date().toISOString().slice(0, 10)) ? 'Enter a valid date of birth before today.' : ''
+  const experienceErr = submitted && experienceYears && (!/^\d{1,2}$/.test(experienceYears) || Number(experienceYears) > 80) ? 'Enter a whole number from 0 to 80 years.' : ''
+  const specialtyErr = submitted && isOtherSpecialty && customSpecialty.trim().length < 2 ? 'Specify your specialty using at least 2 characters.' : ''
   const genderErr = touched.gender && !gender.trim() ? 'Gender is required' : ''
   const passStrength = getStrength(password)
 
@@ -286,6 +293,8 @@ export default function DoctorRegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitted(true)
+    setAuthError('')
     setTouched({
       firstName: true,
       lastName: true,
@@ -298,21 +307,25 @@ export default function DoctorRegisterPage() {
       gender: true,
       licenseNumber: false,
     })
-    
+
     if (
       !EMAIL_RE.test(email) ||
-      password.length < 8 ||
-      !firstName ||
-      !lastName ||
+      password.length < 8 || password.length > 128 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^a-zA-Z0-9\s]/.test(password) ||
+      firstName.trim().length < 1 ||
+      lastName.trim().length < 1 ||
+      (experienceYears && (!/^\d{1,2}$/.test(experienceYears) || Number(experienceYears) > 80)) ||
+      (isOtherSpecialty && customSpecialty.trim().length < 2) ||
       !COUNTRY_CODE_RE.test(countryCode.trim()) ||
       !PHONE_RE.test(phone.trim()) ||
-      !dateOfBirth ||
+      !dateOfBirth || dateOfBirth >= new Date().toISOString().slice(0, 10) ||
       !gender.trim() ||
       (!!normalizedUsername && (!USERNAME_RE.test(normalizedUsername) || normalizedUsername.length < 3 || usernameAvailable === false))
     ) {
+      setAuthError('Please correct the highlighted fields before continuing.')
+      focusValidation(e.currentTarget)
       return
     }
-    
+
     if (!consentAccepted) {
       setAuthError('Please acknowledge the development test conditions')
       return
@@ -345,7 +358,7 @@ export default function DoctorRegisterPage() {
       }
 
       await registerDoctor(registerData)
-      
+
       // Redirect to doctor-specific email verification page with phone details
       router.push(`/auth/doctor-verify-email?email=${encodeURIComponent(email)}&country_code=${countryCode}&phone=${phone || ''}`)
     } catch (error) {
@@ -369,7 +382,7 @@ export default function DoctorRegisterPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`* { box-sizing: border-box; } input::placeholder { color: rgba(4,53,77,0.3); } body { margin: 0; }`}</style>
+      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } body { margin: 0; }`}</style>
 
       {/* Left panel - branding */}
       <div style={{
@@ -386,7 +399,7 @@ export default function DoctorRegisterPage() {
         overflow: 'hidden',
       }}>
         <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1.2px)', backgroundSize: '22px 22px', pointerEvents: 'none' }} />
-        
+
         <div style={{ position: 'relative', zIndex: 1 }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label='Qarevo Health home'>
             <Image
@@ -402,11 +415,11 @@ export default function DoctorRegisterPage() {
         </div>
 
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
+          <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
             Join Qarevo as<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>a Physician</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Create your physician account and start providing virtual consultations with clinical intelligence support.
           </p>
         </div>
@@ -414,7 +427,7 @@ export default function DoctorRegisterPage() {
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {['Development', 'Synthetic data', 'Test accounts'].map(b => (
-              <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.48)', letterSpacing: '0.04em' }}>{b}</span>
+              <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
             ))}
           </div>
         </div>
@@ -431,39 +444,39 @@ export default function DoctorRegisterPage() {
 
           {/* Form card */}
           <div style={{
-            background: 'rgba(255,255,255,0.88)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(28px) saturate(200%)',
             WebkitBackdropFilter: 'blur(28px) saturate(200%)',
             borderRadius: '22px',
-            border: '1px solid rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
             padding: '40px 40px 36px',
           }}>
             {/* Header */}
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
-                <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
+                <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
                   Physician Registration
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
                   Create a test clinician account to explore the development platform
                 </p>
               </div>
-              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.steth} size={20} sw={1.25} color="#fff" />
               </div>
             </div>
 
             {/* Error banner */}
             {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: '#FFF5F5', border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={16} sw={1.75} color={T.red} />
                 <span style={{ fontSize: '13px', color: '#991B1B', lineHeight: 1.4 }}>{authError}</span>
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Name fields */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field
@@ -471,7 +484,7 @@ export default function DoctorRegisterPage() {
                   placeholder="John"
                   value={firstName}
                   onChange={setFirstName}
-                  error={touched.firstName && !firstName ? 'First name is required' : ''}
+                  error={touched.firstName && firstName.trim().length < 1 ? 'First name is required.' : ''}
                   onBlur={() => setTouched({ ...touched, firstName: true })}
                 />
                 <Field
@@ -479,7 +492,7 @@ export default function DoctorRegisterPage() {
                   placeholder="Doe"
                   value={lastName}
                   onChange={setLastName}
-                  error={touched.lastName && !lastName ? 'Last name is required' : ''}
+                  error={touched.lastName && lastName.trim().length < 1 ? 'Last name is required.' : ''}
                   onBlur={() => setTouched({ ...touched, lastName: true })}
                 />
               </div>
@@ -543,11 +556,11 @@ export default function DoctorRegisterPage() {
 
               {/* Password strength indicator */}
               {password && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: passStrength.color ? `${passStrength.color}15` : 'rgba(4,53,77,0.04)' }}>
-                  <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'rgba(4,53,77,0.08)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: passStrength.color ? `${passStrength.color}15` : "var(--surface-hover)" }}>
+                  <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: "var(--surface-hover)", overflow: 'hidden' }}>
                     <div style={{ width: `${(passStrength.score / 5) * 100}%`, height: '100%', background: passStrength.color || T.slate2, transition: 'all 0.3s ease' }} />
                   </div>
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: passStrength.color || T.slate2, minWidth: '50px' }}>{passStrength.label}</span>
+                  <span style={{ fontSize: "13px", fontWeight: 600, color: passStrength.color || T.slate2, minWidth: '50px' }}>{passStrength.label}</span>
                 </div>
               )}
 
@@ -563,6 +576,7 @@ export default function DoctorRegisterPage() {
                 />
                 <Field
                   label="Phone Number"
+                  hint="Digits only; enter the country code in the separate field."
                   placeholder="1234567890"
                   value={phone}
                   onChange={setPhone}
@@ -594,8 +608,8 @@ export default function DoctorRegisterPage() {
                       width: '100%',
                       padding: '12px 14px',
                       borderRadius: '11px',
-                      border: genderErr ? '1.5px solid rgba(220,38,38,0.55)' : '1.5px solid rgba(4,53,77,0.1)',
-                      background: 'rgba(255,255,255,0.7)',
+                      border: genderErr ? '1.5px solid rgba(220,38,38,0.55)' : "1.5px solid var(--border)",
+                      background: "var(--surface-glass)",
                       color: gender ? T.navy : T.slate2,
                       fontSize: '14px',
                       fontFamily: 'inherit',
@@ -607,14 +621,14 @@ export default function DoctorRegisterPage() {
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
                   </select>
-                  {genderErr && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{genderErr}</p>}
+                  {genderErr && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{genderErr}</p>}
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
                   Medical Specialty
-                  <span style={{ fontSize: '11.5px', color: T.slate2, fontWeight: 400, marginLeft: '4px' }}>Optional</span>
+                  <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 400, marginLeft: '4px' }}>Optional</span>
                 </label>
                 <select
                   value={specialty}
@@ -628,8 +642,8 @@ export default function DoctorRegisterPage() {
                     width: '100%',
                     padding: '12px 14px',
                     borderRadius: '11px',
-                    border: '1.5px solid rgba(4,53,77,0.1)',
-                    background: 'rgba(255,255,255,0.7)',
+                    border: "1.5px solid var(--border)",
+                    background: "var(--surface-glass)",
                     color: specialty ? T.navy : T.slate2,
                     fontSize: '14px',
                     fontFamily: 'inherit',
@@ -669,6 +683,7 @@ export default function DoctorRegisterPage() {
                 {isOtherSpecialty && (
                   <Field
                     label="Please specify your specialty"
+                    error={specialtyErr || undefined}
                     placeholder="e.g., Sports Medicine, Palliative Care"
                     value={customSpecialty}
                     onChange={setCustomSpecialty}
@@ -679,6 +694,8 @@ export default function DoctorRegisterPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field
                   label="Years of Experience"
+                  error={experienceErr || undefined}
+                  hint="Whole years from 0 to 80."
                   placeholder="e.g., 5"
                   value={experienceYears}
                   onChange={setExperienceYears}
@@ -706,36 +723,37 @@ export default function DoctorRegisterPage() {
               <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(32,181,223,0.04)', border: '1px solid rgba(32,181,223,0.12)' }}>
                 <Checkbox
                   checked={consentAccepted}
-                  onChange={() => setConsentAccepted(!consentAccepted)}
+                  onChange={() => { setConsentAccepted(!consentAccepted); setAuthError('') }}
                 >
-                  I will use synthetic information only in this development test. The <Link href="/terms" style={{ color: T.blue, textDecoration: 'underline' }}>Terms of Service</Link> and <Link href="/privacy" style={{ color: T.blue, textDecoration: 'underline' }}>Privacy Policy</Link> are awaiting approval. This does not authorise real-patient care. (Required)
+                  I will use synthetic information only in this development test. The <Link href="/terms" style={{ color: T.link, textDecoration: 'underline' }}>Terms of Service</Link> and <Link href="/privacy" style={{ color: T.link, textDecoration: 'underline' }}>Privacy Policy</Link> are awaiting approval. This does not authorise real-patient care. (Required)
                 </Checkbox>
               </div>
 
+              {submitted && !consentAccepted && <p className="field-error" role="alert">Acknowledge the development test conditions before continuing.</p>}
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={loading || !consentAccepted}
+                disabled={loading}
                 style={{
                   width: '100%',
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: loading || !consentAccepted
+                  background: loading
                     ? 'rgba(32,181,223,0.4)'
-                    : `linear-gradient(135deg,${T.blue} 0%,#348CEA 100%)`,
+                    : `linear-gradient(135deg,${T.blue} 0%,var(--primary-end) 100%)`,
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',
                   fontWeight: 700,
                   letterSpacing: '-0.02em',
-                  cursor: loading || !consentAccepted ? 'not-allowed' : 'pointer',
+                  cursor: loading ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
                   transition: 'all 0.15s ease',
-                  boxShadow: loading || !consentAccepted
+                  boxShadow: loading
                     ? 'none'
                     : '0 3px 10px rgba(32,181,223,0.32), 0 1px 3px rgba(32,181,223,0.2)',
                 }}
@@ -748,7 +766,7 @@ export default function DoctorRegisterPage() {
             {/* Sign in link */}
             <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '24px 0 0', letterSpacing: '-0.01em' }}>
               Already have an account?{' '}
-              <Link href="/auth/doctor/login" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>
+              <Link href="/auth/doctor/login" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>
                 Sign In
               </Link>
             </p>

@@ -1,5 +1,7 @@
 'use client'
 
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
+
 import React, { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { DOCTOR_SIDEBAR_ITEMS, DOCTOR_ROUTES, isDoctorNavActive } from '@/constants/doctor-navigation'
@@ -106,7 +108,7 @@ export default function DoctorLayout({
     .join('') || 'DR'
 
   return (
-    <div style={{ minHeight: '100vh', background: PAGE_BG }}>
+    <div className='doctor-portal-shell portal-shell' style={{ minHeight: '100vh', background: PAGE_BG }}>
       <DoctorMobileNavigation />
       <style>{`
         @media (max-width: 920px) {
@@ -128,10 +130,10 @@ export default function DoctorLayout({
         {/* Sidebar */}
         <aside style={{
           width: '260px',
-          background: 'rgba(247,250,252,0.82)',
+          background: "var(--surface-subtle)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-          borderRight: '1px solid rgba(4,53,77,0.08)',
+          borderRight: "1px solid var(--border)",
           minHeight: '100vh',
           position: 'fixed',
           left: 0,
@@ -141,11 +143,11 @@ export default function DoctorLayout({
           display: 'flex',
           flexDirection: 'column',
         }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)', flexShrink: 0 }}>
+          <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
             <AuthenticatedLogo width={140} />
-            <p style={{ margin: '8px 0 0', fontSize: '11px', color: T.slate2, fontWeight: 500 }}>Doctor Portal</p>
+            <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate2, fontWeight: 500 }}>Doctor Portal</p>
           </div>
-          
+
           <nav style={{ padding: '16px 12px', flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {DOCTOR_SIDEBAR_ITEMS.map((item) => {
@@ -197,7 +199,7 @@ export default function DoctorLayout({
                           textDecoration: 'none',
                           transition: 'all 0.15s ease',
                           ...(isActive
-                            ? { background: 'rgba(32,181,223,0.12)', color: T.blue, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }
+                            ? { background: 'rgba(32,181,223,0.12)', color: T.link, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }
                             : { color: T.slate, background: 'transparent' }
                           ),
                         }}
@@ -223,14 +225,15 @@ export default function DoctorLayout({
           </nav>
         </aside>
 
+        <div className='portal-appearance'><ThemeToggle /></div>
         {/* Main content */}
         <main style={{ flex: 1, marginLeft: '260px' }}>
           {/* Header */}
           <header style={{
-            background: 'rgba(255,255,255,0.86)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(22px) saturate(175%)',
             WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-            borderBottom: '1px solid rgba(4,53,77,0.08)',
+            borderBottom: "1px solid var(--border)",
             padding: '16px 32px',
             position: 'sticky',
             top: 0,
@@ -239,7 +242,7 @@ export default function DoctorLayout({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Welcome, {fullName}</h2>
+                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Welcome, {fullName}</h2>
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Manage your consultations and patients</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -249,7 +252,7 @@ export default function DoctorLayout({
                     padding: '10px',
                     borderRadius: '10px',
                     border: 'none',
-                    background: 'rgba(247,250,252,0.8)',
+                    background: "var(--surface-subtle)",
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                   }}
@@ -277,17 +280,17 @@ export default function DoctorLayout({
                 >
                   {loggingOut ? 'Signing out...' : 'Sign out'}
                 </button>
-                <button 
+                <button
                   onClick={handleProfileClick}
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(4,53,77,0.08)', cursor: 'pointer', transition: 'all 0.15s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)", cursor: 'pointer', transition: 'all 0.15s' }}
                   title="View Profile"
                 >
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.25)' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.25)' }}>
                     {initials}
                   </div>
                   <div style={{ textAlign: 'left' }}>
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: T.navy, lineHeight: 1.2 }}>{displayName}</p>
-                    <p style={{ margin: 0, fontSize: '11px', color: T.slate2, lineHeight: 1 }}>{specialty}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1 }}>{specialty}</p>
                   </div>
                 </button>
               </div>
@@ -313,7 +316,7 @@ export default function DoctorLayout({
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px',
-            background: 'rgba(4,53,77,0.32)',
+            background: "var(--surface-hover)",
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
           }}
@@ -322,8 +325,8 @@ export default function DoctorLayout({
             width: '100%',
             maxWidth: '380px',
             borderRadius: '18px',
-            border: '1px solid rgba(255,255,255,0.88)',
-            background: 'rgba(255,255,255,0.96)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             boxShadow: '0 24px 64px rgba(4,53,77,0.2)',
             padding: '24px',
           }}>
@@ -332,7 +335,7 @@ export default function DoctorLayout({
                 <Ico p={ICONS.logout} size={20} sw={1.8} color={T.red} />
               </div>
               <div>
-                <h2 id="doctor-logout-title" style={{ margin: '0 0 6px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Sign out?</h2>
+                <h2 id="doctor-logout-title" style={{ margin: '0 0 6px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Sign out?</h2>
                 <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: T.slate }}>
                   You will need to sign in again to access the doctor portal.
                 </p>
@@ -343,7 +346,7 @@ export default function DoctorLayout({
                 type="button"
                 onClick={() => setShowLogoutConfirm(false)}
                 disabled={loggingOut}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer' }}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer' }}
               >
                 No, stay
               </button>
@@ -351,7 +354,7 @@ export default function DoctorLayout({
                 type="button"
                 onClick={handleConfirmLogout}
                 disabled={loggingOut}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: T.red, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer', opacity: loggingOut ? 0.7 : 1 }}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: '#b92332', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer', opacity: loggingOut ? 0.7 : 1 }}
               >
                 {loggingOut ? 'Signing out...' : 'Yes, sign out'}
               </button>

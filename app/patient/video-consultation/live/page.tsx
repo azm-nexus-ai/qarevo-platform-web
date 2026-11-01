@@ -65,7 +65,7 @@ function SelfView({ stream, cameraOn, cameraLoading, cameraError, onTryAgain }: 
     borderRadius: '18px',
     overflow: 'hidden',
     zIndex: 2,
-    border: '1px solid rgba(255,255,255,0.8)',
+    border: "1px solid var(--border)",
     boxShadow: Sh.glow,
     display: 'flex',
     flexDirection: 'column',
@@ -76,14 +76,14 @@ function SelfView({ stream, cameraOn, cameraLoading, cameraError, onTryAgain }: 
   // Error state
   if (cameraError) {
     return (
-      <div style={{ ...baseStyle, background: 'rgba(4,53,77,0.82)', padding: '10px', textAlign: 'center', gap: '6px' }}>
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>
+      <div style={{ ...baseStyle, background: "var(--surface-hover)", padding: '10px', textAlign: 'center', gap: '6px' }}>
+        <div style={{ fontSize: "13px", fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>
           {cameraError.message}
         </div>
         <button
           type="button"
           onClick={onTryAgain}
-          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '28px', padding: '0 10px', borderRadius: '999px', border: 'none', background: 'rgba(32,181,223,0.9)', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '28px', padding: '0 10px', borderRadius: '999px', border: 'none', background: 'rgba(32,181,223,0.9)', color: '#fff', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}
           aria-label="Try again to access camera"
         >
           Try Again
@@ -95,9 +95,9 @@ function SelfView({ stream, cameraOn, cameraLoading, cameraError, onTryAgain }: 
   // Loading state
   if (cameraLoading) {
     return (
-      <div style={{ ...baseStyle, background: 'rgba(4,53,77,0.82)' }}>
+      <div style={{ ...baseStyle, background: "var(--surface-hover)" }}>
         <div style={{ width: '22px', height: '22px', borderRadius: '999px', border: '2px solid rgba(32,181,223,0.3)', borderTopColor: T.blue, animation: 'spin 0.8s linear infinite' }} />
-        <div style={{ marginTop: '6px', fontSize: '10px', color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>Starting camera…</div>
+        <div style={{ marginTop: '6px', fontSize: "13px", color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>Starting camera…</div>
       </div>
     )
   }
@@ -114,7 +114,7 @@ function SelfView({ stream, cameraOn, cameraLoading, cameraError, onTryAgain }: 
           style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' /* mirror */ }}
           aria-label="Your camera preview"
         />
-        <div style={{ position: 'absolute', bottom: '6px', left: '8px', fontSize: '9px', fontWeight: 700, color: '#fff', background: 'rgba(4,53,77,0.54)', padding: '2px 6px', borderRadius: '999px' }}>
+        <div style={{ position: 'absolute', bottom: '6px', left: '8px', fontSize: '9px', fontWeight: 700, color: '#fff', background: "var(--surface-hover)", padding: '2px 6px', borderRadius: '999px' }}>
           You
         </div>
       </div>
@@ -139,7 +139,7 @@ function SelfView({ stream, cameraOn, cameraLoading, cameraError, onTryAgain }: 
 function MediaErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (
     <div role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 12px', borderRadius: '12px', background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.16)', marginBottom: '8px' }}>
-      <span style={{ fontSize: '12px', color: T.red, fontWeight: 600 }}>{message}</span>
+      <span style={{ fontSize: "13px", color: T.red, fontWeight: 600 }}>{message}</span>
       <button type="button" onClick={onDismiss} style={{ border: 'none', background: 'none', color: T.red, fontSize: '14px', cursor: 'pointer', lineHeight: 1 }} aria-label="Dismiss error">✕</button>
     </div>
   )
@@ -263,7 +263,7 @@ function LiveConsultationPageContent() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         .consult-shell { max-width: 1500px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
-        .consult-header, .consult-video-card, .consult-side-card, .control-dock, .modal-card { background: rgba(255,255,255,0.86); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border: 1px solid rgba(255,255,255,0.9); box-shadow: ${Sh.card}; }
+        .consult-header, .consult-video-card, .consult-side-card, .control-dock, .modal-card { background: var(--surface); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border: 1px solid var(--border); box-shadow: ${Sh.card}; }
         .consult-header { border-radius: 24px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
         .consult-body { display: grid; grid-template-columns: minmax(0, 1.35fr) 390px; gap: 16px; align-items: start; }
         .consult-video-card { border-radius: 28px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -272,15 +272,15 @@ function LiveConsultationPageContent() {
         .video-stage::after { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(255,255,255,0.06), transparent 40%, rgba(255,255,255,0.08)); pointer-events: none; }
         .doctor-card { position: relative; z-index: 1; width: min(880px, 100%); padding: 28px; border-radius: 24px; background: rgba(255,255,255,0.14); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.2); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
         .video-badges { position: absolute; inset: 0 auto auto 20px; display: flex; flex-direction: column; gap: 8px; padding: 20px 0 0 0; z-index: 2; }
-        .video-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.86); color: ${T.navy}; border: 1px solid rgba(255,255,255,0.82); box-shadow: ${Sh.inner}; }
+        .video-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--surface); color: ${T.navy}; border: 1px solid var(--border); box-shadow: ${Sh.inner}; }
         .video-controls { position: absolute; inset: auto 16px 16px 16px; display: flex; justify-content: center; z-index: 2; }
         .video-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 10px; border-radius: 999px; background: rgba(255,255,255,0.16); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.26); }
         .meta-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-        .meta-pill { padding: 11px 12px; border-radius: 14px; background: rgba(247,250,252,0.82); border: 1px solid rgba(4,53,77,0.08); }
+        .meta-pill { padding: 11px 12px; border-radius: 14px; background: var(--surface-subtle); border: 1px solid var(--border); }
         .consult-side-panel { display: flex; flex-direction: column; gap: 12px; }
         .consult-side-card { border-radius: 20px; padding: 16px; }
         .control-dock { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(1160px, calc(100% - 24px)); border-radius: 999px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; z-index: 30; }
-        .control-pill { border: 1px solid rgba(255,255,255,0.72); background: rgba(255,255,255,0.72); color: ${T.navy}; padding: 0 12px; min-height: 44px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
+        .control-pill { border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; padding: 0 12px; min-height: 44px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
         .control-pill:hover, .control-pill:focus-visible { transform: translateY(-1px); box-shadow: ${Sh.glow}; outline: none; }
         .control-pill.active { background: rgba(32,181,223,0.16); color: ${T.blue}; border-color: rgba(32,181,223,0.24); }
         .control-pill.muted { background: rgba(220,38,38,0.1); color: ${T.red}; border-color: rgba(220,38,38,0.16); }
@@ -301,11 +301,11 @@ function LiveConsultationPageContent() {
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <header className="consult-header" aria-label="Consultation header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '14px', display: 'grid', placeItems: 'center', background: 'rgba(32,181,223,0.14)', color: T.blue }}>
+            <div style={{ width: '46px', height: '46px', borderRadius: '14px', display: 'grid', placeItems: 'center', background: 'rgba(32,181,223,0.14)', color: T.link }}>
               <Ico p={ICONS.steth} size={18} sw={1.8} />
             </div>
             <div>
-              <div className="badge" style={{ marginBottom: '6px', background: 'rgba(32,181,223,0.1)', color: T.blue }}>
+              <div className="badge" style={{ marginBottom: '6px', background: 'rgba(32,181,223,0.1)', color: T.link }}>
                 <Ico p={ICONS.check} size={10} sw={2.3} />
                 Verified Participant
               </div>
@@ -319,15 +319,15 @@ function LiveConsultationPageContent() {
               <Ico p={ICONS.zap} size={12} sw={1.8} />
               {formattedElapsed}
             </div>
-            <div className="chip" style={{ background: 'rgba(247,250,252,0.9)', color: T.green }}>
+            <div className="chip" style={{ background: "var(--surface-subtle)", color: T.green }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: T.green, display: 'inline-block' }} />
               {networkStatus}
             </div>
-            <div className="chip" style={{ background: recordingOn ? 'rgba(32,181,223,0.12)' : 'rgba(4,53,77,0.06)', color: recordingOn ? T.blue : T.slate2 }}>
+            <div className="chip" style={{ background: recordingOn ? 'rgba(32,181,223,0.12)' : "var(--surface-hover)", color: recordingOn ? T.link : T.slate2 }}>
               <Ico p={ICONS.video} size={12} sw={1.8} />
               {recordingOn ? 'Recording • On' : 'Recording • Off'}
             </div>
-            <div className="chip" style={{ background: 'rgba(247,250,252,0.9)', color: T.navy }}>
+            <div className="chip" style={{ background: "var(--surface-subtle)", color: T.navy }}>
               <Ico p={ICONS.shield} size={12} sw={1.8} />
               E2E Encrypted
             </div>
@@ -390,7 +390,7 @@ function LiveConsultationPageContent() {
                     <Ico p={ICONS.user} size={16} sw={1.9} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.82)' }}>Physician</div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.82)' }}>Physician</div>
                     <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff' }}>{doctorName}</div>
                   </div>
                 </div>
@@ -453,19 +453,19 @@ function LiveConsultationPageContent() {
             {/* ── Meta row ──────────────────────────────────────────────── */}
             <div className="meta-row">
               <div className="meta-pill">
-                <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '4px' }}>Internet</div>
+                <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '4px' }}>Internet</div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{networkStatus}</div>
               </div>
               <div className="meta-pill">
-                <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '4px' }}>Latency</div>
+                <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '4px' }}>Latency</div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{latency}</div>
               </div>
               <div className="meta-pill">
-                <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '4px' }}>Camera</div>
+                <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '4px' }}>Camera</div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: cameraOn ? T.green : T.slate2 }}>{cameraOn ? 'Active' : 'Off'}</div>
               </div>
               <div className="meta-pill">
-                <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '4px' }}>Microphone</div>
+                <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '4px' }}>Microphone</div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: micMuted ? T.slate2 : T.green }}>{micMuted ? 'Muted' : 'Active'}</div>
               </div>
             </div>
@@ -476,18 +476,18 @@ function LiveConsultationPageContent() {
             <section className="consult-side-card" style={{ padding: '14px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>Clinical workspace</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>Clinical workspace</div>
                   <h2 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 800, color: T.navy }}>Patient context</h2>
                 </div>
-                <button type="button" onClick={() => setPanelCollapsed((v) => !v)} className="focus-ring control-pill" style={{ minHeight: '36px', padding: '0 10px', fontSize: '11px' }}>
+                <button type="button" onClick={() => setPanelCollapsed((v) => !v)} className="focus-ring control-pill" style={{ minHeight: '36px', padding: '0 10px', fontSize: "13px" }}>
                   {panelCollapsed ? 'Expand' : 'Collapse'}
                 </button>
               </div>
 
               {!panelCollapsed && (
                 <div style={{ display: 'grid', gap: '10px' }}>
-                  <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '8px' }}>Patient info</div>
+                  <div style={{ padding: '12px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '8px' }}>Patient info</div>
                     <div style={{ display: 'grid', gap: '6px' }}>
                       {[
                         ['Patient', 'Ava Addo'],
@@ -496,7 +496,7 @@ function LiveConsultationPageContent() {
                         ['Allergies', 'Penicillin'],
                         ['Current Medications', 'Lisinopril 10mg'],
                       ].map(([label, value]) => (
-                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '12.5px', color: T.slate }}>
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: "13px", color: T.slate }}>
                           <span style={{ color: T.slate2 }}>{label}</span>
                           <span style={{ color: T.navy, fontWeight: 700, textAlign: 'right' }}>{value}</span>
                         </div>
@@ -504,79 +504,79 @@ function LiveConsultationPageContent() {
                     </div>
                   </div>
 
-                  <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                  <div style={{ padding: '12px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>SOAP notes</div>
-                      <div className="chip" style={{ background: 'rgba(32,181,223,0.12)', color: T.blue }}>Auto-saving</div>
+                      <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>SOAP notes</div>
+                      <div className="chip" style={{ background: 'rgba(32,181,223,0.12)', color: T.link }}>Auto-saving</div>
                     </div>
-                    <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} rows={7} className="focus-ring" style={{ width: '100%', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.08)', padding: '10px 12px', fontSize: '12px', color: T.navy, lineHeight: 1.6, resize: 'vertical', background: 'rgba(255,255,255,0.9)' }} aria-label="Clinical notes" />
-                    <div style={{ marginTop: '8px', fontSize: '11px', color: T.slate2 }}>Last updated {date} • {slot}</div>
+                    <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} rows={7} className="focus-ring" style={{ width: '100%', borderRadius: '12px', border: "1px solid var(--border)", padding: '10px 12px', fontSize: "13px", color: T.navy, lineHeight: 1.6, resize: 'vertical', background: "var(--surface-glass)" }} aria-label="Clinical notes" />
+                    <div style={{ marginTop: '8px', fontSize: "13px", color: T.slate2 }}>Last updated {date} • {slot}</div>
                   </div>
 
-                  <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                    <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '8px' }}>Live vitals</div>
+                  <div style={{ padding: '12px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2, marginBottom: '8px' }}>Live vitals</div>
                     <div style={{ display: 'grid', gap: '8px' }}>
                       {[['Heart rate', '78 bpm'], ['Blood pressure', '120/78'], ['Blood oxygen', '98%'], ['Temperature', '36.8°C']].map(([label, value]) => (
-                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.86)', border: '1px solid rgba(4,53,77,0.06)' }}>
-                          <span style={{ fontSize: '12px', color: T.slate2 }}>{label}</span>
-                          <span style={{ fontSize: '12px', color: T.navy, fontWeight: 700 }}>{value}</span>
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '10px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
+                          <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
+                          <span style={{ fontSize: "13px", color: T.navy, fontWeight: 700 }}>{value}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                  <div style={{ padding: '12px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>AI assistant</div>
+                      <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>AI assistant</div>
                       <div className="chip" style={{ background: 'rgba(165,224,218,0.26)', color: T.navy }}>Review required</div>
                     </div>
                     <div style={{ display: 'grid', gap: '8px' }}>
                       {[['Consultation summary', 'Placeholder summary ready for physician review'], ['Medication suggestions', 'Suggested follow-up considerations'], ['Clinical reminders', 'Recheck symptoms after 48 hours']].map(([label, value]) => (
-                        <div key={label} style={{ padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(4,53,77,0.06)' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 700, color: T.navy }}>{label}</div>
-                          <div style={{ fontSize: '12px', color: T.slate, marginTop: '3px' }}>{value}</div>
+                        <div key={label} style={{ padding: '8px 10px', borderRadius: '10px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
+                          <div style={{ fontSize: "13px", fontWeight: 700, color: T.navy }}>{label}</div>
+                          <div style={{ fontSize: "13px", color: T.slate, marginTop: '3px' }}>{value}</div>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                  <div style={{ padding: '12px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>Documents</div>
-                      <button type="button" onClick={() => setDocsOpen((v) => !v)} className="focus-ring control-pill" style={{ minHeight: '32px', padding: '0 10px', fontSize: '11px' }}>{docsOpen ? 'Hide' : 'Open'}</button>
+                      <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>Documents</div>
+                      <button type="button" onClick={() => setDocsOpen((v) => !v)} className="focus-ring control-pill" style={{ minHeight: '32px', padding: '0 10px', fontSize: "13px" }}>{docsOpen ? 'Hide' : 'Open'}</button>
                     </div>
                     {docsOpen && (
                       <div style={{ display: 'grid', gap: '8px' }}>
                         {documentFiles.map((file) => (
-                          <div key={file.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.84)', border: '1px solid rgba(4,53,77,0.06)' }}>
+                          <div key={file.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '10px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
                             <div>
-                              <div style={{ fontSize: '12px', fontWeight: 700, color: T.navy }}>{file.name}</div>
-                              <div style={{ fontSize: '11px', color: T.slate2 }}>{file.type} • {file.size}</div>
+                              <div style={{ fontSize: "13px", fontWeight: 700, color: T.navy }}>{file.name}</div>
+                              <div style={{ fontSize: "13px", color: T.slate2 }}>{file.type} • {file.size}</div>
                             </div>
-                            <button type="button" className="focus-ring control-pill" style={{ minHeight: '30px', padding: '0 10px', fontSize: '11px' }}>View</button>
+                            <button type="button" className="focus-ring control-pill" style={{ minHeight: '30px', padding: '0 10px', fontSize: "13px" }}>View</button>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                  <div style={{ padding: '12px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>Live chat</div>
-                      <button type="button" onClick={() => setChatOpen((v) => !v)} className="focus-ring control-pill" style={{ minHeight: '32px', padding: '0 10px', fontSize: '11px' }}>{chatOpen ? 'Hide' : 'Show'}</button>
+                      <div style={{ fontSize: "13px", textTransform: 'uppercase', letterSpacing: '0.06em', color: T.slate2 }}>Live chat</div>
+                      <button type="button" onClick={() => setChatOpen((v) => !v)} className="focus-ring control-pill" style={{ minHeight: '32px', padding: '0 10px', fontSize: "13px" }}>{chatOpen ? 'Hide' : 'Show'}</button>
                     </div>
                     {chatOpen && (
                       <div style={{ display: 'grid', gap: '8px' }}>
                         {messages.map((message) => (
-                          <div key={message.id} style={{ padding: '8px 10px', borderRadius: '10px', background: message.from === 'doctor' ? 'rgba(32,181,223,0.10)' : message.from === 'patient' ? 'rgba(165,224,218,0.18)' : 'rgba(255,255,255,0.86)', border: '1px solid rgba(4,53,77,0.06)' }}>
-                            <div style={{ fontSize: '11px', color: T.slate2, marginBottom: '4px' }}>{message.from === 'doctor' ? 'Physician' : message.from === 'patient' ? 'Patient' : 'System'} • {message.time}</div>
-                            <div style={{ fontSize: '12px', color: T.navy, lineHeight: 1.6 }}>{message.text}</div>
+                          <div key={message.id} style={{ padding: '8px 10px', borderRadius: '10px', background: message.from === 'doctor' ? 'rgba(32,181,223,0.10)' : message.from === 'patient' ? 'rgba(165,224,218,0.18)' : "var(--surface-glass)", border: "1px solid var(--border)" }}>
+                            <div style={{ fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>{message.from === 'doctor' ? 'Physician' : message.from === 'patient' ? 'Patient' : 'System'} • {message.time}</div>
+                            <div style={{ fontSize: "13px", color: T.navy, lineHeight: 1.6 }}>{message.text}</div>
                           </div>
                         ))}
-                        {typing && <div style={{ fontSize: '11px', color: T.slate2 }}>Physician is typing…</div>}
+                        {typing && <div style={{ fontSize: "13px", color: T.slate2 }}>Physician is typing…</div>}
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
                           {quickReplies.map((reply) => (
-                            <button key={reply} type="button" onClick={() => handleQuickReply(reply)} className="focus-ring control-pill" style={{ minHeight: '32px', padding: '0 10px', fontSize: '11px' }}>{reply}</button>
+                            <button key={reply} type="button" onClick={() => handleQuickReply(reply)} className="focus-ring control-pill" style={{ minHeight: '32px', padding: '0 10px', fontSize: "13px" }}>{reply}</button>
                           ))}
                         </div>
                       </div>
@@ -681,7 +681,7 @@ function LiveConsultationPageContent() {
       {confirmEndOpen && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="end-consultation-title" onClick={(e) => { if (e.target === e.currentTarget) setConfirmEndOpen(false) }}>
           <section className="modal-card">
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '999px', background: 'rgba(220,38,38,0.08)', color: T.red, fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '999px', background: 'rgba(220,38,38,0.08)', color: T.red, fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
               <Ico p={ICONS.check} size={10} sw={2.4} />
               End consultation
             </div>

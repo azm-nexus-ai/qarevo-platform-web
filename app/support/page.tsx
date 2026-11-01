@@ -61,7 +61,7 @@ export default function SupportPage() {
       rightRail={
         <div className='grid gap-3'>
           <PortalCard>
-            <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Emergency Help</p>
+            <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Emergency Help</p>
             <h2 style={{ margin: '0 0 10px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Immediate assistance</h2>
             <div className='grid gap-2'>
               {[
@@ -70,7 +70,7 @@ export default function SupportPage() {
                 ['Urgent Response', 'Available 24/7'],
               ].map(([label, value]) => (
                 <div key={label} style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.12)' }}>
-                  <p style={{ margin: '0 0 3px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+                  <p style={{ margin: '0 0 3px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
                   <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{value}</p>
                 </div>
               ))}
@@ -86,7 +86,7 @@ export default function SupportPage() {
         {submitted ? <PortalBadge tone='success'>Support ticket submitted successfully.</PortalBadge> : null}
 
         <PortalCard>
-          <div className='flex items-center gap-3 rounded-2xl border px-4 py-3' style={{ borderColor: 'rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.92)' }}>
+          <div className='flex items-center gap-3 rounded-2xl border px-4 py-3' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)" }}>
             <Ico p={ICONS.search} size={18} sw={1.8} color={T.slate2} />
             <input
               value={search}
@@ -100,17 +100,17 @@ export default function SupportPage() {
 
         <PortalCard>
           <div className='mb-4'>
-            <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Quick Help</p>
+            <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Quick Help</p>
             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Jump into common support topics</h2>
           </div>
           <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
             {QUICK_HELP.map((item) => (
-              <div key={item.title} className='rounded-2xl border p-4 transition hover:-translate-y-px' style={{ borderColor: 'rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)' }}>
+              <div key={item.title} className='rounded-2xl border p-4 transition hover:-translate-y-px' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)" }}>
                 <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(32,181,223,0.12)', display: 'grid', placeItems: 'center', marginBottom: '10px' }}>
                   <Ico p={item.icon} size={16} sw={1.7} color={T.blue} />
                 </div>
                 <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{item.title}</p>
-                <p style={{ margin: 0, fontSize: '12.5px', color: T.slate, lineHeight: 1.6 }}>{item.body}</p>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>{item.body}</p>
               </div>
             ))}
           </div>
@@ -119,7 +119,7 @@ export default function SupportPage() {
         <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'>
           <PortalCard>
             <div className='mb-4'>
-              <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>FAQ</p>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>FAQ</p>
               <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Answers to common questions</h2>
             </div>
             <div className='grid gap-3'>
@@ -134,13 +134,13 @@ export default function SupportPage() {
                       type='button'
                       onClick={() => setOpenFaq(expanded ? null : item.question)}
                       className='rounded-2xl border p-4 text-left transition hover:-translate-y-px focus:outline-none focus:ring-2'
-                      style={{ borderColor: expanded ? 'rgba(32,181,223,0.2)' : 'rgba(4,53,77,0.08)', background: expanded ? 'rgba(32,181,223,0.05)' : 'rgba(247,250,252,0.9)' }}
+                      style={{ borderColor: expanded ? 'rgba(32,181,223,0.2)' : "var(--border)", background: expanded ? 'rgba(32,181,223,0.05)' : "var(--surface-subtle)" }}
                     >
                       <div className='flex items-center justify-between gap-3'>
                         <span style={{ fontSize: '14px', fontWeight: 700, color: T.navy }}>{item.question}</span>
                         <Ico p={ICONS.arrowSm} size={14} sw={1.8} color={expanded ? T.blue : T.slate2} />
                       </div>
-                      {expanded ? <p style={{ margin: '10px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.65 }}>{item.answer}</p> : null}
+                      {expanded ? <p style={{ margin: '10px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.65 }}>{item.answer}</p> : null}
                     </button>
                   )
                 })
@@ -150,17 +150,17 @@ export default function SupportPage() {
 
           <PortalCard>
             <div className='mb-4'>
-              <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Contact Options</p>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Contact Options</p>
               <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Reach the support team your way</h2>
             </div>
             <div className='grid gap-3 sm:grid-cols-2'>
               {CONTACT_OPTIONS.map((item) => (
-                <div key={item.label} className='rounded-2xl border p-4' style={{ borderColor: 'rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)' }}>
+                <div key={item.label} className='rounded-2xl border p-4' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)" }}>
                   <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(32,181,223,0.12)', display: 'grid', placeItems: 'center', marginBottom: '10px' }}>
                     <Ico p={item.icon} size={16} sw={1.7} color={T.blue} />
                   </div>
                   <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{item.label}</p>
-                  <p style={{ margin: 0, fontSize: '12.5px', color: T.slate, lineHeight: 1.6 }}>{item.meta}</p>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>{item.meta}</p>
                 </div>
               ))}
             </div>
@@ -171,23 +171,23 @@ export default function SupportPage() {
           <PortalCard>
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Support Tickets</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Support Tickets</p>
                 <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Open issues and recent conversations</h2>
               </div>
               <PortalBadge tone='info'>{TICKETS.length} active threads</PortalBadge>
             </div>
             <div className='grid gap-3'>
               {TICKETS.map((ticket) => (
-                <div key={ticket.id} className='rounded-2xl border p-4' style={{ borderColor: 'rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)' }}>
+                <div key={ticket.id} className='rounded-2xl border p-4' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)" }}>
                   <div className='flex flex-wrap items-start justify-between gap-3'>
                     <div>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{ticket.id}</p>
-                      <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: T.slate }}>{ticket.category}</p>
-                      <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.slate2 }}>Last updated {ticket.updated}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate }}>{ticket.category}</p>
+                      <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>Last updated {ticket.updated}</p>
                     </div>
                     <div className='flex flex-col items-end gap-2'>
                       <PortalBadge tone={ticket.status === 'Resolved' ? 'success' : ticket.status === 'Open' ? 'warning' : 'info'}>{ticket.status}</PortalBadge>
-                      <Link href={`/support/${ticket.id}`} style={{ color: T.blue, fontSize: '12.5px', fontWeight: 700, textDecoration: 'none' }}>View Ticket</Link>
+                      <Link href={`/support/${ticket.id}`} style={{ color: T.link, fontSize: "13px", fontWeight: 700, textDecoration: 'none' }}>View Ticket</Link>
                     </div>
                   </div>
                 </div>
@@ -197,7 +197,7 @@ export default function SupportPage() {
 
           <PortalCard>
             <div className='mb-4'>
-              <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Create Support Ticket</p>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Create Support Ticket</p>
               <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Tell us what you need help with</h2>
             </div>
             <form
@@ -207,17 +207,17 @@ export default function SupportPage() {
                 setSubmitted(true)
               }}
             >
-              <input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder='Subject' className='rounded-2xl border px-4 py-3 text-sm' style={{ borderColor: 'rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.92)', color: T.navy }} />
+              <input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder='Subject' className='rounded-2xl border px-4 py-3 text-sm' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)", color: T.navy }} />
               <div className='grid gap-3 sm:grid-cols-2'>
-                <select value={category} onChange={(event) => setCategory(event.target.value)} className='rounded-2xl border px-4 py-3 text-sm' style={{ borderColor: 'rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.92)', color: T.navy }}>
+                <select value={category} onChange={(event) => setCategory(event.target.value)} className='rounded-2xl border px-4 py-3 text-sm' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)", color: T.navy }}>
                   {['Appointments', 'Billing', 'Technical Issue', 'Account', 'Prescriptions'].map((item) => <option key={item}>{item}</option>)}
                 </select>
-                <select value={priority} onChange={(event) => setPriority(event.target.value)} className='rounded-2xl border px-4 py-3 text-sm' style={{ borderColor: 'rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.92)', color: T.navy }}>
+                <select value={priority} onChange={(event) => setPriority(event.target.value)} className='rounded-2xl border px-4 py-3 text-sm' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)", color: T.navy }}>
                   {['Low', 'Medium', 'High', 'Urgent'].map((item) => <option key={item}>{item}</option>)}
                 </select>
               </div>
-              <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder='Describe the issue in detail' rows={6} className='rounded-2xl border px-4 py-3 text-sm' style={{ borderColor: 'rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.92)', color: T.navy, resize: 'vertical' }} />
-              <label className='rounded-2xl border border-dashed px-4 py-4 text-sm' style={{ borderColor: 'rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.7)', color: T.slate }}>
+              <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder='Describe the issue in detail' rows={6} className='rounded-2xl border px-4 py-3 text-sm' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)", color: T.navy, resize: 'vertical' }} />
+              <label className='rounded-2xl border border-dashed px-4 py-4 text-sm' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)", color: T.slate }}>
                 Attachment
                 <input type='file' className='mt-2 block text-xs' />
               </label>

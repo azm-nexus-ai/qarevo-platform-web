@@ -11,10 +11,10 @@ export default function ComplianceSection() {
       style={{
         position: 'relative',
         zIndex: 1,
-        background: 'rgba(255,255,255,0.46)',
+        background: 'var(--surface-subtle)',
         backdropFilter: 'blur(32px) saturate(150%)',
         WebkitBackdropFilter: 'blur(32px) saturate(150%)',
-        borderTop: '1px solid rgba(255,255,255,0.68)',
+        borderTop: "1px solid var(--border)",
         borderBottom: '1px solid rgba(255,255,255,0.52)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(4,53,77,0.03)',
       }}
@@ -23,7 +23,7 @@ export default function ComplianceSection() {
         <div className="compliance-row">
           <span
             style={{
-              fontSize: '10px',
+              fontSize: "13px",
               fontWeight: 700,
               color: T.slate2,
               letterSpacing: '0.13em',

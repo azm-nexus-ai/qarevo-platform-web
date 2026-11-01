@@ -22,18 +22,18 @@ import {
   type AdminBulkUpdateConfigsRequest,
 } from '@/lib/api'
 
-function ConfigCard({ config, onEdit, onDelete }: { 
+function ConfigCard({ config, onEdit, onDelete }: {
   config: AdminSystemConfig
   onEdit: (id: string) => void
   onDelete: (id: string) => void
 }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '20px',
       display: 'flex',
@@ -45,18 +45,18 @@ function ConfigCard({ config, onEdit, onDelete }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{config.key}</p>
           {config.is_sensitive && (
-            <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, background: 'rgba(220,38,38,0.12)', color: T.red }}>
+            <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, background: 'rgba(220,38,38,0.12)', color: T.red }}>
               SENSITIVE
             </span>
           )}
         </div>
-        <p style={{ margin: 0, fontSize: '12px', color: T.slate2, marginBottom: '4px' }}>
+        <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>
           {config.description || 'No description'}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '12px', color: T.slate }}>Category: {config.category}</span>
-          <span style={{ fontSize: '12px', color: T.slate2 }}>•</span>
-          <span style={{ fontSize: '12px', color: T.slate }}>
+          <span style={{ fontSize: "13px", color: T.slate }}>Category: {config.category}</span>
+          <span style={{ fontSize: "13px", color: T.slate2 }}>•</span>
+          <span style={{ fontSize: "13px", color: T.slate }}>
             Value: {config.is_sensitive ? '•••••••••' : String(config.value)}
           </span>
         </div>
@@ -68,8 +68,8 @@ function ConfigCard({ config, onEdit, onDelete }: {
           style={{
             padding: '8px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: '#fff',
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
             color: T.navy,
             fontSize: '13px',
             fontWeight: 600,
@@ -173,7 +173,7 @@ export default function SystemConfigPage() {
 
   const handleDeleteConfig = async (configId: string) => {
     if (!confirm('Are you sure you want to delete this config?')) return
-    
+
     try {
       await deleteAdminConfig(configId)
       const data = await getAdminConfigs(categoryFilter, searchQuery)
@@ -198,7 +198,7 @@ export default function SystemConfigPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+      <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         {error}
       </div>
     )
@@ -246,8 +246,8 @@ export default function SystemConfigPage() {
               width: '100%',
               padding: '10px 12px 10px 40px',
               borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              background: 'rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-glass)",
               fontSize: '14px',
               color: T.navy,
               outline: 'none',
@@ -260,8 +260,8 @@ export default function SystemConfigPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -305,7 +305,7 @@ export default function SystemConfigPage() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px',
-            background: 'rgba(4,53,77,0.32)',
+            background: "var(--surface-hover)",
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
           }}
@@ -314,8 +314,8 @@ export default function SystemConfigPage() {
             width: '100%',
             maxWidth: '480px',
             borderRadius: '18px',
-            border: '1px solid rgba(255,255,255,0.88)',
-            background: 'rgba(255,255,255,0.96)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             boxShadow: '0 24px 64px rgba(4,53,77,0.2)',
             padding: '24px',
           }}>
@@ -335,8 +335,8 @@ export default function SystemConfigPage() {
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-glass)",
                     fontSize: '14px',
                     color: T.navy,
                     outline: 'none',
@@ -355,8 +355,8 @@ export default function SystemConfigPage() {
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-glass)",
                     fontSize: '14px',
                     color: T.navy,
                     outline: 'none',
@@ -375,8 +375,8 @@ export default function SystemConfigPage() {
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-glass)",
                     fontSize: '14px',
                     color: T.navy,
                     outline: 'none',
@@ -394,8 +394,8 @@ export default function SystemConfigPage() {
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-glass)",
                     fontSize: '14px',
                     color: T.navy,
                     cursor: 'pointer',
@@ -428,7 +428,7 @@ export default function SystemConfigPage() {
                   setShowCreateModal(false)
                   setCreateForm({ key: '', value: '', description: '', category: 'general', is_sensitive: false })
                 }}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Cancel
               </button>

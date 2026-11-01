@@ -63,7 +63,7 @@ function IntakePageContent() {
   const [doctorLoadError, setDoctorLoadError] = useState('')
   const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor) ?? physician, [remoteDoctor, physician])
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
-  
+
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
   const serviceDetail = useMemo(() => {
     const services = profileServices(remoteDoctor)
@@ -185,15 +185,15 @@ function IntakePageContent() {
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG }}>
-      <header style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px' }}>
+      <header style={{ background: "var(--surface)", borderBottom: '1px solid #e2e8f0', padding: '16px 24px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button onClick={handleBack} style={{ padding: '8px', borderRadius: '8px', background: '#f1f5f9', border: 'none', cursor: 'pointer' }}>
-              <span style={{ fontSize: '20px', color: '#64748b' }}>←</span>
+            <button onClick={handleBack} style={{ padding: '8px', borderRadius: '8px', background: "var(--canvas)", border: 'none', cursor: 'pointer' }}>
+              <span style={{ fontSize: '20px', color: "var(--text-muted)" }}>←</span>
             </button>
-            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#04354D' }}>Intake Information</h1>
+            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: "var(--text)" }}>Intake Information</h1>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#64748b' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: "var(--text-muted)" }}>
             <span>Step 2 of 3</span>
             <div style={{ display: 'flex', gap: '4px' }}>
               <div style={{ width: '24px', height: '4px', background: '#348cea', borderRadius: '2px' }} />
@@ -206,13 +206,13 @@ function IntakePageContent() {
 
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 24px' }}>
         <div style={{ ...Glass, padding: '32px', borderRadius: '16px' }}>
-          <h2 style={{ marginBottom: '8px', fontSize: '18px', fontWeight: 600, color: '#04354D' }}>Tell us about your health concern</h2>
-          <p style={{ color: '#64748b', marginBottom: '24px', fontSize: '14px' }}>
+          <h2 style={{ marginBottom: '8px', fontSize: '18px', fontWeight: 600, color: "var(--text)" }}>Tell us about your health concern</h2>
+          <p style={{ color: "var(--text-muted)", marginBottom: '24px', fontSize: '14px' }}>
             Please provide details about your medical condition so Dr. {physicianData.name} can prepare for your consultation.
           </p>
 
           {submitError && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
+            <div style={{ background: "var(--danger-soft)", border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
               <p style={{ color: '#dc2626', margin: 0, fontSize: '14px' }}>{submitError}</p>
             </div>
           )}
@@ -227,7 +227,7 @@ function IntakePageContent() {
                 onChange={(e) => setChiefComplaint(e.target.value)}
                 placeholder="What is the main reason for your visit? (e.g., persistent headache, fever, chest pain)"
                 required
-                style={{ width: '100%', minHeight: '100px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                style={{ width: '100%', minHeight: '100px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
             </div>
 
@@ -239,7 +239,7 @@ function IntakePageContent() {
                 value={symptoms}
                 onChange={(e) => setSymptoms(e.target.value)}
                 placeholder="Describe your symptoms in detail (e.g., throbbing pain, nausea, dizziness)"
-                style={{ width: '100%', minHeight: '80px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                style={{ width: '100%', minHeight: '80px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
             </div>
 
@@ -251,7 +251,7 @@ function IntakePageContent() {
                 value={medicalHistory}
                 onChange={(e) => setMedicalHistory(e.target.value)}
                 placeholder="Any relevant medical history, previous conditions, or ongoing treatments"
-                style={{ width: '100%', minHeight: '80px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                style={{ width: '100%', minHeight: '80px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
             </div>
 
@@ -265,7 +265,7 @@ function IntakePageContent() {
                   value={reportedDuration}
                   onChange={(e) => setReportedDuration(e.target.value)}
                   placeholder="e.g., 3 days, 2 weeks"
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                 />
               </div>
 
@@ -278,7 +278,7 @@ function IntakePageContent() {
                   value={reportedLocation}
                   onChange={(e) => setReportedLocation(e.target.value)}
                   placeholder="e.g., left side of head, lower back"
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                 />
               </div>
             </div>
@@ -293,7 +293,7 @@ function IntakePageContent() {
                   value={reportedOnset}
                   onChange={(e) => setReportedOnset(e.target.value)}
                   placeholder="e.g., sudden, gradual"
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                 />
               </div>
 
@@ -304,7 +304,7 @@ function IntakePageContent() {
                 <select
                   value={reportedSeverity}
                   onChange={(e) => setReportedSeverity(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                 >
                   <option value="">Select severity</option>
                   <option value="mild">Mild</option>
@@ -322,14 +322,14 @@ function IntakePageContent() {
                 value={associatedFactors}
                 onChange={(e) => setAssociatedFactors(e.target.value)}
                 placeholder="Anything that makes it better or worse (e.g., rest, movement, certain foods)"
-                style={{ width: '100%', minHeight: '60px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                style={{ width: '100%', minHeight: '60px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
               <button
                 onClick={handleBack}
-                style={{ padding: '12px 24px', borderRadius: '8px', background: '#f1f5f9', color: '#64748b', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}
+                style={{ padding: '12px 24px', borderRadius: '8px', background: "var(--canvas)", color: "var(--text-muted)", border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}
               >
                 Back
               </button>
@@ -352,7 +352,7 @@ function IntakePageFallback() {
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center' }}>
       <div style={{ textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>Loading intake form...</p>
+        <p style={{ margin: 0, fontSize: '14px', color: "var(--text-muted)" }}>Loading intake form...</p>
       </div>
     </main>
   )

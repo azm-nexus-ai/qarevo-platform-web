@@ -29,7 +29,7 @@ export default function Footer() {
         background: 'rgba(255,255,255,0.54)',
         backdropFilter: 'blur(24px) saturate(150%)',
         WebkitBackdropFilter: 'blur(24px) saturate(150%)',
-        borderTop: '1px solid rgba(255,255,255,0.72)',
+        borderTop: "1px solid var(--border)",
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)',
       }}
     >
@@ -75,7 +75,7 @@ export default function Footer() {
           <div>
             <p
               style={{
-                fontSize: '10px',
+                fontSize: "13px",
                 fontWeight: 700,
                 color: T.slate2,
                 letterSpacing: '0.1em',
@@ -112,7 +112,7 @@ export default function Footer() {
           <div>
             <p
               style={{
-                fontSize: '10px',
+                fontSize: "13px",
                 fontWeight: 700,
                 color: T.slate2,
                 letterSpacing: '0.1em',
@@ -168,7 +168,7 @@ export default function Footer() {
         >
           <p
             style={{
-              fontSize: '12px',
+              fontSize: "13px",
               color: T.slate2,
               margin: 0,
               letterSpacing: '-0.005em',
@@ -184,7 +184,7 @@ export default function Footer() {
                 gap: '5px',
                 padding: '4px 10px',
                 borderRadius: '100px',
-                fontSize: '11px',
+                fontSize: "13px",
                 fontWeight: 600,
                 color: '#0F9E77',
                 letterSpacing: '-0.01em',
@@ -209,9 +209,9 @@ export default function Footer() {
                 gap: '5px',
                 padding: '4px 10px',
                 borderRadius: '100px',
-                fontSize: '11px',
+                fontSize: "13px",
                 fontWeight: 600,
-                color: T.blue,
+                color: T.link,
                 letterSpacing: '-0.01em',
                 ...Glass.chip,
               }}

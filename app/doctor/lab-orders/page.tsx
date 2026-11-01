@@ -42,8 +42,8 @@ const inputStyle = {
   minHeight: '44px',
   padding: '12px 14px',
   borderRadius: '12px',
-  border: '1px solid rgba(4,53,77,0.1)',
-  background: 'rgba(255,255,255,0.95)',
+  border: "1px solid var(--border)",
+  background: "var(--surface-glass)",
   color: T.navy,
   fontSize: '14px',
   fontWeight: 600,
@@ -160,7 +160,7 @@ export default function DoctorLabOrdersPage() {
   }
 
   const handleSave = async () => {
-    if (!selectedPatientId || !form.title.trim()) return
+    if (!selectedPatientId || !form.title.trim()) { setError('Select a patient and enter a lab test title.'); return }
     setSaving(true)
     setError(null)
     const payload = {
@@ -237,9 +237,9 @@ export default function DoctorLabOrdersPage() {
     <div className='doctor-lab-page'>
       <style>{`
         .doctor-lab-page { display: grid; gap: 18px; }
-        .dl-card { background: rgba(255,255,255,0.9); backdrop-filter: blur(22px) saturate(175%); -webkit-backdrop-filter: blur(22px) saturate(175%); border: 1px solid rgba(255,255,255,0.9); border-radius: 20px; box-shadow: ${Sh.card}; padding: 22px; }
+        .dl-card { background: var(--surface); backdrop-filter: blur(22px) saturate(175%); -webkit-backdrop-filter: blur(22px) saturate(175%); border: 1px solid var(--border); border-radius: 20px; box-shadow: ${Sh.card}; padding: 22px; }
         .dl-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
-        .dl-btn { min-height: 42px; border-radius: 12px; border: 1px solid rgba(4,53,77,0.12); background: white; color: ${T.navy}; padding: 0 14px; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .dl-btn { min-height: 42px; border-radius: 12px; border: 1px solid var(--border); background: white; color: ${T.navy}; padding: 0 14px; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .dl-btn:hover, .dl-btn:focus-visible { transform: translateY(-1px); box-shadow: ${Sh.glow}; outline: none; }
         .dl-btn.primary { border: none; background: linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%); color: white; }
         .dl-btn.danger { color: ${T.red}; border-color: rgba(220,38,38,0.18); background: rgba(220,38,38,0.06); }
@@ -247,7 +247,7 @@ export default function DoctorLabOrdersPage() {
         .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
         .dl-field { display: grid; gap: 6px; }
         .dl-field span, .dl-eyebrow { font-size: 11px; font-weight: 800; color: ${T.slate2}; letter-spacing: 0.06em; text-transform: uppercase; }
-        .dl-order { border-radius: 18px; border: 1px solid rgba(4,53,77,0.08); background: rgba(247,250,252,0.92); padding: 16px; display: grid; gap: 12px; }
+        .dl-order { border-radius: 18px; border: 1px solid var(--border); background: var(--surface-subtle); padding: 16px; display: grid; gap: 12px; }
         .dl-meta { display: flex; gap: 10px; flex-wrap: wrap; color: ${T.slate2}; font-size: 12px; font-weight: 700; }
         .dl-empty { padding: 28px; border-radius: 18px; background: rgba(32,181,223,0.08); color: ${T.blue}; text-align: center; font-weight: 800; }
         @media (max-width: 700px) { .dl-card { padding: 16px; border-radius: 18px; } .dl-btn { width: 100%; } .dl-header { display: grid; } }
@@ -309,7 +309,7 @@ export default function DoctorLabOrdersPage() {
             <label className='dl-field'><span>Reason for test</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} /></label>
             <label className='dl-field'><span>Preparation instructions</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.preparation_instructions} onChange={(event) => setForm({ ...form, preparation_instructions: event.target.value })} /></label>
           </div>
-          <button className='dl-btn primary' type='button' onClick={handleSave} disabled={saving || !form.title.trim()} style={{ marginTop: '14px' }}>
+          <button className='dl-btn primary' type='button' onClick={handleSave} disabled={saving} style={{ marginTop: '14px' }}>
             {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Lab Request'}
           </button>
         </section>
@@ -355,16 +355,16 @@ export default function DoctorLabOrdersPage() {
                 {test.result_filename && <span>Result: {test.result_filename}</span>}
               </div>
               <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                <div style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(4,53,77,0.06)' }}>
+                <div style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
                   <div className='dl-eyebrow'>Doctor lab guidance</div>
                   <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.recommended_lab_name || 'Any accredited laboratory'}</div>
-                  {test.recommended_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: '12px' }}>{test.recommended_lab_address}</div>}
+                  {test.recommended_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.recommended_lab_address}</div>}
                 </div>
-                <div style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(4,53,77,0.06)' }}>
+                <div style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
                   <div className='dl-eyebrow'>Patient recorded appointment</div>
                   <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.selected_lab_name || 'Not recorded yet'}</div>
-                  <div style={{ marginTop: '2px', color: T.slate, fontSize: '12px' }}>{test.scheduledForLabel || test.scheduled_for || 'No date recorded'}{test.home_collection ? ' - home collection' : ''}</div>
-                  {test.selected_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: '12px' }}>{test.selected_lab_address}</div>}
+                  <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.scheduledForLabel || test.scheduled_for || 'No date recorded'}{test.home_collection ? ' - home collection' : ''}</div>
+                  {test.selected_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.selected_lab_address}</div>}
                 </div>
               </div>
               {test.reason && <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>Reason: {test.reason}</p>}

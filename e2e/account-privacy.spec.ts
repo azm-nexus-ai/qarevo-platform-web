@@ -458,3 +458,100 @@ test('settings never expose editable defaults before loading and can retry an ou
   await expect(page.getByRole('heading', { name: 'Profile and contact identity' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save Changes', exact: true })).toBeEnabled()
 })
+
+
+test('onboarding explains invalid fields without locking Continue', async ({ page }) => {
+  await signIn(page, alpha)
+  await page.getByRole('button', { name: /Continue/ }).click()
+  await expect(page.locator('[data-validation-summary]')).toContainText('Please enter your full name')
+  await page.goto('/auth/profile-setup/contact-information')
+  const next = page.getByRole('button', { name: /Continue/ })
+  await expect(next).toBeEnabled()
+  await page.locator('#postalCode').fill('ABC12')
+  await page.locator('#primaryPhone').fill('123')
+  await page.locator('#address').fill('Musterstraße')
+  await next.click()
+  await expect(page.locator('#postalCode-error')).toContainText('five-digit')
+  await expect(page.locator('#primaryPhone-error')).toContainText('international')
+  await expect(page.locator('#address-error')).toContainText('house number')
+  await expect(page.locator('#primaryPhone')).toBeFocused()
+  await page.locator('#postalCode').fill('01067')
+  await page.locator('#primaryPhone').fill('+49 151 12345678')
+  await page.locator('#address').fill('Musterstraße 12a')
+  await expect(page.locator('#postalCode-error')).toHaveCount(0)
+  await expect(page.locator('#primaryPhone-error')).toHaveCount(0)
+  await expect(page.locator('#address-error')).toHaveCount(0)
+  await page.goto('/auth/profile-setup/medical-history-allergies')
+  await page.getByRole('button', { name: /Continue/ }).click()
+  await expect(page.locator('[data-validation-summary]')).toContainText('medical history')
+})
+
+test('doctor registration exposes required fields and consent without a disabled-submit trap', async ({ page }) => {
+  await page.goto('/auth/doctor-register')
+  await page.locator('button[type="submit"]').click()
+  await expect(page.getByText('First name is required.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Acknowledge the development test conditions before continuing.', { exact: true })).toBeVisible()
+  await expect(page.locator('input[aria-invalid=true]').first()).toBeFocused()
+})
+
+test('global theme survives refresh, route changes, logout and a fresh browser session', async ({ page, context, browser }) => {
+  await signIn(page, alpha)
+  await page.goto('/patient/settings')
+  const toggle = page.getByRole('button', { name: 'Dark mode', exact: true })
+  await toggle.click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await page.goto('/patient/prescriptions')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  const second = await context.newPage()
+  await second.goto('/privacy')
+  await expect(second.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await page.goto('/patient/settings')
+  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await expect(second.locator('html')).toHaveAttribute('data-theme', 'light')
+  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  const state = await context.storageState()
+  const fresh = await browser.newContext({ storageState: { cookies: [], origins: state.origins.map(origin => ({ ...origin, localStorage: origin.localStorage.filter(item => item.name === 'qarevo.theme.v1') })) } })
+  const freshPage = await fresh.newPage()
+  await freshPage.goto('/auth/sign-in')
+  await expect(freshPage.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await fresh.close()
+})
+
+
+for (const portal of ['doctor', 'admin'] as const) {
+  test(`${portal} has persistent theme and readable controls on desktop and mobile`, async ({ page, context }) => {
+    await context.addInitScript(role => {
+      localStorage.setItem('qarevo_access_token', 'synthetic-role-token')
+      localStorage.setItem('qarevo_refresh_token', 'synthetic-role-refresh')
+      localStorage.setItem('qarevo_user_id', 'synthetic-role-owner')
+      localStorage.setItem('qarevo_role', role)
+    }, portal === 'doctor' ? 'PROVIDER' : 'ADMIN')
+    await context.route(`**/api/v1/${portal}/**`, route => {
+      const path = new URL(route.request().url()).pathname
+      const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'Content-Type,Authorization', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' }
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+      if (path.endsWith('/profile')) return route.fulfill({ headers: cors, json: { full_name: 'Synthetic Doctor', specialty: 'General Medicine' } })
+      if (path.endsWith('/admin-users')) return route.fulfill({ headers: cors, json: { admin_users: [], total: 0 } })
+      return route.fulfill({ headers: cors, json: { patients: [], total_count: 0, filtered_count: 0, page: 1, page_size: 20, has_previous: false, has_next: false } })
+    })
+    const path = portal === 'admin' ? '/admin/admin-users' : '/doctor/patients'
+    await page.goto(path)
+    await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await page.reload()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    if (portal === 'admin') {
+      await page.getByRole('button', { name: 'Add Admin User', exact: true }).click()
+      const dialog = page.getByRole('dialog')
+      await dialog.getByRole('button', { name: 'Create Admin', exact: true }).click()
+      await expect(page.locator('#admin-full_name-error')).toContainText('Full name is required')
+      await expect(page.locator('#admin-email-error')).toContainText('valid email')
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+    }
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect(page.getByRole('button', { name: 'Dark mode', exact: true })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  })
+}

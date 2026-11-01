@@ -75,7 +75,7 @@ export default function HeroSection() {
                 letterSpacing: '-0.015em',
                 ...Glass.pill,
               }}
-              on={{ background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(4,53,77,0.13)' }}
+              on={{ background: "var(--surface-glass)", border: "1px solid var(--border)" }}
             >
               Read the Whitepaper
             </HoverBtn>

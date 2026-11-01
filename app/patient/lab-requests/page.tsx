@@ -39,7 +39,7 @@ const statusTone = (status: string) => {
   const lower = status.toLowerCase()
   if (lower.includes('result') || lower.includes('complete')) return { bg: 'rgba(15,158,119,0.12)', color: '#0F9E77' }
   if (lower.includes('book')) return { bg: 'rgba(165,224,218,0.24)', color: T.navy }
-  if (lower.includes('progress') || lower.includes('process')) return { bg: 'rgba(32,181,223,0.12)', color: T.blue }
+  if (lower.includes('progress') || lower.includes('process')) return { bg: 'rgba(32,181,223,0.12)', color: T.link }
   return { bg: 'rgba(247,158,27,0.12)', color: '#B35C00' }
 }
 
@@ -226,32 +226,32 @@ function LabRequestsPageContent() {
     >
       <style>{`
         * { box-sizing: border-box; }
-        .lab-hero, .lab-card, .lab-summary-card { background: rgba(255,255,255,0.9); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); border: 1px solid rgba(255,255,255,0.94); box-shadow: ${Sh.card}; }
+        .lab-hero, .lab-card, .lab-summary-card { background: var(--surface); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); border: 1px solid var(--border); box-shadow: ${Sh.card}; }
         .lab-hero { border-radius: 28px; padding: 24px; position: relative; overflow: hidden; }
         .lab-card { border-radius: 24px; padding: 20px; margin-top: 14px; }
         .lab-summary-card { border-radius: 24px; padding: 18px; display: grid; gap: 10px; }
         .section-eyebrow { margin: 0 0 4px; font-size: 11px; font-weight: 800; color: ${T.slate2}; letter-spacing: 0.06em; text-transform: uppercase; }
         .rail-title { margin: 0 0 6px; font-size: 18px; font-weight: 800; color: ${T.navy}; }
         .rail-grid { display: grid; gap: 8px; }
-        .rail-stat, .meta-item { padding: 10px 12px; border-radius: 12px; background: rgba(247,250,252,0.9); border: 1px solid rgba(4,53,77,0.06); }
+        .rail-stat, .meta-item { padding: 10px 12px; border-radius: 12px; background: var(--surface-subtle); border: 1px solid var(--border); }
         .rail-stat span, .meta-item span { display: block; font-size: 10px; color: ${T.slate2}; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
         .rail-stat strong, .meta-item strong { font-size: 12px; color: ${T.navy}; }
         .rail-note, .empty-box { padding: 14px; border-radius: 16px; background: rgba(32,181,223,0.1); color: ${T.blue}; font-size: 12px; font-weight: 700; line-height: 1.65; }
-        .action-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid rgba(4,53,77,0.12); background: rgba(255,255,255,0.92); color: ${T.navy}; font-size: 13px; font-weight: 800; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease; cursor: pointer; }
+        .action-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; font-size: 13px; font-weight: 800; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease; cursor: pointer; }
         .action-btn:hover, .action-btn:focus-visible { transform: translateY(-1px); box-shadow: ${Sh.glow}; outline: none; }
         .action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
         .action-btn.primary { background: linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%); color: #fff; border: none; box-shadow: 0 8px 22px rgba(32,181,223,0.24); }
-        .request-card, .download-row { border-radius: 18px; padding: 16px; border: 1px solid rgba(4,53,77,0.08); background: rgba(247,250,252,0.92); }
+        .request-card, .download-row { border-radius: 18px; padding: 16px; border: 1px solid var(--border); background: var(--surface-subtle); }
         .badge { display: inline-flex; align-items: center; justify-content: center; width: fit-content; max-width: 100%; padding: 7px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
         .status-badge { align-self: flex-start; flex: 0 0 auto; min-height: 28px; }
         .meta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
-        .select-input, .text-input { width: 100%; min-height: 44px; border-radius: 12px; border: 1px solid rgba(4,53,77,0.08); background: rgba(255,255,255,0.95); color: ${T.navy}; padding: 0 12px; font-size: 13px; font-weight: 700; }
-        .toggle-pill { min-height: 44px; border-radius: 12px; border: 1px solid rgba(4,53,77,0.08); background: rgba(255,255,255,0.9); color: ${T.navy}; padding: 0 12px; font-size: 13px; font-weight: 800; cursor: pointer; }
+        .select-input, .text-input { width: 100%; min-height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; padding: 0 12px; font-size: 13px; font-weight: 700; }
+        .toggle-pill { min-height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; padding: 0 12px; font-size: 13px; font-weight: 800; cursor: pointer; }
         .toggle-pill.active { background: rgba(32,181,223,0.12); color: ${T.blue}; border-color: rgba(32,181,223,0.24); }
         .modal-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(3,28,41,0.42); display: grid; place-items: center; padding: 18px; }
         .modal-card { width: min(620px, 100%); max-height: 88vh; overflow: auto; border-radius: 24px; background: white; box-shadow: 0 24px 70px rgba(3,28,41,0.3); padding: 22px; }
-        .icon-btn { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; border: 1px solid rgba(4,53,77,0.1); background: rgba(247,250,252,0.96); color: ${T.navy}; cursor: pointer; font-size: 20px; line-height: 1; }
+        .icon-btn { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-subtle); color: ${T.navy}; cursor: pointer; font-size: 20px; line-height: 1; }
         @media (max-width: 720px) {
           .lab-hero, .lab-card { padding: 16px; border-radius: 22px; }
           .meta-grid { grid-template-columns: 1fr; }
@@ -304,7 +304,7 @@ function LabRequestsPageContent() {
                     <article key={item.id} className='request-card'>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                         <div>
-                          <span className='badge' style={{ display: 'inline-flex', background: 'white', color: T.navy }}>{item.category ?? 'Diagnostic Test'}</span>
+                          <span className='badge' style={{ display: 'inline-flex', background: "var(--surface)", color: T.navy }}>{item.category ?? 'Diagnostic Test'}</span>
                           <h3 style={{ margin: '10px 0 4px', fontSize: '18px', fontWeight: 800, color: T.navy }}>{item.title}</h3>
                           <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{item.description || 'No extra description provided yet.'}</p>
                         </div>
@@ -316,7 +316,7 @@ function LabRequestsPageContent() {
                         <div className='meta-item'><span>Processing time</span><strong>{item.processing_time || 'Lab dependent'}</strong></div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
-                        <div style={{ fontSize: '12px', color: T.slate2 }}>Recommended completion: {item.completionDate ?? 'Not scheduled'}</div>
+                        <div style={{ fontSize: "13px", color: T.slate2 }}>Recommended completion: {item.completionDate ?? 'Not scheduled'}</div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button type='button' className='action-btn primary' onClick={() => beginBooking(item)}>Record Appointment</button>
                           <button type='button' className='action-btn' onClick={() => setDetailsRequest(item)}>View Details</button>
@@ -364,8 +364,8 @@ function LabRequestsPageContent() {
               {preparationItems.length === 0 ? <div className='empty-box'>Preparation notes will appear after you select a request.</div> : preparationItems.map((item) => (
                 <div key={item.title} className='download-row'>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                    <div className='icon-btn' style={{ color: T.blue }}><Ico p={ICONS.check} size={16} sw={1.8} /></div>
-                    <div><div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{item.title}</div><div style={{ fontSize: '12px', color: T.slate, lineHeight: 1.65, marginTop: '3px' }}>{item.body}</div></div>
+                    <div className='icon-btn' style={{ color: T.link }}><Ico p={ICONS.check} size={16} sw={1.8} /></div>
+                    <div><div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{item.title}</div><div style={{ fontSize: "13px", color: T.slate, lineHeight: 1.65, marginTop: '3px' }}>{item.body}</div></div>
                   </div>
                 </div>
               ))}
@@ -391,7 +391,7 @@ function LabRequestsPageContent() {
               <div className='download-row'>
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{selectedRequest?.title ?? 'Selected lab request'}</div>
-                  <div style={{ fontSize: '11px', color: T.slate2, marginTop: '3px' }}>PDF, PNG, JPG, or WEBP. Stored in Medical Records after upload.</div>
+                  <div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>PDF, PNG, JPG, or WEBP. Stored in Medical Records after upload.</div>
                 </div>
                 <input ref={uploadInputRef} type='file' accept='.pdf,image/png,image/jpeg,image/webp' style={{ display: 'none' }} onChange={(event) => handleUpload(event.target.files?.[0])} />
                 <button type='button' className='action-btn primary' onClick={() => uploadInputRef.current?.click()} disabled={saving}>{saving ? 'Uploading...' : 'Upload Result'}</button>
@@ -401,7 +401,7 @@ function LabRequestsPageContent() {
               <div style={{ display: 'grid', gap: '10px', marginTop: '10px' }}>
                 {data.recent_uploads.map((item) => (
                   <div key={item.file_id} className='download-row'>
-                    <div><div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{item.title}</div><div style={{ fontSize: '11px', color: T.slate2, marginTop: '3px' }}>{item.meta}</div></div>
+                    <div><div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{item.title}</div><div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>{item.meta}</div></div>
                     <button type='button' className='action-btn' onClick={() => previewResult(item.file_id)}>Preview</button>
                   </div>
                 ))}

@@ -76,7 +76,7 @@ export default function DoctorPrescriptionsPage() {
 
   const fetchMedications = async () => {
     if (!selectedPatientId) return
-    
+
     setLoading(true)
     setError(null)
     try {
@@ -86,11 +86,11 @@ export default function DoctorPrescriptionsPage() {
           'Authorization': `Bearer ${token}`,
         },
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch medications')
       }
-      
+
       const data = await response.json()
       setMedications(data.medications || [])
     } catch (err) {
@@ -107,8 +107,8 @@ export default function DoctorPrescriptionsPage() {
   }
 
   const handleAddMedication = async () => {
-    if (!selectedPatientId || !newMed.name || !newMed.strength) return
-    
+    if (!selectedPatientId || !newMed.name.trim() || !newMed.strength.trim()) { setError('Select a patient and enter the medication name and strength before saving.'); return }
+
     setLoading(true)
     try {
       const token = readAccessToken()
@@ -123,11 +123,11 @@ export default function DoctorPrescriptionsPage() {
           ...newMed,
         }),
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to add medication')
       }
-      
+
       const data = await response.json()
       setMedications(data.medications || [])
       setNewMed({
@@ -154,7 +154,7 @@ export default function DoctorPrescriptionsPage() {
 
   const handleDeleteMedication = async (medId: string) => {
     if (!selectedPatientId) return
-    
+
     setLoading(true)
     try {
       const token = readAccessToken()
@@ -164,11 +164,11 @@ export default function DoctorPrescriptionsPage() {
           'Authorization': `Bearer ${token}`,
         },
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to delete medication')
       }
-      
+
       const data = await response.json()
       setMedications(data.medications || [])
     } catch (err) {
@@ -192,13 +192,13 @@ export default function DoctorPrescriptionsPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Prescriptions</h1>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Prescriptions</h1>
           <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage patient medications</p>
         </div>
       </div>
 
       {/* Patient Selection */}
-      <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
+      <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
         <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
         <select
           value={selectedPatientId}
@@ -210,7 +210,7 @@ export default function DoctorPrescriptionsPage() {
             border: '1px solid rgba(0,0,0,0.1)',
             fontSize: '15px',
             outline: 'none',
-            background: 'white',
+            background: "var(--surface)",
             color: T.navy,
             fontWeight: 500,
             cursor: 'pointer',
@@ -251,7 +251,7 @@ export default function DoctorPrescriptionsPage() {
       </div>
 
       {error && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
+        <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
       )}
 
       {/* Add Medication Button */}
@@ -275,9 +275,9 @@ export default function DoctorPrescriptionsPage() {
 
       {/* Add Medication Form */}
       {showAddForm && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
+        <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
           <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 700, color: T.navy }}>New Medication</h3>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Episode ID (Optional)</label>
@@ -296,9 +296,9 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Medication Name *</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Medication Name (Required)</label>
               <input
                 type="text"
                 value={newMed.name}
@@ -314,7 +314,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Brand</label>
               <input
@@ -332,9 +332,9 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Strength *</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Strength (Required)</label>
               <input
                 type="text"
                 value={newMed.strength}
@@ -350,7 +350,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Dosage</label>
               <input
@@ -368,7 +368,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Frequency</label>
               <input
@@ -386,7 +386,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Duration</label>
               <input
@@ -404,7 +404,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Instructions</label>
               <textarea
@@ -423,7 +423,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Food</label>
               <input
@@ -441,7 +441,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Times of Day</label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -453,9 +453,9 @@ export default function DoctorPrescriptionsPage() {
                       padding: '8px 16px',
                       borderRadius: '8px',
                       border: '1px solid rgba(0,0,0,0.08)',
-                      background: newMed.times.includes(time) ? 'rgba(32,181,223,0.1)' : 'rgba(255,255,255,0.88)',
+                      background: newMed.times.includes(time) ? 'rgba(32,181,223,0.1)' : "var(--surface-glass)",
                       color: newMed.times.includes(time) ? 'rgba(32,181,223,1)' : T.slate2,
-                      fontSize: '12px',
+                      fontSize: "13px",
                       fontWeight: 600,
                       cursor: 'pointer',
                     }}
@@ -465,7 +465,7 @@ export default function DoctorPrescriptionsPage() {
                 ))}
               </div>
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Refill Status</label>
               <input
@@ -483,19 +483,19 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <button
               onClick={handleAddMedication}
-              disabled={loading || !newMed.name || !newMed.strength}
+              disabled={loading}
               style={{
                 padding: '12px 24px',
                 borderRadius: '12px',
                 border: 'none',
-                background: loading || !newMed.name || !newMed.strength ? 'rgba(32,181,223,0.5)' : 'rgba(32,181,223,1)',
+                background: loading ? 'rgba(32,181,223,0.5)' : 'rgba(32,181,223,1)',
                 color: 'white',
                 fontSize: '14px',
                 fontWeight: 600,
-                cursor: loading || !newMed.name || !newMed.strength ? 'not-allowed' : 'pointer',
+                cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
               {loading ? 'Adding...' : 'Add Medication'}
@@ -512,11 +512,11 @@ export default function DoctorPrescriptionsPage() {
             <div
               key={med.id}
               style={{
-                background: 'rgba(255,255,255,0.88)',
+                background: "var(--surface-glass)",
                 backdropFilter: 'blur(22px) saturate(175%)',
                 WebkitBackdropFilter: 'blur(22px) saturate(175%)',
                 borderRadius: '16px',
-                border: '1px solid rgba(255,255,255,0.88)',
+                border: "1px solid var(--border)",
                 boxShadow: Sh.card,
                 padding: '20px',
               }}
@@ -526,13 +526,13 @@ export default function DoctorPrescriptionsPage() {
                   <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700, color: T.navy }}>{med.name} {med.brand && `(${med.brand})`}</h3>
                   <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{med.strength} · {med.dosage} · {med.frequency}</p>
                   <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Duration: {med.duration}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Status: {med.status}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Duration: {med.duration}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Status: {med.status}</span>
                     {med.times.length > 0 && (
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Times: {med.times.join(', ')}</span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Times: {med.times.join(', ')}</span>
                     )}
                     {med.refill && (
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: T.green }}>{med.refill}</span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: T.green }}>{med.refill}</span>
                     )}
                   </div>
                   {med.instructions && (
@@ -547,7 +547,7 @@ export default function DoctorPrescriptionsPage() {
                     border: 'none',
                     background: 'rgba(220,38,38,0.1)',
                     color: T.red,
-                    fontSize: '12px',
+                    fontSize: "13px",
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}

@@ -14,7 +14,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 function CompletionVisual() {
@@ -77,11 +77,11 @@ function LeftPanel() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <CompletionVisual />
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
+          <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
             Onboarding complete.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your profile is ready.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             You’ve finished setting up your patient profile. You can now explore the development platform.
           </p>
         </div>
@@ -99,7 +99,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -131,23 +131,23 @@ export default function ProfileCompletedPage() {
 
       <div className='pc-wrap' style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '44px 24px 64px', overflowY: 'auto' }}>
         <div style={{ width: '100%', maxWidth: '760px' }}>
-          <section className='pc-card' style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(34px) saturate(200%)', WebkitBackdropFilter: 'blur(34px) saturate(200%)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.92)', boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)', padding: '36px 32px' }}>
-            <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          <section className='pc-card' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(34px) saturate(200%)', WebkitBackdropFilter: 'blur(34px) saturate(200%)', borderRadius: '24px', border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)', padding: '36px 32px' }}>
+            <div style={{ padding: '12px 14px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 6 of 6</p>
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>100% Complete</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>100% Complete</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Welcome to Qarevo Health</p>
               </div>
             </div>
 
             <header style={{ marginBottom: '18px', textAlign: 'center' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '18px', margin: '0 auto 14px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 4px 16px rgba(32,181,223,0.35), inset 0 1px 0 rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '18px', margin: '0 auto 14px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 4px 16px rgba(32,181,223,0.35), inset 0 1px 0 rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Ico p={ICONS.check} size={26} sw={1.8} color='#fff' />
               </div>
-              <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>Profile Completed</h1>
+              <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>Profile Completed</h1>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>
                 Your profile information has been saved. This development environment is for synthetic testing; legal approval and clinical launch checks remain outstanding.
               </p>
@@ -159,23 +159,23 @@ export default function ProfileCompletedPage() {
                 { icon: ICONS.brain, label: 'Informed', sub: 'Your saved details are available' },
                 { icon: ICONS.shield, label: 'Secure', sub: 'Account-specific access' },
               ].map(({ icon, label, sub }) => (
-                <div key={label} style={{ padding: '16px', borderRadius: '16px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(4,53,77,0.06)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div key={label} style={{ padding: '16px', borderRadius: '16px', background: "var(--surface-glass)", border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Ico p={icon} size={15} sw={1.7} color={T.blue} />
                   </div>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em' }}>{label}</div>
-                  <div style={{ fontSize: '12px', color: T.slate2, lineHeight: 1.5 }}>{sub}</div>
+                  <div style={{ fontSize: "13px", color: T.slate2, lineHeight: 1.5 }}>{sub}</div>
                 </div>
               ))}
             </div>
 
-            <div style={{ marginBottom: '16px', padding: '12px 13px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <div style={{ marginBottom: '16px', padding: '12px 13px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
               <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.info} size={13} sw={1.75} color={T.blue} />
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '12.5px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>What happens next?</p>
-                <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>What happens next?</p>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>
                   Your profile is now ready. Continue to your dashboard to begin exploring your care experience.
                 </p>
               </div>
@@ -185,7 +185,7 @@ export default function ProfileCompletedPage() {
               <Link
                 href='/patient/dashboard'
                 onClick={() => markOnboardingCompleted()}
-                style={{ width: '100%', minHeight: '48px', borderRadius: '13px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)' }}
+                style={{ width: '100%', minHeight: '48px', borderRadius: '13px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)' }}
               >
                 Continue to Dashboard
                 <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />

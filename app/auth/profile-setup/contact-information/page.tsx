@@ -11,6 +11,7 @@ import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/Profil
 import { getApiErrorDetail, getPatientSettings } from '@/lib/api'
 import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
 import { getOnboarding, saveContactInformation, GERMAN_STATES, type ContactInformation } from '@/lib/patient-onboarding'
+import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
 import { createAccountDraftStorage } from '@/lib/account-storage'
 
 const LEFT_BG = [
@@ -18,7 +19,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 const STORAGE_KEY = 'qarevo.onboarding.contact-information.v1'
@@ -65,7 +66,7 @@ const COUNTRY_CODES: Record<string, string> = { Germany: '+49' }
 const COUNTRY_OPTIONS = ['Germany']
 const STATE_OPTIONS: Record<string, string[]> = { Germany: GERMAN_STATES }
 function formatPhone(input: string, _country: string) {
-  return input.replace(/[^0-9+ ().-]/g, '')
+  return input
 }
 
 function JourneyVisual() {
@@ -170,11 +171,11 @@ function LeftPanel() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <JourneyVisual />
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
+          <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
             Care stays within reach.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>We’ll know how to support you.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Your contact details and emergency information help us communicate clearly and respond quickly when it matters most.
           </p>
         </div>
@@ -192,7 +193,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -204,7 +205,7 @@ function LeftPanel() {
 function SectionHeader({ title, body }: { title: string; body: string }) {
   return (
     <div style={{ marginBottom: '12px' }}>
-      <h2 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>{title}</h2>
+      <h2 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>{title}</h2>
       <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6, letterSpacing: '-0.01em' }}>{body}</p>
     </div>
   )
@@ -276,7 +277,7 @@ export default function ContactInformationPage() {
 
   const updateField = <K extends keyof ContactForm>(key: K, value: ContactForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
-    setErrors((prev) => ({ ...prev, [key]: '' }))
+    setErrors(collectErrors({ ...form, [key]: value }))
   }
 
   const validatePhone = (value: string, required: boolean) => {
@@ -291,25 +292,30 @@ export default function ContactInformationPage() {
     if (!value.primaryPhone.trim()) nextErrors.primaryPhone = 'Primary phone number is required'
     else if (validatePhone(value.primaryPhone, true)) nextErrors.primaryPhone = validatePhone(value.primaryPhone, true)
 
-    if (value.alternativePhone && validatePhone(value.alternativePhone, false)) nextErrors.alternativePhone = 'Enter a valid alternative phone number'
+    if (value.alternativePhone && validatePhone(value.alternativePhone, false)) nextErrors.alternativePhone = validatePhone(value.alternativePhone, false)
     if (!EMAIL_RE.test(value.email)) nextErrors.email = 'Enter a valid email address'
     if (value.country !== 'Germany') nextErrors.country = 'Please select your country'
     if (!GERMAN_STATES.includes(value.state)) nextErrors.state = 'Please select your state or province'
-    if (value.city.trim().length < 2 || !/[a-zäöüß]/i.test(value.city)) nextErrors.city = 'Enter a valid city name'
-    if (value.address.trim().length < 5 || !/[a-zäöüß]/i.test(value.address)) nextErrors.address = 'Enter your street and house number'
+    if (value.city.trim().length < 2 || value.city.trim().length > 100 || !/\p{L}/u.test(value.city) || /[<>\x00-\x1f]/.test(value.city)) nextErrors.city = 'Enter a city name using 2–100 characters; HTML is not accepted.'
+    if (value.address.trim().length < 5 || value.address.trim().length > 250 || !/\p{L}/u.test(value.address) || !/[0-9]/.test(value.address) || /[<>\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value.address)) nextErrors.address = 'Enter street and house number, for example Musterstraße 12 (5–250 characters).'
     if (!/^[0-9]{5}$/.test(value.postalCode)) nextErrors.postalCode = 'Enter a five-digit German postal code'
     if (!value.preferredContactMethod) nextErrors.preferredContactMethod = 'Please choose a preferred contact method'
 
-    if (!value.emergencyName.trim()) nextErrors.emergencyName = 'Emergency contact name is required'
+    if (value.emergencyName.trim().length < 2 || value.emergencyName.trim().length > 100 || !/\p{L}/u.test(value.emergencyName) || /[<>\x00-\x1f]/.test(value.emergencyName)) nextErrors.emergencyName = 'Enter the emergency contact’s name (2–100 characters).'
     if (!value.emergencyRelationship) nextErrors.emergencyRelationship = 'Please select a relationship'
     if (!value.emergencyPhone.trim()) nextErrors.emergencyPhone = 'Emergency contact phone number is required'
     else if (validatePhone(value.emergencyPhone, true)) nextErrors.emergencyPhone = validatePhone(value.emergencyPhone, true)
 
-    if (value.primaryPhone.replace(/\D/g, '') === value.emergencyPhone.replace(/\D/g, '')) nextErrors.emergencyPhone = 'Use a different phone number for your emergency contact'
-    if (value.emergencyAltPhone && validatePhone(value.emergencyAltPhone, false)) nextErrors.emergencyAltPhone = 'Enter a valid alternative number'
+    if (value.primaryPhone.trim() && value.primaryPhone.replace(/\D/g, '') === value.emergencyPhone.replace(/\D/g, '')) nextErrors.emergencyPhone = 'Use a different phone number for your emergency contact'
+    if (value.emergencyAltPhone && validatePhone(value.emergencyAltPhone, false)) nextErrors.emergencyAltPhone = validatePhone(value.emergencyAltPhone, false)
     if (value.emergencyEmail && !EMAIL_RE.test(value.emergencyEmail)) nextErrors.emergencyEmail = 'Enter a valid emergency contact email'
 
     return nextErrors
+  }
+
+  const markTouched = (key: keyof ContactForm) => {
+    setTouched(previous => ({ ...previous, [key]: true }))
+    setErrors(collectErrors(form))
   }
 
   const validate = () => {
@@ -343,7 +349,12 @@ export default function ContactInformationPage() {
       emergencyAltPhone: true,
       emergencyEmail: true,
     })
-    if (!validate()) return
+    if (!validate()) {
+      if (form.alternativePhone) setShowOptionalPhones(true)
+      if (form.emergencyAltPhone || form.emergencyEmail) setShowOptionalEmergency(true)
+      focusValidation(e.currentTarget)
+      return
+    }
     setSubmitting(true)
     try {
       await saveContactInformation({
@@ -365,13 +376,13 @@ export default function ContactInformationPage() {
     }
   }
 
-  const canContinue = draftReady && !submitting && Object.keys(collectErrors(form)).length === 0
+  const canContinue = draftReady && !submitting
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
       <style>{`
         * { box-sizing: border-box; }
-        input::placeholder, textarea::placeholder { color: rgba(4,53,77,0.3); }
+        input::placeholder, textarea::placeholder { color: var(--text-muted); }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
@@ -397,30 +408,30 @@ export default function ContactInformationPage() {
             onSubmit={onSubmit}
             noValidate
             style={{
-              background: 'rgba(255,255,255,0.9)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(34px) saturate(200%)',
               WebkitBackdropFilter: 'blur(34px) saturate(200%)',
               borderRadius: '24px',
-              border: '1px solid rgba(255,255,255,0.92)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)',
               padding: '36px 32px',
               animation: 'fadeUp 0.3s ease',
             }}
           >
             <fieldset disabled={!draftReady || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-            <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <div style={{ padding: '12px 14px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 3 of 6</p>
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>50% Complete</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>50% Complete</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Approximately 2 Minutes</p>
               </div>
             </div>
 
             <header style={{ marginBottom: '16px' }}>
-              <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>
+              <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>
                 Stay Connected
               </h1>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>
@@ -428,11 +439,12 @@ export default function ContactInformationPage() {
               </p>
             </header>
 
-            <div style={{ marginBottom: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 11px', borderRadius: '100px', background: savedTick ? T.greenLight : 'rgba(4,53,77,0.03)', border: `1px solid ${savedTick ? 'rgba(9,173,112,0.25)' : 'rgba(4,53,77,0.08)'}` }}>
+            <div style={{ marginBottom: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 11px', borderRadius: '100px', background: savedTick ? T.greenLight : "var(--surface-hover)", border: `1px solid ${savedTick ? 'rgba(9,173,112,0.25)' : "var(--border)"}` }}>
               <Ico p={savedTick ? ICONS.check : ICONS.activity} size={11} sw={2} color={savedTick ? T.green : T.slate2} />
-              <span style={{ fontSize: '11.5px', fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
+              <span style={{ fontSize: "13px", fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
             </div>
 
+            <ValidationSummary errors={Object.fromEntries(Object.entries(errors).filter(([key]) => touched[key]))} />
             {submitError ? (
               <div role='alert' style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
                 {submitError}
@@ -445,18 +457,18 @@ export default function ContactInformationPage() {
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='primaryPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Primary Phone Number (Required)</label>
-                  <input id='primaryPhone' required aria-required='true' value={form.primaryPhone} autoComplete='tel' onChange={(e) => updateField('primaryPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, primaryPhone: true }))} placeholder={form.country && COUNTRY_CODES[form.country] ? `${COUNTRY_CODES[form.country]} 801 234 5678` : '+234 801 234 5678'} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('primaryPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.primaryPhone && errors.primaryPhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.primaryPhone}</p> : null}
+                  <input id='primaryPhone' type='tel' aria-invalid={!!(touched.primaryPhone && errors.primaryPhone)} aria-describedby={['primaryPhone-hint', touched.primaryPhone && errors.primaryPhone ? 'primaryPhone-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.primaryPhone} autoComplete='tel' onChange={(e) => updateField('primaryPhone', formatPhone(e.target.value, form.country))} onBlur={() => markTouched('primaryPhone')} placeholder={form.country && COUNTRY_CODES[form.country] ? `${COUNTRY_CODES[form.country]} 801 234 5678` : '+234 801 234 5678'} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('primaryPhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='primaryPhone' error={touched.primaryPhone ? errors.primaryPhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='email' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Email Address (Required)</label>
-                  <input id='email' required aria-required='true' type='email' value={form.email} autoComplete='email' onChange={(e) => updateField('email', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, email: true }))} placeholder='you@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('email'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.email && errors.email ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.email}</p> : null}
+                  <input readOnly id='email' aria-invalid={!!(touched.email && errors.email)} aria-describedby={[null, touched.email && errors.email ? 'email-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' type='email' value={form.email} autoComplete='email' onChange={(e) => updateField('email', e.target.value)} onBlur={() => markTouched('email')} placeholder='you@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('email'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='email' error={touched.email ? errors.email : undefined} />
                 </div>
               </div>
 
-              <button type='button' onClick={() => setShowOptionalPhones((prev) => !prev)} style={{ marginBottom: showOptionalPhones ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.blue, fontSize: '12.5px', fontWeight: 700, letterSpacing: '-0.01em' }}>
+              <button type='button' onClick={() => setShowOptionalPhones((prev) => !prev)} style={{ marginBottom: showOptionalPhones ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em' }}>
                 {showOptionalPhones ? 'Hide optional phone fields' : 'Add alternative phone number'}
               </button>
 
@@ -464,8 +476,8 @@ export default function ContactInformationPage() {
                 <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label htmlFor='alternativePhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Alternative Phone Number <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></label>
-                    <input id='alternativePhone' value={form.alternativePhone} autoComplete='tel' onChange={(e) => updateField('alternativePhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, alternativePhone: true }))} placeholder='Alternative number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('alternativePhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                    {touched.alternativePhone && errors.alternativePhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.alternativePhone}</p> : null}
+                    <input id='alternativePhone' type='tel' aria-invalid={!!(touched.alternativePhone && errors.alternativePhone)} aria-describedby={['alternativePhone-hint', touched.alternativePhone && errors.alternativePhone ? 'alternativePhone-error' : null].filter(Boolean).join(' ') || undefined} value={form.alternativePhone} autoComplete='tel' onChange={(e) => updateField('alternativePhone', formatPhone(e.target.value, form.country))} onBlur={() => markTouched('alternativePhone')} placeholder='Alternative number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('alternativePhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                    <FieldFeedback name='alternativePhone' error={touched.alternativePhone ? errors.alternativePhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
                   </div>
                 </div>
               ) : null}
@@ -473,34 +485,35 @@ export default function ContactInformationPage() {
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='country' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Country (Required)</label>
-                  <select id='country' required aria-required='true' value={form.country} autoComplete='country-name' onChange={(e) => updateField('country', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, country: true }))} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('country'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}><option value=''>Select</option>{COUNTRY_OPTIONS.map(item => <option key={item} value={item}>{item}</option>)}</select>
-                  {touched.country && errors.country ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.country}</p> : null}
+                  <select id='country' aria-invalid={!!(touched.country && errors.country)} aria-describedby={[null, touched.country && errors.country ? 'country-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.country} autoComplete='country-name' onChange={(e) => updateField('country', e.target.value)} onBlur={() => markTouched('country')} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('country'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}><option value=''>Select</option>{COUNTRY_OPTIONS.map(item => <option key={item} value={item}>{item}</option>)}</select>
+                  <FieldFeedback name='country' error={touched.country ? errors.country : undefined} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='state' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>State / Province (Required)</label>
-                  <select id='state' required aria-required='true' value={form.state} onChange={(e) => updateField('state', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, state: true }))} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('state'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}><option value=''>Select</option>{stateOptions.map(item => <option key={item} value={item}>{item}</option>)}</select>
-                  {touched.state && errors.state ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.state}</p> : null}
+                  <select id='state' aria-invalid={!!(touched.state && errors.state)} aria-describedby={[null, touched.state && errors.state ? 'state-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.state} onChange={(e) => updateField('state', e.target.value)} onBlur={() => markTouched('state')} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('state'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}><option value=''>Select</option>{stateOptions.map(item => <option key={item} value={item}>{item}</option>)}</select>
+                  <FieldFeedback name='state' error={touched.state ? errors.state : undefined} />
                 </div>
               </div>
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='city' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>City (Required)</label>
-                  <input id='city' required aria-required='true' value={form.city} autoComplete='address-level2' onChange={(e) => updateField('city', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, city: true }))} placeholder='City' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('city'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.city && errors.city ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.city}</p> : null}
+                  <input id='city' aria-invalid={!!(touched.city && errors.city)} aria-describedby={['city-hint', touched.city && errors.city ? 'city-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.city} autoComplete='address-level2' onChange={(e) => updateField('city', e.target.value)} onBlur={() => markTouched('city')} placeholder='City' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('city'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='city' error={touched.city ? errors.city : undefined} hint='City or municipality, 2–100 characters.' />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='postalCode' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Postal Code (Required)</label>
-                  <input id='postalCode' required aria-required='true' value={form.postalCode} autoComplete='postal-code' onChange={(e) => updateField('postalCode', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, postalCode: true }))} placeholder='Postal code' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('postalCode'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <input id='postalCode' aria-invalid={!!(touched.postalCode && errors.postalCode)} aria-describedby={['postalCode-hint', touched.postalCode && errors.postalCode ? 'postalCode-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.postalCode} autoComplete='postal-code' onChange={(e) => updateField('postalCode', e.target.value)} onBlur={() => markTouched('postalCode')} inputMode='numeric' placeholder='10115' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('postalCode'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='postalCode' error={touched.postalCode ? errors.postalCode : undefined} hint='Germany: exactly 5 digits, for example 10115. Keep any leading zero.' />
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
                 <label htmlFor='address' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Residential Address (Required)</label>
-                <textarea id='address' required aria-required='true' value={form.address} autoComplete='street-address' onChange={(e) => updateField('address', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, address: true }))} placeholder='Street address, area, and relevant location details' rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('address'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
-                {touched.address && errors.address ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.address}</p> : null}
+                <textarea id='address' aria-invalid={!!(touched.address && errors.address)} aria-describedby={['address-hint', touched.address && errors.address ? 'address-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.address} autoComplete='street-address' onChange={(e) => updateField('address', e.target.value)} onBlur={() => markTouched('address')} placeholder='Musterstraße 12' rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('address'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
+                <FieldFeedback name='address' error={touched.address ? errors.address : undefined} hint='Street and house number, for example Musterstraße 12. Add apartment details if needed (maximum 250 characters).' />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -513,14 +526,14 @@ export default function ContactInformationPage() {
                         key={option}
                         type='button'
                         onClick={() => updateField('preferredContactMethod', option)}
-                        onBlur={() => setTouched((prev) => ({ ...prev, preferredContactMethod: true }))}
+                        onBlur={() => markTouched('preferredContactMethod')}
                         style={{
                           padding: '8px 12px',
                           borderRadius: '100px',
-                          border: active ? `1px solid ${T.blueMid}` : '1px solid rgba(4,53,77,0.08)',
-                          background: active ? T.blueLight : 'rgba(255,255,255,0.78)',
-                          color: active ? T.blue : T.slate,
-                          fontSize: '12.5px',
+                          border: active ? `1px solid ${T.blueMid}` : "1px solid var(--border)",
+                          background: active ? T.blueLight : "var(--surface-glass)",
+                          color: active ? T.link : T.slate,
+                          fontSize: "13px",
                           fontWeight: 700,
                           letterSpacing: '-0.01em',
                           cursor: 'pointer',
@@ -531,23 +544,23 @@ export default function ContactInformationPage() {
                     )
                   })}
                 </div>
-                {touched.preferredContactMethod && errors.preferredContactMethod ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.preferredContactMethod}</p> : null}
+                {touched.preferredContactMethod && errors.preferredContactMethod ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.preferredContactMethod}</p> : null}
               </div>
             </div>
 
-            <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+            <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
               <SectionHeader title='Emergency Contact' body='Let us know who we should reach in case of an urgent medical situation.' />
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='emergencyName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Name (Required)</label>
-                  <input id='emergencyName' required aria-required='true' value={form.emergencyName} autoComplete='name' onChange={(e) => updateField('emergencyName', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyName: true }))} placeholder='Full name' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyName'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.emergencyName && errors.emergencyName ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyName}</p> : null}
+                  <input id='emergencyName' aria-invalid={!!(touched.emergencyName && errors.emergencyName)} aria-describedby={['emergencyName-hint', touched.emergencyName && errors.emergencyName ? 'emergencyName-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.emergencyName} autoComplete='name' onChange={(e) => updateField('emergencyName', e.target.value)} onBlur={() => markTouched('emergencyName')} placeholder='Full name' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyName'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='emergencyName' error={touched.emergencyName ? errors.emergencyName : undefined} hint='Full name of another person, 2–100 characters.' />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='relationship' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Relationship (Required)</label>
-                  <select required id='relationship' value={form.emergencyRelationship} onChange={(e) => updateField('emergencyRelationship', e.target.value as Relationship)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyRelationship: true }))} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyRelationship'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}>
+                  <select required id='relationship' aria-invalid={!!(touched.emergencyRelationship && errors.emergencyRelationship)} aria-describedby={[null, touched.emergencyRelationship && errors.emergencyRelationship ? 'emergencyRelationship-error' : null].filter(Boolean).join(' ') || undefined} value={form.emergencyRelationship} onChange={(e) => updateField('emergencyRelationship', e.target.value as Relationship)} onBlur={() => markTouched('emergencyRelationship')} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyRelationship'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}>
                     <option value=''>Select</option>
                     <option value='Parent'>Parent</option>
                     <option value='Spouse'>Spouse</option>
@@ -556,19 +569,19 @@ export default function ContactInformationPage() {
                     <option value='Friend'>Friend</option>
                     <option value='Other'>Other</option>
                   </select>
-                  {touched.emergencyRelationship && errors.emergencyRelationship ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyRelationship}</p> : null}
+                  <FieldFeedback name='emergencyRelationship' error={touched.emergencyRelationship ? errors.emergencyRelationship : undefined} />
                 </div>
               </div>
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='emergencyPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Phone Number (Required)</label>
-                  <input id='emergencyPhone' required aria-required='true' value={form.emergencyPhone} autoComplete='tel' onChange={(e) => updateField('emergencyPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, emergencyPhone: true }))} placeholder='Primary emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.emergencyPhone && errors.emergencyPhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyPhone}</p> : null}
+                  <input id='emergencyPhone' type='tel' aria-invalid={!!(touched.emergencyPhone && errors.emergencyPhone)} aria-describedby={['emergencyPhone-hint', touched.emergencyPhone && errors.emergencyPhone ? 'emergencyPhone-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.emergencyPhone} autoComplete='tel' onChange={(e) => updateField('emergencyPhone', formatPhone(e.target.value, form.country))} onBlur={() => markTouched('emergencyPhone')} placeholder='Primary emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyPhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='emergencyPhone' error={touched.emergencyPhone ? errors.emergencyPhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
                 </div>
               </div>
 
-              <button type='button' onClick={() => setShowOptionalEmergency((prev) => !prev)} style={{ marginBottom: showOptionalEmergency ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.blue, fontSize: '12.5px', fontWeight: 700, letterSpacing: '-0.01em' }}>
+              <button type='button' onClick={() => setShowOptionalEmergency((prev) => !prev)} style={{ marginBottom: showOptionalEmergency ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em' }}>
                 {showOptionalEmergency ? 'Hide optional emergency fields' : 'Add optional emergency contact details'}
               </button>
 
@@ -576,26 +589,26 @@ export default function ContactInformationPage() {
                 <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label htmlFor='emergencyAltPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Alternative Number <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></label>
-                    <input id='emergencyAltPhone' value={form.emergencyAltPhone} autoComplete='tel' onChange={(e) => updateField('emergencyAltPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, emergencyAltPhone: true }))} placeholder='Alternative emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyAltPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                    {touched.emergencyAltPhone && errors.emergencyAltPhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyAltPhone}</p> : null}
+                    <input id='emergencyAltPhone' type='tel' aria-invalid={!!(touched.emergencyAltPhone && errors.emergencyAltPhone)} aria-describedby={['emergencyAltPhone-hint', touched.emergencyAltPhone && errors.emergencyAltPhone ? 'emergencyAltPhone-error' : null].filter(Boolean).join(' ') || undefined} value={form.emergencyAltPhone} autoComplete='tel' onChange={(e) => updateField('emergencyAltPhone', formatPhone(e.target.value, form.country))} onBlur={() => markTouched('emergencyAltPhone')} placeholder='Alternative emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyAltPhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                    <FieldFeedback name='emergencyAltPhone' error={touched.emergencyAltPhone ? errors.emergencyAltPhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label htmlFor='emergencyEmail' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Email <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></label>
-                    <input id='emergencyEmail' type='email' value={form.emergencyEmail} autoComplete='email' onChange={(e) => updateField('emergencyEmail', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyEmail: true }))} placeholder='email@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyEmail'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                    {touched.emergencyEmail && errors.emergencyEmail ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyEmail}</p> : null}
+                    <input id='emergencyEmail' aria-invalid={!!(touched.emergencyEmail && errors.emergencyEmail)} aria-describedby={[null, touched.emergencyEmail && errors.emergencyEmail ? 'emergencyEmail-error' : null].filter(Boolean).join(' ') || undefined} type='email' value={form.emergencyEmail} autoComplete='email' onChange={(e) => updateField('emergencyEmail', e.target.value)} onBlur={() => markTouched('emergencyEmail')} placeholder='email@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyEmail'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                    <FieldFeedback name='emergencyEmail' error={touched.emergencyEmail ? errors.emergencyEmail : undefined} />
                   </div>
                 </div>
               ) : null}
             </div>
 
-            <div style={{ marginBottom: '16px', padding: '12px 13px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <div style={{ marginBottom: '16px', padding: '12px 13px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
               <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.info} size={13} sw={1.75} color={T.blue} />
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '12.5px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Why do we ask for an emergency contact?</p>
-                <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{helpText}</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Why do we ask for an emergency contact?</p>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{helpText}</p>
               </div>
             </div>
 
@@ -611,7 +624,7 @@ export default function ContactInformationPage() {
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: canContinue ? continueHover ? 'linear-gradient(135deg,#348CEA 0%,#0F47B8 100%)' : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(32,181,223,0.5)',
+                  background: canContinue ? continueHover ? 'linear-gradient(135deg,var(--primary-end) 0%,#0F47B8 100%)' : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : 'rgba(32,181,223,0.5)',
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',

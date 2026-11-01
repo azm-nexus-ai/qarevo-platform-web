@@ -110,7 +110,7 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            border: '2px solid rgba(255,255,255,0.95)',
+            border: "2px solid var(--border)",
             ...Glass.verifyBadge,
           }}
         >
@@ -122,7 +122,7 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
         <div
           className='doctor-card-name'
           style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
             fontSize: '15px',
             fontWeight: 700,
             color: T.navy,
@@ -132,13 +132,13 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
         >
           {name}
         </div>
-        <div className='doctor-card-meta' style={{ fontSize: '12.5px', color: T.slate2, marginBottom: '16px', letterSpacing: '-0.01em' }}>
+        <div className='doctor-card-meta' style={{ fontSize: "13px", color: T.slate2, marginBottom: '16px', letterSpacing: '-0.01em' }}>
           {specialty} · Clinical Ver: {verification}
         </div>
         <div
           className='doctor-card-focus'
           style={{
-            fontSize: '10px',
+            fontSize: "13px",
             fontWeight: 700,
             color: T.slate2,
             letterSpacing: '0.1em',
@@ -155,8 +155,8 @@ export default function DoctorCard({ name, specialty, verification, tags = [], i
               style={{
                 padding: '4px 11px',
                 borderRadius: '100px',
-                color: T.blue,
-                fontSize: '12px',
+                color: T.link,
+                fontSize: "13px",
                 fontWeight: 500,
                 letterSpacing: '-0.01em',
                 ...Glass.chip,

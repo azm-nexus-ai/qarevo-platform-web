@@ -12,18 +12,18 @@ import {
   isAdmin,
 } from '@/lib/api'
 
-function SettingCard({ title, description, children }: { 
+function SettingCard({ title, description, children }: {
   title: string
   description: string
   children: React.ReactNode
 }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '24px',
     }}>
@@ -113,7 +113,7 @@ export default function AdminSettingsPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+      <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         {error}
       </div>
     )
@@ -182,8 +182,8 @@ export default function AdminSettingsPage() {
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(4,53,77,0.12)',
-                  background: 'rgba(255,255,255,0.9)',
+                  border: "1px solid var(--border)",
+                  background: "var(--surface-glass)",
                   fontSize: '14px',
                   color: T.navy,
                   cursor: 'pointer',
@@ -205,8 +205,8 @@ export default function AdminSettingsPage() {
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(4,53,77,0.12)',
-                  background: 'rgba(255,255,255,0.9)',
+                  border: "1px solid var(--border)",
+                  background: "var(--surface-glass)",
                   fontSize: '14px',
                   color: T.navy,
                   cursor: 'pointer',
@@ -231,8 +231,8 @@ export default function AdminSettingsPage() {
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
-                border: '1px solid rgba(4,53,77,0.12)',
-                background: '#fff',
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
                 color: T.navy,
                 fontSize: '14px',
                 fontWeight: 600,
@@ -248,8 +248,8 @@ export default function AdminSettingsPage() {
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
-                border: '1px solid rgba(4,53,77,0.12)',
-                background: '#fff',
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
                 color: T.navy,
                 fontSize: '14px',
                 fontWeight: 600,
@@ -265,8 +265,8 @@ export default function AdminSettingsPage() {
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
-                border: '1px solid rgba(4,53,77,0.12)',
-                background: '#fff',
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
                 color: T.navy,
                 fontSize: '14px',
                 fontWeight: 600,
@@ -290,8 +290,8 @@ export default function AdminSettingsPage() {
               style={{
                 padding: '10px 16px',
                 borderRadius: '10px',
-                border: '1px solid rgba(4,53,77,0.12)',
-                background: '#fff',
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
                 color: T.navy,
                 fontSize: '14px',
                 fontWeight: 600,
