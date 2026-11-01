@@ -12,6 +12,18 @@ const compile = name => ts.transpileModule(
 ).outputText
 const storageCode = compile('account-storage.ts')
 const apiCode = compile('api.ts')
+const slotModule = { exports: {} }
+vm.runInNewContext(compile('booking-slot.ts'), { module: slotModule, exports: slotModule.exports, Date, Error })
+
+test('booking retains server UTC instants and refuses missing, ambiguous or malformed slots', () => {
+  const { resolveBookingSlot } = slotModule.exports
+  const slot = { label: '9:00 AM', start_at: '2030-07-10T07:00:00+00:00', end_at: '2030-07-10T07:30:00+00:00', time_zone: 'Europe/Berlin', duration_minutes: 30 }
+  assert.equal(resolveBookingSlot([slot], '9:00 AM').start_at, '2030-07-10T07:00:00+00:00')
+  assert.throws(() => resolveBookingSlot([], '9:00 AM'), /no longer available/)
+  assert.throws(() => resolveBookingSlot([slot, slot], '9:00 AM'), /no longer available/)
+  assert.throws(() => resolveBookingSlot([slot], '9:00 AM', 'forged'), /no longer available/)
+  assert.throws(() => resolveBookingSlot([{ ...slot, start_at: '2030-07-10T09:00:00' }], '9:00 AM'), /could not be verified/)
+})
 
 function storage() {
   const data = {}

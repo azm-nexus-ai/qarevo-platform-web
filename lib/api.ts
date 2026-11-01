@@ -717,7 +717,17 @@ export type PatientBookingAvailabilityResponse = {
 export type PatientBookingSlotsResponse = {
     date: string;
     slots: string[];
+    slot_details?: PatientBookingSlot[];
+    schedule_ready?: boolean;
     working_hours?: PatientBookingWorkingHours;
+};
+
+export type PatientBookingSlot = {
+    label: string;
+    start_at: string;
+    end_at: string;
+    time_zone: string;
+    duration_minutes: number;
 };
 
 export type PatientDashboardCarePlan = {

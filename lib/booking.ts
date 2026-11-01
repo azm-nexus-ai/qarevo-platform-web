@@ -56,7 +56,7 @@ export function buildBookingQueryParams(
 ) {
   const next = new URLSearchParams(params.toString())
   // Never propagate clinical text or arbitrary query values to history, referrers or logs.
-  const allowed = new Set(['physicianId', 'provider_id', 'service', 'service_type', 'date', 'slot',
+  const allowed = new Set(['physicianId', 'provider_id', 'service', 'service_type', 'date', 'slot', 'start_at', 'end_at',
     'fee', 'duration', 'insurance', 'bundesland', 'episode_id', 'episodeId', 'appointmentId',
     'consultationId', 'aiDraftJobId', 'intake_submitted', 'physicianName', 'physicianSpecialty',
     'physicianHospital', 'physicianImageUrl', 'physicianConsultationFee', 'physicianExperienceYears',

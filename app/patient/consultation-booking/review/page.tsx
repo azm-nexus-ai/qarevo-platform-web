@@ -5,15 +5,16 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
-import { createPatientAppointment, getPatientDoctor, getPatientTimezone, getPatientSettings, type PatientSettings, type PatientDoctor } from '@/lib/api'
+import { createPatientAppointment, getPatientDoctor, getPatientBookingSlots, getPatientSettings, type PatientSettings, type PatientDoctor, type PatientBookingSlot } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import { useEpisodeIntake } from '@/lib/use-episode-intake'
+import { resolveBookingSlot } from '@/lib/booking-slot'
 
 function formatFee(value: number) {
-  return value > 0 ? `$${value}` : 'Not configured'
+  return 'Pricing pending setup'
 }
 
 function readLabel(service: string | null) {
@@ -25,32 +26,6 @@ function readLabel(service: string | null) {
     default:
       return 'Video Consultation'
   }
-}
-
-function parseAppointmentStart(dateLabel: string, timeLabel: string) {
-  const trimmedDate = dateLabel.trim()
-  const today = new Date()
-  let datePart = trimmedDate
-  if (/^today$/i.test(trimmedDate)) {
-    datePart = today.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })
-  } else if (/^tomorrow$/i.test(trimmedDate)) {
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    datePart = tomorrow.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })
-  }
-
-  const parsed = new Date(`${datePart} ${timeLabel}`)
-  if (Number.isNaN(parsed.getTime())) {
-    throw new Error('Choose a valid appointment date and time before confirming.')
-  }
-  return parsed
-}
-
-function addDuration(start: Date, durationLabel: string) {
-  const minutes = Number(durationLabel.match(/(\d+)/)?.[1] ?? 30)
-  const end = new Date(start)
-  end.setMinutes(end.getMinutes() + minutes)
-  return end
 }
 
 function profileServices(doctor: PatientDoctor | null) {
@@ -92,20 +67,8 @@ function ReviewPageContent() {
   const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
   const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
+  const [verifiedSlot, setVerifiedSlot] = useState<PatientBookingSlot | null>(null)
   const [doctorLoadError, setDoctorLoadError] = useState('')
-  const [userTimeZone, setUserTimeZone] = useState('Europe/Berlin')
-
-  useEffect(() => {
-    async function loadTimezone() {
-      try {
-        const data = await getPatientTimezone()
-        setUserTimeZone(data.time_zone || 'Europe/Berlin')
-      } catch (error) {
-        console.error('Failed to load timezone, using default', error)
-      }
-    }
-    loadTimezone()
-  }, [])
   const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor) ?? physician, [remoteDoctor, physician])
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
@@ -114,10 +77,10 @@ function ReviewPageContent() {
     return services.find((item) => item.type === service) ?? services[0]
   }, [remoteDoctor, service])
   const fee = Number(searchParams.get('fee') ?? serviceDetail?.price ?? physicianData.consultationFee ?? 0)
-  const duration = searchParams.get('duration') ?? serviceDetail?.duration ?? '30 min'
+  const duration = verifiedSlot ? `${verifiedSlot.duration_minutes} min` : 'Not yet verified'
   const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
-  const date = searchParams.get('date') ?? 'Today'
-  const slot = searchParams.get('slot') ?? '4:30 PM'
+  const date = searchParams.get('date') ?? ''
+  const slot = searchParams.get('slot') ?? ''
   const episodeId = searchParams.get('episode_id') ?? ''
   const intakeSubmitted = searchParams.get('intake_submitted') === 'true'
   const [patient, setPatient] = useState<PatientSettings | null>(null)
@@ -163,13 +126,24 @@ function ReviewPageContent() {
     }
   }, [physicianId, physician])
 
-  const appointmentEnd = useMemo(() => {
-    const parts = duration.match(/(\d+)/)
-    const minutes = parts ? Number(parts[1]) : 30
-    const start = new Date('2026-01-01T09:00:00')
-    start.setMinutes(start.getMinutes() + minutes)
-    return start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZone: userTimeZone })
-  }, [duration, userTimeZone])
+  const [slotError, setSlotError] = useState('')
+  const requestedStart = searchParams.get('start_at')
+  useEffect(() => {
+    let current = true
+    setVerifiedSlot(null)
+    setSlotError('')
+    if (!physicianId || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !slot) {
+      setSlotError('Go back and choose an available appointment date and time.')
+      return
+    }
+    getPatientBookingSlots(physicianId, date)
+      .then(response => { if (current) setVerifiedSlot(resolveBookingSlot(response.slot_details ?? [], slot, requestedStart)) })
+      .catch(error => { if (current) setSlotError(error instanceof Error ? error.message : 'The appointment time could not be verified.') })
+    return () => { current = false }
+  }, [physicianId, date, slot, requestedStart])
+  const appointmentEnd = verifiedSlot
+    ? new Date(verifiedSlot.end_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZone: verifiedSlot.time_zone })
+    : 'Verifying appointment time…'
 
   const allAgreed = agreed
 
@@ -187,6 +161,7 @@ function ReviewPageContent() {
 
   const handleConfirm = async () => {
     if (isSubmitting) return
+    if (!verifiedSlot) { setSubmitError(slotError || 'Wait for the appointment time to be verified.'); return }
     if (!allAgreed) { setSubmitError('Confirm the required booking review before continuing.'); return }
     if (!episodeId || !intakeSubmitted) { setSubmitError('Complete and submit the required intake before confirming this booking.'); return }
     if (!patient || patientError || intake.error || intake.loading) { setSubmitError(patientError || intake.error || 'Wait for your saved information to load before continuing.'); return }
@@ -194,13 +169,10 @@ function ReviewPageContent() {
     setSubmitError('')
 
     try {
-      const startAt = parseAppointmentStart(date, slot)
-      const endAt = addDuration(startAt, duration)
-
       const booking = await createPatientAppointment({
         provider_id: physicianData.id,
-        start_at: startAt.toISOString(),
-        end_at: endAt.toISOString(),
+        start_at: verifiedSlot.start_at,
+        end_at: verifiedSlot.end_at,
         consultation_modality: service,
         episode_id: episodeId || undefined,
 
@@ -222,7 +194,9 @@ function ReviewPageContent() {
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG }}>
       <div style={{ maxWidth: '1460px', margin: '0 auto', padding: '24px 20px 40px' }}>
-        <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: '280px minmax(0, 1fr) 340px', alignItems: 'start' }}>
+        <style>{` .review-grid { display: grid; gap: 16px; grid-template-columns: 280px minmax(0, 1fr) 340px; align-items: start; } @media(max-width: 1120px) { .review-grid { grid-template-columns: minmax(0, 1fr); } } `}</style>
+        {slotError && <p role='alert' className='field-error'>{slotError}</p>}
+        <div className='review-grid'>
           <aside style={{ display: 'grid', gap: '12px' }}>
             <section style={{ ...Glass.nav, borderRadius: '20px', border: "1px solid var(--border)", padding: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -320,8 +294,8 @@ function ReviewPageContent() {
                   ['Consultation Type', readLabel(service)],
                   ['Appointment Date', date],
                   ['Appointment Time', slot],
-                  ['Timezone', userTimeZone],
-                  ['Estimated Duration', duration],
+                  ['Timezone', verifiedSlot?.time_zone || 'Not available'],
+                  ['Estimated Duration', verifiedSlot ? `${verifiedSlot.duration_minutes} min` : 'Not available'],
                   ['Consultation Fee', formatFee(fee)],
                   ['Insurance Coverage', insurance],
                   ['Expected End Time', appointmentEnd],
@@ -385,9 +359,9 @@ function ReviewPageContent() {
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {[
                     ['Free cancellation', 'Free cancellation up to 24 hours before appointment.'],
-                    ['Late cancellation', 'A late cancellation fee may apply if the appointment is changed within 24 hours.'],
+                    ['Cancellation terms', 'Commercial cancellation terms are awaiting approval. This development test does not create a charge.'],
                     ['Missed appointments', 'Missed visits are subject to the standard care-team rescheduling policy.'],
-                    ['Refund eligibility', 'Eligible refunds are reviewed based on the consultation type and provider availability.'],
+                    ['Payments and invoices', 'Payment processing and automated invoicing are not enabled for this development test.'],
                   ].map(([label, value]) => (
                     <div key={label} style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 3px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{label}</p>
@@ -396,7 +370,7 @@ function ReviewPageContent() {
                   ))}
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.7 }}>Free cancellation up to 24 hours before your appointment. Late or missed appointments may be subject to a rescheduling fee.</p>
+                <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.7 }}>This is a synthetic development booking. No payment is collected. Pricing, insurance agreements and cancellation terms must be approved before a commercial pilot.</p>
               )}
             </section>
 

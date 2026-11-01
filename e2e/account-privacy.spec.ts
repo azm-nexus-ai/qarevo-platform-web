@@ -635,6 +635,42 @@ test('intake requires visible consent and keeps clinical text out of navigation 
   await expect(page.getByText('A. Bello', { exact: true })).toHaveCount(0)
 })
 
+test.describe('booking time contract in a different browser timezone', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' })
+  test('confirmation submits the Berlin slot unchanged and displays a stale-slot error', async ({ page, context }) => {
+    const providerId = '22222222-2222-4222-8222-222222222222'
+    const episodeId = '11111111-1111-4111-8111-111111111111'
+    const slot = { label: '9:00 AM', start_at: '2030-07-10T07:00:00+00:00', end_at: '2030-07-10T07:30:00+00:00', time_zone: 'Europe/Berlin', duration_minutes: 30 }
+    const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
+    const booked: Record<string, unknown>[] = []
+    let available = true
+    await context.route(`**/api/v1/patient/doctors/${providerId}`, route => route.fulfill({ headers, json: { id: providerId, name: 'Synthetic Clinician', languages: [], insurance: [], services: [] } }))
+    await context.route('**/api/v1/patient/booking-datetime/slots?**', route => route.fulfill({ headers, json: { date: '2030-07-10', slots: available ? [slot.label] : [], slot_details: available ? [slot] : [], schedule_ready: true } }))
+    await context.route(`**/api/v1/patient/episodes/${episodeId}/intake`, route => route.fulfill({ headers, json: { responses: { raw_text: 'Synthetic rehearsal only' } } }))
+    await context.route('**/api/v1/patient/appointments', route => {
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+      booked.push(route.request().postDataJSON())
+      return route.fulfill({ headers, json: { id: '33333333-3333-4333-8333-333333333333', episode_id: episodeId, consultation_id: '44444444-4444-4444-8444-444444444444', ...slot } })
+    })
+    await signIn(page, alpha)
+    const query = new URLSearchParams({ physicianId: providerId, date: '2030-07-10', slot: slot.label, start_at: slot.start_at, episode_id: episodeId, intake_submitted: 'true' })
+    const review = `/patient/consultation-booking/review?${query}`
+    await page.goto(review)
+    await expect(page.getByText('9:30 AM', { exact: true })).toBeVisible()
+    await page.getByLabel('I have reviewed my synthetic booking information').check()
+    await page.getByRole('button', { name: 'Confirm Appointment', exact: true }).click()
+    await expect(page).toHaveURL(/consultation-booking\/success\?/)
+    expect(booked).toHaveLength(1)
+    expect(booked[0].start_at).toBe(slot.start_at)
+    expect(booked[0].end_at).toBe(slot.end_at)
+    available = false
+    await page.goto(review)
+    await expect(page.getByRole('alert').filter({ hasText: 'no longer available' })).toBeVisible()
+    await page.getByRole('button', { name: 'Confirm Appointment', exact: true }).click()
+    expect(booked).toHaveLength(1)
+  })
+})
+
 
 test('video preparation never invents a clinician connection or clinical content', async ({ page }) => {
   await signIn(page, alpha)

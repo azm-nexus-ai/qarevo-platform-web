@@ -13,8 +13,8 @@ import {
   getPatientDoctor,
   getPatientBookingAvailability,
   getPatientBookingSlots,
-  getPatientTimezone,
   type PatientDoctor,
+  type PatientBookingSlot,
   type PatientBookingAvailabilityDay,
   type PatientBookingWorkingHours,
 } from '@/lib/api'
@@ -58,7 +58,7 @@ function formatWorkingTime(value?: string | null) {
 }
 
 function formatFee(value: number) {
-  return value > 0 ? `$${value}` : 'Not configured'
+  return 'Pricing pending setup'
 }
 
 function groupSlots(slots: string[]) {
@@ -81,18 +81,6 @@ function groupSlots(slots: string[]) {
   })
 
   return groups.filter((group) => group.slots.length > 0)
-}
-
-function parseSlotStart(date: Date, slot: string) {
-  const [timePart, meridiem] = slot.split(' ')
-  const [hourPart, minutePart = '0'] = timePart.split(':')
-  let hour = Number(hourPart)
-  const minute = Number(minutePart)
-  if (meridiem === 'PM' && hour !== 12) hour += 12
-  if (meridiem === 'AM' && hour === 12) hour = 0
-  const start = new Date(date)
-  start.setHours(Number.isFinite(hour) ? hour : 9, Number.isFinite(minute) ? minute : 0, 0, 0)
-  return start
 }
 
 function profileServices(doctor: PatientDoctor | null) {
@@ -169,22 +157,11 @@ function DateTimeSelectionPageContent() {
   const [workingHours, setWorkingHours] = useState<PatientBookingWorkingHours | null>(null)
   const [availableDays, setAvailableDays] = useState<string[]>([])
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [slotDetails, setSlotDetails] = useState<PatientBookingSlot[]>([])
+  const selectedSlotDetail = slotDetails.find(item => item.label === selectedSlot)
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [availabilityError, setAvailabilityError] = useState('')
-  const [userTimeZone, setUserTimeZone] = useState('Africa/Lagos')
-
-  useEffect(() => {
-    async function loadTimezone() {
-      try {
-        const data = await getPatientTimezone()
-        setUserTimeZone(data.time_zone || 'Africa/Lagos')
-      } catch (error) {
-        console.error('Failed to load timezone, using default', error)
-      }
-    }
-    loadTimezone()
-  }, [])
   const preservedParams = useMemo(() => {
     const next = buildBookingQueryParams(searchParams, physicianData, service)
     return next.toString()
@@ -214,8 +191,10 @@ function DateTimeSelectionPageContent() {
     const next = buildBookingQueryParams(searchParams, physicianData, selectedServiceType)
     next.set('date', formatDateKey(selectedDate))
     if (selectedSlot) next.set('slot', selectedSlot)
+    if (selectedSlotDetail) { next.set('start_at', selectedSlotDetail.start_at); next.set('end_at', selectedSlotDetail.end_at) }
+    else { next.delete('start_at'); next.delete('end_at') }
     return `/patient/consultation-booking/intake?${next.toString()}`
-  }, [searchParams, physicianData, selectedDate, selectedSlot, selectedServiceType])
+  }, [searchParams, physicianData, selectedDate, selectedSlot, selectedServiceType, selectedSlotDetail])
 
   // Save booking state to context when selections change
   useEffect(() => {
@@ -224,7 +203,7 @@ function DateTimeSelectionPageContent() {
         physicianId: physicianData.id,
         physicianName: physicianData.name,
         service: selectedServiceType,
-        date: formatDateLabel(selectedDate),
+        date: formatDateKey(selectedDate),
         slot: selectedSlot,
         step: 'datetime',
       })
@@ -270,12 +249,12 @@ function DateTimeSelectionPageContent() {
       return
     }
 
-    const selectedDayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: userTimeZone }).toUpperCase()
+    const selectedDayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
     const isAvailable = availableDays.includes(selectedDayOfWeek)
 
     if (!isAvailable) {
       const nextAvailableDay = availableDays[0]
-      let errorMessage = `${physicianData.name} is not available on ${formatDateLabel(selectedDate, userTimeZone)}.`
+      let errorMessage = `${physicianData.name} is not available on ${formatDateLabel(selectedDate)}.`
 
       if (nextAvailableDay) {
         errorMessage += ` Available days: ${availableDays.join(', ')}. Please select an available date.`
@@ -293,10 +272,15 @@ function DateTimeSelectionPageContent() {
     if (!physicianData.id || !selectedDateKey) return
 
     let cancelled = false
+    setLoadingSlots(true)
+    setSlotDetails([])
+    setAvailableSlots([])
     getPatientBookingSlots(physicianData.id, selectedDateKey)
       .then((response) => {
         if (cancelled) return
         setAvailableSlots(response.slots)
+        setSlotDetails(response.slot_details ?? [])
+        setAvailabilityError(response.schedule_ready === false ? 'This clinician has not configured a complete appointment calendar. Choose another clinician or contact support.' : '')
         setWorkingHours((current) => response.working_hours ?? current)
         setSelectedSlot((current) => response.slots.includes(current) ? current : response.slots[0] ?? '')
       })
@@ -304,6 +288,8 @@ function DateTimeSelectionPageContent() {
         console.error('Failed to load provider slots', error)
         if (!cancelled) {
           setAvailableSlots([])
+          setSlotDetails([])
+          setAvailabilityError('Available times could not be loaded. Select the date again to retry.')
           setSelectedSlot('')
         }
       })
@@ -316,16 +302,11 @@ function DateTimeSelectionPageContent() {
     }
   }, [physicianData.id, selectedDateKey])
 
-  const endTime = useMemo(() => {
-    if (!duration || !selectedDate || !selectedSlot) return ''
-    const parts = duration.match(/(\d+)/)
-    const minutes = parts ? Number(parts[1]) : 30
-    const start = parseSlotStart(selectedDate, selectedSlot || '9:00 AM')
-    start.setMinutes(start.getMinutes() + minutes)
-    return `${start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZone: userTimeZone })}`
-  }, [duration, selectedDate, selectedSlot, userTimeZone])
-
-  const canContinue = Boolean(selectedSlot && availableSlots.includes(selectedSlot))
+  const endTime = selectedSlotDetail
+    ? new Date(selectedSlotDetail.end_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZone: selectedSlotDetail.time_zone })
+    : ''
+  const displayDuration = selectedSlotDetail ? `${selectedSlotDetail.duration_minutes} min` : 'Select a time'
+  const canContinue = Boolean(!loadingSlots && selectedSlotDetail && availableSlots.includes(selectedSlot))
 
   useEffect(() => {
     if (!physicianId || physician) return
@@ -410,7 +391,7 @@ function DateTimeSelectionPageContent() {
               <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
               <div style={{ display: 'grid', gap: '7px', fontSize: "13px", color: T.slate2 }}>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Consultation</span><strong style={{ color: T.navy }}>{readLabel(selectedServiceType)}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Duration</span><strong style={{ color: T.navy }}>{duration}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Duration</span><strong style={{ color: T.navy }}>{displayDuration}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Working hours</span><strong style={{ color: T.navy }}>{formatWorkingTime(workingHours?.start)} - {formatWorkingTime(workingHours?.end)}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Days</span><strong style={{ color: T.navy }}>{availableDays.length ? availableDays.join(', ') : 'Not configured'}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Fee</span><strong style={{ color: T.navy }}>{formatFee(fee)}</strong></div>
@@ -787,7 +768,7 @@ function DateTimeSelectionPageContent() {
                   ['Consultation', readLabel(service)],
                   ['Selected Date', formatDateLabel(selectedDate)],
                   ['Selected Time', mounted ? selectedSlot : 'Loading...'],
-                  ['Duration', duration],
+                  ['Duration', displayDuration],
                   ['Fee', formatFee(fee)],
                   ['Insurance', insurance],
                   ['Estimated Total', formatFee(fee)],
