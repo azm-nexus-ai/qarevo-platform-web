@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
@@ -8,7 +8,8 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
-import { getApiErrorDetail, updateProfile } from '@/lib/api'
+import { getApiErrorDetail, getPatientSettings, updateProfile } from '@/lib/api'
+import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
 import { createAccountDraftStorage } from '@/lib/account-storage'
 
 const LEFT_BG = [
@@ -66,23 +67,7 @@ const NATIONALITIES = [
   'Other',
 ]
 
-const LANGUAGES = [
-  'English',
-  'French',
-  'Spanish',
-  'Arabic',
-  'Portuguese',
-  'German',
-  'Italian',
-  'Hindi',
-  'Yoruba',
-  'Igbo',
-  'Hausa',
-  'Swahili',
-  'Mandarin',
-  'Japanese',
-  'Other',
-]
+const LANGUAGES = ['German', 'English']
 
 function JourneyVisual() {
   return (
@@ -300,9 +285,7 @@ function splitFullName(fullName: string) {
 export default function PersonalInformationPage() {
   const router = useRouter()
   const [draftStorage] = useState(createAccountDraftStorage)
-  const filePickerRef = useRef<HTMLInputElement | null>(null)
-  const cameraPickerRef = useRef<HTMLInputElement | null>(null)
-  const [dragging, setDragging] = useState(false)
+  const [draftReady, setDraftReady] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [savedTick, setSavedTick] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
@@ -313,21 +296,20 @@ export default function PersonalInformationPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    try {
-      const raw = draftStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw) as PersonalInfoForm
-        queueMicrotask(() => setForm({ ...INITIAL_FORM, ...parsed }))
-        return
-      }
-
-    } catch {
-      // Ignore local storage parse failures in prototype mode.
+  useEffect(() => hydrateAccountDraft<PersonalInfoForm>(draftStorage, STORAGE_KEY, async () => {
+    const saved = await getPatientSettings()
+    return {
+      fullName: [saved.first_name, saved.last_name].filter(Boolean).join(' '),
+      preferredName: saved.preferred_name || '', dateOfBirth: saved.date_of_birth || '',
+      gender: (saved.gender || '') as Gender, nationality: saved.nationality || '',
+      preferredLanguage: saved.language || '', maritalStatus: (saved.marital_status || '') as MaritalStatus,
     }
-  }, [draftStorage])
+  }, data => setForm({ ...INITIAL_FORM, ...data, photoDataUrl: '' }),
+  error => setSubmitError(getApiErrorDetail(error) || 'Could not load your saved profile. Reload to try again.'),
+  () => setDraftReady(true)), [draftStorage])
 
   useEffect(() => {
+    if (!draftReady) return
     const id = window.setTimeout(() => {
       try {
         draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
@@ -343,7 +325,7 @@ export default function PersonalInformationPage() {
     }, 320)
 
     return () => window.clearTimeout(id)
-  }, [form, draftStorage])
+  }, [form, draftStorage, draftReady])
 
   const requiredFilled =
     form.fullName.trim().length > 1 &&
@@ -354,7 +336,7 @@ export default function PersonalInformationPage() {
     !!form.maritalStatus
 
   const dateLooksValid = form.dateOfBirth ? isPastDate(form.dateOfBirth) : false
-  const canContinue = requiredFilled && dateLooksValid && !submitting
+  const canContinue = draftReady && requiredFilled && dateLooksValid && !submitting
 
   const helperText = useMemo(
     () =>
@@ -365,17 +347,6 @@ export default function PersonalInformationPage() {
   const updateField = <K extends keyof PersonalInfoForm>(key: K, value: PersonalInfoForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
     setErrors((prev) => ({ ...prev, [key]: '' }))
-  }
-
-  const onFileSelect = (file?: File | null) => {
-    if (!file) return
-    if (!file.type.startsWith('image/')) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const data = String(reader.result || '')
-      updateField('photoDataUrl', data)
-    }
-    reader.readAsDataURL(file)
   }
 
   const validate = () => {
@@ -414,9 +385,13 @@ export default function PersonalInformationPage() {
       const { firstName, lastName } = splitFullName(form.fullName)
       await updateProfile({
         first_name: firstName,
-        last_name: lastName || undefined,
+        last_name: lastName,
         date_of_birth: form.dateOfBirth,
         gender: form.gender || undefined,
+        preferred_name: form.preferredName.trim() || null,
+        nationality: form.nationality,
+        marital_status: form.maritalStatus || undefined,
+        language: form.preferredLanguage as 'German' | 'English',
       })
       setSubmitting(false)
       setOnboardingStage('contact-information')
@@ -479,6 +454,7 @@ export default function PersonalInformationPage() {
               animation: 'fadeUp 0.3s ease',
             }}
           >
+            <fieldset disabled={!draftReady || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div
               style={{
                 padding: '12px 14px',
@@ -534,9 +510,9 @@ export default function PersonalInformationPage() {
 
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='fullName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Full Name</label>
+                <label htmlFor='fullName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Full Name (Required)</label>
                 <input
-                  id='fullName'
+                  id='fullName' required aria-required='true'
                   value={form.fullName}
                   autoComplete='name'
                   onChange={(e) => updateField('fullName', e.target.value)}
@@ -561,90 +537,11 @@ export default function PersonalInformationPage() {
               </div>
             </div>
 
-            <div style={{ marginBottom: '12px' }}>
-              <p style={{ margin: '0 0 7px', fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Profile Photo <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></p>
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setDragging(true)
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  setDragging(false)
-                  onFileSelect(e.dataTransfer.files?.[0])
-                }}
-                style={{
-                  borderRadius: '12px',
-                  border: `1.5px dashed ${dragging ? T.blue : 'rgba(4,53,77,0.14)'}`,
-                  background: dragging ? 'rgba(234,241,255,0.72)' : 'rgba(255,255,255,0.72)',
-                  padding: '14px',
-                }}
-              >
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(4,53,77,0.04)', border: '1px solid rgba(4,53,77,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                    {form.photoDataUrl ? (
-                      <img src={form.photoDataUrl} alt='Profile preview' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Ico p={ICONS.user} size={20} sw={1.5} color={T.slate2} />
-                    )}
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: '200px' }}>
-                    <p style={{ margin: '0 0 6px', fontSize: '12.5px', color: T.slate, lineHeight: 1.5 }}>
-                      Drag and drop an image, upload from files, or use camera.
-                    </p>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <button
-                        type='button'
-                        onClick={() => filePickerRef.current?.click()}
-                        style={{ padding: '7px 10px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.88)', fontSize: '12.5px', fontWeight: 600, color: T.navy, cursor: 'pointer' }}
-                      >
-                        Upload Photo
-                      </button>
-                      <button
-                        type='button'
-                        onClick={() => cameraPickerRef.current?.click()}
-                        style={{ padding: '7px 10px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.88)', fontSize: '12.5px', fontWeight: 600, color: T.navy, cursor: 'pointer' }}
-                      >
-                        Camera Upload
-                      </button>
-                      {form.photoDataUrl ? (
-                        <button
-                          type='button'
-                          onClick={() => updateField('photoDataUrl', '')}
-                          style={{ padding: '7px 10px', borderRadius: '9px', border: '1px solid rgba(220,38,38,0.18)', background: '#FFF5F5', fontSize: '12.5px', fontWeight: 600, color: T.red, cursor: 'pointer' }}
-                        >
-                          Remove Photo
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <input
-                ref={filePickerRef}
-                type='file'
-                accept='image/*'
-                onChange={(e) => onFileSelect(e.target.files?.[0])}
-                style={{ display: 'none' }}
-              />
-              <input
-                ref={cameraPickerRef}
-                type='file'
-                accept='image/*'
-                capture='user'
-                onChange={(e) => onFileSelect(e.target.files?.[0])}
-                style={{ display: 'none' }}
-              />
-            </div>
-
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='dob' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Date of Birth</label>
+                <label htmlFor='dob' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Date of Birth (Required)</label>
                 <input
-                  id='dob'
+                  id='dob' required aria-required='true'
                   type='date'
                   value={form.dateOfBirth}
                   onChange={(e) => updateField('dateOfBirth', e.target.value)}
@@ -655,9 +552,9 @@ export default function PersonalInformationPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='gender' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Gender</label>
+                <label htmlFor='gender' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Gender (Required)</label>
                 <select
-                  id='gender'
+                  id='gender' required aria-required='true'
                   value={form.gender}
                   onChange={(e) => updateField('gender', e.target.value as Gender)}
                   onBlur={() => setTouched((prev) => ({ ...prev, gender: true }))}
@@ -674,49 +571,40 @@ export default function PersonalInformationPage() {
 
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='nationality' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Nationality</label>
-                <input
-                  id='nationality'
-                  list='nationalities'
+                <label htmlFor='nationality' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Nationality (Required)</label>
+                <select
+                  id='nationality' required aria-required='true'
                   value={form.nationality}
-                  autoComplete='country-name'
-                  placeholder='Start typing to search'
                   onChange={(e) => updateField('nationality', e.target.value)}
                   onBlur={() => setTouched((prev) => ({ ...prev, nationality: true }))}
                   style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('nationality'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
-                />
-                <datalist id='nationalities'>
-                  {NATIONALITIES.map((item) => (
-                    <option key={item} value={item} />
-                  ))}
-                </datalist>
+                >
+                  <option value=''>Select</option>
+                  {NATIONALITIES.map(item => <option key={item} value={item}>{item}</option>)}
+                </select>
                 {touched.nationality && errors.nationality ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.nationality}</p> : null}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='language' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Language</label>
-                <input
-                  id='language'
-                  list='languages'
+                <label htmlFor='language' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Language (Required)</label>
+                <select
+                  id='language' required aria-required='true'
                   value={form.preferredLanguage}
-                  placeholder='Start typing to search'
                   onChange={(e) => updateField('preferredLanguage', e.target.value)}
                   onBlur={() => setTouched((prev) => ({ ...prev, preferredLanguage: true }))}
                   style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('preferredLanguage'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
-                />
-                <datalist id='languages'>
-                  {LANGUAGES.map((item) => (
-                    <option key={item} value={item} />
-                  ))}
-                </datalist>
+                >
+                  <option value=''>Select</option>
+                  {LANGUAGES.map(item => <option key={item} value={item}>{item}</option>)}
+                </select>
                 {touched.preferredLanguage && errors.preferredLanguage ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.preferredLanguage}</p> : null}
               </div>
             </div>
 
             <div style={{ marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label htmlFor='maritalStatus' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Marital Status</label>
+              <label htmlFor='maritalStatus' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Marital Status (Required)</label>
               <select
-                id='maritalStatus'
+                id='maritalStatus' required aria-required='true'
                 value={form.maritalStatus}
                 onChange={(e) => updateField('maritalStatus', e.target.value as MaritalStatus)}
                 onBlur={() => setTouched((prev) => ({ ...prev, maritalStatus: true }))}
@@ -804,7 +692,7 @@ export default function PersonalInformationPage() {
                 Back
               </Link>
             </div>
-          </form>
+          </fieldset></form>
         </div>
       </div>
     </main>

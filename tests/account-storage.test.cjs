@@ -413,3 +413,46 @@ test('network failure during logout still removes credentials and drafts', async
   assert.equal(t.api.readRefreshToken(), null)
   assert.equal(Object.keys(t.sessionStorage).length, 0)
 })
+
+function hydration() {
+  const mod = { exports: {} }
+  vm.runInNewContext(compile('hydrate-account-draft.ts'), { module: mod, exports: mod.exports })
+  return mod.exports.hydrateAccountDraft
+}
+const settled = () => new Promise(resolve => setImmediate(resolve))
+
+test('saved server profile is restored when no tab draft exists', async () => {
+  let result, ready = false
+  hydration()({ getItem: () => null }, 'profile', async () => ({ name: 'Saved Patient' }), data => { result = data }, error => { throw error }, () => { ready = true })
+  await settled()
+  assert.equal(result.name, 'Saved Patient')
+  assert.equal(ready, true)
+})
+
+test('unsaved tab draft takes precedence over server profile', async () => {
+  let result, calls = 0
+  hydration()({ getItem: () => '{"name":"Unsaved Patient"}' }, 'profile', async () => { calls++; return {} }, data => { result = data }, error => { throw error }, () => {})
+  await settled()
+  assert.equal(calls, 0)
+  assert.equal(result.name, 'Unsaved Patient')
+})
+
+test('cancelled hydration cannot overwrite a different screen or account', async () => {
+  const pending = deferred()
+  let applied = false, ready = false
+  const stop = hydration()({ getItem: () => null }, 'profile', () => pending.promise, () => { applied = true }, error => { throw error }, () => { ready = true })
+  stop()
+  pending.resolve({ name: 'Old Patient' })
+  await settled()
+  assert.equal(applied, false)
+  assert.equal(ready, false)
+})
+
+test('malformed and non-object drafts fall back to saved server data', async () => {
+  for (const raw of ['invalid JSON', 'true', '[]', 'null']) {
+    let result
+    hydration()({ getItem: () => raw }, 'profile', async () => ({ name: 'Saved Patient' }), data => { result = data }, error => { throw error }, () => {})
+    await settled()
+    assert.equal(result.name, 'Saved Patient')
+  }
+})

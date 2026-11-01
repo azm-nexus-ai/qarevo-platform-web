@@ -400,7 +400,7 @@ export default function ProfileSetupPage() {
                 {[
                   { icon: ICONS.lock, label: 'Secure & Encrypted' },
                   { icon: ICONS.steth, label: 'Verified Healthcare Professionals' },
-                  { icon: ICONS.shield, label: 'HIPAA-Oriented Security' },
+                  { icon: ICONS.shield, label: 'Account-Based Access' },
                   { icon: ICONS.brain, label: 'AI-Assisted Healthcare' },
                   { icon: ICONS.activity, label: 'Private Medical Records' },
                 ].map(({ icon, label }) => (

@@ -2,6 +2,7 @@
 
 import { useState, useId } from 'react'
 import Link from 'next/link'
+import { getOnboarding, onboardingPath } from '@/lib/patient-onboarding'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
@@ -342,7 +343,7 @@ export default function SignInPage() {
     try {
       const response = await loginPatient({ email, password })
       storeAuthTokens({ ...response, role: 'PATIENT' })
-      completePatientSignIn()
+      await completePatientSignIn()
     } catch (error) {
       setAuthError(getFriendlySignInError(error))
     } finally {
@@ -350,23 +351,14 @@ export default function SignInPage() {
     }
   }
 
-  const completePatientSignIn = () => {
+  const completePatientSignIn = async () => {
     if (new URLSearchParams(window.location.search).get('next') === 'profile-setup') {
-        setAuthenticatedOnboardingStage('personal-information')
-        router.replace('/auth/profile-setup/personal-information')
-        return
-    }
-
-    const authFlowState = readAuthFlowState()
-    if (authFlowState?.isAuthenticated) {
-      const nextRoute = authFlowState.onboardingCompleted
-        ? '/patient/dashboard'
-        : getOnboardingRedirectPath(authFlowState)
-      router.push(nextRoute)
+      setAuthenticatedOnboardingStage('personal-information')
+      router.replace('/auth/profile-setup/personal-information')
       return
     }
-
-    router.push('/patient/dashboard')
+    const progress = await getOnboarding()
+    router.replace(progress.complete ? '/patient/dashboard' : onboardingPath(progress.next_step))
   }
 
   const handlePasskeySignIn = async () => {
@@ -378,7 +370,7 @@ export default function SignInPage() {
     try {
       const response = await loginPatientWithPasskey(email)
       storeAuthTokens({ ...response, role: 'PATIENT' })
-      completePatientSignIn()
+      await completePatientSignIn()
     } catch (error) {
       setAuthError(getFriendlySignInError(error))
     } finally {

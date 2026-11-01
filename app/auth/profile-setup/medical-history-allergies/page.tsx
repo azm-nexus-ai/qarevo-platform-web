@@ -10,7 +10,9 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
-import { getApiErrorDetail, updatePatientHealthInfo } from '@/lib/api'
+import { getApiErrorDetail } from '@/lib/api'
+import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
+import { getOnboarding, saveHealthHistory } from '@/lib/patient-onboarding'
 import { createAccountDraftStorage } from '@/lib/account-storage'
 
 const LEFT_BG = [
@@ -89,8 +91,8 @@ function validateForm(form: HealthProfileForm): HealthProfileErrors {
     nextErrors.medicalHistory = 'Select at least one medical history option.'
   }
 
-  if (form.medicalHistory.includes('Other') && !form.medicalHistoryOther.trim()) {
-    nextErrors.medicalHistoryOther = 'Please describe the other condition.'
+  if (form.medicalHistory.includes('Other') && form.medicalHistoryOther.trim().length < 4) {
+    nextErrors.medicalHistoryOther = 'Describe the other condition using at least 4 characters.'
   }
 
   if (!form.surgeriesStatus) {
@@ -105,8 +107,8 @@ function validateForm(form: HealthProfileForm): HealthProfileErrors {
 
   if (form.allergies.length === 0) {
     nextErrors.allergies = 'Select at least one allergy option.'
-  } else if (form.allergies.includes('Other') && !form.allergyDetails.Other?.trim()) {
-    nextErrors.allergies = 'Add a brief detail for the other allergy.'
+  } else if (form.allergies.includes('Other') && (form.allergyDetails.Other?.trim().length || 0) < 4) {
+    nextErrors.allergies = 'Describe the other allergy using at least 4 characters.'
   }
 
   if (!form.currentMedicationsMode) {
@@ -124,38 +126,6 @@ function validateForm(form: HealthProfileForm): HealthProfileErrors {
   }
 
   return nextErrors
-}
-
-function summarizeList(label: string, values: string[]) {
-  const filtered = values.filter(Boolean)
-  return filtered.length ? `${label}: ${filtered.join(', ')}` : ''
-}
-
-function buildAllergySummary(form: HealthProfileForm) {
-  if (form.allergies.includes('No Known Allergies')) return 'No Known Allergies'
-  return form.allergies
-    .map((allergy) => {
-      const detail = form.allergyDetails[allergy]?.trim()
-      return detail ? `${allergy} (${detail})` : allergy
-    })
-    .join('; ')
-}
-
-function buildMedicalConditionSummary(form: HealthProfileForm) {
-  const sections = [
-    summarizeList('Medical history', form.medicalHistory.filter((item) => item !== 'Other')),
-    form.medicalHistory.includes('Other') && form.medicalHistoryOther.trim()
-      ? `Other condition: ${form.medicalHistoryOther.trim()}`
-      : '',
-    form.surgeriesStatus === 'yes'
-      ? `Past surgeries: ${form.surgeries.map((entry) => `${entry.procedureName} at ${entry.hospital} (${entry.year})`).join('; ')}`
-      : 'Past surgeries: None reported',
-    form.currentMedicationsMode === 'taking'
-      ? `Current medications: ${form.medications.map((entry) => `${entry.medicationName} ${entry.dosage} ${entry.frequency}${entry.purpose ? ` for ${entry.purpose}` : ''}`).join('; ')}`
-      : 'Current medications: None reported',
-    summarizeList('Family history', form.familyHistory),
-  ].filter(Boolean)
-  return sections.join('\n')
 }
 
 function HealthVisual() {
@@ -292,7 +262,7 @@ function LeftPanel() {
 function SectionHeader({ title, body }: { title: string; body: string }) {
   return (
     <div style={{ marginBottom: '12px' }}>
-      <h2 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>{title}</h2>
+      <h2 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>{title} (Required)</h2>
       <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6, letterSpacing: '-0.01em' }}>{body}</p>
     </div>
   )
@@ -327,7 +297,7 @@ function Field({ label, placeholder, value, onChange, error, success, type = 'te
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span> : null}
+        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span> : <span>(Required)</span>}
       </label>
       <input id={id} type={type} value={value} placeholder={placeholder} autoComplete={autoComplete} onChange={(event) => onChange(event.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={{ width: '100%', minHeight: '44px', padding: '11px 12px', borderRadius: '11px', border: `1.5px solid ${border}`, background, color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', transition: 'all 0.15s ease' }} />
       {(error || success) && <p style={{ margin: 0, fontSize: '12px', color: error ? T.red : T.green, lineHeight: 1.45 }}>{error || 'Looks good.'}</p>}
@@ -343,9 +313,9 @@ function TextAreaField({ label, placeholder, value, onChange, error, optional }:
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span> : null}
+        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span> : <span>(Required)</span>}
       </label>
-      <textarea id={id} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: `1.5px solid ${border}`, background: focused ? '#fff' : 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', transition: 'all 0.15s ease' }} />
+      <textarea id={id} required={!optional} aria-invalid={!!error} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: `1.5px solid ${border}`, background: focused ? '#fff' : 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', transition: 'all 0.15s ease' }} />
       {error ? <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.45 }}>{error}</p> : null}
     </div>
   )
@@ -355,7 +325,7 @@ function SectionStatus({ title, description, status, error }: { title: string; d
   return (
     <div style={{ marginBottom: '12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '4px', flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>{title}</h2>
+        <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>{title} (Required)</h2>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: error ? 'rgba(220,38,38,0.08)' : 'rgba(9,173,112,0.09)', border: `1px solid ${error ? 'rgba(220,38,38,0.18)' : 'rgba(9,173,112,0.16)'}`, color: error ? T.red : T.green, fontSize: '11.5px', fontWeight: 700 }}>
           <Ico p={error ? ICONS.info : ICONS.check} size={11} sw={2.2} color={error ? T.red : T.green} />
           {status}
@@ -421,6 +391,7 @@ function MedicationCard({ entry, onChange, onRemove, canRemove }: { entry: Medic
 export default function MedicalHistoryAllergiesPage() {
   const router = useRouter()
   const [draftStorage] = useState(createAccountDraftStorage)
+  const [draftReady, setDraftReady] = useState(false)
   const [form, setForm] = useState<HealthProfileForm>(INITIAL_FORM)
   const [savedTick, setSavedTick] = useState(false)
   const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
@@ -430,25 +401,23 @@ export default function MedicalHistoryAllergiesPage() {
   const [submitError, setSubmitError] = useState('')
   const [errors, setErrors] = useState<HealthProfileErrors>({})
 
-  useEffect(() => {
-    try {
-      const stored = draftStorage.getItem(STORAGE_KEY)
-      if (!stored) return
-
-      const parsed = JSON.parse(stored) as Partial<HealthProfileForm>
-      setForm({
-        ...INITIAL_FORM,
-        ...parsed,
-        surgeries: (parsed.surgeries || []).map((entry) => ({ ...createSurgeryEntry(), ...entry, id: entry.id || makeId() })),
-        medications: (parsed.medications || []).map((entry) => ({ ...createMedicationEntry(), ...entry, id: entry.id || makeId() })),
-        allergyDetails: parsed.allergyDetails || {},
-      })
-    } catch {
-      // Ignore prototype storage issues.
-    }
-  }, [draftStorage])
+  useEffect(() => hydrateAccountDraft<HealthProfileForm>(draftStorage, STORAGE_KEY, async () => {
+    const saved = (await getOnboarding()).health
+    return saved ? {
+      medicalHistory: saved.medical_history, medicalHistoryOther: saved.other_condition,
+      surgeriesStatus: saved.surgeries_status,
+      surgeries: saved.surgeries.map(item => ({ id: item.id, procedureName: item.procedure_name, hospital: item.hospital, year: String(item.year) })),
+      allergies: saved.allergies, allergyDetails: saved.allergy_details,
+      currentMedicationsMode: saved.medications_status,
+      medications: saved.medications.map(item => ({ id: item.id, medicationName: item.medication_name, dosage: item.dosage, frequency: item.frequency, purpose: item.purpose })),
+      familyHistory: saved.family_history,
+    } : {}
+  }, data => setForm({ ...INITIAL_FORM, ...data }),
+  error => setSubmitError(getApiErrorDetail(error) || 'Could not load your saved health history. Reload to try again.'),
+  () => setDraftReady(true)), [draftStorage])
 
   useEffect(() => {
+    if (!draftReady) return
     const timer = window.setTimeout(() => {
       try {
         draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
@@ -464,14 +433,14 @@ export default function MedicalHistoryAllergiesPage() {
     }, 320)
 
     return () => window.clearTimeout(timer)
-  }, [form, draftStorage])
+  }, [form, draftStorage, draftReady])
 
   useEffect(() => {
     setErrors(validateForm(form))
   }, [form])
 
   const validationErrors = useMemo(() => validateForm(form), [form])
-  const canContinue = Object.keys(validationErrors).length === 0 && !submitting
+  const canContinue = draftReady && Object.keys(validationErrors).length === 0 && !submitting
   const progress = 67
 
   const updateField = <K extends keyof HealthProfileForm>(key: K, value: HealthProfileForm[K]) => {
@@ -535,9 +504,15 @@ export default function MedicalHistoryAllergiesPage() {
 
     setSubmitting(true)
     try {
-      await updatePatientHealthInfo({
-        allergies: buildAllergySummary(form),
-        medical_conditions: buildMedicalConditionSummary(form),
+      await saveHealthHistory({
+        medical_history: form.medicalHistory, other_condition: form.medicalHistoryOther,
+        surgeries_status: form.surgeriesStatus as 'yes' | 'no',
+        surgeries: form.surgeriesStatus === 'yes' ? form.surgeries.map(item => ({ id: item.id, procedure_name: item.procedureName, hospital: item.hospital, year: Number(item.year) })) : [],
+        allergies: form.allergies,
+        allergy_details: Object.fromEntries(Object.entries(form.allergyDetails).filter(([key, value]) => form.allergies.includes(key) && value.trim())),
+        medications_status: form.currentMedicationsMode as 'taking' | 'none',
+        medications: form.currentMedicationsMode === 'taking' ? form.medications.map(item => ({ id: item.id, medication_name: item.medicationName, dosage: item.dosage, frequency: item.frequency, purpose: item.purpose })) : [],
+        family_history: form.familyHistory,
       })
       setSubmitting(false)
       setOnboardingStage('insurance-consent')
@@ -577,6 +552,7 @@ export default function MedicalHistoryAllergiesPage() {
           </Link>
 
           <form className='hp-card' onSubmit={handleSubmit} noValidate style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(34px) saturate(200%)', WebkitBackdropFilter: 'blur(34px) saturate(200%)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.92)', boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)', padding: '36px 32px', animation: 'fadeUp 0.3s ease' }}>
+            <fieldset disabled={!draftReady || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div>
                 <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
@@ -699,7 +675,7 @@ export default function MedicalHistoryAllergiesPage() {
                 Back
               </Link>
             </div>
-          </form>
+          </fieldset></form>
         </div>
       </div>
     </main>

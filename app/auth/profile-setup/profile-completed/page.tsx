@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { usePatientResource } from '@/lib/use-patient-resource'
+import { onboardingPath, type OnboardingStatus } from '@/lib/patient-onboarding'
 import { PAGE_BG, T } from '@/lib/tokens'
 import { markOnboardingCompleted } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
@@ -80,14 +82,14 @@ function LeftPanel() {
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your profile is ready.</span>
           </h2>
           <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            You’ve finished setting up your patient profile. Qarevo Health is now ready to support your care journey.
+            You’ve finished setting up your patient profile. You can now explore the development platform.
           </p>
         </div>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'Protected Data', sub: 'Your records stay secure and encrypted' },
+          { icon: ICONS.lock, label: 'Your Profile', sub: 'Review and update your saved information' },
           { icon: ICONS.shield, label: 'Ready for Care', sub: 'Your profile now supports better consultations' },
           { icon: ICONS.check, label: 'A Smooth Finish', sub: 'You are ready to explore Qarevo Health' },
         ].map(({ icon, label, sub }) => (
@@ -107,6 +109,11 @@ function LeftPanel() {
 }
 
 export default function ProfileCompletedPage() {
+  const progress = usePatientResource<OnboardingStatus>('/api/v1/patient/settings/onboarding')
+  if (progress.loading) return <main style={{ padding: 36 }}><p role='status'>Checking your saved profile…</p></main>
+  if (progress.error) return <main style={{ padding: 36 }}><h1>We couldn’t confirm your saved profile</h1><p role='alert'>Please try again before continuing.</p><button onClick={progress.retry}>Try again</button></main>
+  if (!progress.data?.complete) return <main style={{ padding: 36 }}><h1>Your profile still needs a saved step</h1><Link href={onboardingPath(progress.data?.next_step || 'personal')}>Continue profile</Link></main>
+
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
       <style>{`
@@ -142,15 +149,15 @@ export default function ProfileCompletedPage() {
               </div>
               <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>Profile Completed</h1>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>
-                Your onboarding is complete. You can now begin using Qarevo Health with a profile that is secure, personalized, and ready for care.
+                Your profile information has been saved. This development environment is for synthetic testing; legal approval and clinical launch checks remain outstanding.
               </p>
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '18px' }}>
               {[
-                { icon: ICONS.lock, label: 'Protected', sub: 'Your information is encrypted' },
-                { icon: ICONS.brain, label: 'Informed', sub: 'Your care profile is ready' },
-                { icon: ICONS.shield, label: 'Secure', sub: 'Privacy-first healthcare access' },
+                { icon: ICONS.lock, label: 'Protected', sub: 'Your profile has been saved' },
+                { icon: ICONS.brain, label: 'Informed', sub: 'Your saved details are available' },
+                { icon: ICONS.shield, label: 'Secure', sub: 'Account-specific access' },
               ].map(({ icon, label, sub }) => (
                 <div key={label} style={{ padding: '16px', borderRadius: '16px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(4,53,77,0.06)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

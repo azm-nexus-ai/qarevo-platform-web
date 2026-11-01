@@ -8,7 +8,9 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
-import { createEmergencyContact, getApiErrorDetail, getPatientSettings, updateProfile } from '@/lib/api'
+import { getApiErrorDetail, getPatientSettings } from '@/lib/api'
+import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
+import { getOnboarding, saveContactInformation, GERMAN_STATES, type ContactInformation } from '@/lib/patient-onboarding'
 import { createAccountDraftStorage } from '@/lib/account-storage'
 
 const LEFT_BG = [
@@ -46,7 +48,7 @@ const INITIAL_FORM: ContactForm = {
   primaryPhone: '',
   alternativePhone: '',
   email: '',
-  country: '',
+  country: 'Germany',
   state: '',
   city: '',
   address: '',
@@ -59,43 +61,11 @@ const INITIAL_FORM: ContactForm = {
   emergencyEmail: '',
 }
 
-const COUNTRY_CODES: Record<string, string> = {
-  Nigeria: '+234',
-  Ghana: '+233',
-  Kenya: '+254',
-  'South Africa': '+27',
-  'United Kingdom': '+44',
-  'United States': '+1',
-  Canada: '+1',
-  France: '+33',
-  Germany: '+49',
-  India: '+91',
-}
-
-const COUNTRY_OPTIONS = ['Nigeria', 'Ghana', 'Kenya', 'South Africa', 'United Kingdom', 'United States', 'Canada', 'France', 'Germany', 'India', 'Other']
-
-const STATE_OPTIONS: Record<string, string[]> = {
-  Nigeria: ['Lagos', 'Abuja FCT', 'Oyo', 'Rivers', 'Kano'],
-  Ghana: ['Greater Accra', 'Ashanti', 'Western', 'Northern'],
-  Kenya: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru'],
-  'South Africa': ['Gauteng', 'Western Cape', 'KwaZulu-Natal'],
-  'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
-  'United States': ['California', 'Texas', 'New York', 'Florida'],
-  Canada: ['Ontario', 'British Columbia', 'Quebec', 'Alberta'],
-  France: ['Ile-de-France', 'Provence-Alpes-Cote d’Azur', 'Occitanie'],
-  Germany: ['Berlin', 'Bavaria', 'Hamburg', 'Hesse'],
-  India: ['Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu'],
-  Other: [],
-}
-
-function formatPhone(input: string, country: string) {
-  const prefix = COUNTRY_CODES[country] || ''
-  const digits = input.replace(/[^\d+]/g, '')
-
-  if (!digits) return prefix ? `${prefix} ` : ''
-  if (digits.startsWith('+')) return digits
-  if (prefix && !digits.startsWith(prefix.replace('+', ''))) return `${prefix} ${digits}`
-  return digits
+const COUNTRY_CODES: Record<string, string> = { Germany: '+49' }
+const COUNTRY_OPTIONS = ['Germany']
+const STATE_OPTIONS: Record<string, string[]> = { Germany: GERMAN_STATES }
+function formatPhone(input: string, _country: string) {
+  return input.replace(/[^0-9+ ().-]/g, '')
 }
 
 function JourneyVisual() {
@@ -243,6 +213,7 @@ function SectionHeader({ title, body }: { title: string; body: string }) {
 export default function ContactInformationPage() {
   const router = useRouter()
   const [draftStorage] = useState(createAccountDraftStorage)
+  const [draftReady, setDraftReady] = useState(false)
   const [form, setForm] = useState<ContactForm>(INITIAL_FORM)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -255,43 +226,29 @@ export default function ContactInformationPage() {
   const [showOptionalEmergency, setShowOptionalEmergency] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-
-    try {
-      const stored = draftStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        queueMicrotask(() => {
-          if (!cancelled) setForm({ ...INITIAL_FORM, ...parsed })
-        })
-      }
-    } catch {
-      // Invalid or inaccessible drafts are ignored.
-    }
-
-    getPatientSettings()
-      .then(settings => {
-        if (!cancelled) {
-          setForm(previous => ({
-            ...previous,
-            email: settings.email,
-            primaryPhone: previous.primaryPhone || settings.phone || '',
-          }))
-        }
-      })
-      .catch(error => {
-        if (!cancelled) {
-          setSubmitError(
-            getApiErrorDetail(error) ||
-            'Could not load your contact details. Reload to try again.'
-          )
-        }
-      })
-
-    return () => { cancelled = true }
+    let current = true
+    const stop = hydrateAccountDraft<ContactForm>(draftStorage, STORAGE_KEY, async () => {
+      const saved = await getOnboarding()
+      const value = saved.contact
+      return value ? {
+        primaryPhone: value.primary_phone, alternativePhone: value.alternative_phone || '',
+        country: value.country, state: value.state, city: value.city, address: value.address,
+        postalCode: value.postal_code, preferredContactMethod: value.preferred_contact_method,
+        emergencyName: value.emergency_name, emergencyRelationship: value.emergency_relationship,
+        emergencyPhone: value.emergency_phone, emergencyAltPhone: value.emergency_alternative_phone || '',
+        emergencyEmail: value.emergency_email || '',
+      } : {}
+    }, data => setForm(previous => ({ ...INITIAL_FORM, ...data, email: previous.email, primaryPhone: data.primaryPhone || previous.primaryPhone })),
+    error => setSubmitError(getApiErrorDetail(error) || 'Could not load your saved contact information. Reload to try again.'),
+    () => setDraftReady(true))
+    getPatientSettings().then(settings => {
+      if (current) setForm(previous => ({ ...previous, email: settings.email, primaryPhone: previous.primaryPhone || settings.phone || '' }))
+    }).catch(error => { if (current) setSubmitError(getApiErrorDetail(error) || 'Could not load your account email. Reload to try again.') })
+    return () => { current = false; stop() }
   }, [draftStorage])
 
   useEffect(() => {
+    if (!draftReady) return
     const id = window.setTimeout(() => {
       try {
         draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
@@ -307,7 +264,7 @@ export default function ContactInformationPage() {
     }, 320)
 
     return () => window.clearTimeout(id)
-  }, [form, draftStorage])
+  }, [form, draftStorage, draftReady])
 
   const helpText = useMemo(
     () =>
@@ -324,8 +281,8 @@ export default function ContactInformationPage() {
 
   const validatePhone = (value: string, required: boolean) => {
     if (!value.trim()) return required ? 'This field is required' : ''
-    const digits = value.replace(/[^\d]/g, '')
-    return digits.length < 7 ? 'Enter a valid phone number' : ''
+    const normalized = value.replace(/[\s().-]/g, '')
+    return /^\+[1-9][0-9]{6,14}$/.test(normalized) ? '' : 'Use an international number beginning with +, for example +49.'
   }
 
   const collectErrors = (value: ContactForm) => {
@@ -336,10 +293,11 @@ export default function ContactInformationPage() {
 
     if (value.alternativePhone && validatePhone(value.alternativePhone, false)) nextErrors.alternativePhone = 'Enter a valid alternative phone number'
     if (!EMAIL_RE.test(value.email)) nextErrors.email = 'Enter a valid email address'
-    if (!value.country.trim()) nextErrors.country = 'Please select your country'
-    if (!value.state.trim()) nextErrors.state = 'Please select your state or province'
-    if (!value.city.trim()) nextErrors.city = 'City is required'
-    if (!value.address.trim()) nextErrors.address = 'Residential address is required'
+    if (value.country !== 'Germany') nextErrors.country = 'Please select your country'
+    if (!GERMAN_STATES.includes(value.state)) nextErrors.state = 'Please select your state or province'
+    if (value.city.trim().length < 2 || !/[a-zäöüß]/i.test(value.city)) nextErrors.city = 'Enter a valid city name'
+    if (value.address.trim().length < 5 || !/[a-zäöüß]/i.test(value.address)) nextErrors.address = 'Enter your street and house number'
+    if (!/^[0-9]{5}$/.test(value.postalCode)) nextErrors.postalCode = 'Enter a five-digit German postal code'
     if (!value.preferredContactMethod) nextErrors.preferredContactMethod = 'Please choose a preferred contact method'
 
     if (!value.emergencyName.trim()) nextErrors.emergencyName = 'Emergency contact name is required'
@@ -347,6 +305,7 @@ export default function ContactInformationPage() {
     if (!value.emergencyPhone.trim()) nextErrors.emergencyPhone = 'Emergency contact phone number is required'
     else if (validatePhone(value.emergencyPhone, true)) nextErrors.emergencyPhone = validatePhone(value.emergencyPhone, true)
 
+    if (value.primaryPhone.replace(/\D/g, '') === value.emergencyPhone.replace(/\D/g, '')) nextErrors.emergencyPhone = 'Use a different phone number for your emergency contact'
     if (value.emergencyAltPhone && validatePhone(value.emergencyAltPhone, false)) nextErrors.emergencyAltPhone = 'Enter a valid alternative number'
     if (value.emergencyEmail && !EMAIL_RE.test(value.emergencyEmail)) nextErrors.emergencyEmail = 'Enter a valid emergency contact email'
 
@@ -387,21 +346,16 @@ export default function ContactInformationPage() {
     if (!validate()) return
     setSubmitting(true)
     try {
-      await updateProfile({ phone: form.primaryPhone.trim() })
-
-      const settings = await getPatientSettings()
-      const contactExists = settings.emergency_contacts.some((contact) => (
-        contact.name.trim().toLowerCase() === form.emergencyName.trim().toLowerCase()
-        && contact.phone.replace(/\D/g, '') === form.emergencyPhone.replace(/\D/g, '')
-      ))
-      if (!contactExists) {
-        await createEmergencyContact({
-          name: form.emergencyName.trim(),
-          relationship: form.emergencyRelationship,
-          phone: form.emergencyPhone.trim(),
-        })
-      }
-
+      await saveContactInformation({
+        primary_phone: form.primaryPhone, alternative_phone: form.alternativePhone,
+        country: form.country as 'Germany', state: form.state, city: form.city,
+        address: form.address, postal_code: form.postalCode,
+        preferred_contact_method: form.preferredContactMethod as ContactInformation['preferred_contact_method'],
+        emergency_name: form.emergencyName,
+        emergency_relationship: form.emergencyRelationship as ContactInformation['emergency_relationship'],
+        emergency_phone: form.emergencyPhone, emergency_alternative_phone: form.emergencyAltPhone,
+        emergency_email: form.emergencyEmail || null,
+      })
       setSubmitting(false)
       setOnboardingStage('health-profile')
       router.push('/auth/profile-setup/medical-history-allergies')
@@ -411,7 +365,7 @@ export default function ContactInformationPage() {
     }
   }
 
-  const canContinue = !submitting && Object.keys(collectErrors(form)).length === 0
+  const canContinue = draftReady && !submitting && Object.keys(collectErrors(form)).length === 0
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
@@ -453,6 +407,7 @@ export default function ContactInformationPage() {
               animation: 'fadeUp 0.3s ease',
             }}
           >
+            <fieldset disabled={!draftReady || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div>
                 <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
@@ -489,14 +444,14 @@ export default function ContactInformationPage() {
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='primaryPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Primary Phone Number</label>
-                  <input id='primaryPhone' value={form.primaryPhone} autoComplete='tel' onChange={(e) => updateField('primaryPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, primaryPhone: true }))} placeholder={form.country && COUNTRY_CODES[form.country] ? `${COUNTRY_CODES[form.country]} 801 234 5678` : '+234 801 234 5678'} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('primaryPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <label htmlFor='primaryPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Primary Phone Number (Required)</label>
+                  <input id='primaryPhone' required aria-required='true' value={form.primaryPhone} autoComplete='tel' onChange={(e) => updateField('primaryPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, primaryPhone: true }))} placeholder={form.country && COUNTRY_CODES[form.country] ? `${COUNTRY_CODES[form.country]} 801 234 5678` : '+234 801 234 5678'} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('primaryPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
                   {touched.primaryPhone && errors.primaryPhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.primaryPhone}</p> : null}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='email' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Email Address</label>
-                  <input id='email' type='email' value={form.email} autoComplete='email' onChange={(e) => updateField('email', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, email: true }))} placeholder='you@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('email'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <label htmlFor='email' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Email Address (Required)</label>
+                  <input id='email' required aria-required='true' type='email' value={form.email} autoComplete='email' onChange={(e) => updateField('email', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, email: true }))} placeholder='you@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('email'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
                   {touched.email && errors.email ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.email}</p> : null}
                 </div>
               </div>
@@ -517,41 +472,39 @@ export default function ContactInformationPage() {
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='country' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Country</label>
-                  <input id='country' list='countries' value={form.country} autoComplete='country-name' onChange={(e) => updateField('country', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, country: true }))} placeholder='Start typing to search' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('country'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  <datalist id='countries'>{COUNTRY_OPTIONS.map((item) => <option key={item} value={item} />)}</datalist>
+                  <label htmlFor='country' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Country (Required)</label>
+                  <select id='country' required aria-required='true' value={form.country} autoComplete='country-name' onChange={(e) => updateField('country', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, country: true }))} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('country'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}><option value=''>Select</option>{COUNTRY_OPTIONS.map(item => <option key={item} value={item}>{item}</option>)}</select>
                   {touched.country && errors.country ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.country}</p> : null}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='state' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>State / Province</label>
-                  <input id='state' list='states' value={form.state} onChange={(e) => updateField('state', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, state: true }))} placeholder='Select state or province' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('state'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  <datalist id='states'>{stateOptions.map((item) => <option key={item} value={item} />)}</datalist>
+                  <label htmlFor='state' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>State / Province (Required)</label>
+                  <select id='state' required aria-required='true' value={form.state} onChange={(e) => updateField('state', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, state: true }))} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('state'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}><option value=''>Select</option>{stateOptions.map(item => <option key={item} value={item}>{item}</option>)}</select>
                   {touched.state && errors.state ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.state}</p> : null}
                 </div>
               </div>
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='city' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>City</label>
-                  <input id='city' value={form.city} autoComplete='address-level2' onChange={(e) => updateField('city', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, city: true }))} placeholder='City' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('city'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <label htmlFor='city' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>City (Required)</label>
+                  <input id='city' required aria-required='true' value={form.city} autoComplete='address-level2' onChange={(e) => updateField('city', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, city: true }))} placeholder='City' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('city'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
                   {touched.city && errors.city ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.city}</p> : null}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='postalCode' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Postal Code <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></label>
-                  <input id='postalCode' value={form.postalCode} autoComplete='postal-code' onChange={(e) => updateField('postalCode', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, postalCode: true }))} placeholder='Postal code' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('postalCode'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <label htmlFor='postalCode' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Postal Code (Required)</label>
+                  <input id='postalCode' required aria-required='true' value={form.postalCode} autoComplete='postal-code' onChange={(e) => updateField('postalCode', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, postalCode: true }))} placeholder='Postal code' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('postalCode'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-                <label htmlFor='address' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Residential Address</label>
-                <textarea id='address' value={form.address} autoComplete='street-address' onChange={(e) => updateField('address', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, address: true }))} placeholder='Street address, area, and relevant location details' rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('address'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
+                <label htmlFor='address' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Residential Address (Required)</label>
+                <textarea id='address' required aria-required='true' value={form.address} autoComplete='street-address' onChange={(e) => updateField('address', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, address: true }))} placeholder='Street address, area, and relevant location details' rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('address'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
                 {touched.address && errors.address ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.address}</p> : null}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Contact Method</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Contact Method (Required)</p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {(['Phone Call', 'SMS', 'Email', 'WhatsApp'] as const).map((option) => {
                     const active = form.preferredContactMethod === option
@@ -587,8 +540,8 @@ export default function ContactInformationPage() {
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='emergencyName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Name</label>
-                  <input id='emergencyName' value={form.emergencyName} autoComplete='name' onChange={(e) => updateField('emergencyName', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyName: true }))} placeholder='Full name' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyName'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <label htmlFor='emergencyName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Name (Required)</label>
+                  <input id='emergencyName' required aria-required='true' value={form.emergencyName} autoComplete='name' onChange={(e) => updateField('emergencyName', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyName: true }))} placeholder='Full name' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyName'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
                   {touched.emergencyName && errors.emergencyName ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyName}</p> : null}
                 </div>
 
@@ -609,8 +562,8 @@ export default function ContactInformationPage() {
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='emergencyPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Phone Number</label>
-                  <input id='emergencyPhone' value={form.emergencyPhone} autoComplete='tel' onChange={(e) => updateField('emergencyPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, emergencyPhone: true }))} placeholder='Primary emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <label htmlFor='emergencyPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Phone Number (Required)</label>
+                  <input id='emergencyPhone' required aria-required='true' value={form.emergencyPhone} autoComplete='tel' onChange={(e) => updateField('emergencyPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, emergencyPhone: true }))} placeholder='Primary emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
                   {touched.emergencyPhone && errors.emergencyPhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyPhone}</p> : null}
                 </div>
               </div>
@@ -683,7 +636,7 @@ export default function ContactInformationPage() {
                 Back
               </Link>
             </div>
-          </form>
+          </fieldset></form>
         </div>
       </div>
     </main>

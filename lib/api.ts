@@ -2085,6 +2085,9 @@ export type PatientSettings = {
     phone?: string;
     date_of_birth?: string;
     gender?: string;
+    preferred_name?: string | null;
+    nationality?: string | null;
+    marital_status?: string | null;
     email_notifications: boolean;
     sms_notifications: boolean;
     push_notifications: boolean;
@@ -2221,6 +2224,10 @@ export type ProfileUpdate = {
     date_of_birth?: string;
     gender?: string;
     phone?: string;
+    preferred_name?: string | null;
+    nationality?: string;
+    marital_status?: string;
+    language?: 'German' | 'English';
 };
 
 export async function getPatientSettings(): Promise<PatientSettings> {

@@ -34,10 +34,13 @@ function tokens(email: string) {
 async function mockApi(context: BrowserContext) {
   const scenario: RenewalScenario = { expireAccess: false, failure: 'none', refreshes: 0, rejectedAccess: 0 }
   const consumed = new Set<string>()
+  const saved = new Map<string, Record<string, Record<string, unknown>>>()
   scenarios.set(context, scenario)
   await context.route('**/api/**', async route => {
     const request = route.request()
     const pathname = new URL(request.url()).pathname
+    const owner = (request.headers().authorization || '').replace(/^Bearer (test|renewed)-access:/, '')
+    const account = saved.get(owner) || {}
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'Content-Type,Authorization', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' }
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
     if (pathname === '/api/v1/auth/login' || pathname === '/api/v1/auth/verify-email-code') {
@@ -68,7 +71,22 @@ async function mockApi(context: BrowserContext) {
         return route.fulfill({ status: 401, headers: cors, json: { detail: 'Invalid or expired access token' } })
       }
       const email = authorization.replace(/^Bearer (test|renewed)-access:/, '')
-      return route.fulfill({ headers: cors, json: { user_id: email, email, phone: '+4915112345678', emergency_contacts: [] } })
+      return route.fulfill({ headers: cors, json: { user_id: email, email, phone: '+4915112345678', emergency_contacts: [], ...(account.personal || {}) } })
+    }
+    if (pathname === '/api/v1/patient/settings/profile' && request.method() === 'PUT') {
+      account.personal = request.postDataJSON()
+      saved.set(owner, account)
+      return route.fulfill({ headers: cors, json: { user_id: owner, email: owner, ...account.personal } })
+    }
+    if (pathname.startsWith('/api/v1/patient/settings/onboarding')) {
+      if (request.method() === 'PUT') {
+        const step = pathname.split('/').at(-1)!
+        account[step] = request.postDataJSON()
+        saved.set(owner, account)
+      }
+      const steps = ['personal', 'contact', 'health', 'coverage']
+      const next = steps.find(step => !account[step]) || null
+      return route.fulfill({ headers: cors, json: { ...account, personal: account.personal || {}, complete: !next, next_step: next, completed_steps: steps.filter(step => account[step]), coverage_verified: false, legal_ready: false, consent_version: 'dev-test-20261101' } })
     }
     if (pathname === '/api/v1/auth/logout') {
       scenario.logoutCount = (scenario.logoutCount || 0) + 1
@@ -334,4 +352,67 @@ test('sidebar logout clears private browser state and revokes the refresh sessio
   await expect.poll(() => scenarios.get(context)!.logoutCount || 0).toBe(1)
   expect(await page.evaluate(() => localStorage.getItem('qarevo_access_token'))).toBeNull()
   expect(await page.evaluate(() => Object.entries(sessionStorage).some(([key, value]) => key.includes(alpha) || value.includes('Private logout draft')))).toBe(false)
+})
+
+test('all profile steps save, survive a fresh sign-in and keep funding distinct', async ({ page, context }) => {
+  const savedBodies: Record<string, Record<string, unknown>> = {}
+  context.on('request', request => {
+    if (request.method() === 'PUT' && request.url().includes('/api/v1/patient/settings/')) savedBodies[new URL(request.url()).pathname.split('/').at(-1)!] = request.postDataJSON()
+  })
+  await signIn(page, alpha)
+  await expect(page.getByLabel('Full Name (Required)', { exact: true })).toBeVisible()
+  await page.locator('#fullName').fill('Synthetic Patient')
+  await page.locator('#preferredName').fill('Test Name')
+  await page.locator('#dob').fill('1998-05-21')
+  await page.locator('#gender').selectOption('Female')
+  await page.locator('#nationality').selectOption('German')
+  await page.locator('#language').selectOption('German')
+  await page.locator('#maritalStatus').selectOption('Single')
+  await page.locator('button[type="submit"]').click()
+  await expect(page).toHaveURL(/contact-information$/)
+  expect(savedBodies.profile).toMatchObject({ preferred_name: 'Test Name', nationality: 'German', language: 'German', marital_status: 'Single' })
+  await page.locator('#country').selectOption('Germany')
+  await expect(page.locator('#state option')).toHaveCount(17)
+  await page.locator('#state').selectOption('Berlin')
+  await page.locator('#city').fill('Berlin')
+  await page.locator('#address').fill('Teststraße 12')
+  await page.locator('#postalCode').fill('10115')
+  await page.getByRole('button', { name: 'Email', exact: true }).click()
+  await page.locator('#emergencyName').fill('Synthetic Contact')
+  await page.locator('#emergencyRelationship').selectOption('Friend')
+  await page.locator('#emergencyPhone').fill('+49301234567')
+  await page.locator('button[type="submit"]').click()
+  await expect(page).toHaveURL(/medical-history-allergies$/)
+  expect(savedBodies.contact).toMatchObject({ address: 'Teststraße 12', postal_code: '10115', state: 'Berlin', preferred_contact_method: 'Email' })
+  await page.getByRole('button', { name: 'None', exact: true }).click()
+  await page.getByRole('button', { name: 'No', exact: true }).click()
+  await page.getByRole('button', { name: 'No Known Allergies', exact: true }).click()
+  await page.getByRole('button', { name: "I'm Not Taking Any Medication", exact: true }).click()
+  await page.getByRole('button', { name: 'None Known', exact: true }).click()
+  await page.locator('button[type="submit"]').click()
+  await expect(page).toHaveURL(/insurance-privacy-consent$/)
+  expect(savedBodies.health).toMatchObject({ medical_history: ['None'], surgeries_status: 'no', medications_status: 'none' })
+  await page.getByLabel('Funding type (Required)').selectOption('GKV')
+  await page.getByLabel('Insurance provider (Required)', { exact: true }).fill('Synthetic Insurer')
+  await page.getByLabel('Insurance number (KVNR) (Required)', { exact: true }).fill('A123456789')
+  for (const checkbox of await page.locator('input[type="checkbox"][required]').all()) await checkbox.check()
+  await page.getByRole('button', { name: 'Complete Profile', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Profile Completed', exact: true })).toBeVisible()
+  expect(savedBodies.coverage).toMatchObject({ insurance_type: 'GKV', insurance_number: 'A123456789', consent_version: 'dev-test-20261101', consents: { marketing: false } })
+  await signIn(page, alpha) // A new login clears tab drafts; the same account must restore saved data.
+  await expect(page.locator('#fullName')).toHaveValue('Synthetic Patient')
+  await expect(page.locator('#preferredName')).toHaveValue('Test Name')
+  await page.goto('/auth/profile-setup/contact-information')
+  await expect(page.locator('#address')).toHaveValue('Teststraße 12')
+  await page.goto('/auth/profile-setup/medical-history-allergies')
+  await expect(page.getByRole('button', { name: 'None', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.goto('/auth/profile-setup/insurance-privacy-consent')
+  await expect(page.locator('#coverage-type')).toHaveValue('GKV')
+})
+
+test('an unsaved account cannot claim a completed profile through a direct URL', async ({ page }) => {
+  await signIn(page, alpha)
+  await page.goto('/auth/profile-setup/profile-completed')
+  await expect(page.getByRole('heading', { name: 'Your profile still needs a saved step' })).toBeVisible()
+  await expect(page.getByText('100% Complete', { exact: true })).toHaveCount(0)
 })
