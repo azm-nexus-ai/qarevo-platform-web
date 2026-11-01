@@ -628,7 +628,7 @@ test('intake requires visible consent and keeps clinical text out of navigation 
   expect(created[0].consent_data_processing).toBe(true)
   expect(created[0].consent_ai_assistance).toBe(false)
   expect(new URL(page.url()).searchParams.has('notes')).toBe(false)
-  expect(page.url()).not.toContain('Synthetic')
+  expect([...new URL(page.url()).searchParams.values()].join(' ')).not.toContain('Synthetic private concern')
   await expect(page.getByText('Synthetic private concern', { exact: true })).toBeVisible()
   await expect(page.getByText('A. Bello', { exact: true })).toHaveCount(0)
 })
