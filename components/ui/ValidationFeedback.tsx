@@ -3,7 +3,8 @@
 export function focusValidation(form: Element) {
   // Wait for React to render the error state before moving keyboard focus.
   requestAnimationFrame(() => {
-    const target = form.querySelector<HTMLElement>('[aria-invalid="true"], [data-validation-summary]')
+    const target = form.querySelector<HTMLElement>('[aria-invalid="true"]')
+      || form.querySelector<HTMLElement>('[data-validation-summary]')
     target?.focus()
     target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   })
