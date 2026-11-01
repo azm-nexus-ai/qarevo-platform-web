@@ -39,4 +39,21 @@ Intake requires an explicit development data-processing acknowledgement before s
 
 Booking review reads the signed-in patient's profile and saved intake. Clinical narrative is retrieved through the authenticated API, not forwarded in query strings. Legacy `notes` parameters are discarded by booking navigation. Existing browser history or external logs are not retroactively erased. These acknowledgements remain `dev-test-20261101`; they do not publish or approve the supplied legal drafts.
 
-Remaining: full CWS audit/outbox atomicity and recovery, OTP/log privacy, hosted credential/rate-limit evidence, remaining UI consistency, and the final cross-role acceptance run. The video screen still contains prototype behavior; actual video integration remains Phase 3 and must not be represented as a completed clinical consultation.
+Remaining: hosted credential/rate-limit evidence, AI authority deployment checks, remaining UI consistency, and the final cross-role acceptance run. The video screen still contains prototype behavior; actual video integration remains Phase 3 and must not be represented as a completed clinical consultation.
+
+
+## Release 4: durable activity and log privacy
+
+Platform API `f2df2d94` passes 627 local tests including real PostgreSQL receipt concurrency and rollback; deployment workflow `41350339010` passed. CWS `d0ac4400` passes 177 tests including seven PostgreSQL recovery scenarios; workflow `41350414064` passed and cloud deployment `6b45a1cc-cc8d-443a-9099-f2df8618e476` succeeded. The CWS worker requires `OUTBOX_PUBLISHER_ENABLED=true`; activation and live signed delivery still require verification. One audited clinical transaction now owns its durable delivery record. Failed/expired external acknowledgements are retried using a stable event ID. Email idempotency has Resend's 24-hour bound; the runbook does not claim exactly-once external email.
+
+API `0cdaeb7c` removed debug OTP logging and false debug-delivery success. SMS development mode reports unavailable without generating or consuming an OTP. Its deployment workflow `41349480916` passed. The full web privacy suite at `f3fdc106` passed (`41349489769`), and Vercel marked that exact SHA ready.
+
+## Release 5: truthful UI and visible theme controls
+
+The shared theme control is visibly labelled Dark mode in the main navigation, clinician/admin desktop headers and mobile navigation, and patient headers. One root theme and persisted key serve every route; browser coverage checks refresh, routes, logout/new session and cross-tab changes. The patient video screens no longer simulate doctor chat, SOAP notes, recordings, vitals or successful device tests. Real local camera/microphone checks remain accessible. The existing meeting APIs and Chime adapter are preserved for Phase 3 integration. Patient and clinician video availability use the same shared component.
+
+Unverified HIPAA, SOC 2, ISO and CE badges were removed from public acquisition/authentication screens. The old technical whitepaper is withheld from its public route pending factual review; its source remains in version control. Cookie information now carries the same unapproved-development status as privacy/terms. This is not a legal approval.
+
+## Next requested phases and external dependencies
+
+The owner requested continuing directly through Phases 3 and 4 after Phase 2 validation. Phase 3 is the complete booking/video/approved-record journey, not an extension of a simulated video UI. Phase 4 includes automated payment/invoicing and insurance workflows. On 2026-11-01 the owner confirmed payment/provider accounts are not yet arranged and commercial fees/insurance arrangements remain pending; continue technical integration work without asserting payment or insurance readiness. No real charges or insurance submissions are authorized by test configuration.

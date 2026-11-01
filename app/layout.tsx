@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: '%s | Qarevo Health',
   },
   description: 'Discover verified physicians, orchestrate continuous care, and experience the highest standard of clinical intelligence and data governance.',
-  keywords: ['healthcare', 'telemedicine', 'physician', 'GDPR', 'HIPAA', 'clinical intelligence'],
+  keywords: ['healthcare', 'telemedicine', 'physician', 'clinical intelligence'],
   icons: {
     icon: '/brand/qarevo-mark.png',
     shortcut: '/brand/qarevo-mark.png',

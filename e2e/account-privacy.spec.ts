@@ -632,3 +632,54 @@ test('intake requires visible consent and keeps clinical text out of navigation 
   await expect(page.getByText('Synthetic private concern', { exact: true })).toBeVisible()
   await expect(page.getByText('A. Bello', { exact: true })).toHaveCount(0)
 })
+
+
+test('video preparation never invents a clinician connection or clinical content', async ({ page }) => {
+  await signIn(page, alpha)
+  for (const route of ['live', 'waiting-room']) {
+    await page.goto(`/patient/video-consultation/${route}`)
+    await expect(page.locator('#feature-availability-title')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Check camera and microphone', exact: true })).toHaveAttribute('href', '/patient/video-consultation/device-check')
+    await expect(page.getByText('Recording • On', { exact: true })).toHaveCount(0)
+    await expect(page.getByLabel('Clinical notes')).toHaveCount(0)
+    await expect(page.locator('body')).not.toContainText('Patient reports fatigue')
+    await expect(page.locator('body')).not.toContainText('Lab Results.pdf')
+  }
+})
+
+test('unapproved legal and technical materials are not presented as certifications', async ({ page }) => {
+  await page.goto('/cookies')
+  await expect(page.getByRole('heading', { name: 'Cookie information is under review' })).toBeVisible()
+  await expect(page.locator('body')).not.toContainText('GDPR Compliant')
+  await page.goto('/whitepaper')
+  await expect(page.getByRole('heading', { name: 'Our technical overview is being updated' })).toBeVisible()
+  await expect(page.locator('body')).not.toContainText('Certified Infrastructure')
+  await page.goto('/auth')
+  await expect(page.locator('body')).not.toContainText('SOC 2 Type II')
+})
+
+
+test('main navigation exposes dark mode on desktop and mobile and synchronizes tabs', async ({ page, context }) => {
+  await page.goto('/')
+  const navigation = page.getByRole('navigation', { name: 'Main navigation', exact: true })
+  const toggle = navigation.getByRole('button', { name: 'Dark mode', exact: true })
+  await expect(toggle).toBeVisible()
+  await expect(toggle).toContainText('Dark mode')
+  await toggle.click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  const second = await context.newPage()
+  await second.goto('/')
+  await expect(second.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await toggle.click()
+  await expect(second.locator('html')).toHaveAttribute('data-theme', 'light')
+  for (const width of [320, 390, 768]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(toggle).toBeVisible()
+    const bounds = await toggle.boundingBox()
+    expect(bounds).not.toBeNull()
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+  }
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await second.close()
+})

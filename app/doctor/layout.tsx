@@ -225,7 +225,6 @@ export default function DoctorLayout({
           </nav>
         </aside>
 
-        <div className='portal-appearance'><ThemeToggle /></div>
         {/* Main content */}
         <main style={{ flex: 1, marginLeft: '260px' }}>
           {/* Header */}
@@ -246,6 +245,7 @@ export default function DoctorLayout({
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Manage your consultations and patients</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <ThemeToggle />
                 <button
                   onClick={handleSettingsClick}
                   style={{

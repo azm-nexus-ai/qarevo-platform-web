@@ -192,7 +192,7 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['Secure', 'Encrypted', 'HIPAA'].map(b => (
+          {['Email verification', 'Account security', 'Clinician review'].map(b => (
             <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
           ))}
         </div>

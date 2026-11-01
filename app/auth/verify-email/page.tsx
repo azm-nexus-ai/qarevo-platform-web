@@ -601,7 +601,7 @@ export default function VerifyEmailPage() {
             {[
               { icon: ICONS.shield,   label: 'Secure verification'    },
               { icon: ICONS.lock,     label: 'End-to-end encrypted'   },
-              { icon: ICONS.activity, label: 'HIPAA · GDPR compliant' },
+              { icon: ICONS.activity, label: 'Email verification · Protected access' },
               { icon: ICONS.brain,    label: 'Medical-grade privacy'  },
             ].map(({ icon, label }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>

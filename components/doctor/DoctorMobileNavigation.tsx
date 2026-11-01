@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
@@ -123,6 +124,7 @@ export default function DoctorMobileNavigation() {
           border-bottom: 1px solid var(--border);
           box-shadow: 0 2px 12px rgba(4,53,77,0.06);
         }
+        @media(max-width:420px) { .dmn-topbar button[aria-label="Profile"] { display: none; } }
         .dmn-hamburger {
           width: 40px;
           height: 40px;
@@ -221,10 +223,11 @@ export default function DoctorMobileNavigation() {
             aria-label="Qarevo Health Doctor Dashboard"
             style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
           >
-            <AuthenticatedLogo width={120} />
+            <AuthenticatedLogo width={100} />
           </Link>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+          <ThemeToggle />
           <button
             type="button"
             aria-label="Profile"

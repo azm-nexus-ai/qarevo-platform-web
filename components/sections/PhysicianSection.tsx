@@ -13,7 +13,7 @@ export default function PhysicianSection() {
     { icon: ICONS.steth, title: 'Verified Physicians', desc: 'Board-certified specialists across Europe' },
     { icon: ICONS.video, title: 'Virtual Consultations', desc: 'HD video with AI-assisted diagnostics' },
     { icon: ICONS.brain, title: 'Clinical Intelligence', desc: 'AI-powered treatment recommendations' },
-    { icon: ICONS.shield, title: 'Secure Platform', desc: 'HIPAA & GDPR compliant infrastructure' },
+    { icon: ICONS.shield, title: 'Secure Platform', desc: 'Account verification and controlled clinical access' },
   ]
 
   return (
@@ -302,7 +302,7 @@ export default function PhysicianSection() {
             >
               <Ico p={ICONS.shield} size={16} sw={1.75} color={T.blue} />
               <span style={{ fontSize: "13px", fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                HIPAA Compliant
+                Account verification
               </span>
             </div>
           </div>

@@ -37,6 +37,6 @@ export function ThemeToggle() {
   return <button type="button" className="theme-toggle" aria-label="Dark mode" aria-pressed={ready ? theme === 'dark' : undefined}
     onClick={() => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')}>
     <span aria-hidden="true" className="theme-light-icon">☾</span><span aria-hidden="true" className="theme-dark-icon">☀</span>
-    <span>Appearance</span>
+    <span>Dark mode</span>
   </button>
 }

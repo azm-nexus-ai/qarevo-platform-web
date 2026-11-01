@@ -926,7 +926,7 @@ function ResetPasswordPageContent() {
                 {[
                   { icon: ICONS.lock, label: 'Secure Credentials' },
                   { icon: ICONS.shield, label: 'Encrypted Update' },
-                  { icon: ICONS.check, label: 'HIPAA · GDPR' },
+                  { icon: ICONS.check, label: 'Protected account access' },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />

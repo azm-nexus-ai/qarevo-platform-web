@@ -672,7 +672,7 @@ function OtpPageContent() {
         {[
           { icon: ICONS.shield,   label: 'Identity-verified access'    },
           { icon: ICONS.lock,     label: 'End-to-end encrypted'        },
-          { icon: ICONS.activity, label: 'HIPAA · GDPR compliant'      },
+          { icon: ICONS.activity, label: 'Email verification · Protected access'      },
           { icon: ICONS.brain,    label: 'Medical-grade security'      },
         ].map(({ icon, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>

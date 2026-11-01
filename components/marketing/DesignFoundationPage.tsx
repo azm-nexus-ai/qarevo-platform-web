@@ -263,7 +263,7 @@ export default function DesignFoundationPage() {
                 { color: T.greenLight, name: 'Suc. Light', hex: '#E3F8F0' },
                 { color: T.amber,      name: 'Warning',    hex: '#D97706' },
                 { color: T.red,        name: 'Error',      hex: '#DC2626' },
-                { color: T.purple,     name: 'HIPAA',      hex: '#7C3AED' },
+                { color: T.purple,     name: 'Purple',      hex: '#7C3AED' },
                 { color: T.cyan,       name: 'SOC 2',      hex: '#0891B2' },
               ]} />
             </div>
@@ -617,9 +617,9 @@ export default function DesignFoundationPage() {
               <Chip label="● Systems Nominal"        color={T.green}  bg={T.greenLight} border="1px solid #A8EDD4" />
               <Chip label="⏳ Awaiting Sign-off"     color={T.amber}  bg="#FFF8E6"      border="1px solid #FDE4A0" />
               <Chip label="✗ Error"                 color={T.red}    bg="#FEF2F2"      border="1px solid #FECACA" />
-              <Chip label="ISO 27001"                color={T.cyan}   bg="#E0F6FD"      border="1px solid #BAE9F8" />
-              <Chip label="GDPR"                     color={T.teal}   bg={T.greenLight} border="1px solid #A8EDD4" />
-              <Chip label="HIPAA"                    color={T.purple} bg="#F3EEFF"      border="1px solid #D8C4FF" />
+              <Chip label="Account verification"                color={T.cyan}   bg="#E0F6FD"      border="1px solid #BAE9F8" />
+              <Chip label="Data protection"                     color={T.teal}   bg={T.greenLight} border="1px solid #A8EDD4" />
+              <Chip label="Clinician review"                    color={T.purple} bg="#F3EEFF"      border="1px solid #D8C4FF" />
               <Chip label="SOC 2"                    color={T.cyan}   bg="#E0F6FD"      border="1px solid #BAE9F8" />
               <Chip label="EMA Standards"            color={T.amber}  bg="#FFF8E6"      border="1px solid #FDE4A0" />
               <Chip label="Internal Medicine"        color={T.blue}   bg="rgba(234,241,255,0.72)" border={`1px solid ${T.blueMid}`} />

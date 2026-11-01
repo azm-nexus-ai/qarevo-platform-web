@@ -164,7 +164,7 @@ function LeftPanel() {
           <FloatCard bottom="0" style={{ left: '50%', transform: 'translateX(-50%)' }} icon={ICONS.shield} iconColor="rgba(52,140,234,0.9)" iconBg="rgba(32,181,223,0.22)" label="Satisfaction" value="98%" sub="Patient-rated" subColor="rgba(251,191,36,0.85)" />
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['HIPAA', 'GDPR', 'ISO 27001', 'SOC 2 Type II'].map(b => (
+          {['Email verification', 'Clinician review', 'Account security'].map(b => (
             <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
           ))}
         </div>
@@ -263,7 +263,7 @@ function RightPanel() {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '20px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
           <Ico p={ICONS.shield} size={12} sw={1.75} color={T.slate2} />
-          <span style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.01em' }}>HIPAA & GDPR compliant · AES-256 encrypted</span>
+          <span style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.01em' }}>Email verification · Protected account access</span>
         </div>
       </div>
     </div>

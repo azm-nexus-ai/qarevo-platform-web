@@ -837,7 +837,7 @@ function DateTimeSelectionPageContent() {
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {['Secure Booking', 'Encrypted Scheduling', 'Instant Confirmation', 'HIPAA-Compliant Platform', 'Verified Physicians'].map((item) => (
+                {['Secure Booking', 'Encrypted Scheduling', 'Instant Confirmation', 'Protected Account Access', 'Verified Physicians'].map((item) => (
                   <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: T.slate, fontSize: "13px", fontWeight: 600 }}>
                     <Ico p={ICONS.shield} size={12} sw={1.8} color={T.green} />
                     {item}

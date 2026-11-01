@@ -185,7 +185,6 @@ export default function AdminLayout({
           </nav>
         </aside>
 
-        <div className='portal-appearance'><ThemeToggle /></div>
         {/* Main content */}
         <main style={{ flex: 1, marginLeft: '260px' }}>
           {/* Header */}
@@ -206,6 +205,7 @@ export default function AdminLayout({
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Platform administration and monitoring</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <ThemeToggle />
                 <button
                   onClick={handleLogoutClick}
                   disabled={loggingOut}

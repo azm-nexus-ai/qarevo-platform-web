@@ -44,7 +44,7 @@ export default function NavigationBar() {
 
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth <= 768
+      const mobile = window.innerWidth <= 1180
       setIsMobile(mobile)
     }
 
@@ -159,9 +159,9 @@ export default function NavigationBar() {
       >
         <div
           style={{
-            maxWidth: '1080px',
+            maxWidth: '1320px',
             margin: '0 auto',
-            padding: '0 24px',
+            padding: '0 16px',
             height: navHeight,
             display: 'flex',
             alignItems: 'center',
@@ -220,6 +220,7 @@ export default function NavigationBar() {
                   })}
                 </div>
 
+                <div style={{ margin: '0 12px', flexShrink: 0 }}><ThemeToggle /></div>
                 {/* Desktop auth buttons */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginLeft: 'auto' }}>
                   {isAuthenticated ? (
@@ -340,6 +341,7 @@ export default function NavigationBar() {
                   <AuthenticatedLogo priority width={100} />
                 </Link>
 
+                <ThemeToggle />
                 {/* Mobile hamburger */}
                 <button
                   ref={hamburgerRef}
@@ -365,7 +367,7 @@ export default function NavigationBar() {
                       display: 'block',
                       width: '18px',
                       height: '2px',
-                      background: T.brandNavy,
+                      background: T.navy,
                       borderRadius: '2px',
                       transition: 'transform 0.2s ease, opacity 0.2s ease',
                       transform: mobileOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none',
@@ -376,7 +378,7 @@ export default function NavigationBar() {
                       display: 'block',
                       width: '18px',
                       height: '2px',
-                      background: T.brandNavy,
+                      background: T.navy,
                       borderRadius: '2px',
                       transition: 'opacity 0.2s ease',
                       opacity: mobileOpen ? 0 : 1,
@@ -387,7 +389,7 @@ export default function NavigationBar() {
                       display: 'block',
                       width: '18px',
                       height: '2px',
-                      background: T.brandNavy,
+                      background: T.navy,
                       borderRadius: '2px',
                       transition: 'transform 0.2s ease, opacity 0.2s ease',
                       transform: mobileOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none',
@@ -399,7 +401,6 @@ export default function NavigationBar() {
           )}
         </div>
       </nav>
-      <div className="public-appearance"><ThemeToggle /></div>
 
       {/* Mobile drawer overlay */}
       <div

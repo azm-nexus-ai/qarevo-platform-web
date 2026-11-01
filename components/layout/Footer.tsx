@@ -174,7 +174,7 @@ export default function Footer() {
               letterSpacing: '-0.005em',
             }}
           >
-            © {new Date().getFullYear()} Qarevo Health. All rights reserved. EU GDPR Compliant.
+            © {new Date().getFullYear()} Qarevo Health. All rights reserved.
           </p>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <span
@@ -200,7 +200,7 @@ export default function Footer() {
                   flexShrink: 0,
                 }}
               />
-              CE Marked
+              Development preview
             </span>
             <span
               style={{
@@ -216,7 +216,7 @@ export default function Footer() {
                 ...Glass.chip,
               }}
             >
-              ISO 27001
+              Clinician-led care
             </span>
           </div>
         </div>
