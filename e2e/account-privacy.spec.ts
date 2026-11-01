@@ -800,7 +800,7 @@ test('rescheduling saves exact server times and details survive a refresh', asyn
   const { appointment, slot, state } = await mockAppointmentManagement(context)
   await signIn(page, alpha)
   await page.goto('/patient/appointments')
-  await expect(page.getByText('45 min', { exact: true })).toBeVisible()
+  await expect(page.getByText('· 45 min', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Reschedule', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Reschedule appointment', exact: true })
   await dialog.getByRole('button', { name: 'Confirm reschedule', exact: true }).click()
