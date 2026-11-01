@@ -475,6 +475,7 @@ test('onboarding explains invalid fields without locking Continue', async ({ pag
   await expect(page.locator('#primaryPhone-error')).toContainText('international')
   await expect(page.locator('#address-error')).toContainText('house number')
   await expect(page.locator('#primaryPhone')).toBeFocused()
+  await expect(page.locator('#emergencyName-error')).toBeVisible()
   await page.locator('#postalCode').fill('01067')
   await page.locator('#primaryPhone').fill('+49 151 12345678')
   await page.locator('#address').fill('Musterstraße 12a')
