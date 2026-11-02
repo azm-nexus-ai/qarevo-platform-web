@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react'
 import Link from 'next/link'
+import RecoverySignInLinks from '@/components/auth/RecoverySignInLinks'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -203,14 +204,14 @@ function LeftPanel() {
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your care remains protected.</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Account recovery is encrypted end-to-end and designed to be quick, calm, and trustworthy.
+            Request a single-use recovery link. After changing your password, sign in again through your patient, clinician or administrator portal.
           </p>
         </div>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'Encrypted Reset Flow', sub: 'Secure links with expiry safeguards' },
+          { icon: ICONS.lock, label: 'Time-limited Reset Flow', sub: 'Secure links with expiry safeguards' },
           { icon: ICONS.shield, label: 'Privacy by Default', sub: 'No account details exposed during recovery' },
           { icon: ICONS.check, label: 'Single-use Recovery Link', sub: 'Use the link sent to your mailbox' },
         ].map(({ icon, label, sub }, i) => (
@@ -242,7 +243,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>
-                {label}
+                {label} <span aria-hidden="true">(Required)</span>
               </div>
               <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
@@ -291,7 +292,7 @@ function AlertBanner({ kind }: { kind: Exclude<ErrorKind, 'empty' | 'invalid' | 
       <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} style={{ marginTop: '1px', flexShrink: 0 }} />
       <div>
         <div style={{ fontSize: '13px', fontWeight: 700, color: T.red, lineHeight: 1.4, letterSpacing: '-0.005em' }}>{content.title}</div>
-        <div style={{ fontSize: "13px", color: '#B93434', lineHeight: 1.5, letterSpacing: '-0.005em' }}>{content.body}</div>
+        <div style={{ fontSize: "13px", color: T.red, lineHeight: 1.5, letterSpacing: '-0.005em' }}>{content.body}</div>
       </div>
     </div>
   )
@@ -329,12 +330,12 @@ function EmailField({
       : '0 0 0 3px rgba(32,181,223,0.09)'
     : 'none'
 
-  const bg = error ? '#FFF5F5' : success ? '#F0FDF8' : focused ? '#fff' : 'rgba(255,255,255,0.7)'
+  const bg = error ? 'var(--danger-soft)' : success ? 'var(--success-soft)' : 'var(--surface)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        Email Address
+        Email Address <span aria-hidden="true">(Required)</span>
       </label>
       <div style={{ position: 'relative' }}>
         <span
@@ -353,6 +354,9 @@ function EmailField({
         </span>
         <input
           id={id}
+          required
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           type='email'
           value={value}
           placeholder='Enter your registered email address'
@@ -383,7 +387,7 @@ function EmailField({
           {success ? <Ico p={ICONS.check} size={14} sw={2.5} color={T.green} /> : error ? <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} /> : null}
         </span>
       </div>
-      {error ? <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p> : null}
+      {error ? <p id={`${id}-error`} role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p> : null}
     </div>
   )
 }
@@ -580,7 +584,7 @@ export default function ForgotPasswordPage() {
 
                     <button
                       type='submit'
-                      disabled={loading || !emailValue}
+                      disabled={loading}
                       style={{
                         width: '100%',
                         padding: '14px 20px',
@@ -805,7 +809,7 @@ export default function ForgotPasswordPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
                 {[
                   { icon: ICONS.lock, label: 'Secure Recovery' },
-                  { icon: ICONS.shield, label: 'Encrypted Workflow' },
+                  { icon: ICONS.shield, label: 'Single-use Link' },
                   { icon: ICONS.check, label: 'Account Recovery' },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -817,8 +821,9 @@ export default function ForgotPasswordPage() {
             </div>
           </section>
 
+          <RecoverySignInLinks />
           <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-            By continuing you agree to our{' '}
+            Review the status of our{' '}
             <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
               Terms
             </Link>{' '}

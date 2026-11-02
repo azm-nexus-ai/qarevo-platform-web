@@ -429,6 +429,11 @@ test('an unsaved account cannot claim a completed profile through a direct URL',
 
 test('password recovery guides users through their email link and rejects a missing token', async ({ page }) => {
   await page.goto('/auth/forgot-password')
+  await expect(page.locator('body')).not.toContainText('encrypted end-to-end')
+  await page.locator('button[type=submit]').click()
+  await expect(page.getByLabel('Email Address')).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByRole('alert')).toContainText('Email address is required')
+  await expect(page.locator('button[type=submit]')).toBeEnabled()
   await page.getByLabel('Email Address').fill(alpha)
   await page.locator('button[type="submit"]').click()
   await expect(page.getByText('If an eligible account exists', { exact: false })).toBeVisible()
@@ -437,10 +442,15 @@ test('password recovery guides users through their email link and rejects a miss
   await expect(page.getByText('The password reset link is missing or invalid.', { exact: false })).toBeVisible()
   await page.goto('/auth/reset-password#token=synthetic-reset-token')
   await expect(page).toHaveURL(/\/auth\/reset-password$/)
+  await page.locator('button[type=submit]').click()
+  await expect(page.locator('input[aria-invalid=true]')).toHaveCount(2)
   await page.getByLabel('New Password', { exact: true }).fill('SyntheticNewPassword123!')
   await page.getByLabel('Confirm New Password', { exact: true }).fill('SyntheticNewPassword123!')
   await page.locator('button[type="submit"]').click()
   await expect(page.getByText('Your password has been successfully updated.', { exact: false })).toBeVisible()
+  const portals = page.getByRole('navigation', { name: 'Choose your sign-in portal' })
+  await expect(portals.getByRole('link', { name: 'Administrator sign-in' })).toHaveAttribute('href', '/auth/admin/login')
+  await expect(portals.getByRole('link', { name: 'Clinician sign-in' })).toHaveAttribute('href', '/auth/doctor/login')
 })
 
 

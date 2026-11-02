@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useId, useState } from 'react'
 import Link from 'next/link'
+import RecoverySignInLinks from '@/components/auth/RecoverySignInLinks'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -285,7 +286,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>
-                {label}
+                {label} <span aria-hidden="true">(Required)</span>
               </div>
               <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
@@ -334,7 +335,7 @@ function AlertBanner({ kind }: { kind: Exclude<ErrorKind, 'mismatch' | 'weak' | 
       <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} style={{ marginTop: '1px', flexShrink: 0 }} />
       <div>
         <div style={{ fontSize: '13px', fontWeight: 700, color: T.red, lineHeight: 1.4, letterSpacing: '-0.005em' }}>{content.title}</div>
-        <div style={{ fontSize: "13px", color: '#B93434', lineHeight: 1.5, letterSpacing: '-0.005em' }}>{content.body}</div>
+        <div style={{ fontSize: "13px", color: T.red, lineHeight: 1.5, letterSpacing: '-0.005em' }}>{content.body}</div>
       </div>
     </div>
   )
@@ -381,7 +382,7 @@ function PasswordField({
       : '0 0 0 3px rgba(32,181,223,0.09)'
     : 'none'
 
-  const bg = error ? '#FFF5F5' : success ? '#F0FDF8' : focused ? '#fff' : 'rgba(255,255,255,0.7)'
+  const bg = error ? 'var(--danger-soft)' : success ? 'var(--success-soft)' : 'var(--surface)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -405,6 +406,9 @@ function PasswordField({
         </span>
         <input
           id={id}
+          required
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           type={show ? 'text' : 'password'}
           value={value}
           placeholder='••••••••••••'
@@ -455,7 +459,7 @@ function PasswordField({
           {success ? <Ico p={ICONS.check} size={14} sw={2.5} color={T.green} /> : error ? <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} /> : null}
         </div>
       </div>
-      {error ? <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p> : null}
+      {error ? <p id={`${id}-error`} role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p> : null}
     </div>
   )
 }
@@ -811,7 +815,7 @@ function ResetPasswordPageContent() {
 
                         <button
                           type='submit'
-                          disabled={loading || !newPassword || !confirmPassword}
+                          disabled={loading}
                           style={{
                             width: '100%',
                             padding: '14px 20px',
@@ -943,7 +947,7 @@ function ResetPasswordPageContent() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
                 {[
                   { icon: ICONS.lock, label: 'Secure Credentials' },
-                  { icon: ICONS.shield, label: 'Encrypted Update' },
+                  { icon: ICONS.shield, label: 'Session Protection' },
                   { icon: ICONS.check, label: 'Protected account access' },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -955,8 +959,9 @@ function ResetPasswordPageContent() {
             </div>
           </section>
 
+          <RecoverySignInLinks />
           <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-            By continuing you agree to our{' '}
+            Review the status of our{' '}
             <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
               Terms
             </Link>{' '}
