@@ -432,7 +432,7 @@ test('password recovery guides users through their email link and rejects a miss
   await expect(page.locator('body')).not.toContainText('encrypted end-to-end')
   await page.locator('button[type=submit]').click()
   await expect(page.getByLabel('Email Address')).toHaveAttribute('aria-invalid', 'true')
-  await expect(page.getByRole('alert')).toContainText('Email address is required')
+  await expect(page.locator('form').getByRole('alert')).toContainText('Email address is required')
   await expect(page.locator('button[type=submit]')).toBeEnabled()
   await page.getByLabel('Email Address').fill(alpha)
   await page.locator('button[type="submit"]').click()
