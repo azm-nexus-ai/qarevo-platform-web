@@ -1050,6 +1050,15 @@ export async function loginPatient(body: { email: string; password: string }): P
 export async function loginAdmin(body: { email: string; password: string }): Promise<AdminLoginResponse> {
   return apiPost<AdminLoginResponse>("/api/v1/auth/admin/login", body);
 }
+export async function getSessionStatus(activity = false): Promise<import('./session-timeout').SessionStatus> {
+    const response = await fetchWithAuthRetry(`${getBaseUrl()}/api/v1/session${activity ? '/activity' : ''}`, {
+        method: activity ? 'POST' : 'GET', headers: authHeaders(), cache: 'no-store',
+        signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) throw new ApiError(response.status, 'Session verification failed.');
+    return response.json();
+}
+
 export async function logoutCurrentUser(): Promise<void> {
     const refreshToken = readRefreshToken();
     let request: Promise<Response> | undefined;

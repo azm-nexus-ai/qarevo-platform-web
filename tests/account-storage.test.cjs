@@ -580,3 +580,16 @@ test('denied microphone access cleans up the session without claiming connection
   assert.ok(!harness.calls.includes('start'))
   assert.ok(harness.calls.includes('devices-destroy'))
 })
+
+
+test('session deadlines use the earliest server limit and conservatively deduct transit time', () => {
+  const mod = { exports: {} }
+  vm.runInNewContext(compile('session-timeout.ts'), { module: mod, exports: mod.exports, Date, Error })
+  const status = { server_time: '2030-01-01T12:00:00Z', idle_expires_at: '2030-01-01T12:15:00Z', absolute_expires_at: '2030-01-01T12:05:00Z', warning_seconds: 120 }
+  const result = mod.exports.sessionTiming(status, 5000, 1000)
+  assert.equal(result.deadline, 304000)
+  assert.equal(result.absolute, true)
+  assert.equal(result.warningMs, 120000)
+  assert.throws(() => mod.exports.sessionTiming({ ...status, idle_expires_at: 'invalid' }, 5000, 0), /unavailable/)
+  assert.equal(mod.exports.sessionTiming({ ...status, idle_expires_at: '2029-01-01T00:00:00Z' }, 5000, 0).deadline, 5000)
+})

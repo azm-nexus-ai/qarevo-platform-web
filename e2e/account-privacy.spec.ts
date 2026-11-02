@@ -47,6 +47,7 @@ async function mockApi(context: BrowserContext) {
     const account = saved.get(owner) || {}
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'Content-Type,Authorization', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' }
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    if (pathname === '/api/v1/session' || pathname === '/api/v1/session/activity') return route.fulfill({ headers: cors, json: { server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
     if (pathname === '/api/v1/auth/login' || pathname === '/api/v1/auth/verify-email-code') {
       const body = request.postDataJSON()
       return route.fulfill({ headers: cors, json: tokens(body.email) })

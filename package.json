@@ -13,7 +13,7 @@
     "lint": "eslint",
     "test:e2e": "playwright test",
     "test:privacy": "node --test tests/account-storage.test.cjs",
-    "test:e2e:privacy": "playwright test e2e/account-privacy.spec.ts e2e/clinical-navigation.spec.ts e2e/admin-workflow.spec.ts e2e/billing-availability.spec.ts"
+    "test:e2e:privacy": "playwright test e2e/account-privacy.spec.ts e2e/clinical-navigation.spec.ts e2e/admin-workflow.spec.ts e2e/billing-availability.spec.ts e2e/session-timeout.spec.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",
