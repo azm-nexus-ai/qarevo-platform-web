@@ -27,6 +27,8 @@ async function prepare(context: BrowserContext, role: 'PATIENT' | 'PROVIDER' | '
     if (path.endsWith('/episodes')) return route.fulfill({ headers, json: { episodes: [], page: 1, total_count: 0 } })
     if (path.endsWith('/profile')) return route.fulfill({ headers, json: { full_name: 'Synthetic Doctor' } })
     if (path.endsWith('/overview')) return route.fulfill({ headers, json: { patients: { total: 0 }, doctors: { total: 0 }, users: { total: 0 }, exceptions: { active: 0 } } })
+    if (path.endsWith('/health')) return route.fulfill({ headers, json: { status: 'healthy', pending_verifications: 0, critical_exceptions: 0, high_exceptions: 0 } })
+    if (path.endsWith('/activity')) return route.fulfill({ headers, json: { period_days: 7, date_from: '2030-01-01', date_to: '2030-01-07', new_patients: 0, new_doctors: 0, new_exceptions: 0 } })
     if (path.endsWith('/doctors-summary')) return route.fulfill({ headers, json: { by_specialty: {} } })
     if (path.endsWith('/workflow-delivery')) return route.fulfill({ headers, json: { status: 'disabled', jobs: [], pending_count: 0, failed_count: 0, can_retry: false } })
     return route.fulfill({ headers, json: {} })
@@ -97,7 +99,7 @@ test('unavailable authority blocks private content with retry and sign-out', asy
   state.unavailable = true
   await page.goto('/patient/billing')
   await expect(page.getByRole('heading', { name: 'Billing & Payments' })).toHaveCount(0)
-  await expect(page.getByRole('alert')).toContainText('could not confirm your session')
+  await expect(page.getByRole('region', { name: 'Session verification' }).getByRole('alert')).toContainText('could not confirm your session')
   state.unavailable = false
   await page.getByRole('button', { name: 'Retry connection' }).click()
   await expect(page.getByRole('heading', { name: 'Billing & Payments' })).toBeVisible()
