@@ -32,6 +32,7 @@ export default function DoctorReviewDialog({ providerId, onClose, onSaved }: {
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (details?.can_review !== true) return
     const next: Record<string, string> = {}
     if (reference.trim().length < 4 || reference.trim().length > 500) next.reference = 'Enter a review reference or reason using 4–500 characters.'
     if (decision === 'approve' && !confirmed) next.confirmed = 'Confirm that you have reviewed the clinician’s identity and professional credentials.'
@@ -70,9 +71,11 @@ export default function DoctorReviewDialog({ providerId, onClose, onSaved }: {
           <div><dt>Specialty</dt><dd>{details.specialty || 'Not provided'}</dd></div>
           <div><dt>Clinical approval</dt><dd>{details.verification_status.replaceAll('_', ' ')}</dd></div>
           <div><dt>Account status</dt><dd>{details.status.replaceAll('_', ' ')}</dd></div>
+          <div><dt>Clinical access</dt><dd>{details.clinical_access?.status === 'enabled' ? 'Enabled' : details.clinical_access?.status === 'blocked' ? 'Blocked' : 'Not assessed'}</dd></div>
         </dl>
+        {details.clinical_access && <p style={{ lineHeight: 1.6 }}>{details.clinical_access.message}</p>}
         <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>Email verification does not verify a medical licence. Review the clinician’s identity and credentials through your approved process before granting clinical access. Record the evidence reference below; do not paste patient information.</p>
-        <form noValidate onSubmit={submit}>
+        {details.can_review !== true ? <p role="status">Super administrator or operations administrator access is required to record a decision. You can review the clinician details here.</p> : <form noValidate onSubmit={submit}>
           <ValidationSummary errors={errors} />
           {saveError && <p role="alert" className="field-error">{saveError}</p>}
           <label htmlFor="review-decision">Decision (Required)</label>
@@ -91,7 +94,7 @@ export default function DoctorReviewDialog({ providerId, onClose, onSaved }: {
             <FieldFeedback name="review-confirmed" error={errors.confirmed} />
           </div>}
           <button type="submit" disabled={saving} style={{ marginTop: 16, padding: '12px 18px', borderRadius: 10, border: 0, background: 'var(--primary)', color: '#fff', fontWeight: 650 }}>{saving ? 'Saving decision…' : 'Save decision'}</button>
-        </form>
+        </form>}
       </>}
   </dialog>
 }

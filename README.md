@@ -36,3 +36,6 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 # Vercel Test Run
+# Clinician access review
+
+The administrator clinician list distinguishes account status from backend-reported clinical access. Blocked access shows the server's reason; missing eligibility data is not treated as approval. The review dialog only presents decision controls when the backend returns `can_review=true`; the API independently enforces super/operations administrator authority. Mobile cards, dark-mode persistence, explicit form errors, approval/suspension changes and read-only inspection are covered by the browser privacy suite. Deploy the corresponding Platform API eligibility/permissions contract before this UI change. No live clinician is automatically approved.

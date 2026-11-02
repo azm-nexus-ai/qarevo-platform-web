@@ -2674,6 +2674,8 @@ export async function getAdminDashboardPatientsSummary(): Promise<AdminDashboard
 }
 
 // Admin Doctors Types
+export type ClinicalAccess = { status: 'enabled' | 'blocked'; reason: string; message: string };
+
 export type AdminDoctor = {
     id: string;
     provider_id: string;
@@ -2685,6 +2687,7 @@ export type AdminDoctor = {
     specialty: string | null;
     license_number: string | null;
     license_verified: boolean;
+    clinical_access?: ClinicalAccess;
     verification_status: string;
     status: string;
     region?: string | null;
@@ -2704,6 +2707,8 @@ export type AdminDoctorVerification = {
     submitted_at: string | null;
     verification_status: string;
     status: string;
+    clinical_access?: ClinicalAccess;
+    can_review?: boolean;
 };
 
 export type AdminDoctorsListResponse = {
