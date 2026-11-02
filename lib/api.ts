@@ -949,10 +949,10 @@ export type BillingStatusResponse = {
     currency: string;
     insurance_type: string;
     billing_requirements?: {
-        claim_submission_required: boolean;
-        direct_billing: boolean;
-        requires_pre_authorization: boolean;
-        patient_pays_upfront: boolean;
+        claim_submission_required: boolean | null;
+        direct_billing: boolean | null;
+        requires_pre_authorization: boolean | null;
+        patient_pays_upfront: boolean | null;
     } | null;
     authorized_by?: string | null;
     authorized_at?: string | null;
@@ -2006,9 +2006,11 @@ export type PatientBillingInsuranceSummary = {
 };
 
 export type PatientBillingResponse = {
-    current_balance: number;
-    insurance_coverage: number;
-    amount_due: number;
+    status?: 'not_configured' | 'ready';
+    capabilities?: { payments: string; invoicing: string; insurance_verification: string };
+    current_balance: number | null;
+    insurance_coverage: number | null;
+    amount_due: number | null;
     currency?: string;
     payment_provider_enabled?: boolean;
     payment_methods: PatientBillingPaymentMethod[];

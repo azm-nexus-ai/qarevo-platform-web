@@ -1,5 +1,9 @@
 # Phase 2: identity, privacy and clinical-data integrity
 
+Latest verification, 2 November: web `5947a97e` passed all 45 browser scenarios and is ready on Vercel. API clinician-join fix `f95aa11f` passed 779 tests and deployment CI `41368552088`; cloud deployment `4e8896ab-7168-40e2-84a3-a0e9b2d27334` succeeded. QA `ba377148` adds a passing real HTTP/two-schema PostgreSQL clinical journey (only video simulated), exposing the fixed user/profile identity mismatch. Live clinician approval/media remain pending.
+
+Billing availability update: the backend now reports EUR, null financial balances and unverified insurance details rather than fabricated dollar/zero balances or active coverage. The patient screen has loading/error/retry/unavailable states and no checkout controls when billing is unavailable; three new browser regressions cover this and mobile dark mode. API suite: 780 passed; CWS: 321 passed; frontend: 40 unit tests, typecheck and build passed. Browser CI for this increment must pass before acceptance. Existing internal billing authorizations are not provider transactions; payment/invoicing provider, fee schedule and insurer/practice arrangement remain Phase 4 blockers. No chargeable integration was enabled.
+
 Status: in progress. This is the agreed second phase, not the later booking/video completion phase.
 
 ## Release 1: explicit clinician approval

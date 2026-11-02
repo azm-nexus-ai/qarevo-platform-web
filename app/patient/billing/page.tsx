@@ -10,18 +10,15 @@ import { clearAuthTokens, getApiErrorDetail, getPatientBilling, isAuthError, typ
 import { T } from '@/lib/tokens'
 
 const EMPTY_BILLING: PatientBillingResponse = {
-  current_balance: 0,
-  insurance_coverage: 0,
-  amount_due: 0,
-  currency: 'USD',
+  status: 'not_configured',
+  current_balance: null,
+  insurance_coverage: null,
+  amount_due: null,
+  currency: 'EUR',
   payment_provider_enabled: false,
   payment_methods: [],
   invoices: [],
-  payment_history: [
-    { title: 'Paid', value: '$0', hint: 'No completed payments yet', tone: 'neutral' },
-    { title: 'Pending', value: '$0', hint: 'No open invoices', tone: 'neutral' },
-    { title: 'Refunded', value: '$0', hint: 'No processed refunds', tone: 'neutral' },
-  ],
+  payment_history: [],
   upcoming_charges: [],
   insurance_summary: {
     status: 'not_added',
@@ -30,13 +27,14 @@ const EMPTY_BILLING: PatientBillingResponse = {
   },
 }
 
-function money(value: number | undefined, currency = 'USD') {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(value || 0))
+function money(value: number | null | undefined, currency = 'EUR') {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 'Not available'
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value)
 }
 
 function invoiceAmount(invoice: PatientBillingInvoice, currency: string) {
   if (typeof invoice.amount === 'string' && invoice.amount.trim()) return invoice.amount
-  return money(0, currency)
+  return money(null, currency)
 }
 
 function invoiceDate(invoice: PatientBillingInvoice) {
@@ -96,6 +94,7 @@ export default function PatientBillingPage() {
   const [billing, setBilling] = useState<PatientBillingResponse>(EMPTY_BILLING)
   const [notice, setNotice] = useState<{ title: string; body: string } | null>(null)
   const [errorMessage, setErrorMessage] = useState('')
+  const [reload, setReload] = useState(0)
 
   useEffect(() => {
     let mounted = true
@@ -122,16 +121,18 @@ export default function PatientBillingPage() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [reload])
 
-  const currency = billing.currency || 'USD'
+  const currency = billing.currency || 'EUR'
   const paidInvoices = useMemo(() => billing.invoices.filter((invoice) => invoice.status?.toLowerCase() === 'paid'), [billing.invoices])
   const paymentProviderEnabled = Boolean(billing.payment_provider_enabled)
   const hasPaymentMethods = billing.payment_methods.length > 0
   const hasInvoices = billing.invoices.length > 0
   const insurance = billing.insurance_summary || EMPTY_BILLING.insurance_summary
-  const insuranceStatus = insurance.status === 'active'
-    ? 'Active'
+  const insuranceStatus = insurance.status === 'verified'
+    ? 'Verified'
+    : ['active', 'unverified'].includes(insurance.status)
+      ? 'Not verified'
     : insurance.status === 'incomplete'
       ? 'Incomplete'
       : 'Not added'
@@ -148,6 +149,10 @@ export default function PatientBillingPage() {
   }
 
   function handlePayNow() {
+    if (typeof billing.amount_due !== 'number') {
+      showNotice('Balance unavailable', 'Your balance could not be confirmed. Please try again later.')
+      return
+    }
     if (billing.amount_due <= 0) {
       showNotice('Nothing to pay', 'This account has no outstanding balance right now, so no payment is required.')
       return
@@ -192,7 +197,7 @@ export default function PatientBillingPage() {
           </div>
         </div>
         <div className='grid gap-2'>
-          <PortalBadge tone={insurance.status === 'active' ? 'success' : insurance.status === 'incomplete' ? 'warning' : 'neutral'}>{insuranceStatus}</PortalBadge>
+          <PortalBadge tone={insurance.status === 'verified' ? 'success' : ['incomplete', 'unverified', 'active'].includes(insurance.status) ? 'warning' : 'neutral'}>{insuranceStatus}</PortalBadge>
           {insurance.member_number ? <PortalBadge tone='info'>Member record on file</PortalBadge> : null}
         </div>
       </PortalCard>
@@ -203,13 +208,36 @@ export default function PatientBillingPage() {
     <PatientPortalShell
       title='Billing & Payments'
       description='Track balances, payment methods, invoices, insurance coverage, and upcoming healthcare charges from one dedicated billing workspace.'
-      rightRail={rightRail}
+      rightRail={!loading && !errorMessage && billing.status === 'ready' ? rightRail : undefined}
     >
       {loading ? (
         <div className='grid gap-4'>
           <PortalSkeleton height={180} />
           <PortalSkeleton height={220} />
           <PortalSkeleton height={220} />
+        </div>
+      ) : errorMessage ? (
+        <PortalCard>
+          <p role='alert' className='mb-4'>{errorMessage}</p>
+          <PortalButton tone='secondary' onClick={() => setReload(value => value + 1)}>Retry billing</PortalButton>
+        </PortalCard>
+      ) : billing.status !== 'ready' ? (
+        <div className='grid gap-5'>
+          <PortalCard>
+            <div role='status' aria-label='Billing availability'>
+              <PortalBadge tone='neutral'>Not available yet</PortalBadge>
+              <h2 className='mt-4 mb-2 text-xl font-semibold' style={{ color: T.navy }}>Payments &amp; invoices</h2>
+              <p className='max-w-2xl text-sm leading-6' style={{ color: T.slate }}>Payments and automated invoices are not available yet. Consultation fees and funding terms must be confirmed before a paid booking.</p>
+              <p className='mt-3 text-sm leading-6' style={{ color: T.slate }}>A balance and any confirmed insurance contribution will appear when billing becomes available.</p>
+            </div>
+          </PortalCard>
+          <PortalCard>
+            <h2 className='mb-2 text-xl font-semibold' style={{ color: T.navy }}>Your insurance details</h2>
+            <PortalBadge tone={insurance.status === 'not_added' ? 'neutral' : 'warning'}>{insuranceStatus}</PortalBadge>
+            <p className='mt-3 text-sm leading-6' style={{ color: T.slate }}>{insurance.provider_name || 'No insurer has been added.'}</p>
+            <p className='mt-2 mb-4 max-w-2xl text-sm leading-6' style={{ color: T.slate }}>Saved insurance details do not confirm coverage or direct billing for a consultation.</p>
+            <Link href='/patient/settings' className='inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold' style={{ color: T.link, border: '1px solid var(--border)', background: 'var(--surface-subtle)' }}>Review insurance details</Link>
+          </PortalCard>
         </div>
       ) : (
         <div className='grid gap-4'>
@@ -219,7 +247,7 @@ export default function PatientBillingPage() {
             {[
               { label: 'Current Balance', value: money(billing.current_balance, currency), hint: hasInvoices ? 'Across active invoices' : 'No active invoices' },
               { label: 'Insurance Coverage', value: money(billing.insurance_coverage, currency), hint: insurance.provider_name || 'No payer coverage applied' },
-              { label: 'Amount Due', value: money(billing.amount_due, currency), hint: billing.amount_due > 0 ? 'Payment required' : 'Nothing due right now' },
+              { label: 'Amount Due', value: money(billing.amount_due, currency), hint: billing.amount_due === null ? 'Balance unavailable' : billing.amount_due > 0 ? 'Payment required' : 'Nothing due right now' },
             ].map((item) => (
               <PortalCard key={item.label}>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</p>
@@ -331,7 +359,7 @@ export default function PatientBillingPage() {
                   {billing.upcoming_charges.map((charge, index) => (
                     <div key={`${charge.label || 'charge'}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <span style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{charge.label || 'Upcoming charge'}</span>
-                      <span style={{ fontSize: '13px', color: T.navy, fontWeight: 800 }}>{typeof charge.amount === 'number' ? money(charge.amount, currency) : charge.amount || money(0, currency)}</span>
+                      <span style={{ fontSize: '13px', color: T.navy, fontWeight: 800 }}>{typeof charge.amount === 'number' ? money(charge.amount, currency) : charge.amount || money(null, currency)}</span>
                     </div>
                   ))}
                 </div>
