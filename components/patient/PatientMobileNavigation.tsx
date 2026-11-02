@@ -133,6 +133,9 @@ export default function PatientMobileNavigation() {
         @media(max-width:460px) {
           .pmn-topbar button[aria-label="Open messages"], .pmn-topbar button[aria-label="Profile"] { display: none; }
         }
+        @media(max-width:360px) {
+          .pmn-topbar { padding-inline: 10px; gap: 8px; }
+        }
         .pmn-hamburger {
           width: 40px;
           height: 40px;
@@ -240,7 +243,7 @@ export default function PatientMobileNavigation() {
 
       {/* Mobile Top Bar */}
       <div className="pmn-topbar" role="banner">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
           <button
             ref={hamburgerRef}
             className="pmn-hamburger"
@@ -256,7 +259,7 @@ export default function PatientMobileNavigation() {
           <Link
             href="/patient/dashboard"
             aria-label="Qarevo Health Patient Dashboard"
-            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', minWidth: 0, maxWidth: '100px', flex: 1 }}
           >
             <AuthenticatedLogo width={100} />
           </Link>
