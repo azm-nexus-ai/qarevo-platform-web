@@ -286,7 +286,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>
-                {label} <span aria-hidden="true">(Required)</span>
+                {label}
               </div>
               <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
@@ -387,7 +387,7 @@ function PasswordField({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label}
+        {label} <span aria-hidden="true">(Required)</span>
       </label>
       <div style={{ position: 'relative' }}>
         <span
