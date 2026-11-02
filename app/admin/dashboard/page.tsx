@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import WorkflowDeliveryCard from '@/components/admin/WorkflowDeliveryCard'
 import {
   clearAuthTokens,
   getAdminDashboardOverview,
@@ -100,7 +101,7 @@ function HealthCard({ data }: { data: AdminDashboardHealth }) {
           {statusStyle.text}
         </span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: '16px' }}>
         <div>
           <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>Pending Verifications</p>
           <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: T.navy }}>{data.pending_verifications}</p>
@@ -135,7 +136,7 @@ function ActivityCard({ data }: { data: AdminDashboardActivity }) {
           Last {data.period_days} days ({new Date(data.date_from).toLocaleDateString()} - {new Date(data.date_to).toLocaleDateString()})
         </p>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: '16px' }}>
         <div>
           <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>New Patients</p>
           <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: T.navy }}>{data.new_patients}</p>
@@ -248,7 +249,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: '16px' }}>
         <StatCard
           title="Total Patients"
           value={overview.patients.total}
@@ -279,10 +280,12 @@ export default function AdminDashboard() {
       </div>
 
       {/* Health & Activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '16px' }}>
         <HealthCard data={health} />
         <ActivityCard data={activity} />
       </div>
+
+      <WorkflowDeliveryCard />
 
       {/* Doctors Summary */}
       {doctorsSummary?.by_specialty && (
@@ -298,7 +301,7 @@ export default function AdminDashboard() {
           <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>
             Doctors by Specialty
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '12px' }}>
             {Object.entries(doctorsSummary.by_specialty).map(([specialty, count]) => (
               <div key={specialty} style={{
                 padding: '12px 16px',
