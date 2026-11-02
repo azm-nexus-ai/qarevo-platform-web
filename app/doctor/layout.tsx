@@ -1,5 +1,6 @@
 'use client'
 
+import SidebarToggle from '@/components/layout/SidebarToggle'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
 
 import React, { useState, useEffect } from 'react'
@@ -128,7 +129,7 @@ export default function DoctorLayout({
       `}</style>
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <aside style={{
+        <aside id="doctor-primary-sidebar" style={{
           width: '260px',
           background: "var(--surface-subtle)",
           backdropFilter: 'blur(22px) saturate(175%)',
@@ -226,7 +227,7 @@ export default function DoctorLayout({
         </aside>
 
         {/* Main content */}
-        <main style={{ flex: 1, marginLeft: '260px' }}>
+        <main data-portal-main='doctor' style={{ flex: 1, marginLeft: '260px' }}>
           {/* Header */}
           <header style={{
             background: "var(--surface-glass)",
@@ -245,7 +246,7 @@ export default function DoctorLayout({
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Manage your consultations and patients</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <ThemeToggle />
+                <SidebarToggle role='doctor' /><ThemeToggle />
                 <button
                   onClick={handleSettingsClick}
                   style={{

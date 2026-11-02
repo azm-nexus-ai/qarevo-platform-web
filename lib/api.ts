@@ -2257,8 +2257,19 @@ export type ProfileUpdate = {
     language?: 'German' | 'English';
 };
 
+// Coalesce only concurrent reads within the same account/session. No response cache.
+const patientSettingsReads = new Map<string, Promise<PatientSettings>>();
 export async function getPatientSettings(): Promise<PatientSettings> {
-    return apiGet<PatientSettings>("/api/v1/patient/settings");
+    assertCurrentAccount();
+    const scope = readAccountScope();
+    if (!scope) return apiGet<PatientSettings>("/api/v1/patient/settings");
+    const existing = patientSettingsReads.get(scope);
+    if (existing) return existing;
+    const request = apiGet<PatientSettings>("/api/v1/patient/settings").finally(() => {
+        if (patientSettingsReads.get(scope) === request) patientSettingsReads.delete(scope);
+    });
+    patientSettingsReads.set(scope, request);
+    return request;
 }
 
 export async function updatePatientSettings(body: PatientSettingsUpdate): Promise<PatientSettings> {

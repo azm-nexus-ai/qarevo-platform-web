@@ -11,7 +11,7 @@ import { getApiErrorDetail } from '@/lib/api'
 import { createAccountDraftStorage } from '@/lib/account-storage'
 import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
 import { getOnboarding, saveCoverageInformation, onboardingPath, type CoverageInformation } from '@/lib/patient-onboarding'
-const LEFT_BG = `radial-gradient(ellipse at top left, rgba(32,181,223,.3), transparent 60%), ${T.navy}`
+const LEFT_BG = `radial-gradient(ellipse at top left, rgba(32,181,223,.3), transparent 60%), ${T.brandNavy}`
 const STORAGE_KEY = 'qarevo.onboarding.insurance-privacy-consent.v2'
 type CoverageForm = Omit<CoverageInformation, 'insurance_type'> & { insurance_type: CoverageInformation['insurance_type'] | '' }
 const INITIAL_FORM: CoverageForm = { insurance_type: '', provider: '', insurance_number: '', consents: { terms: false, privacy: false, health: false, telemedicine: false, marketing: false } }
@@ -92,7 +92,7 @@ function LeftPanel() {
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Privacy stays in focus.</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            We only ask for the information needed to verify coverage, protect your records, and deliver safe digital healthcare.
+            Record your intended funding route and review the privacy information before continuing.
           </p>
         </div>
       </div>
@@ -101,7 +101,7 @@ function LeftPanel() {
         {[
           { icon: ICONS.lock, label: 'Saved Preferences', sub: 'Your choices are saved to your account' },
           { icon: ICONS.shield, label: 'Trusted Access', sub: 'Only authorized care teams can review it' },
-          { icon: ICONS.check, label: 'Coverage Flexibility', sub: 'Add insurance now or later from your profile' },
+          { icon: ICONS.check, label: 'Coverage Flexibility', sub: 'Choose statutory, private or self-pay funding' },
         ].map(({ icon, label, sub }) => (
           <div key={label} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', padding: '13px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
@@ -118,12 +118,12 @@ function LeftPanel() {
   )
 }
 
-function TextField({ label, value, onChange, placeholder, error, optional }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; optional?: boolean }) {
+function TextField({ label, value, onChange, placeholder, error, optional, hint }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; optional?: boolean; hint?: string }) {
   const id = useId()
   const [focused, setFocused] = useState(false)
 
-  const border = error ? 'rgba(220,38,38,0.55)' : focused ? 'rgba(32,181,223,0.45)' : 'rgba(4,53,77,0.1)'
-  const background = error ? '#FFF5F5' : focused ? '#fff' : 'rgba(255,255,255,0.78)'
+  const border = error ? 'var(--danger)' : focused ? 'var(--link)' : 'var(--border)'
+  const background = error ? 'var(--danger-soft)' : 'var(--surface)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -134,6 +134,8 @@ function TextField({ label, value, onChange, placeholder, error, optional }: { l
         id={id}
         required={!optional}
         aria-invalid={!!error}
+        aria-describedby={[hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined}
+        autoComplete="off"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
@@ -153,7 +155,8 @@ function TextField({ label, value, onChange, placeholder, error, optional }: { l
           transition: 'all 0.15s ease',
         }}
       />
-      {error ? <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.45 }}>{error}</p> : null}
+      {hint && <p id={`${id}-hint`} className="field-hint">{hint}</p>}
+      {error ? <p id={`${id}-error`} role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.45 }}>{error}</p> : null}
     </div>
   )
 }
@@ -202,35 +205,35 @@ export default function InsurancePrivacyConsentPage() {
   }
   const [missingStep, setMissingStep] = useState<Parameters<typeof onboardingPath>[0]>(null)
   return <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-    <style>{`.coverage-left { display: block; } .coverage-main { padding: 36px; flex: 1; min-width: 0; } .coverage-field:focus-visible { outline: 3px solid #348CEA; outline-offset: 3px; } @media(max-width:1000px){.coverage-left{display:none}.coverage-main{padding:20px}}`}</style>
+    <style>{`.coverage-left { display: block; } .coverage-main { padding: clamp(20px, 4vw, 48px); flex: 1; min-width: 0; } .coverage-field:focus-visible { outline: 3px solid #348CEA; outline-offset: 3px; } @media(max-width:1000px){.coverage-left{display:none}.coverage-main{padding:20px}}`}</style>
     <div className='coverage-left'><LeftPanel /></div>
     <section className='coverage-main'>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
         <ProfileSetupLogo />
         <p style={{ color: T.slate, margin: '24px 0 8px' }}>Profile setup · Coverage & privacy</p>
-        <h1 style={{ color: T.navy, fontSize: 30, margin: '0 0 12px' }}>Your coverage, clearly recorded</h1>
+        <h1 style={{ color: T.navy, fontSize: 'clamp(26px, 4vw, 36px)', lineHeight: 1.2, letterSpacing: '-0.03em', margin: '0 0 12px' }}>Your coverage, clearly recorded</h1>
         <p style={{ color: T.slate, lineHeight: 1.7 }}>Choose how you intend to fund care. Saving insurance information does not verify eligibility, arrange payment, or confirm reimbursement.</p>
-        <form onSubmit={submit} noValidate style={{ background: 'rgba(255,255,255,.92)', borderRadius: 24, padding: 28, boxShadow: '0 18px 48px rgba(4,53,77,.08)' }}>
+        <form onSubmit={submit} noValidate style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, padding: 'clamp(18px, 4vw, 32px)', boxShadow: 'var(--shadow-card)' }}>
           <p role='status' style={{ color: T.slate2, fontSize: 13 }}>{ready ? saveMessage : 'Loading your saved coverage…'}</p>
           {submitError && <p role='alert' style={{ color: T.red }}>{submitError}</p>}
           {missingStep && <Link href={onboardingPath(missingStep)}>Continue profile</Link>}
-          <fieldset disabled={!ready || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+          <fieldset aria-label='Coverage and acknowledgements' disabled={!ready || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <label htmlFor='coverage-type' style={{ display: 'block', color: T.navy, fontWeight: 700, marginBottom: 8 }}>Funding type (Required)</label>
-            <select id='coverage-type' className='coverage-field' required value={form.insurance_type} onChange={event => update('insurance_type', event.target.value as CoverageForm['insurance_type'])} style={{ width: '100%', minHeight: 48, padding: 12, border: '1px solid #B8CBD5', borderRadius: 12, color: T.navy, background: "var(--surface)" }}>
+            <select id='coverage-type' className='coverage-field' aria-invalid={submitted && !!errors.insurance_type} aria-describedby={submitted && errors.insurance_type ? 'coverage-type-error' : undefined} required value={form.insurance_type} onChange={event => update('insurance_type', event.target.value as CoverageForm['insurance_type'])} style={{ width: '100%', minHeight: 48, padding: 12, border: '1px solid var(--border)', borderRadius: 12, color: T.navy, background: "var(--surface)" }}>
               <option value=''>Select a funding type</option><option value='SELF_PAY'>Self-pay</option><option value='GKV'>Statutory insurance (GKV)</option><option value='PKV'>Private insurance (PKV)</option>
             </select>
-            {submitted && errors.insurance_type && <p role='alert'>{errors.insurance_type}</p>}
+            {submitted && errors.insurance_type && <p id='coverage-type-error' className='field-error' role='alert'>{errors.insurance_type}</p>}
             {form.insurance_type && form.insurance_type !== 'SELF_PAY' && <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
-              <TextField label='Insurance provider' value={form.provider} onChange={value => update('provider', value)} placeholder='Insurer name' error={submitted ? errors.provider : undefined} />
-              <TextField label={form.insurance_type === 'GKV' ? 'Insurance number (KVNR)' : 'Private policy number'} value={form.insurance_number} onChange={value => update('insurance_number', value)} placeholder={form.insurance_type === 'GKV' ? 'One capital letter and nine digits' : 'As shown on your policy'} error={submitted ? errors.insurance_number : undefined} />
+              <TextField label='Insurance provider' value={form.provider} onChange={value => update('provider', value)} placeholder='Insurer name' hint='Enter the full insurer name (at least 2 characters).' error={submitted ? errors.provider : undefined} />
+              <TextField label={form.insurance_type === 'GKV' ? 'Insurance number (KVNR)' : 'Private policy number'} value={form.insurance_number} onChange={value => update('insurance_number', value)} hint={form.insurance_type === 'GKV' ? 'Format: one capital letter followed by exactly 9 digits. Format checking does not verify coverage.' : '3–50 characters: letters, numbers, spaces, slash, full stop or hyphen.'} placeholder={form.insurance_type === 'GKV' ? 'One capital letter and nine digits' : 'As shown on your policy'} error={submitted ? errors.insurance_number : undefined} />
               <p style={{ color: T.slate, fontSize: 13, lineHeight: 1.6 }}>We check the format of your entry. Coverage, provider participation, and reimbursement still require confirmation before treatment.</p>
             </div>}
-            <section style={{ marginTop: 24, padding: 18, background: '#FFF8EB', border: '1px solid #E7CE99', borderRadius: 14 }}>
-              <h2 style={{ fontSize: 18, marginTop: 0, color: T.navy }}>Development test acknowledgements</h2>
+            <fieldset style={{ marginTop: 24, minWidth: 0, padding: 18, background: 'var(--surface-subtle)', border: '1px solid var(--border)', borderRadius: 14 }}>
+              <legend style={{ fontSize: 18, fontWeight: 700, padding: '0 6px', color: T.navy }}>Development test acknowledgements</legend>
               <p style={{ color: T.slate, lineHeight: 1.7 }}>The supplied legal documents are drafts awaiting company details, technical alignment, and legal approval. These test acknowledgements are not consent for processing real patient information. Do not enter real medical or insurance details.</p>
-              {TEST_ACKNOWLEDGEMENTS.map(([key, label]) => <label key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 14, color: T.navy, lineHeight: 1.6 }}><input type='checkbox' required checked={form.consents[key]} onChange={event => update('consents', { ...form.consents, [key]: event.target.checked })} style={{ marginTop: 6 }} /><span>{label} <strong>(Required)</strong></span></label>)}
+              {TEST_ACKNOWLEDGEMENTS.map(([key, label]) => <label key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 14, color: T.navy, lineHeight: 1.6 }}><input type='checkbox' required aria-invalid={submitted && !form.consents[key]} aria-describedby={submitted && !form.consents[key] ? `ack-${key}-error` : undefined} checked={form.consents[key]} onChange={event => update('consents', { ...form.consents, [key]: event.target.checked })} style={{ marginTop: 6 }} /><span>{label} <strong>(Required)</strong>{submitted && !form.consents[key] && <span id={`ack-${key}-error`} role='alert' className='field-error' style={{ display: 'block' }}>Confirm this acknowledgement to continue.</span>}</span></label>)}
               {submitted && errors.consents && <p role='alert' style={{ color: T.red }}>{errors.consents}</p>}
-            </section>
+            </fieldset>
             <label style={{ display: 'flex', gap: 10, margin: '20px 0', color: T.slate, lineHeight: 1.6 }}><input type='checkbox' checked={form.consents.marketing} onChange={event => update('consents', { ...form.consents, marketing: event.target.checked })} /><span>Test the optional marketing preference. This stores a preference for this test account. (Optional)</span></label>
             <button type='submit' disabled={submitting || !ready} style={{ width: '100%', minHeight: 48, border: 0, borderRadius: 12, background: T.blue, color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>{submitting ? 'Saving profile…' : 'Complete Profile'}</button>
             <Link href='/auth/profile-setup/medical-history-allergies' style={{ display: 'block', textAlign: 'center', marginTop: 18, color: T.slate }}>Back</Link>

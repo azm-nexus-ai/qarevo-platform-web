@@ -359,3 +359,51 @@ button:disabled { cursor: wait; }
 
 .patient-appearance-navigation { display: flex; justify-content: flex-end; align-items: center; gap: 16px; padding: 10px 24px; background: var(--surface); border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 14px; }
 @media(max-width:920px) { .patient-appearance-navigation { display: none; } }
+
+
+/* Shared portal controls. Only the primary navigation collapses; care rails stay intact. */
+.auth-appearance-navigation { display: flex; justify-content: flex-end; align-items: center; padding: 10px clamp(16px, 4vw, 40px); background: var(--surface); border-bottom: 1px solid var(--border); }
+.patient-appearance-navigation { justify-content: flex-start; }
+.patient-portal-label { margin-right: auto; }
+.patient-top-right-logo { margin-left: 8px; display: inline-flex; align-items: center; }
+@media (min-width: 921px) {
+  html[data-patient-sidebar=collapsed] #patient-primary-sidebar,
+  html[data-doctor-sidebar=collapsed] #doctor-primary-sidebar,
+  html[data-admin-sidebar=collapsed] #admin-primary-sidebar { display: none; }
+  html[data-doctor-sidebar=collapsed] [data-portal-main=doctor],
+  html[data-admin-sidebar=collapsed] [data-portal-main=admin] { margin-left: 0 !important; }
+  html[data-patient-sidebar=collapsed] .pps-shell { grid-template-columns: minmax(0, 1fr); }
+  html[data-patient-sidebar=collapsed] .pps-shell-has-rail,
+  html[data-patient-sidebar=collapsed] .pd-shell { grid-template-columns: minmax(0, 1fr) 320px; }
+  html[data-patient-sidebar=collapsed] .fd-shell { grid-template-columns: minmax(0, 1fr) 290px; }
+}
+@media (min-width:921px) and (max-width:1280px) {
+  html[data-patient-sidebar=collapsed] .pps-shell-has-rail,
+  html[data-patient-sidebar=collapsed] .fd-shell { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width:921px) and (max-width:1200px) {
+  html[data-patient-sidebar=collapsed] .pd-shell { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width:920px) { .sidebar-toggle { display: none; } }
+@theme inline { --color-danger: var(--danger); --color-danger-subtle: var(--danger-soft); }
+
+/* Corporate navigation uses the same surfaces and type scale as every portal. */
+.corporate-footer { position: relative; background: var(--surface); color: var(--text-secondary); border-top: 1px solid var(--border); }
+.corporate-footer-content { max-width: 1400px; margin: auto; padding: clamp(24px,4vw,48px); display: grid; grid-template-columns: minmax(0,1fr) minmax(200px,1fr); gap: 28px 48px; }
+.corporate-footer-brand p { max-width: 410px; margin: 16px 0; font-size: 14px; line-height: 1.7; }
+.corporate-footer-preview { font-size: 12px; line-height: 1.6; color: var(--text-muted); }
+.corporate-footer nav { display: flex; align-content: start; flex-wrap: wrap; gap: 4px 18px; }
+.corporate-footer nav a,.corporate-footer nav button { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 0; font-size: 14px; color: var(--text-secondary); text-decoration: none; background: transparent; border: 0; cursor: pointer; }
+.corporate-footer nav a:hover,.corporate-footer nav button:hover { color: var(--link); text-decoration: underline; text-underline-offset: 4px; }
+.corporate-footer-copyright { grid-column: 1 / -1; border-top: 1px solid var(--border); margin: 0; padding-top: 22px; font-size: 12px; }
+.preferences-dialog { margin: auto; max-width: min(600px,calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow: auto; padding: clamp(20px,4vw,32px); border: 1px solid var(--border); border-radius: 20px; color: var(--text); background: var(--surface); box-shadow: var(--shadow-float); }
+.preferences-dialog::backdrop { background: rgba(0,12,25,.65); backdrop-filter: blur(4px); }
+.preferences-dialog h2 { font-size: 24px; letter-spacing: -.025em; line-height: 1.25; margin: 0 0 18px; }
+.preferences-dialog p { font-size: 15px; line-height: 1.65; margin: 16px 0; color: var(--text-secondary); }
+.preferences-dialog a { color: var(--link); text-decoration: underline; }
+.preferences-dialog-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+@media(min-width:921px) {
+  .corporate-footer[data-portal-footer=doctor],.corporate-footer[data-portal-footer=admin] { margin-left: 260px; }
+  html[data-doctor-sidebar=collapsed] .corporate-footer[data-portal-footer=doctor],html[data-admin-sidebar=collapsed] .corporate-footer[data-portal-footer=admin] { margin-left: 0; }
+}
+@media(max-width:600px) { .corporate-footer-content { grid-template-columns: minmax(0,1fr); } .preferences-dialog-actions .theme-toggle { white-space: normal; text-align: left; } }

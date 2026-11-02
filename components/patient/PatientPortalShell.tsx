@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
-import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import { ICONS } from '@/constants/icons'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
@@ -40,18 +39,6 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
 
   return (
     <>
-      {/* Logo */}
-      <div style={{ marginBottom: '18px' }}>
-        <Link
-          href='/'
-          aria-label='Qarevo Health home'
-          onClick={onNavigate}
-          style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
-        >
-          <AuthenticatedLogo priority />
-        </Link>
-      </div>
-
       {/* Patient card */}
       <section
         aria-label='Patient summary'
@@ -235,7 +222,7 @@ export default function PatientPortalShell({
 
       <div className={`pps-shell ${rightRail ? 'pps-shell-has-rail' : ''}`}>
         {/* Desktop Sidebar */}
-        <aside className='pps-left'>
+        <aside id='patient-primary-sidebar' className='pps-left'>
           <div
             className='pps-sidebar'
             style={{

@@ -16,7 +16,6 @@ import Ico from '@/components/ui/Ico'
 import DoctorCard from '@/components/cards/DoctorCard'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
-import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuthError, clearAuthTokens, type PatientSettings, type PatientDoctor } from '@/lib/api'
 
 function getQuickBookServiceType(
@@ -336,14 +335,8 @@ export default function FindDoctorPage() {
       <div aria-hidden='true' style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'radial-gradient(circle at center, rgba(32,181,223,0.1) 1px, transparent 1.2px)', backgroundSize: '22px 22px', maskImage: 'radial-gradient(ellipse 92% 80% at 50% 36%, black 44%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse 92% 80% at 50% 36%, black 44%, transparent 100%)' }} />
 
       <div className='fd-shell'>
-        <aside className='fd-left'>
+        <aside id='patient-primary-sidebar' className='fd-left'>
           <div className='fd-sidebar' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '16px' }}>
-            <div style={{ marginBottom: '18px' }}>
-              <Link href='/' aria-label='Qarevo Health home' style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-                <AuthenticatedLogo priority />
-              </Link>
-            </div>
-
             <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>

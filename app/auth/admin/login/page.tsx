@@ -74,7 +74,6 @@ export default function AdminLoginPage() {
   const pwToggle = (
     <button
       type="button"
-      tabIndex={-1}
       onClick={() => setShowPw(s => !s)}
       aria-label={showPw ? 'Hide password' : 'Show password'}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex' }}
@@ -245,6 +244,7 @@ export default function AdminLoginPage() {
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
+          <Link href='/auth/forgot-password' style={{ color: T.link, textAlign: 'center', padding: '10px' }}>Forgot your password?</Link>
         </form>
 
         {/* Back to main site */}

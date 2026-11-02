@@ -593,3 +593,18 @@ test('session deadlines use the earliest server limit and conservatively deduct 
   assert.throws(() => mod.exports.sessionTiming({ ...status, idle_expires_at: 'invalid' }, 5000, 0), /unavailable/)
   assert.equal(mod.exports.sessionTiming({ ...status, idle_expires_at: '2029-01-01T00:00:00Z' }, 5000, 0).deadline, 5000)
 })
+
+
+test('simultaneous patient chrome reads share one request but never cache completed profile data', async () => {
+  let calls = 0
+  const hold = deferred()
+  const t = tab(storage(), async () => { calls++; await hold.promise; return new Response(JSON.stringify({ user_id: 'a' })) })
+  login(t, 'a')
+  const first = t.api.getPatientSettings(), second = t.api.getPatientSettings()
+  assert.equal(calls, 1)
+  hold.resolve()
+  const results = await Promise.all([first, second])
+  assert.equal(results[0].user_id, 'a')
+  await t.api.getPatientSettings()
+  assert.equal(calls, 2)
+})

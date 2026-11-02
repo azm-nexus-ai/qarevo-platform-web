@@ -6,7 +6,6 @@ import { PAGE_BG } from '@/lib/tokens'
 import Glow from '@/components/shared/Glow'
 import FloatingHelp from '@/components/shared/FloatingHelp'
 import NavigationBar from '@/components/layout/NavigationBar'
-import Footer from '@/components/layout/Footer'
 import HeroSection from '@/components/sections/HeroSection'
 import ComplianceSection from '@/components/sections/ComplianceSection'
 import PhysicianSection from '@/components/sections/PhysicianSection'
@@ -84,7 +83,6 @@ export default function LandingPage() {
         <PhysicianConsultationSection />
         <DashboardSection />
       </main>
-      <Footer />
       <FloatingHelp />
     </div>
   )

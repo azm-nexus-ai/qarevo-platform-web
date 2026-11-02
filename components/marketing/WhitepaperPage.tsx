@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { T, Glass, Sh, PAGE_BG } from '@/lib/tokens'
 import NavigationBar from '@/components/layout/NavigationBar'
-import Footer from '@/components/layout/Footer'
 import HoverBtn from '@/components/buttons/HoverBtn'
 
 // ── Section card ─────────────────────────────────────────────────────────────
@@ -499,7 +498,6 @@ export default function WhitepaperPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   )
 }

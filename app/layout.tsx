@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
+import Footer from '@/components/layout/Footer'
 import { THEME_BOOTSTRAP } from '@/lib/theme'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { BookingProvider } from '@/contexts/BookingContext'
@@ -38,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html suppressHydrationWarning lang="en" className={inter.variable}>
       <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body>
-        <NavigationGuards><ThemeProvider><BookingProvider><SessionGuard>{children}</SessionGuard></BookingProvider></ThemeProvider></NavigationGuards>
+        <NavigationGuards><ThemeProvider><BookingProvider><SessionGuard>{children}<Footer /></SessionGuard></BookingProvider></ThemeProvider></NavigationGuards>
       </body>
     </html>
   )

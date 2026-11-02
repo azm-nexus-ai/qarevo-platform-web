@@ -1,6 +1,7 @@
 'use client'
 
 import AdminMobileNavigation from '@/components/layout/AdminMobileNavigation'
+import SidebarToggle from '@/components/layout/SidebarToggle'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
 
 import React, { useState, useEffect } from 'react'
@@ -88,7 +89,7 @@ export default function AdminLayout({
       `}</style>
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <aside style={{
+        <aside id="admin-primary-sidebar" style={{
           width: '260px',
           background: "var(--surface-subtle)",
           backdropFilter: 'blur(22px) saturate(175%)',
@@ -186,7 +187,7 @@ export default function AdminLayout({
         </aside>
 
         {/* Main content */}
-        <main style={{ flex: 1, marginLeft: '260px' }}>
+        <main data-portal-main='admin' style={{ flex: 1, marginLeft: '260px' }}>
           {/* Header */}
           <header style={{
             background: "var(--surface-glass)",
@@ -205,7 +206,7 @@ export default function AdminLayout({
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Platform administration and monitoring</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <ThemeToggle />
+                <SidebarToggle role='admin' /><ThemeToggle />
                 <button
                   onClick={handleLogoutClick}
                   disabled={loggingOut}

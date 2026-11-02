@@ -104,3 +104,47 @@ test('unavailable authority blocks private content with retry and sign-out', asy
   await page.getByRole('button', { name: 'Retry connection' }).click()
   await expect(page.getByRole('heading', { name: 'Billing & Payments' })).toBeVisible()
 })
+
+for (const [role, portal, path] of [
+  ['PATIENT', 'patient', '/patient/billing'],
+  ['PROVIDER', 'doctor', '/doctor/workspace'],
+  ['ADMIN', 'admin', '/admin/dashboard'],
+] as const) {
+  test(`${role}: sidebar, theme and storage controls persist without touching authentication`, async ({ page, context }, testInfo) => {
+    await prepare(context, role, 900)
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    await page.goto(path)
+    await page.getByRole('button', { name: 'Hide sidebar', exact: true }).click()
+    await expect(page.locator(`#${portal}-primary-sidebar`)).toBeHidden()
+    await expect(page.locator('html')).toHaveAttribute(`data-${portal}-sidebar`, 'collapsed')
+    await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Show sidebar', exact: true })).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await page.screenshot({ path: testInfo.outputPath(`${portal}-desktop-dark.png`), fullPage: true })
+    await page.getByRole('contentinfo').getByRole('link', { name: 'Privacy', exact: true }).click()
+    await expect(page).toHaveURL(/\/privacy$/)
+    await page.goto(path)
+    await expect(page.getByRole('button', { name: 'Show sidebar', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Cookie preferences', exact: true }).click()
+    const preferences = page.getByRole('dialog', { name: 'Cookie & storage preferences' })
+    await expect(preferences).toBeVisible()
+    await preferences.getByRole('button', { name: 'Clear appearance preferences' }).click()
+    await expect(preferences.getByRole('status')).toContainText('account and sign-in are unchanged')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    expect(await page.evaluate(() => localStorage.getItem('qarevo_access_token'))).toBe('synthetic-access')
+    await preferences.getByRole('button', { name: 'Close preferences' }).click()
+    await expect(page.getByRole('button', { name: 'Cookie preferences', exact: true })).toBeFocused()
+    await expect(page.locator(`#${portal}-primary-sidebar`)).toBeVisible()
+    await page.setViewportSize({ width: 375, height: 812 })
+    await expect(page.getByRole('button', { name: 'Hide sidebar', exact: true })).toBeHidden()
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+    if (portal === 'patient') {
+      const logo = page.getByRole('link', { name: 'Qarevo Health Patient Dashboard', exact: true }).filter({ visible: true })
+      const toggle = page.getByRole('button', { name: 'Dark mode', exact: true })
+      expect((await logo.boundingBox())!.x).toBeGreaterThan((await toggle.boundingBox())!.x)
+      await page.getByRole('button', { name: 'Open navigation menu' }).click()
+      await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toBeVisible()
+    }
+  })
+}
