@@ -46,13 +46,13 @@ test('billing outage shows a retry and no empty financial account', async ({ pag
   const state = await prepare(context)
   state.status = 503
   await page.goto('/patient/billing')
-  await expect(page.getByRole('alert')).toContainText('Synthetic billing service unavailable')
+  await expect(page.getByRole('alert', { name: 'Billing error' })).toContainText('Synthetic billing service unavailable')
   await expect(page.getByRole('status', { name: 'Billing availability' })).toHaveCount(0)
   await expect(page.getByText('Nothing due right now', { exact: true })).toHaveCount(0)
   state.status = 200
   await page.getByRole('button', { name: 'Retry billing' }).click()
   await expect(page.getByRole('status', { name: 'Billing availability' })).toBeVisible()
-  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByRole('alert', { name: 'Billing error' })).toHaveCount(0)
 })
 
 test('billing remains readable on mobile with persistent dark mode and legacy insurance status', async ({ page, context }) => {

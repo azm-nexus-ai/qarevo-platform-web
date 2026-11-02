@@ -244,6 +244,25 @@ test('late logout cannot clear a newer account', async () => {
   assert.equal(t.api.readAccessToken(), 'access-B')
 })
 
+test('logout starts revocation before session-change listeners can navigate', async () => {
+  const response = deferred()
+  let started = false
+  const t = tab(undefined, (url, init) => {
+    assert.ok(url.endsWith('/auth/logout'))
+    assert.equal(init.keepalive, true)
+    assert.equal(JSON.parse(init.body).refresh_token, 'refresh-A')
+    assert.equal(t.localStorage.getItem('qarevo_access_token'), 'access-A')
+    started = true
+    return response.promise
+  })
+  login(t, 'A')
+  const request = t.api.logoutCurrentUser()
+  assert.equal(started, true)
+  assert.equal(t.api.readAccessToken(), null)
+  response.resolve(new Response('{}'))
+  await request
+})
+
 test('retry uses the renewed access token and keeps the account draft', async () => {
   let count = 0
   const t = tab(undefined, async (url, init) => {

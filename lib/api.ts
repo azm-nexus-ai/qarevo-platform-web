@@ -1052,17 +1052,23 @@ export async function loginAdmin(body: { email: string; password: string }): Pro
 }
 export async function logoutCurrentUser(): Promise<void> {
     const refreshToken = readRefreshToken();
-    // End local access immediately, even when the network is unavailable.
-    clearAuthTokens();
-    if (!refreshToken) return;
-    const response = await fetch(`${getBaseUrl()}/api/v1/auth/logout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-        signal: AbortSignal.timeout(10_000),
-        keepalive: true,
-        cache: "no-store",
-    });
+    let request: Promise<Response> | undefined;
+    try {
+        // Start revocation before accountChanged can navigate away. Keep local
+        // cleanup synchronous; never wait for the network to hide private data.
+        if (refreshToken) request = fetch(`${getBaseUrl()}/api/v1/auth/logout`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+            signal: AbortSignal.timeout(10_000),
+            keepalive: true,
+            cache: "no-store",
+        });
+    } finally {
+        clearAuthTokens();
+    }
+    if (!request) return;
+    const response = await request;
     if (!response.ok) throw new ApiError(response.status, "Server logout could not be confirmed.");
 }
 

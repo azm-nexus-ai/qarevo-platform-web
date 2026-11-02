@@ -218,7 +218,7 @@ export default function PatientBillingPage() {
         </div>
       ) : errorMessage ? (
         <PortalCard>
-          <p role='alert' className='mb-4'>{errorMessage}</p>
+          <p role='alert' aria-label='Billing error' className='mb-4'>{errorMessage}</p>
           <PortalButton tone='secondary' onClick={() => setReload(value => value + 1)}>Retry billing</PortalButton>
         </PortalCard>
       ) : billing.status !== 'ready' ? (
