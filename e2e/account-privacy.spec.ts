@@ -714,9 +714,10 @@ test('main navigation exposes dark mode on desktop and mobile and synchronizes t
   for (const width of [320, 390, 768]) {
     await page.setViewportSize({ width, height: 844 })
     await expect(toggle).toBeVisible()
-    const bounds = await toggle.boundingBox()
-    expect(bounds).not.toBeNull()
-    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+    await expect.poll(async () => {
+      const bounds = await toggle.boundingBox()
+      return bounds !== null && bounds.x >= 0 && bounds.x + bounds.width <= width
+    }).toBe(true)
   }
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
