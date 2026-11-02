@@ -337,7 +337,7 @@ export default function DoctorLayout({
               <div>
                 <h2 id="doctor-logout-title" style={{ margin: '0 0 6px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Sign out?</h2>
                 <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: T.slate }}>
-                  You will need to sign in again to access the doctor portal.
+                  Save any unfinished clinical draft before signing out. Unsaved changes will be discarded.
                 </p>
               </div>
             </div>

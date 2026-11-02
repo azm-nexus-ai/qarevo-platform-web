@@ -7,9 +7,10 @@ interface LogoutModalProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
+  description?: string
 }
 
-export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalProps) {
+export default function LogoutModal({ isOpen, onClose, onConfirm, description = 'Are you sure you want to log out?' }: LogoutModalProps) {
   if (!isOpen) return null
 
   return (
@@ -61,7 +62,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
             color: T.slate,
           }}
         >
-          Are you sure you want to log out?
+          {description}
         </p>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
           <HoverBtn

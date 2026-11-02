@@ -4,6 +4,7 @@ import './globals.css'
 import { THEME_BOOTSTRAP } from '@/lib/theme'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { BookingProvider } from '@/contexts/BookingContext'
+import { NavigationGuards } from '@/components/ui/NavigationGuards'
 
 const inter = localFont({
   src: '../public/fonts/InterVariable.woff2',
@@ -36,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html suppressHydrationWarning lang="en" className={inter.variable}>
       <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body>
-        <ThemeProvider><BookingProvider>{children}</BookingProvider></ThemeProvider>
+        <NavigationGuards><ThemeProvider><BookingProvider>{children}</BookingProvider></ThemeProvider></NavigationGuards>
       </body>
     </html>
   )

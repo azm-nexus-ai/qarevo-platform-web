@@ -70,6 +70,10 @@ export default function DoctorMobileNavigation() {
     hamburgerRef.current?.focus()
   }, [])
 
+  // A guarded link delays its original click callback. Close the drawer once
+  // the route actually changes, including accepted browser Back/Forward.
+  useEffect(() => { closeDrawer() }, [pathname, closeDrawer])
+
   const handleLogout = async () => {
     if (loggingOut) return
     setLoggingOut(true)
@@ -375,6 +379,7 @@ export default function DoctorMobileNavigation() {
           isOpen={showLogoutModal}
           onClose={() => setShowLogoutModal(false)}
           onConfirm={handleLogout}
+          description="Save any unfinished clinical draft before signing out. Unsaved changes will be discarded."
         />
       )}
     </div>

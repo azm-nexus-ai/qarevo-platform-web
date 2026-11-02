@@ -13,7 +13,7 @@
     "lint": "eslint",
     "test:e2e": "playwright test",
     "test:privacy": "node --test tests/account-storage.test.cjs",
-    "test:e2e:privacy": "playwright test e2e/account-privacy.spec.ts"
+    "test:e2e:privacy": "playwright test e2e/account-privacy.spec.ts e2e/clinical-navigation.spec.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",
@@ -21,6 +21,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
+    "nextjs-nav-guard": "1.1.3",
     "phosphor-react": "^1.4.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",

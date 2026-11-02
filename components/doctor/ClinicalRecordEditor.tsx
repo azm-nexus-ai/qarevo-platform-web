@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useNavigationGuard } from 'nextjs-nav-guard'
+import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import { apiGet, apiPost, apiPut, completeDoctorConsultation } from '@/lib/api'
 import { clinicalFields, contentOf, emptyRecord, recordErrors, type ClinicalRecordState, type PublishedClinicalRecord, type RecordContent } from '@/lib/clinical-record'
 
@@ -23,6 +25,10 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
   const [notice, setNotice] = useState('')
   const [errors, setErrors] = useState<ReturnType<typeof recordErrors>>({})
   const [amendmentError, setAmendmentError] = useState('')
+  const navigation = useNavigationGuard({
+    // Session expiry/logout must still remove clinical content from the screen.
+    enabled: ({ to }) => (dirty || busy !== null) && !to.startsWith('/auth/'),
+  })
 
   useEffect(() => {
     let current = true
@@ -36,13 +42,6 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
       .finally(() => { if (current) setLoading(false) })
     return () => { current = false }
   }, [path, attempt])
-
-  useEffect(() => {
-    if (!dirty) return
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [dirty])
 
   async function save() {
     setError(''); setNotice('')
@@ -86,7 +85,8 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
   }
 
   if (loading) return <section className='rounded-2xl border border-theme bg-surface p-6' role='status'>Loading the saved clinical record…</section>
-  return <section aria-labelledby='clinical-record-title' className='rounded-2xl border border-theme bg-surface p-5 sm:p-8'>
+  return <><UnsavedChangesDialog open={navigation.active} busy={busy !== null}
+    onKeepEditing={navigation.reject} onDiscard={navigation.accept} /><section aria-labelledby='clinical-record-title' className='rounded-2xl border border-theme bg-surface p-5 sm:p-8'>
     <div className='mb-6 flex flex-wrap items-start justify-between gap-4'>
       <div><p className='text-xs font-semibold uppercase tracking-widest text-muted'>Clinical documentation</p>
         <h2 id='clinical-record-title' className='mt-2 text-2xl font-semibold text-ink'>{editing ? 'Review and publish the care summary' : 'Published care summary'}</h2>
@@ -95,7 +95,7 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
     </div>
     {error && <div role='alert' className='mb-5 rounded-xl border border-red-400 bg-surface-subtle p-4 text-ink'><p>{error}</p>
       <button type='button' className={`${secondary} mt-3`} disabled={Boolean(busy)} onClick={() => {
-        if (!dirty || window.confirm('Reload the saved record? Unsaved text on this page will be replaced.')) setAttempt(value => value + 1)
+        if (!dirty || window.confirm('Reload the saved record? Unsaved text on this page will be replaced.')) { setDirty(false); setAttempt(value => value + 1) }
       }}>Reload saved record</button></div>}
     {notice && <p role='status' className='mb-5 rounded-xl border border-theme bg-surface-subtle p-4 text-ink'>{notice}</p>}
     {editing ? <form onSubmit={event => { event.preventDefault(); void save() }} noValidate>
@@ -129,5 +129,5 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
       <div className='mt-6 flex flex-wrap gap-3'><button type='button' className={secondary} onClick={() => { setEditing(true); setAmendment(''); setReviewed(false); setNotice('') }}>Create amendment</button>
         {consultationStatus !== 'ENDED' && <button type='button' className={secondary} disabled={Boolean(busy)} onClick={() => void reconcile()}>{busy === 'reconcile' ? 'Confirming…' : 'Confirm consultation completion'}</button>}</div>
     </>}
-  </section>
+  </section></>
 }
