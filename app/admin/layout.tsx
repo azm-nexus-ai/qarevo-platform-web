@@ -73,16 +73,16 @@ export default function AdminLayout({
       <AdminMobileNavigation onSignOut={handleLogoutClick} />
       <style>{`
         @media (max-width: 920px) {
-          aside {
+          #admin-primary-sidebar {
             display: none !important;
           }
-          main {
+          [data-portal-main=admin] {
             margin-left: 0 !important;
           }
-          header {
+          [data-portal-main=admin] > header {
             display: none !important;
           }
-          div[style*="padding: 28px 32px"] {
+          .admin-portal-shell div[style*="padding: 28px 32px"] {
             padding: 16px !important;
           }
         }

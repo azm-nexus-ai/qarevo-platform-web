@@ -1062,3 +1062,22 @@ for (const width of [320, 820, 1440]) {
     await page.screenshot({ path: testInfo.outputPath(`coverage-${width}-dark.png`), fullPage: true })
   })
 }
+
+for (const role of ['admin', 'doctor']) {
+  test(`${role} sign-in exposes required labels, errors and safe password recovery`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 844 })
+    await page.goto(`/auth/${role}/login`)
+    await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+    const passwordField = page.getByLabel('Password (Required)', { exact: true })
+    await expect(passwordField).toHaveAttribute('autocomplete', 'current-password')
+    await page.locator('button[type=submit]').click()
+    await expect(page.locator('input[aria-invalid=true]')).toHaveCount(2)
+    await expect(passwordField).toHaveAttribute('aria-describedby', /.+/)
+    await expect(page.getByRole('alert').filter({ hasText: /password/i })).toBeVisible()
+    await expect(page.locator('button[type=submit]')).toBeEnabled()
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+    await page.getByRole('link', { name: /Forgot.*password/ }).click()
+    await expect(page).toHaveURL(/\/auth\/forgot-password$/)
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  })
+}

@@ -178,11 +178,15 @@ export default function InsurancePrivacyConsentPage() {
     () => setReady(true)), [draftStorage])
   useEffect(() => {
     if (!ready) return
-    const timer = window.setTimeout(() => {
+    setSaveMessage('Saving draft in this tab…')
+    const persist = () => {
       try { draftStorage.setItem(STORAGE_KEY, JSON.stringify(form)); setSaveMessage('Draft saved in this tab') }
       catch { setSaveMessage('Could not autosave right now') }
-    }, 320)
-    return () => window.clearTimeout(timer)
+    }
+    const timer = window.setTimeout(persist, 320)
+    // Refresh/navigation must not discard the last keystrokes before the debounce.
+    window.addEventListener('pagehide', persist)
+    return () => { window.clearTimeout(timer); window.removeEventListener('pagehide', persist) }
   }, [form, draftStorage, ready])
   const update = <K extends keyof CoverageForm>(key: K, value: CoverageForm[K]) => setForm(previous => ({ ...previous, [key]: value }))
   const submit = async (event: FormEvent) => {

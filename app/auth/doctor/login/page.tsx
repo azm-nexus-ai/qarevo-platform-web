@@ -92,12 +92,12 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
     : 'none'
 
   const bg = error
-    ? '#FFF5F5'
+    ? 'var(--danger-soft)'
     : success
-    ? '#F0FDF8'
+    ? 'var(--success-soft)'
     : focused
-    ? '#fff'
-    : 'rgba(255,255,255,0.7)'
+    ? 'var(--surface)'
+    : 'var(--surface)'
 
   const hasLeft = !!icon
   const hasRight = !!rightSlot || success || !!error
@@ -105,7 +105,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label}
+        {label} <span>(Required)</span>
       </label>
       <div style={{ position: 'relative' }}>
         {icon && (
@@ -115,6 +115,9 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
         )}
         <input
           id={id}
+          required
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           type={type}
           value={value}
           placeholder={placeholder}
@@ -147,7 +150,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
           </span>
         )}
       </div>
-      {error && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
+      {error && <p id={`${id}-error`} role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
     </div>
   )
 }
@@ -294,7 +297,6 @@ export default function DoctorLoginPage() {
   const pwToggle = (
     <button
       type="button"
-      tabIndex={-1}
       onClick={() => setShowPassword(s => !s)}
       aria-label={showPassword ? 'Hide password' : 'Show password'}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex' }}
@@ -329,7 +331,7 @@ export default function DoctorLoginPage() {
             borderRadius: '22px',
             border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
-            padding: '40px 40px 36px',
+            padding: 'clamp(20px, 5vw, 40px)',
           }}>
             {/* Header */}
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -348,14 +350,14 @@ export default function DoctorLoginPage() {
 
             {/* Error banner */}
             {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={16} sw={1.75} color={T.red} />
-                <span style={{ fontSize: '13px', color: '#991B1B', lineHeight: 1.4 }}>{authError}</span>
+                <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.4 }}>{authError}</span>
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Field
                 label="Email, Username, or Phone"
                 placeholder="doctor@example.com"

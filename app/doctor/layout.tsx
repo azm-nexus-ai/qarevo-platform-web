@@ -113,16 +113,16 @@ export default function DoctorLayout({
       <DoctorMobileNavigation />
       <style>{`
         @media (max-width: 920px) {
-          aside {
+          #doctor-primary-sidebar {
             display: none !important;
           }
-          main {
+          [data-portal-main=doctor] {
             margin-left: 0 !important;
           }
-          header {
+          [data-portal-main=doctor] > header {
             display: none !important;
           }
-          div[style*="padding: 28px 32px"] {
+          .doctor-portal-shell div[style*="padding: 28px 32px"] {
             padding: 16px !important;
           }
         }

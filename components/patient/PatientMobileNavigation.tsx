@@ -108,7 +108,7 @@ export default function PatientMobileNavigation() {
           box-shadow: 0 2px 12px rgba(4,53,77,0.06);
         }
         @media(max-width:460px) {
-          .pmn-topbar button[aria-label="Open messages"], .pmn-topbar button[aria-label="Profile"] { display: none; }
+          .pmn-topbar button[aria-label="Open messages"], .pmn-topbar button[aria-label="Profile"] { display: none !important; }
         }
         @media(max-width:360px) {
           .pmn-topbar { padding-inline: 10px; gap: 8px; }

@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import Link from 'next/link'
-import { T, Sh } from '@/lib/tokens'
+import { T } from '@/lib/tokens'
 import { ApiError, getApiErrorDetail, loginAdmin, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -91,21 +91,13 @@ export default function AdminLoginPage() {
         backdropFilter: 'blur(22px) saturate(180%)',
         WebkitBackdropFilter: 'blur(22px) saturate(180%)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.92), 0 2px 8px rgba(4,53,77,0.06), 0 14px 34px rgba(4,53,77,0.10), 0 40px 84px rgba(4,53,77,0.08)',
-        padding: '40px',
+        padding: 'clamp(22px, 5vw, 40px)',
         borderRadius: '20px',
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label='Qarevo Health home'>
-            <Image
-              src='/brand/Untitled design - 2026-08-03T165058.603.png'
-              alt='Qarevo Health'
-              width={160}
-              height={34}
-              priority
-              unoptimized
-              style={{ width: '160px', height: 'auto' }}
-            />
+            <AuthenticatedLogo width={160} priority />
           </Link>
         </div>
 
@@ -132,17 +124,21 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {/* Email */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-              Email
+            <label htmlFor="admin-email" style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
+              Email (Required)
             </label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: T.slate2, display: 'flex' }}>
                 <Ico p={ICONS.message} size={14} sw={1.75} />
               </span>
               <input
+                id="admin-email"
+                required
+                aria-invalid={!!emailErr}
+                aria-describedby={emailErr ? "admin-email-error" : undefined}
                 type="email"
                 value={email}
                 placeholder="admin@qarevo-health.de"
@@ -165,19 +161,23 @@ export default function AdminLoginPage() {
                 }}
               />
             </div>
-            {emailErr && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{emailErr}</p>}
+            {emailErr && <p id="admin-email-error" role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{emailErr}</p>}
           </div>
 
           {/* Password */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-              Password
+            <label htmlFor="admin-password" style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
+              Password (Required)
             </label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: T.slate2, display: 'flex' }}>
                 <Ico p={ICONS.lock} size={14} sw={1.75} />
               </span>
               <input
+                id="admin-password"
+                required
+                aria-invalid={!!passErr}
+                aria-describedby={passErr ? "admin-password-error" : undefined}
                 type={showPw ? 'text' : 'password'}
                 value={password}
                 placeholder="••••••••"
@@ -204,12 +204,12 @@ export default function AdminLoginPage() {
                 {pwToggle}
               </span>
             </div>
-            {passErr && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{passErr}</p>}
+            {passErr && <p id="admin-password-error" role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{passErr}</p>}
           </div>
 
           {/* Error message */}
           {authError && (
-            <div style={{
+            <div role="alert" style={{
               padding: '12px',
               borderRadius: '10px',
               background: 'rgba(220,38,38,0.06)',

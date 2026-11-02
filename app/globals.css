@@ -369,7 +369,7 @@ button:disabled { cursor: wait; }
 @media (min-width: 921px) {
   html[data-patient-sidebar=collapsed] #patient-primary-sidebar,
   html[data-doctor-sidebar=collapsed] #doctor-primary-sidebar,
-  html[data-admin-sidebar=collapsed] #admin-primary-sidebar { display: none; }
+  html[data-admin-sidebar=collapsed] #admin-primary-sidebar { display: none !important; }
   html[data-doctor-sidebar=collapsed] [data-portal-main=doctor],
   html[data-admin-sidebar=collapsed] [data-portal-main=admin] { margin-left: 0 !important; }
   html[data-patient-sidebar=collapsed] .pps-shell { grid-template-columns: minmax(0, 1fr); }
