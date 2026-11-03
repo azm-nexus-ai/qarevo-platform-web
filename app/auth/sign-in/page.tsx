@@ -156,16 +156,18 @@ function LeftPanel() {
 
 // ─── Primitives ────────────────────────────────────────────────────────────────
 
-function Field({ label, placeholder, type = 'text', value, onChange, onBlur, error, success, icon, rightSlot, autoComplete }: {
+function Field({ label, placeholder, type = 'text', value, onChange, onBlur, error, success, icon, rightSlot, autoComplete, inputId }: {
   label: string; placeholder: string; type?: string
   value: string; onChange: (v: string) => void; onBlur?: () => void
   error?: string; success?: boolean
   icon?: string | readonly string[]
   rightSlot?: React.ReactNode
   autoComplete?: string
+  inputId?: string
 }) {
   const [focused, setFocused] = useState(false)
-  const id = useId()
+  const generatedId = useId()
+  const id = inputId || generatedId
 
   const bdr   = error ? 'rgba(220,38,38,0.55)' : success ? 'rgba(9,173,112,0.5)' : focused ? 'rgba(32,181,223,0.45)' : 'rgba(4,53,77,0.1)'
   const glow  = focused ? (error ? '0 0 0 3px rgba(220,38,38,0.08)' : '0 0 0 3px rgba(32,181,223,0.09)') : 'none'
@@ -173,7 +175,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, onBlur, err
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{label}</label>
+      {label && <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{label}</label>}
       <div style={{ position: 'relative' }}>
         {icon && (
           <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.link : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
@@ -186,6 +188,9 @@ function Field({ label, placeholder, type = 'text', value, onChange, onBlur, err
           value={value}
           placeholder={placeholder}
           autoComplete={autoComplete}
+          required
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => { setFocused(false); onBlur?.() }}
@@ -207,7 +212,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, onBlur, err
           </span>
         )}
       </div>
-      {error && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
+      {error && <p id={`${id}-error`} role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
     </div>
   )
 }
@@ -515,7 +520,7 @@ export default function SignInPage() {
 
             {/* Auth error banner */}
             {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} style={{ marginTop: '1px', flexShrink: 0 }} />
                 <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.5, letterSpacing: '-0.005em' }}>{authError}</span>
               </div>
@@ -526,7 +531,7 @@ export default function SignInPage() {
 
                 {/* Email */}
                 <Field
-                  label="Email Address"
+                  label="Email Address (Required)"
                   placeholder="emma@example.com"
                   type="email"
                   value={email}
@@ -541,13 +546,14 @@ export default function SignInPage() {
                 {/* Password */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Password</label>
+                    <label htmlFor="patient-password" style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Password (Required)</label>
                     <Link href="/auth/forgot-password" style={{ fontSize: "13px", fontWeight: 600, color: T.link, textDecoration: 'none', letterSpacing: '-0.01em' }}>
                       Forgot password?
                     </Link>
                   </div>
                   <Field
                     label=""
+                    inputId="patient-password"
                     placeholder="Your password"
                     type={showPw ? 'text' : 'password'}
                     value={password}

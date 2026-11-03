@@ -16,6 +16,27 @@ export default function AcceptAdminInvitation() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    const recheck = () => {
+      setPassword(''); setConfirmation(''); setErrors({}); setStatus('checking')
+      setRetry(value => value + 1)
+    }
+    const receiveLink = () => {
+      // Fragment-only navigation keeps this component mounted, including when
+      // reopening a consumed link in the same tab.
+      token.current = new URLSearchParams(window.location.hash.slice(1)).get('token') || ''
+      window.history.replaceState(window.history.state, '', window.location.pathname)
+      recheck()
+    }
+    const restorePage = (event: PageTransitionEvent) => { if (event.persisted) recheck() }
+    window.addEventListener('hashchange', receiveLink)
+    window.addEventListener('pageshow', restorePage)
+    return () => {
+      window.removeEventListener('hashchange', receiveLink)
+      window.removeEventListener('pageshow', restorePage)
+    }
+  }, [])
+
+  useEffect(() => {
     // The ref survives Strict Mode effect cleanup without losing the URL secret.
     if (token.current === null) {
       token.current = new URLSearchParams(window.location.hash.slice(1)).get('token') || ''
