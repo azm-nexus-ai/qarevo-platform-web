@@ -1,41 +1,84 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { acceptAdminInvitation, clearAuthTokens, getApiErrorDetail, getLoginThrottleMessage } from '@/lib/api'
+import { ApiError, acceptAdminInvitation, validateAdminInvitation, clearAuthTokens, getApiErrorDetail, getLoginThrottleMessage } from '@/lib/api'
 import { ValidationSummary } from '@/components/ui/ValidationFeedback'
 
+type Status = 'checking' | 'valid' | 'unavailable' | 'error' | 'complete'
+
 export default function AcceptAdminInvitation() {
-  const [token,setToken]=useState('')
-  const [ready,setReady]=useState(false)
-  const [password,setPassword]=useState('')
-  const [confirmation,setConfirmation]=useState('')
-  const [errors,setErrors]=useState<Record<string,string>>({})
-  const [saving,setSaving]=useState(false)
-  const [complete,setComplete]=useState(false)
-  const tokenRead=useRef(false)
-  useEffect(()=>{
-    if(tokenRead.current)return
-    tokenRead.current=true
-    const value=new URLSearchParams(window.location.hash.slice(1)).get('token') || ''
-    setToken(value)
-    window.history.replaceState(window.history.state,'',window.location.pathname)
-    setReady(true)
-  },[])
-  async function submit(event:React.FormEvent) {
+  const token = useRef<string | null>(null)
+  const [status, setStatus] = useState<Status>('checking')
+  const [retry, setRetry] = useState(0)
+  const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    // The ref survives Strict Mode effect cleanup without losing the URL secret.
+    if (token.current === null) {
+      token.current = new URLSearchParams(window.location.hash.slice(1)).get('token') || ''
+      window.history.replaceState(window.history.state, '', window.location.pathname)
+    }
+    if (!token.current) { setStatus('unavailable'); return }
+    let current = true
+    let expiryTimer: ReturnType<typeof setTimeout> | undefined
+    setStatus('checking')
+    setErrors({})
+    const unavailable = () => {
+      token.current = ''
+      setPassword(''); setConfirmation(''); setStatus('unavailable')
+    }
+    void validateAdminInvitation(token.current).then(result => {
+      if (!current) return
+      if (!result.valid) { unavailable(); return }
+      const remaining = Date.parse(result.expires_at) - Date.now()
+      if (!Number.isFinite(remaining) || remaining <= 0) { unavailable(); return }
+      setStatus('valid')
+      expiryTimer = setTimeout(() => { if (token.current) unavailable() }, Math.min(remaining, 2_147_483_647))
+    }).catch(error => {
+      if (!current) return
+      if (error instanceof ApiError && error.status === 422) { unavailable(); return }
+      setErrors({ server: getLoginThrottleMessage(error) || 'We could not check this invitation. Please retry.' })
+      setStatus('error')
+    })
+    return () => { current = false; clearTimeout(expiryTimer) }
+  }, [retry])
+
+  async function submit(event: React.FormEvent) {
     event.preventDefault()
-    const next:Record<string,string>={}
-    if (password.length<8 || password.length>128 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)) next.password='Use 8–128 characters, including uppercase, lowercase, a number and a special character.'
-    if (password!==confirmation) next.confirmation='The passwords do not match.'
+    if (status !== 'valid' || !token.current || saving) return
+    const next: Record<string, string> = {}
+    if (password.length < 8 || password.length > 128 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)) next.password = 'Use 8–128 characters, including uppercase, lowercase, a number and a special character.'
+    if (!confirmation || password !== confirmation) next.confirmation = 'Enter the same password in both fields.'
     setErrors(next)
-    if(Object.keys(next).length || !token || saving)return
+    if (Object.keys(next).length) return
     setSaving(true)
-    try { await acceptAdminInvitation(token,password); clearAuthTokens(); setToken('');setPassword('');setConfirmation('');setComplete(true) }
-    catch(error) { setErrors({server:getLoginThrottleMessage(error) || getApiErrorDetail(error) || 'We could not activate this invitation. Please try again.'}) }
-    finally {setSaving(false)}
+    try {
+      await acceptAdminInvitation(token.current, password)
+      clearAuthTokens(); token.current = ''; setPassword(''); setConfirmation(''); setStatus('complete')
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 400) {
+        token.current = ''; setPassword(''); setConfirmation(''); setStatus('unavailable')
+      } else setErrors({ server: getLoginThrottleMessage(error) || getApiErrorDetail(error) || 'We could not activate this invitation. Please try again.' })
+    } finally { setSaving(false) }
   }
+
   return <main className='invitation-page'><section>
-    <h1>{complete?'Administrator account ready':'Accept your administrator invitation'}</h1>
-    {!ready?<p>Preparing your invitation…</p>:complete?<><p>Your mailbox has been verified and your password is set. Sign in to manage Qarevo Health.</p><Link href='/auth/admin/login'>Continue to administrator sign-in</Link></>:!token?<><p>Open the complete invitation link from your email. If it has expired or been revoked, ask the owner for a new invitation.</p><Link href='/auth/admin/login'>Administrator sign-in</Link></>:<>
+    <h1>{status === 'complete' ? 'Administrator account ready' : status === 'unavailable' ? 'Invitation unavailable' : 'Accept your administrator invitation'}</h1>
+    {status === 'checking' ? <p role='status'>Checking your invitation…</p> : status === 'complete' ? <>
+      <p>Your mailbox has been verified and your password is set. This invitation has been used and cannot be used again.</p>
+      <Link href='/auth/admin/login'>Continue to administrator sign-in</Link>
+    </> : status === 'unavailable' ? <>
+      <p>This invitation is invalid, expired or already used. If you already activated your account, sign in with the password you chose.</p>
+      <p><Link href='/auth/admin/login'>Administrator sign-in</Link></p>
+      <p><Link href='/auth/forgot-password'>Forgot your password?</Link></p>
+      <p>If you have not activated your account, ask the owner for a new invitation.</p>
+    </> : status === 'error' ? <>
+      <ValidationSummary errors={errors}/>
+      <button type='button' onClick={() => setRetry(value => value + 1)}>Retry invitation check</button>
+    </> : <>
       <p>Choose your own password to activate the access granted by the application owner. This link can be used once and expires after 24 hours.</p>
       <form noValidate onSubmit={submit}><ValidationSummary errors={errors}/>
         <label htmlFor='invite-password'>New password (Required)</label><input id='invite-password' type='password' autoComplete='new-password' required minLength={8} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} aria-invalid={!!errors.password} aria-describedby={errors.password?'invite-password-hint invite-password-error':'invite-password-hint'}/>

@@ -45,7 +45,7 @@ function getFriendlyDoctorLoginError(error: unknown) {
   if (detail.includes('use patient login endpoint') || detail.includes('patient account')) {
     return 'This is a patient account. Please use the patient login page instead.'
   }
-  if (detail.includes('valid email')) {
+  if (error instanceof ApiError && error.status === 422 && detail.includes('valid email')) {
     return 'Enter a valid email, username, or phone number.'
   }
   if (error instanceof ApiError && error.status === 401) {

@@ -24,7 +24,7 @@ function getFriendlyAdminError(error: unknown) {
 
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
-  if (detail.includes('valid email') || detail.includes('email address')) {
+  if (error instanceof ApiError && error.status === 422 && (detail.includes('email') || detail.includes('e-mail'))) {
     return 'Enter a valid email address.'
   }
   if (detail.includes('incorrect') || detail.includes('invalid') || detail.includes('password')) {
@@ -53,18 +53,18 @@ export default function AdminLoginPage() {
   const [touched, setTouched] = useState({ email: false, password: false })
   const [authError, setAuthError] = useState('')
 
-  const emailErr = touched.email && !EMAIL_RE.test(email) ? 'Enter a valid email address' : ''
+  const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : ''
   const passErr = touched.password && password.length < 1 ? 'Password is required' : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setTouched({ email: true, password: true })
-    if (!EMAIL_RE.test(email) || !password) return
+    if (!EMAIL_RE.test(email.trim()) || !password) return
     setLoading(true)
     setAuthError('')
 
     try {
-      const response = await loginAdmin({ email, password })
+      const response = await loginAdmin({ email: email.trim(), password })
       storeAuthTokens({ ...response, role: 'ADMIN' })
       router.push('/admin/dashboard')
     } catch (error) {

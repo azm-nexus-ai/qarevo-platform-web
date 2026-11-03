@@ -1112,6 +1112,7 @@ for (const [portal, route] of [
 
 test('administrator invitation validates passwords, clears the URL secret and requires explicit sign-in', async ({page,context}) => {
   let submitted = 0
+  await context.route('**/api/v1/auth/admin/invitations/validate', route => route.fulfill({json:submitted ? {valid:false} : {valid:true,expires_at:new Date(Date.now()+86400000).toISOString()}}))
   await context.route('**/api/v1/auth/admin/invitations/accept', route => {
     if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}})
     submitted++
@@ -1130,6 +1131,11 @@ test('administrator invitation validates passwords, clears the URL secret and re
   await page.getByLabel('Confirm password (Required)',{exact:true}).fill('Synthetic-only-Password42!')
   await page.getByRole('button',{name:'Activate administrator account'}).click()
   await expect(page.getByRole('link',{name:'Continue to administrator sign-in'})).toHaveAttribute('href','/auth/admin/login')
+  expect(submitted).toBe(1)
+  await page.goto('/auth/admin/accept-invitation#token=synthetic-invitation-only')
+  await expect(page.getByRole('heading',{name:'Invitation unavailable'})).toBeVisible()
+  await expect(page.locator('input[type=password]')).toHaveCount(0)
+  await expect(page.getByRole('link',{name:'Forgot your password?'})).toBeVisible()
   expect(submitted).toBe(1)
 })
 
@@ -1182,3 +1188,56 @@ for (const managing of [true, false]) {
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true)
   })
 }
+
+
+for (const [portal,path,endpoint] of [
+  ['administrator','/auth/admin/login','/api/v1/auth/admin/login'],
+  ['patient','/auth/sign-in','/api/v1/auth/login'],
+  ['clinician','/auth/doctor/login','/api/v1/auth/doctor/login'],
+] as const) {
+  test(`${portal} distinguishes incorrect credentials from email format validation`, async ({page,context}) => {
+    let submitted = 0
+    await context.route('**'+endpoint, route => {
+      if (route.request().method()==='OPTIONS') return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}})
+      submitted++
+      if(portal!=='clinician') expect(route.request().postDataJSON().email).toBe('synthetic@example.com')
+      return route.fulfill({status:401,json:{detail:'Invalid email or password'}})
+    })
+    await page.goto(path)
+    await page.locator('input[autocomplete="email"],input[autocomplete="username"]').fill(' synthetic@example.com ')
+    await page.getByLabel('Password (Required)',{exact:true}).fill('Synthetic-only-Password42!')
+    await page.locator('button[type=submit]').click()
+    await expect(page.getByRole('alert').filter({hasText:/Incorrect email or password|Invalid email, username, phone, or password/})).toBeVisible()
+    await expect(page.getByText('Enter a valid email address.',{exact:true})).toHaveCount(0)
+    expect(submitted).toBe(1)
+  })
+}
+
+test('invitation check fails closed, allows retry, and rejects consumption in another tab', async ({page,context}) => {
+  let checks=0
+  await context.route('**/api/v1/auth/admin/invitations/validate',route=>{
+    checks++
+    return checks===1 ? route.fulfill({status:503,json:{detail:'Synthetic outage'}}) : route.fulfill({json:{valid:true,expires_at:new Date(Date.now()+86400000).toISOString()}})
+  })
+  await context.route('**/api/v1/auth/admin/invitations/accept',route=>route.fulfill({status:400,json:{detail:'This invitation is invalid, expired or already used.'}}))
+  await page.goto('/auth/admin/accept-invitation#token=synthetic-race-token')
+  await expect(page.getByRole('button',{name:'Retry invitation check'})).toBeVisible()
+  await expect(page.locator('input[type=password]')).toHaveCount(0)
+  await page.getByRole('button',{name:'Retry invitation check'}).click()
+  await page.getByLabel('New password (Required)',{exact:true}).fill('Synthetic-only-Password42!')
+  await page.getByLabel('Confirm password (Required)',{exact:true}).fill('Synthetic-only-Password42!')
+  await page.getByRole('button',{name:'Activate administrator account'}).click()
+  await expect(page.getByRole('heading',{name:'Invitation unavailable'})).toBeVisible()
+  await expect(page.locator('input[type=password]')).toHaveCount(0)
+})
+
+test('invitation form expires while open without sending a password', async ({page,context}) => {
+  let writes=0
+  await context.route('**/api/v1/auth/admin/invitations/validate',route=>route.fulfill({json:{valid:true,expires_at:new Date(Date.now()+2500).toISOString()}}))
+  await context.route('**/api/v1/auth/admin/invitations/accept',route=>{writes++;return route.fulfill({json:{message:'Unexpected'}})})
+  await page.goto('/auth/admin/accept-invitation#token=synthetic-expiring-token')
+  await expect(page.getByRole('button',{name:'Activate administrator account'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Invitation unavailable'})).toBeVisible({timeout:10000})
+  await expect(page.locator('input[type=password]')).toHaveCount(0)
+  expect(writes).toBe(0)
+})

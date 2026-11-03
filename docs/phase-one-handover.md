@@ -138,3 +138,5 @@ records. Permanent synthetic-account cleanup requires a separate reviewed operat
 The generic login error reported for the legacy dev administrator was a password
 lockout, not missing administrator authority. All three login pages now preserve
 HTTP 429 guidance from the backend. No lockout has been bypassed or removed manually.
+
+Invitation follow-up: the page now checks single-use/expiry state before showing a password form, fails closed on network errors with retry, and removes an expired form while it is open. Backend acceptance still rechecks under lock. Admin/patient sign-in no longer interprets “Invalid email or password” as email syntax validation, and trims surrounding email whitespace. The owner invitation was consumed successfully; subsequent rejected attempts were INVALID_PASSWORD, not missing privileges.
