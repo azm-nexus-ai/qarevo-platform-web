@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useRef, useState } from 'react'
+import { ArrowUpRight } from 'lucide-react'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { THEME_KEY } from '@/lib/theme'
@@ -11,6 +12,14 @@ import { SIDEBAR_PREFERENCE_CHANGED } from '@/components/layout/SidebarToggle'
 const LINKS = [
   ['Impressum', '/impressum'], ['Privacy', '/privacy'], ['Patient terms', '/terms'],
   ['Cookie information', '/cookies'], ['Support', '/support'],
+] as const
+
+// Company-owned profiles confirmed by the product owner on 3 November 2026.
+const SOCIAL_LINKS = [
+  ['Instagram', 'https://www.instagram.com/qarevo_health/'],
+  ['X', 'https://x.com/qarevohealth'],
+  ['LinkedIn', 'https://www.linkedin.com/company/qarevo-health-gmbh/posts/'],
+  ['TikTok', 'https://www.tiktok.com/@qarevohealth'],
 ] as const
 
 export default function Footer() {
@@ -37,6 +46,11 @@ export default function Footer() {
         <Link href='/' aria-label='Qarevo Health home'><AuthenticatedLogo width={142} /></Link>
         <p>Connecting patients and independent practices through clinician-led digital care.</p>
         <span className='corporate-footer-preview'>Development preview · Synthetic test data only</span>
+        <nav aria-label='Qarevo Health social profiles'>
+          {SOCIAL_LINKS.map(([label, href]) => <a key={href} href={href} target='_blank' rel='noopener noreferrer' aria-label={`${label} (opens in a new tab)`} className='gap-1.5'>
+            {label}<ArrowUpRight size={14} aria-hidden='true' />
+          </a>)}
+        </nav>
       </div>
       <nav aria-label='Legal and support'>
         {LINKS.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}
