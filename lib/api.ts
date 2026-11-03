@@ -111,6 +111,11 @@ export function getApiErrorDetail(error: unknown): string | null {
     return null;
 }
 
+export function getLoginThrottleMessage(error: unknown): string | null {
+    if (!(error instanceof ApiError) || error.status !== 429) return null;
+    return getApiErrorDetail(error) || 'Too many sign-in attempts. Please wait before trying again, or use password recovery.';
+}
+
 export function isAuthError(error: unknown): boolean {
     return error instanceof ApiError && error.status === 401;
 }
@@ -2789,46 +2794,19 @@ export type AdminUpdatePatientRequest = {
 };
 
 // Admin Users Types
+export type AdminRole = 'super_admin' | 'operations_admin' | 'compliance_admin' | 'support_admin';
+export type AdminStatus = 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
 export type AdminUser = {
-    admin_id: string;
-    user_id: string;
-    full_name: string;
-    email: string;
-    role: string;
-    status: string;
-    permissions?: Record<string, unknown>;
-    created_at: string;
-    updated_at?: string;
+    id: string; user_id: string; full_name: string; email: string;
+    role: AdminRole; status: AdminStatus; created_at: string | null; last_login_at: string | null;
 };
-
 export type AdminUsersListResponse = {
-    admin_users: AdminUser[];
-    total_count: number;
-    filtered_count: number;
-    page: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
+    admin_users: AdminUser[]; total: number; limit: number; offset: number;
+    can_manage: boolean; current_admin_id: string;
 };
-
-export type AdminCreateAdminUserRequest = {
-    email: string;
-    full_name: string;
-    role: string;
-    permissions?: Record<string, unknown>;
-    password?: string;
-};
-
-export type AdminUpdateAdminUserRequest = {
-    full_name?: string;
-    role?: string;
-    permissions?: Record<string, unknown>;
-};
-
-export type AdminUpdateAdminStatusRequest = {
-    status: string;
-    reason?: string;
-};
+export type AdminCreateAdminUserRequest = { email: string; full_name: string; role: AdminRole };
+export type AdminUpdateAdminUserRequest = { full_name?: string; role?: AdminRole };
+export type AdminUpdateAdminStatusRequest = { status: Exclude<AdminStatus, 'INVITED'>; reason: string };
 
 // Admin Doctors API Functions
 export async function getAdminDoctors(
@@ -2932,12 +2910,12 @@ export async function updateAdminUser(adminId: string, body: AdminUpdateAdminUse
     return apiPut<AdminUser, AdminUpdateAdminUserRequest>(`/api/v1/admin/admin-users/${adminId}`, body);
 }
 
-export async function updateAdminUserStatus(adminId: string, body: AdminUpdateAdminStatusRequest): Promise<{ message: string }> {
-    return apiPut<{ message: string }, AdminUpdateAdminStatusRequest>(`/api/v1/admin/admin-users/${adminId}/status`, body);
+export async function updateAdminUserStatus(adminId: string, body: AdminUpdateAdminStatusRequest): Promise<AdminUser> {
+    return apiPut<AdminUser, AdminUpdateAdminStatusRequest>(`/api/v1/admin/admin-users/${adminId}/status`, body);
 }
 
-export async function deleteAdminUser(adminId: string): Promise<{ message: string }> {
-    return apiDelete<{ message: string }>(`/api/v1/admin/admin-users/${adminId}`);
+export async function deleteAdminUser(adminId: string): Promise<AdminUser> {
+    return apiDelete<AdminUser>(`/api/v1/admin/admin-users/${adminId}`);
 }
 
 // Admin Exceptions Types
@@ -3256,4 +3234,11 @@ export async function getActionTrends(
     if (dateTo) params.set("date_to", dateTo);
     params.set("granularity", granularity);
     return apiGet<AdminActionTrend[]>(`/api/v1/admin/audit-logs/trends?${params.toString()}`);
+}
+
+export async function resendAdminInvitation(adminId: string): Promise<AdminUser> {
+    return apiPost<AdminUser>(`/api/v1/admin/admin-users/${adminId}/invitation`);
+}
+export async function acceptAdminInvitation(token: string, new_password: string): Promise<{ message: string }> {
+    return apiPost<{ message: string }>('/api/v1/auth/admin/invitations/accept', { token, new_password });
 }

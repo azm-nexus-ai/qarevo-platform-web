@@ -608,3 +608,13 @@ test('simultaneous patient chrome reads share one request but never cache comple
   await t.api.getPatientSettings()
   assert.equal(calls, 2)
 })
+
+
+test('all sign-in portals can display structured lockouts without hiding credential or permission errors', () => {
+  const { api } = tab()
+  const locked = new api.ApiError(429, JSON.stringify({detail:{error_code:'TOO_MANY_LOGIN_ATTEMPTS',message:'Try again in 15 minutes.'}}))
+  assert.equal(api.getLoginThrottleMessage(locked), 'Try again in 15 minutes.')
+  assert.match(api.getLoginThrottleMessage(new api.ApiError(429,'')), /Too many sign-in attempts/)
+  assert.equal(api.getLoginThrottleMessage(new api.ApiError(401,'Invalid password')), null)
+  assert.equal(api.getLoginThrottleMessage(new api.ApiError(403,'Admin access required')), null)
+})

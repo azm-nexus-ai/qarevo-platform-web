@@ -548,7 +548,7 @@ for (const portal of ['doctor', 'admin'] as const) {
       const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'Content-Type,Authorization', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' }
       if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
       if (path.endsWith('/profile')) return route.fulfill({ headers: cors, json: { full_name: 'Synthetic Doctor', specialty: 'General Medicine' } })
-      if (path.endsWith('/admin-users')) return route.fulfill({ headers: cors, json: { admin_users: [], total: 0 } })
+      if (path.endsWith('/admin-users')) return route.fulfill({ headers: cors, json: { admin_users: [], total: 0, limit: 50, offset: 0, can_manage: true, current_admin_id: 'synthetic-owner' } })
       return route.fulfill({ headers: cors, json: { patients: [], total_count: 0, filtered_count: 0, page: 1, page_size: 20, has_previous: false, has_next: false } })
     })
     const path = portal === 'admin' ? '/admin/admin-users' : '/doctor/patients'
@@ -558,9 +558,9 @@ for (const portal of ['doctor', 'admin'] as const) {
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     if (portal === 'admin') {
-      await page.getByRole('button', { name: 'Add Admin User', exact: true }).click()
+      await page.getByRole('button', { name: 'Invite administrator', exact: true }).click()
       const dialog = page.getByRole('dialog')
-      await dialog.getByRole('button', { name: 'Create Admin', exact: true }).click()
+      await dialog.getByRole('button', { name: 'Send invitation', exact: true }).click()
       await expect(page.locator('#admin-full_name-error')).toContainText('Full name is required')
       await expect(page.locator('#admin-email-error')).toContainText('valid email')
       await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
@@ -1089,5 +1089,96 @@ for (const role of ['admin', 'doctor']) {
     await page.getByRole('link', { name: /Forgot.*password/ }).click()
     await expect(page).toHaveURL(/\/auth\/forgot-password$/)
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  })
+}
+
+
+for (const [portal, route] of [
+  ['administrator', '/auth/admin/login'],
+  ['clinician', '/auth/doctor/login'],
+] as const) {
+  test(`${portal} sign-in explains backend lockout instead of hiding it`, async ({page,context}) => {
+    await context.route('**/api/v1/auth/**/login', route => route.request().method()==='OPTIONS' ? route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}}) : route.fulfill({status:429,
+      headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'},
+      json:{detail:{error_code:'TOO_MANY_LOGIN_ATTEMPTS',message:'Too many failed login attempts. Try again in 15 minutes.',retry_after_seconds:900}}}))
+    await page.goto(route)
+    await page.locator('input[autocomplete="email"],input[autocomplete="username"]').fill('synthetic@example.com')
+    await page.getByLabel('Password (Required)',{exact:true}).fill('Synthetic-only-Password42!')
+    await page.locator('button[type=submit]').click()
+    await expect(page.getByRole('alert').filter({hasText:'Try again in 15 minutes.'})).toBeVisible()
+    await expect(page.getByRole('link',{name:/Forgot.*password/})).toBeVisible()
+  })
+}
+
+test('administrator invitation validates passwords, clears the URL secret and requires explicit sign-in', async ({page,context}) => {
+  let submitted = 0
+  await context.route('**/api/v1/auth/admin/invitations/accept', route => {
+    if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}})
+    submitted++
+    expect(route.request().postDataJSON().token).toBe('synthetic-invitation-only')
+    return route.fulfill({headers:{'access-control-allow-origin':'*'},json:{message:'Activated'}})
+  })
+  await page.goto('/auth/admin/accept-invitation#token=synthetic-invitation-only')
+  await expect(page).toHaveURL(/\/accept-invitation$/)
+  await page.getByRole('button',{name:'Activate administrator account'}).click()
+  await expect(page.locator('#invite-password-error')).toBeVisible()
+  expect(submitted).toBe(0)
+  await page.getByLabel('New password (Required)',{exact:true}).fill('Synthetic-only-Password42!')
+  await page.getByLabel('Confirm password (Required)',{exact:true}).fill('different')
+  await page.getByRole('button',{name:'Activate administrator account'}).click()
+  await expect(page.locator('#invite-confirm-error')).toBeVisible()
+  await page.getByLabel('Confirm password (Required)',{exact:true}).fill('Synthetic-only-Password42!')
+  await page.getByRole('button',{name:'Activate administrator account'}).click()
+  await expect(page.getByRole('link',{name:'Continue to administrator sign-in'})).toHaveAttribute('href','/auth/admin/login')
+  expect(submitted).toBe(1)
+})
+
+for (const managing of [true, false]) {
+  test(`administrator directory enforces ${managing ? 'owner controls and canonical contracts' : 'read-only controls'}`, async ({page,context}) => {
+    await context.addInitScript(() => {
+      localStorage.setItem('qarevo_access_token','synthetic-admin')
+      localStorage.setItem('qarevo_refresh_token','synthetic-refresh')
+      localStorage.setItem('qarevo_user_id','synthetic-owner-user')
+      localStorage.setItem('qarevo_role','ADMIN')
+    })
+    const rows = [{id:'synthetic-owner',user_id:'synthetic-owner-user',email:'owner@example.invalid',full_name:'Synthetic Owner',role:'super_admin',status:'ACTIVE',created_at:'2026-11-03T00:00:00Z',last_login_at:null}]
+    const writes: Record<string,unknown>[]=[]
+    const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}
+    await context.route('**/api/v1/admin/admin-users**',route=>{
+      const request=route.request()
+      if(request.method()==='OPTIONS')return route.fulfill({status:204,headers})
+      if(request.method()==='POST') {
+        const body=request.postDataJSON();writes.push(body)
+        expect(body.role).toBe('operations_admin');expect(body.password).toBeUndefined()
+        const invited={...rows[0],...body,id:'synthetic-invite',user_id:'synthetic-invite-user',status:'INVITED'}
+        rows.push(invited)
+        return route.fulfill({status:201,headers,json:invited})
+      }
+      if(request.method()==='PUT')return route.fulfill({status:400,headers,json:{detail:'Cannot remove the last active super administrator. Activate another super administrator first.'}})
+      return route.fulfill({headers,json:{admin_users:rows,total:rows.length,limit:50,offset:0,can_manage:managing,current_admin_id:'synthetic-owner'}})
+    })
+    await page.setViewportSize({width:390,height:844})
+    await page.goto('/admin/admin-users')
+    await expect(page.getByRole('heading',{name:'Synthetic Owner (you)'})).toBeVisible()
+    if(!managing) {
+      await expect(page.getByRole('button',{name:'Invite administrator',exact:true})).toHaveCount(0)
+      await expect(page.getByRole('button',{name:'Suspend access',exact:true})).toHaveCount(0)
+      return
+    }
+    await page.getByRole('button',{name:'Invite administrator',exact:true}).click()
+    const dialog=page.getByRole('dialog')
+    await dialog.getByLabel('Full Name (Required)',{exact:true}).fill('Synthetic Colleague')
+    await dialog.getByLabel('Email (Required)',{exact:true}).fill('colleague@example.invalid')
+    await dialog.getByLabel('Role (Required)',{exact:true}).selectOption('operations_admin')
+    await dialog.getByRole('button',{name:'Send invitation',exact:true}).click()
+    await expect(page.getByRole('status').filter({hasText:'Invitation accepted for email delivery'})).toBeVisible()
+    await expect(page.getByRole('heading',{name:'Synthetic Colleague'})).toBeVisible()
+    expect(writes).toHaveLength(1)
+    await page.getByRole('button',{name:'Suspend access',exact:true}).click()
+    await dialog.getByLabel('Reason (Required)',{exact:true}).fill('Synthetic guard test')
+    await dialog.getByRole('button',{name:'Save changes',exact:true}).click()
+    await expect(dialog.getByText('Cannot remove the last active super administrator. Activate another super administrator first.',{exact:true})).toBeVisible()
+    await dialog.getByRole('button',{name:'Cancel',exact:true}).click()
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true)
   })
 }

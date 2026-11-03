@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
-import { ApiError, getApiErrorDetail, loginAdmin, storeAuthTokens } from '@/lib/api'
+import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginAdmin, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
@@ -19,6 +19,9 @@ const PAGE_BG = [
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function getFriendlyAdminError(error: unknown) {
+  const throttle = getLoginThrottleMessage(error)
+  if (throttle) return throttle
+
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
   if (detail.includes('valid email') || detail.includes('email address')) {

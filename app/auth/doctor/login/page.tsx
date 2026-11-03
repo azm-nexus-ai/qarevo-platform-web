@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { ApiError, apiPost, getApiErrorDetail, type DoctorLoginRequest } from '@/lib/api'
+import { ApiError, apiPost, getApiErrorDetail, getLoginThrottleMessage, type DoctorLoginRequest } from '@/lib/api'
 
 // Page background
 const PAGE_BG = [
@@ -27,6 +27,9 @@ const LEFT_BG = [
 ].join(', ')
 
 function getFriendlyDoctorLoginError(error: unknown) {
+  const throttle = getLoginThrottleMessage(error)
+  if (throttle) return throttle
+
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
   if (detail.includes('administrator') || detail.includes('clinician_approval') || detail.includes('not active')) return getApiErrorDetail(error) || 'Administrator review is required.'
 

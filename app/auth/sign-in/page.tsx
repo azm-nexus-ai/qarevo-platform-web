@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { getOnboardingRedirectPath, readAuthFlowState, setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
-import { ApiError, getApiErrorDetail, loginPatient, loginPatientWithPasskey, storeAuthTokens } from '@/lib/api'
+import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginPatient, loginPatientWithPasskey, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
@@ -291,6 +291,9 @@ function SocialBtn({ provider, onClick }: { provider: 'google' | 'apple'; onClic
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function getFriendlySignInError(error: unknown) {
+  const throttle = getLoginThrottleMessage(error)
+  if (throttle) return throttle
+
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
   if (detail.includes('valid email') || detail.includes('email address')) {

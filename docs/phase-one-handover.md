@@ -119,3 +119,22 @@ Coverage fields use semantic surfaces, responsive spacing, visible format guidan
 Validation: unit/account-isolation tests, TypeScript, production build and targeted lint pass locally. Browser CI exercises each role's collapse/reload/route/theme/reset flow and coverage at 320/820/1440 pixels; the workflow retains only synthetic screenshots for three days. Verify its final result before deployment promotion. Live clinical, payment and legal acceptance gates remain documented in the architecture index.
 
 Browser QA follow-up: inline layout styles were preventing desktop collapse and hiding too few mobile controls; the targeted CSS now overrides only those primary navigation elements. Coverage saves its account-owned tab draft on pagehide, so refreshing before the debounce does not lose the latest input. Administrator/clinician sign-in and recovery fields expose required labels and linked inline errors. Recovery no longer disables empty submissions silently, claims end-to-end encryption, or implies acceptance of draft legal text. The shared recovery links let users return to the correct role's sign-in without inferring their account type.
+
+### Owner-led administrator access (3 November 2026)
+
+Administrator creation now uses mailbox-bound, single-use invitations. The primary
+owner is an active super administrator, established through the deployment-only
+bootstrap/recovery command documented in the Platform API README. Acceptance at
+`/auth/admin/accept-invitation` consumes a fragment token, clears it from the URL,
+sets the recipient's own password, and requires a fresh administrator sign-in.
+No password is assigned or returned to the inviting administrator.
+
+`/admin/admin-users` uses the backend's canonical role/status/identity fields and
+server-reported management capability. It supports invitations, real inline editing,
+resend, suspend, restore, revoke and pagination. Only super administrators can make
+changes; UI visibility does not replace backend authorization. Revocation preserves
+records. Permanent synthetic-account cleanup requires a separate reviewed operation.
+
+The generic login error reported for the legacy dev administrator was a password
+lockout, not missing administrator authority. All three login pages now preserve
+HTTP 429 guidance from the backend. No lockout has been bypassed or removed manually.
