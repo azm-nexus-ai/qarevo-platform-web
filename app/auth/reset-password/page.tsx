@@ -2,11 +2,13 @@
 
 import { Suspense, useEffect, useId, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { recoveryPortal } from '@/lib/auth-recovery'
 import RecoverySignInLinks from '@/components/auth/RecoverySignInLinks'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { resetPassword, ApiError, getApiErrorDetail } from '@/lib/api'
+import { resetPassword, ApiError, getApiErrorDetail, clearAuthTokens, getLoginThrottleMessage } from '@/lib/api'
 
 type ErrorKind = 'weak' | 'mismatch' | 'expiredToken' | 'invalidToken' | 'server' | 'network' | null
 
@@ -531,14 +533,17 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
 }
 
 function ResetPasswordPageContent() {
-  const [token, setToken] = useState('')
+  const portal = recoveryPortal(usePathname())
+  const [token, setToken] = useState<string | null>(null)
   useEffect(() => {
     const captureLink = () => {
       const url = new URL(window.location.href)
       const fragment = new URLSearchParams(url.hash.slice(1))
       const incoming = fragment.get('token') || url.searchParams.get('token')
-      if (!incoming) return
+      if (!incoming) { setToken(value => value === null ? '' : value); return }
       setToken(incoming)
+      setUpdated(false); setNewPassword(''); setConfirmPassword(''); setErrorKind(null); setServerError('')
+      setTouched({ newPassword: false, confirmPassword: false })
       url.searchParams.delete('token')
       fragment.delete('token')
       url.hash = fragment.toString()
@@ -561,6 +566,7 @@ function ResetPasswordPageContent() {
   const [loading, setLoading] = useState(false)
   const [updated, setUpdated] = useState(false)
   const [errorKind, setErrorKind] = useState<ErrorKind>(null)
+  const [serverError, setServerError] = useState('')
 
   const newId = useId()
   const confirmId = useId()
@@ -605,17 +611,23 @@ function ResetPasswordPageContent() {
     }
 
     setErrorKind(null)
+    setServerError('')
     setLoading(true)
 
     try {
       await resetPassword(token, newPassword)
+      clearAuthTokens(); setToken(''); setNewPassword(''); setConfirmPassword('')
       setUpdated(true)
       setErrorKind(null)
     } catch (error) {
       setLoading(false)
       const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
-      if (detail.includes('expired') || detail.includes('expir')) {
+      if (error instanceof ApiError && error.status === 429) {
+        setServerError(getLoginThrottleMessage(error) || 'Too many requests. Please wait before trying again.')
+      } else if (error instanceof ApiError && error.status === 422) {
+        setServerError(getApiErrorDetail(error) || 'Check the password requirements and try again.')
+      } else if (detail.includes('expired') || detail.includes('expir')) {
         setErrorKind('expiredToken')
       } else if (detail.includes('invalid') || detail.includes('used')) {
         setErrorKind('invalidToken')
@@ -651,7 +663,7 @@ function ResetPasswordPageContent() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
         <div style={{ width: '100%', maxWidth: '460px' }}>
           <Link
-            href='/auth/sign-in'
+            href={portal.signIn}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -683,7 +695,7 @@ function ResetPasswordPageContent() {
           >
             {!updated ? (
               <>
-                {!token ? (
+                {token === null ? <p role='status'>Opening your recovery link…</p> : !token ? (
                   <div style={{ textAlign: 'center', padding: '20px 0' }}>
                     <div
                       style={{
@@ -714,10 +726,10 @@ function ResetPasswordPageContent() {
                       Invalid Reset Link
                     </h1>
                     <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
-                      The password reset link is missing or invalid. Please request a new password reset link to continue.
+                      The password reset link is missing or invalid. Reopen the full link from your newest reset email. Refreshing this page removes the link from memory; request a new email only if the original link has expired.
                     </p>
                     <Link
-                      href='/auth/forgot-password'
+                      href={portal.forgot}
                       style={{
                         width: '100%',
                         padding: '14px 20px',
@@ -757,7 +769,7 @@ function ResetPasswordPageContent() {
                             margin: '0 0 7px',
                           }}
                         >
-                          Reset Your Password
+                          {portal.resetTitle}
                         </h1>
                         <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: 0, letterSpacing: '-0.01em' }}>
                           Enter a secure new password for your Qarevo Health account.
@@ -781,6 +793,7 @@ function ResetPasswordPageContent() {
                       </div>
                     </header>
 
+                    {serverError && <p role='alert' style={{ color: 'var(--danger)' }}>{serverError}</p>}
                     {showAlert ? <AlertBanner kind={errorKind as Exclude<ErrorKind, 'mismatch' | 'weak' | null>} /> : null}
 
                     <form onSubmit={onSubmit} noValidate>
@@ -866,7 +879,7 @@ function ResetPasswordPageContent() {
                         </button>
 
                         <div style={{ textAlign: 'center', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <Link href='/auth/sign-in' style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
+                          <Link href={portal.signIn} style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
                             Back to Sign In
                           </Link>
                           <Link href='/' style={{ color: T.link, fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', letterSpacing: '-0.01em' }}>
@@ -912,11 +925,11 @@ function ResetPasswordPageContent() {
                 </h1>
 
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
-                  Your password has been successfully updated. You can now securely sign in to your Qarevo Health account.
+                  Your password has been successfully updated. Your previous sessions have been signed out and the password-attempt lockout has been cleared. Continue to your sign-in portal with your new password.
                 </p>
 
                 <Link
-                  href='/auth/sign-in'
+                  href={portal.signIn}
                   style={{
                     width: '100%',
                     padding: '14px 20px',
@@ -959,7 +972,7 @@ function ResetPasswordPageContent() {
             </div>
           </section>
 
-          <RecoverySignInLinks />
+          {portal.kind === 'patient' && <RecoverySignInLinks />}
           <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
             Review the status of our{' '}
             <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>

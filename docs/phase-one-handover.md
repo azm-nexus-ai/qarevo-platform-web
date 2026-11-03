@@ -145,3 +145,19 @@ Reopening a fragment link in the same tab triggers a fresh check, and restoring 
 cached invitation page clears password input and rechecks validity. Patient sign-in
 now exposes required labels, linked field errors and an announced authentication
 error, matching the clinician and administrator forms.
+
+### Recovery routing and lockout feedback — 3 November 2026
+
+Admin and clinician recovery now retain their portal through request, email entry,
+reset and return-to-sign-in. Their routes reuse the shared forms; public signup is
+not offered to administrators. All three login portals show the server retry window
+and prevent repeated password submissions during it, while recovery stays available.
+Reset success clears browser authentication and password inputs. URL secrets remain
+in memory only; after a refresh, reopen the full link from the newest email.
+
+The live API's explicit PASSWORD_RESET_LINK_BASE still pointed at the older Vercel
+main alias, overriding the correct verification URL. It was changed to the stable
+Git development URL. This change takes effect with the API deployment. The email
+provider recorded sending and receiving-server acceptance within the same minute;
+mailbox display latency is not established by those events. No lockouts were cleared
+manually and no user password was set by the developer.

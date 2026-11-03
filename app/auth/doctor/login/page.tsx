@@ -2,6 +2,7 @@
 
 import { useState, useId } from 'react'
 import Link from 'next/link'
+import { useLoginCooldown } from '@/lib/use-login-cooldown'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
@@ -260,12 +261,14 @@ export default function DoctorLoginPage() {
 
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
+  const cooldown = useLoginCooldown()
 
   const identifierErr = touched.identifier && !identifier ? 'Email, username, or phone is required' : ''
   const passErr = touched.password && !password ? 'Password is required' : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading || cooldown.seconds > 0) return
     setTouched({ identifier: true, password: true })
 
     if (!identifier || !password) {
@@ -291,6 +294,7 @@ export default function DoctorLoginPage() {
       // Redirect to 2FA verification page
       router.push('/auth/doctor/2fa')
     } catch (error) {
+      cooldown.record(error)
       setAuthError(getFriendlyDoctorLoginError(error))
     } finally {
       setLoading(false)
@@ -352,10 +356,10 @@ export default function DoctorLoginPage() {
             </div>
 
             {/* Error banner */}
-            {authError && (
+            {(cooldown.message || authError) && (
               <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={16} sw={1.75} color={T.red} />
-                <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.4 }}>{authError}</span>
+                <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.4 }}>{cooldown.message || authError}</span>
               </div>
             )}
 
@@ -392,7 +396,7 @@ export default function DoctorLoginPage() {
                 >
                   Remember me
                 </Checkbox>
-                <Link href="/auth/forgot-password" style={{ fontSize: '13px', color: T.link, textDecoration: 'none', fontWeight: 500 }}>
+                <Link href="/auth/doctor/forgot-password" style={{ fontSize: '13px', color: T.link, textDecoration: 'none', fontWeight: 500 }}>
                   Forgot password?
                 </Link>
               </div>
@@ -400,7 +404,7 @@ export default function DoctorLoginPage() {
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || cooldown.seconds > 0}
                 style={{
                   width: '100%',
                   padding: '14px 20px',

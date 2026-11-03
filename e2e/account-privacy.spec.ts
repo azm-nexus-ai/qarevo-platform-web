@@ -1087,7 +1087,7 @@ for (const role of ['admin', 'doctor']) {
     await expect(page.locator('button[type=submit]')).toBeEnabled()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
     await page.getByRole('link', { name: /Forgot.*password/ }).click()
-    await expect(page).toHaveURL(/\/auth\/forgot-password$/)
+    await expect(page).toHaveURL(new RegExp(`/auth/${role}/forgot-password$`))
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   })
 }
@@ -1105,7 +1105,7 @@ for (const [portal, route] of [
     await page.locator('input[autocomplete="email"],input[autocomplete="username"]').fill('synthetic@example.com')
     await page.getByLabel('Password (Required)',{exact:true}).fill('Synthetic-only-Password42!')
     await page.locator('button[type=submit]').click()
-    await expect(page.getByRole('alert').filter({hasText:'Try again in 15 minutes.'})).toBeVisible()
+    await expect(page.getByRole('alert').filter({hasText:'Password recovery remains available.'})).toBeVisible()
     await expect(page.getByRole('link',{name:/Forgot.*password/})).toBeVisible()
   })
 }
@@ -1241,3 +1241,60 @@ test('invitation form expires while open without sending a password', async ({pa
   await expect(page.locator('input[type=password]')).toHaveCount(0)
   expect(writes).toBe(0)
 })
+
+for (const role of ['admin', 'doctor'] as const) {
+  test(`${role} recovery keeps portal context and accepts fragment links once`, async ({ page, context }) => {
+    let resets = 0
+    await context.route('**/api/v1/auth/reset-password', route => {
+      if (route.request().method() === 'OPTIONS') return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}})
+      resets++
+      expect(route.request().postDataJSON().token).toBe('synthetic-role-reset')
+      return route.fulfill({json:{message:'Password has been reset successfully.'}})
+    })
+    await page.setViewportSize({width:320,height:900})
+    await page.goto(`/auth/${role}/forgot-password`)
+    await expect(page.getByRole('heading',{name:role==='admin'?'Recover administrator access':'Recover clinician access'})).toBeVisible()
+    await expect(page.getByRole('link',{name:'Create New Account'})).toHaveCount(0)
+    await expect(page.getByRole('link',{name:'Back to Sign In'}).first()).toHaveAttribute('href',`/auth/${role}/login`)
+    await page.getByLabel('Email Address').fill(alpha)
+    await page.locator('button[type=submit]').click()
+    await expect(page.getByRole('button',{name:/Resend available in/})).toBeDisabled()
+    await expect(page.getByText('requesting another link replaces earlier links.',{exact:false})).toBeVisible()
+    await page.goto(`/auth/${role}/reset-password#token=synthetic-role-reset`)
+    await expect(page).toHaveURL(new RegExp(`/auth/${role}/reset-password$`))
+    await page.getByLabel('New Password (Required)',{exact:true}).fill('SyntheticNewPassword123!')
+    await page.getByLabel('Confirm New Password (Required)',{exact:true}).fill('SyntheticNewPassword123!')
+    await page.locator('button[type=submit]').click()
+    await expect(page.getByRole('link',{name:'Continue to Sign In'})).toHaveAttribute('href',`/auth/${role}/login`)
+    expect(resets).toBe(1)
+    await expect(page.locator('input[type=password]')).toHaveCount(0)
+    await page.reload()
+    await expect(page.getByText('Reopen the full link from your newest reset email.',{exact:false})).toBeVisible()
+    await expect(page.getByRole('link',{name:'Request New Reset Link'})).toHaveAttribute('href',`/auth/${role}/forgot-password`)
+    await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth+1)).toBe(true)
+  })
+}
+
+for (const [role,path,endpoint] of [
+  ['admin','/auth/admin/login','/api/v1/auth/admin/login'],
+  ['doctor','/auth/doctor/login','/api/v1/auth/doctor/login'],
+  ['patient','/auth/sign-in','/api/v1/auth/login'],
+] as const) {
+  test(`${role} login visibly counts down a server lockout without retrying`, async ({page,context}) => {
+    let attempts=0
+    await context.route('**'+endpoint, route=>{
+      if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}})
+      attempts++
+      return route.fulfill({status:429,json:{detail:{error_code:'TOO_MANY_LOGIN_ATTEMPTS',retry_after_seconds:2,message:'Too many failed login attempts.'}}})
+    })
+    await page.goto(path)
+    await page.locator('input[autocomplete="email"],input[autocomplete="username"]').fill(alpha)
+    await page.getByLabel('Password (Required)',{exact:true}).fill('Synthetic-only-password42!')
+    await page.locator('button[type=submit]').click()
+    await expect(page.getByRole('alert').filter({hasText:'Password recovery remains available.'})).toBeVisible()
+    await expect(page.locator('button[type=submit]')).toBeDisabled()
+    await expect(page.getByRole('alert').filter({hasText:'The retry window has ended.'})).toBeVisible({timeout:5000})
+    await expect(page.locator('button[type=submit]')).toBeEnabled()
+    expect(attempts).toBe(1)
+  })
+}

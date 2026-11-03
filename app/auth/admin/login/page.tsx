@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import Link from 'next/link'
+import { useLoginCooldown } from '@/lib/use-login-cooldown'
 import { T } from '@/lib/tokens'
 import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginAdmin, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
@@ -52,12 +53,14 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [touched, setTouched] = useState({ email: false, password: false })
   const [authError, setAuthError] = useState('')
+  const cooldown = useLoginCooldown()
 
   const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : ''
   const passErr = touched.password && password.length < 1 ? 'Password is required' : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading || cooldown.seconds > 0) return
     setTouched({ email: true, password: true })
     if (!EMAIL_RE.test(email.trim()) || !password) return
     setLoading(true)
@@ -68,6 +71,7 @@ export default function AdminLoginPage() {
       storeAuthTokens({ ...response, role: 'ADMIN' })
       router.push('/admin/dashboard')
     } catch (error) {
+      cooldown.record(error)
       setAuthError(getFriendlyAdminError(error))
     } finally {
       setLoading(false)
@@ -211,7 +215,7 @@ export default function AdminLoginPage() {
           </div>
 
           {/* Error message */}
-          {authError && (
+          {(cooldown.message || authError) && (
             <div role="alert" style={{
               padding: '12px',
               borderRadius: '10px',
@@ -222,14 +226,14 @@ export default function AdminLoginPage() {
               alignItems: 'flex-start',
             }}>
               <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} style={{ flexShrink: 0, marginTop: '1px' }} />
-              <p style={{ margin: 0, fontSize: '13px', color: T.red, lineHeight: 1.4 }}>{authError}</p>
+              <p style={{ margin: 0, fontSize: '13px', color: T.red, lineHeight: 1.4 }}>{cooldown.message || authError}</p>
             </div>
           )}
 
           {/* Submit button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || cooldown.seconds > 0}
             style={{
               padding: '13px 20px',
               borderRadius: '11px',
@@ -247,7 +251,7 @@ export default function AdminLoginPage() {
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
-          <Link href='/auth/forgot-password' style={{ color: T.link, textAlign: 'center', padding: '10px' }}>Forgot your password?</Link>
+          <Link href='/auth/admin/forgot-password' style={{ color: T.link, textAlign: 'center', padding: '10px' }}>Forgot your password?</Link>
         </form>
 
         {/* Back to main site */}

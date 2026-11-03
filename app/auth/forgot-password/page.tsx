@@ -1,7 +1,9 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { recoveryPortal } from '@/lib/auth-recovery'
 import RecoverySignInLinks from '@/components/auth/RecoverySignInLinks'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -393,6 +395,13 @@ function EmailField({
 }
 
 export default function ForgotPasswordPage() {
+  const portal = recoveryPortal(usePathname())
+  const [resendAfter, setResendAfter] = useState(0)
+  useEffect(() => {
+    if (!resendAfter) return
+    const timer = setTimeout(() => setResendAfter(value => Math.max(0, value - 1)), 1000)
+    return () => clearTimeout(timer)
+  }, [resendAfter])
   const [email, setEmail] = useState('')
   const [touched, setTouched] = useState(false)
   const [errorKind, setErrorKind] = useState<ErrorKind>(null)
@@ -425,6 +434,7 @@ export default function ForgotPasswordPage() {
 
     try {
       await requestPasswordReset(cleaned)
+      setResendAfter(60)
       setSent(true)
       setSentTo(cleaned)
       setErrorKind(null)
@@ -450,11 +460,13 @@ export default function ForgotPasswordPage() {
   }
 
   const resend = async () => {
+    if (loading || resendAfter) return
     setLoading(true)
     setErrorKind(null)
 
     try {
       await requestPasswordReset(sentTo)
+      setResendAfter(60)
       setSent(true)
       setErrorKind(null)
     } catch (error) {
@@ -497,7 +509,7 @@ export default function ForgotPasswordPage() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
         <div style={{ width: '100%', maxWidth: '460px' }}>
           <Link
-            href='/auth/sign-in'
+            href={portal.signIn}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -542,10 +554,10 @@ export default function ForgotPasswordPage() {
                         margin: '0 0 7px',
                       }}
                     >
-                      Forgot your password?
+                      {portal.title}
                     </h1>
                     <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: 0, letterSpacing: '-0.01em' }}>
-                      No problem. Enter the email address associated with your Qarevo Health account and we&apos;ll send you secure instructions to reset your password.
+                      {portal.kind === 'admin' ? 'Enter your administrator email address. Resetting your password does not change your role or restore suspended access.' : 'Enter the email address associated with your account to request secure password-reset instructions.'}
                     </p>
                   </div>
                   <div
@@ -635,15 +647,15 @@ export default function ForgotPasswordPage() {
                     </button>
 
                     <div style={{ textAlign: 'center', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <Link href='/auth/sign-in' style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
+                      <Link href={portal.signIn} style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
                         Back to Sign In
                       </Link>
-                      <p style={{ margin: 0, fontSize: '13.5px', color: T.slate2, letterSpacing: '-0.01em' }}>
+                      {portal.kind === 'patient' && <p style={{ margin: 0, fontSize: '13.5px', color: T.slate2, letterSpacing: '-0.01em' }}>
                         Need a new account?{' '}
                         <Link href='/auth/sign-up' style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>
                           Create New Account
                         </Link>
-                      </p>
+                      </p>}
                     </div>
                   </div>
                 </form>
@@ -682,7 +694,7 @@ export default function ForgotPasswordPage() {
                     Check your email
                   </h1>
                   <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
-                    If an eligible account exists, we will attempt to send reset instructions. Check your inbox and spam folder; use the link in that email to continue.
+                    If an eligible account exists, we will attempt to send reset instructions. Check your inbox and spam folder. Use the newest email; requesting another link replaces earlier links. If you refreshed the reset page, reopen the full link from the email.
                   </p>
                   <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>
                     Requested for <span style={{ fontWeight: 700, color: T.navy }}>{sentTo}</span>
@@ -693,7 +705,7 @@ export default function ForgotPasswordPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <Link
-                    href='/auth/sign-in'
+                    href={portal.signIn}
                     style={{
                       width: '100%',
                       padding: '13px 18px',
@@ -721,7 +733,7 @@ export default function ForgotPasswordPage() {
                   <button
                     type='button'
                     onClick={resend}
-                    disabled={loading}
+                    disabled={loading || resendAfter > 0}
                     style={{
                       width: '100%',
                       padding: '12px 18px',
@@ -759,7 +771,7 @@ export default function ForgotPasswordPage() {
                         Resending…
                       </>
                     ) : (
-                      'Resend Email'
+                      resendAfter > 0 ? `Resend available in ${resendAfter}s` : 'Resend Email'
                     )}
                   </button>
 
@@ -788,7 +800,7 @@ export default function ForgotPasswordPage() {
                   </button>
 
                   <Link
-                    href='/auth/sign-in'
+                    href={portal.signIn}
                     style={{
                       textAlign: 'center',
                       color: T.link,
@@ -821,7 +833,7 @@ export default function ForgotPasswordPage() {
             </div>
           </section>
 
-          <RecoverySignInLinks />
+          {portal.kind === 'patient' && <RecoverySignInLinks />}
           <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
             Review the status of our{' '}
             <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>

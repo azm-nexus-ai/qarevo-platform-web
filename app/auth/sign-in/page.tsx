@@ -2,6 +2,7 @@
 
 import { useState, useId } from 'react'
 import Link from 'next/link'
+import { useLoginCooldown } from '@/lib/use-login-cooldown'
 import { getOnboarding, onboardingPath } from '@/lib/patient-onboarding'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -337,12 +338,14 @@ export default function SignInPage() {
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [touched,  setTouched]  = useState({ email: false, password: false })
   const [authError, setAuthError] = useState('')
+  const cooldown = useLoginCooldown()
 
   const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : ''
   const passErr  = touched.password && password.length < 1 ? 'Password is required' : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading || cooldown.seconds > 0) return
     setTouched({ email: true, password: true })
     if (!EMAIL_RE.test(email.trim()) || !password) return
     setLoading(true)
@@ -353,6 +356,7 @@ export default function SignInPage() {
       storeAuthTokens({ ...response, role: 'PATIENT' })
       await completePatientSignIn()
     } catch (error) {
+      cooldown.record(error)
       setAuthError(getFriendlySignInError(error))
     } finally {
       setLoading(false)
@@ -380,6 +384,7 @@ export default function SignInPage() {
       storeAuthTokens({ ...response, role: 'PATIENT' })
       await completePatientSignIn()
     } catch (error) {
+      cooldown.record(error)
       setAuthError(getFriendlySignInError(error))
     } finally {
       setPasskeyLoading(false)
@@ -519,10 +524,10 @@ export default function SignInPage() {
             </div>
 
             {/* Auth error banner */}
-            {authError && (
+            {(cooldown.message || authError) && (
               <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} style={{ marginTop: '1px', flexShrink: 0 }} />
-                <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.5, letterSpacing: '-0.005em' }}>{authError}</span>
+                <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.5, letterSpacing: '-0.005em' }}>{cooldown.message || authError}</span>
               </div>
             )}
 
@@ -574,7 +579,7 @@ export default function SignInPage() {
                 {/* Submit */}
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || cooldown.seconds > 0}
                   style={{
                     width: '100%', padding: '14px 20px', borderRadius: '13px', border: 'none',
                     background: loading ? 'rgba(32,181,223,0.5)' : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,

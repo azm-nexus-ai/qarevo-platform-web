@@ -94,7 +94,7 @@ export default function AcceptAdminInvitation() {
     </> : status === 'unavailable' ? <>
       <p>This invitation is invalid, expired or already used. If you already activated your account, sign in with the password you chose.</p>
       <p><Link href='/auth/admin/login'>Administrator sign-in</Link></p>
-      <p><Link href='/auth/forgot-password'>Forgot your password?</Link></p>
+      <p><Link href='/auth/admin/forgot-password'>Forgot your password?</Link></p>
       <p>If you have not activated your account, ask the owner for a new invitation.</p>
     </> : status === 'error' ? <>
       <ValidationSummary errors={errors}/>
