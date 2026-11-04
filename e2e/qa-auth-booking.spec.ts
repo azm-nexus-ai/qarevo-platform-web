@@ -38,14 +38,14 @@ test('provider callback rejects missing browser transaction and scrubs credentia
   let exchanges=0
   await context.route('**/api/v1/auth/social/**/finish',route=>{exchanges++;return route.fulfill({status:400,json:{detail:'unexpected request'}})})
   await page.goto('/auth/social/callback?code=synthetic-secret-code&state=unmatched-state')
-  await expect(page.getByRole('alert')).toContainText('Start again in this browser tab')
+  await expect(page.getByRole('main').getByRole('alert')).toContainText('Start again in this browser tab')
   await expect(page).toHaveURL(/\/auth\/social\/callback$/)
   expect(exchanges).toBe(0)
 })
 
 test('provider cancellation is visible and never fabricates a signed-in session',async({page})=>{
   await page.goto('/auth/social/callback#error=access_denied&state=synthetic-cancelled')
-  await expect(page.getByRole('alert')).toContainText('cancelled or declined')
+  await expect(page.getByRole('main').getByRole('alert')).toContainText('cancelled or declined')
   expect(await page.evaluate(()=>localStorage.getItem('qarevo_access_token'))).toBeNull()
   await expect(page).toHaveURL(/\/auth\/social\/callback$/)
 })

@@ -1084,7 +1084,7 @@ for (const role of ['admin', 'doctor']) {
     await page.locator('button[type=submit]').click()
     await expect(page.locator('input[aria-invalid=true]')).toHaveCount(2)
     await expect(passwordField).toHaveAttribute('aria-describedby', /.+/)
-    await expect(page.getByRole('alert').filter({ hasText: /password/i })).toBeVisible()
+    await expect(page.locator('form').getByRole('alert').filter({ hasText: /password/i })).toBeVisible()
     await expect(page.locator('button[type=submit]')).toBeEnabled()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
     await page.getByRole('link', { name: /Forgot.*password/ }).click()
