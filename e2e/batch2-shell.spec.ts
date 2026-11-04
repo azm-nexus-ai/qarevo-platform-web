@@ -90,6 +90,9 @@ test('doctor cards use brand tokens and accessible contrast in both themes',asyn
   await page.getByRole('button',{name:'Dark mode',exact:true}).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme','dark')
   await expect.poll(async()=> (await color()).background).not.toBe(light.background)
+  // Descendant text and the card surface can settle on different frames even
+  // with reduced motion. Do not sample text from the previous theme.
+  await expect.poll(async()=> (await color()).text).not.toBe(light.text)
   const dark=await color()
   expect(dark.background).not.toBe(light.background)
   expect(dark.text).not.toBe(light.text)
