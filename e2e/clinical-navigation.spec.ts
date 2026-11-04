@@ -76,7 +76,7 @@ test('browser back can be cancelled without losing text or breaking history', as
 test('mobile links preserve dark mode and close the menu after guarded navigation', async ({ page, context }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await prepare(page, context)
-  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
   await page.getByRole('button', { name: 'Open navigation menu', exact: true }).click()
   await page.getByRole('link', { name: 'Workspace', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Keep your clinical notes?' })

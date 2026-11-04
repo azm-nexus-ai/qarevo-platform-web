@@ -3,14 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
 import {
   clearAuthTokens,
   getAdminAuditLogs,
   getActionSummary,
   exportAdminAuditLogs,
-  getAuditLog,
   isAuthError,
   readAccessToken,
   isAdmin,
@@ -38,7 +35,7 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
             {new Date(log.created_at).toLocaleString()}
           </span>
           <span style={{ fontSize: "13px", color: T.slate }}>
-            #{log.log_id.slice(-8)}
+            #{log.id.slice(-8)}
           </span>
         </div>
         <span style={{ fontSize: "13px", fontWeight: 600, color: T.link }}>
@@ -65,7 +62,7 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
           <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.link }}>Changes:</p>
           {Object.entries(log.changes).map(([field, change]) => (
             <div key={field} style={{ marginBottom: '8px', fontSize: "13px", color: T.slate }}>
-              <span style={{ fontWeight: 600 }}>{field}:</span> {String(change.old)} → {String(change.new)}
+              <span style={{ fontWeight: 600 }}>{field}:</span> {change && typeof change === 'object' && 'old' in change && 'new' in change ? `${String(change.old)} → ${String(change.new)}` : JSON.stringify(change)}
             </div>
           ))}
         </div>
@@ -79,6 +76,7 @@ export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AdminAuditLog[]>([])
   const [actionSummary, setActionSummary] = useState<AdminActionSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [retry, setRetry] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [actionFilter, setActionFilter] = useState('')
   const [targetTypeFilter, setTargetTypeFilter] = useState('')
@@ -100,14 +98,16 @@ export default function AuditLogsPage() {
     let cancelled = false
 
     async function fetchData() {
+      setLoading(true)
       try {
         const [logsData, summaryData] = await Promise.all([
           getAdminAuditLogs(undefined, actionFilter, targetTypeFilter, undefined, dateFrom, dateTo),
           getActionSummary(dateFrom, dateTo),
         ])
+        if (!Array.isArray(logsData.logs) || !Array.isArray(summaryData.actions)) throw new Error('Unexpected audit service response')
         if (!cancelled) {
           setLogs(logsData.logs)
-          setActionSummary(summaryData)
+          setActionSummary(summaryData.actions)
           setError(null)
         }
       } catch (err) {
@@ -128,7 +128,7 @@ export default function AuditLogsPage() {
     return () => {
       cancelled = true
     }
-  }, [router, actionFilter, targetTypeFilter, dateFrom, dateTo])
+  }, [router, actionFilter, targetTypeFilter, dateFrom, dateTo, retry])
 
   const handleExport = async () => {
     try {
@@ -151,7 +151,8 @@ export default function AuditLogsPage() {
   if (error) {
     return (
       <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
-        {error}
+        <p role='alert'>{error}</p>
+        <button type='button' className='theme-toggle' onClick={() => setRetry(value => value + 1)}>Try again</button>
       </div>
     )
   }
@@ -294,7 +295,7 @@ export default function AuditLogsPage() {
           </div>
         ) : (
           logs.map((log) => (
-            <AuditLogCard key={log.log_id} log={log} />
+            <AuditLogCard key={log.id} log={log} />
           ))
         )}
       </div>

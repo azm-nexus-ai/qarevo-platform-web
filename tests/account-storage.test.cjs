@@ -499,8 +499,8 @@ test('malformed and non-object drafts fall back to saved server data', async () 
 })
 
 function videoHarness({ holdMicrophone = null, failMicrophone = false } = {}) {
-  const module = { exports: {} }
-  vm.runInNewContext(compile('video-connection.ts'), { module, exports: module.exports, Promise, Set, Error })
+  const compiledModule = { exports: {} }
+  vm.runInNewContext(compile('video-connection.ts'), { module: compiledModule, exports: compiledModule.exports, Promise, Set, Error })
   let markMicrophoneStarted
   const microphoneStarted = new Promise(resolve => { markMicrophoneStarted = resolve })
   const calls = []
@@ -531,7 +531,7 @@ function videoHarness({ holdMicrophone = null, failMicrophone = false } = {}) {
   }
   return {
     calls, events, microphoneStarted, get observer() { return observer }, get presence() { return presence },
-    create: () => module.exports.createVideoConnection({ meeting_id: 'synthetic', attendee_id: 'local', join_token: 'never-persist', media_placement: {} }, {}, {
+    create: () => compiledModule.exports.createVideoConnection({ meeting_id: 'synthetic', attendee_id: 'local', join_token: 'never-persist', media_placement: {} }, {}, {
       state: (...args) => events.push(['state', ...args]), tile: value => events.push(['tile', value]), removeTile: value => events.push(['remove', value]), participants: value => events.push(['participants', value]), warning: value => events.push(['warning', value]),
     }, async () => sdk),
   }
@@ -617,4 +617,19 @@ test('all sign-in portals can display structured lockouts without hiding credent
   assert.match(api.getLoginThrottleMessage(new api.ApiError(429,'')), /Too many sign-in attempts/)
   assert.equal(api.getLoginThrottleMessage(new api.ApiError(401,'Invalid password')), null)
   assert.equal(api.getLoginThrottleMessage(new api.ApiError(403,'Admin access required')), null)
+})
+
+test('booking navigation excludes profile images and clinical payloads and stays bounded at supported input limits', () => {
+  const booking = { exports: {} }
+  vm.runInNewContext(compile('booking.ts'), { module: booking, exports: booking.exports, URLSearchParams, require: () => ({ PHYSICIANS: [] }) })
+  const doctor = {id:'11111111-1111-4111-8111-111111111111',name:'Synthetic Doctor',specialty:'General Practice',hospital:'Synthetic',imageUrl:'data:image/png;base64,'+'A'.repeat(5*1024*1024),consultationFee:123,rating:5,experienceYears:10,languages:['German'],insurance:['Self pay']}
+  const input = new URLSearchParams({chief_complaint:'private concern'.repeat(1000),physicianImageUrl:doctor.imageUrl,medicalHistory:'private medical history',date:'2030-07-10',slot:'9:00 AM',start_at:'2030-07-10T07:00:00+00:00',episode_id:'22222222-2222-4222-8222-222222222222'})
+  const bounded=booking.exports.buildBookingQueryParams(input,doctor,'video').toString()
+  assert.ok(bounded.length<600, `bounded booking query was ${bounded.length} characters`)
+  assert.ok(!/private|base64|physicianImage|physicianName|physicianConsultationFee/.test(bounded))
+  assert.equal(new URLSearchParams(bounded).get('episode_id'),'22222222-2222-4222-8222-222222222222')
+  assert.equal(new URLSearchParams(bounded).get('start_at'),'2030-07-10T07:00:00+00:00')
+  const malicious = new URLSearchParams({physicianId:'x'.repeat(300000),slot:'x'.repeat(300000),service:'javascript:bad',episode_id:'medical/private text'})
+  assert.equal(booking.exports.buildBookingQueryParams(malicious,null,null).toString(),'')
+  assert.equal(booking.exports.getBookingPhysician(new URLSearchParams({physicianName:'Forged clinician',physicianConsultationFee:'0'}),doctor).name,'Synthetic Doctor')
 })

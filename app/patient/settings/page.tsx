@@ -1,5 +1,7 @@
 'use client'
+import AccountSecurity from '@/components/security/AccountSecurity'
 
+import { ProfileImageEditor } from '@/components/patient/ProfileImage'
 import { FieldFeedback } from '@/components/ui/ValidationFeedback'
 import { useTheme } from '@/components/ui/ThemeProvider'
 
@@ -680,7 +682,7 @@ export default function PatientSettingsPage() {
         .settings-card { position: relative; overflow: hidden; }
         .settings-two-up { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .settings-info-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .settings-profile-grid { display: grid; gap: 16px; grid-template-columns: 96px minmax(0, 1fr); }
+        .settings-profile-grid { display: grid; gap: 16px; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); }
         .settings-wide { grid-column: 1 / -1; }
         .settings-field-value { overflow-wrap: anywhere; word-break: break-word; }
         .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface-subtle); padding: 12px; }
@@ -764,11 +766,7 @@ export default function PatientSettingsPage() {
               </PortalButton>
             </div>
             <div className='settings-profile-grid'>
-              <div className='settings-profile-avatar flex items-center justify-center md:justify-start'>
-                <div style={{ width: '88px', height: '88px', borderRadius: '24px', background: 'linear-gradient(135deg, rgba(32,181,223,0.18), rgba(52,140,234,0.22))', border: "1px solid var(--border)", display: 'grid', placeItems: 'center', color: T.navy, fontSize: '26px', fontWeight: 800 }}>
-                  {accountData.fullName.charAt(0).toUpperCase()}
-                </div>
-              </div>
+              <div className='settings-profile-avatar'><ProfileImageEditor name={accountData.fullName}/></div>
               <div className='settings-info-grid'>
                 {showProfileEdit ? (
                   <>
@@ -897,10 +895,10 @@ export default function PatientSettingsPage() {
           <PortalCard className='settings-card'>
             <div className='mb-4'>
               <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Security</p>
-              <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Secure access controls</h2>
+              <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Secure access controls</h2><AccountSecurity/>
             </div>
             <div className='grid gap-3'>
-              {SECURITY_ITEMS.map((item) => (
+              {SECURITY_ITEMS.filter(item => item.title !== 'Change Password').map((item) => (
                 <div key={item.title} style={{ padding: '14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                   <div className='flex flex-wrap items-start justify-between gap-2 mb-2'>
                     <div>

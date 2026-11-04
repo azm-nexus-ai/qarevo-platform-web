@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import RoleHomeLink from '@/components/branding/RoleHomeLink'
 
 // Keep the root theme, account isolation and session guard mounted on page errors.
 export default function PageError({ reset }: { error: Error; reset: () => void }) {
@@ -11,7 +11,7 @@ export default function PageError({ reset }: { error: Error; reset: () => void }
       <p role='alert' className='mt-4 text-sm leading-7 text-secondary'>Please try again. Your previously saved information remains in your account. Unsaved changes may need to be entered again.</p>
       <div className='mt-6 flex flex-wrap gap-3'>
         <button onClick={reset} className='rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'>Try again</button>
-        <Link href='/' className='rounded-xl border border-theme px-5 py-3 font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'>Return to home</Link>
+        <RoleHomeLink className='rounded-xl border border-theme px-5 py-3 font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'>Return to home</RoleHomeLink>
       </div>
     </section>
   </main>

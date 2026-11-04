@@ -13,20 +13,6 @@ export type BookingPhysicianData = {
   insurance: string[]
 }
 
-function parseNumber(value: string | null, fallback: number) {
-  if (value === null) return fallback
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : fallback
-}
-
-function parseList(value: string | null, fallback: string[]) {
-  if (!value) return fallback
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
 export function getBookingPhysician(
   searchParams: URLSearchParams | { get: (key: string) => string | null },
   fallbackPhysician?: { id?: string; name?: string; specialty?: string; hospital?: string; imageUrl?: string; consultationFee?: number; experienceYears?: number; rating?: number; languages?: string[]; insurance?: string[] } | null,
@@ -37,15 +23,15 @@ export function getBookingPhysician(
 
   return {
     id: physicianId || base?.id || '',
-    name: searchParams.get('physicianName') ?? base?.name ?? 'Loading physician...',
-    specialty: searchParams.get('physicianSpecialty') ?? base?.specialty ?? 'Specialist',
-    hospital: searchParams.get('physicianHospital') ?? base?.hospital ?? 'Care location not configured',
-    imageUrl: searchParams.get('physicianImageUrl') ?? base?.imageUrl ?? '',
-    consultationFee: parseNumber(searchParams.get('physicianConsultationFee') ?? null, base?.consultationFee ?? 0),
-    experienceYears: parseNumber(searchParams.get('physicianExperienceYears') ?? null, base?.experienceYears ?? 0),
-    rating: parseNumber(searchParams.get('physicianRating') ?? null, base?.rating ?? 0),
-    languages: parseList(searchParams.get('physicianLanguages') ?? null, base?.languages ?? []),
-    insurance: parseList(searchParams.get('physicianInsurance') ?? null, base?.insurance ?? []),
+    name: base?.name ?? 'Loading physician...',
+    specialty: base?.specialty ?? 'Specialist',
+    hospital: base?.hospital ?? 'Care location not configured',
+    imageUrl: base?.imageUrl ?? '',
+    consultationFee: base?.consultationFee ?? 0,
+    experienceYears: base?.experienceYears ?? 0,
+    rating: base?.rating ?? 0,
+    languages: base?.languages ?? [],
+    insurance: base?.insurance ?? [],
   }
 }
 
@@ -54,32 +40,38 @@ export function buildBookingQueryParams(
   physician: BookingPhysicianData | null | undefined,
   service: string | null | undefined,
 ) {
-  const next = new URLSearchParams(params.toString())
-  // Never propagate clinical text or arbitrary query values to history, referrers or logs.
-  const allowed = new Set(['physicianId', 'provider_id', 'service', 'service_type', 'date', 'slot', 'start_at', 'end_at',
-    'fee', 'duration', 'insurance', 'bundesland', 'episode_id', 'episodeId', 'appointmentId',
-    'consultationId', 'aiDraftJobId', 'intake_submitted', 'physicianName', 'physicianSpecialty',
-    'physicianHospital', 'physicianImageUrl', 'physicianConsultationFee', 'physicianExperienceYears',
-    'physicianRating', 'physicianLanguages', 'physicianInsurance'])
-  for (const key of [...next.keys()]) if (!allowed.has(key)) next.delete(key)
-
-  if (physician) {
-    next.set('physicianId', physician.id)
-    next.set('physicianName', physician.name)
-    next.set('physicianSpecialty', physician.specialty)
-    next.set('physicianHospital', physician.hospital)
-    next.set('physicianImageUrl', physician.imageUrl)
-    next.set('physicianConsultationFee', String(physician.consultationFee))
-    next.set('physicianExperienceYears', String(physician.experienceYears))
-    next.set('physicianRating', String(physician.rating))
-    next.set('physicianLanguages', physician.languages.join(','))
-    next.set('physicianInsurance', physician.insurance.join(','))
+  // Only bounded scheduling identifiers belong in navigation. Physician images,
+  // profiles and clinical intake are fetched through authenticated API requests.
+  const source = new URLSearchParams(params.toString())
+  const next = new URLSearchParams()
+  const rules: Record<string, RegExp> = {
+    physicianId: /^[a-zA-Z0-9_-]{1,80}$/,
+    provider_id: /^[a-zA-Z0-9_-]{1,80}$/,
+    service: /^(video|physical|follow-up)$/,
+    service_type: /^(video|physical|follow-up)$/,
+    date: /^\d{4}-\d{2}-\d{2}$/,
+    slot: /^[0-9APMapm: .-]{1,24}$/,
+    start_at: /^[0-9TtZz:+.\-]{1,40}$/,
+    end_at: /^[0-9TtZz:+.\-]{1,40}$/,
+    episode_id: /^[a-zA-Z0-9_-]{1,80}$/,
+    episodeId: /^[a-zA-Z0-9_-]{1,80}$/,
+    appointmentId: /^[a-zA-Z0-9_-]{1,80}$/,
+    consultationId: /^[a-zA-Z0-9_-]{1,80}$/,
+    aiDraftJobId: /^[a-zA-Z0-9_-]{1,80}$/,
+    intake_submitted: /^true$/,
+    from: /^(profile|find-doctor|dashboard|redirect)$/,
   }
-
-  if (service) {
+  for (const [key, pattern] of Object.entries(rules)) {
+    const value = source.get(key)
+    if (value && pattern.test(value)) next.set(key, value)
+  }
+  if (physician && rules.physicianId.test(physician.id)) {
+    next.set('physicianId', physician.id)
+    next.set('provider_id', physician.id)
+  }
+  if (service && rules.service.test(service)) {
     next.set('service', service)
     next.set('service_type', service)
   }
-
   return next
 }

@@ -161,3 +161,44 @@ Git development URL. This change takes effect with the API deployment. The email
 provider recorded sending and receiving-server acceptance within the same minute;
 mailbox display latency is not established by those events. No lockouts were cleared
 manually and no user password was set by the developer.
+
+### QA release — 4 November 2026
+
+Shared role-aware navigation now owns dashboard/home destinations, headers, error
+recovery and support shells. Doctor/admin sidebars start below the full-width
+navbar. Patient left/right rails have independent persisted appearance controls.
+Theme controls announce their next action. Desktop doctor navigation uses Next
+links and coalesces concurrent account-scoped profile requests (two consumers,
+one HTTP request; no completed private response cache).
+
+Booking navigation now carries bounded identifiers/slots only. For the same input
+with a 5 MiB doctor image, query length fell from 5,243,310 to 209 characters.
+Confirmation reads the saved account-owned appointment; no generated references,
+notification-delivery claims or simulated confirmation remain. The PostgreSQL HTTP
+journey verifies one appointment in both patient and assigned-doctor views, slot
+removal, reschedule/cancel propagation and ownership rejection. Doctor availability
+uses the same timezone/buffer/DST calendar as patient booking.
+
+All portals share authenticated password and session management. Administrator MFA
+is explicitly unavailable pending actual enrollment/login enforcement; clinician
+email MFA remains mandatory. Google/Apple authorization-code and explicit linking
+flows are implemented but disabled until company provider configuration exists;
+see Platform API docs/social-auth-configuration.md. No auto-linking by email or
+simulated social login is permitted.
+
+Patient photos use the existing private account-owned database store, with one
+bounded image per patient. Maximum input2 MiB/12MP; only JPEG/PNG/WebP still images
+are decoded, re-encoded to metadata-free JPEG <=256px, and originals discarded.
+No public object URLs or new cloud services are introduced. This storage choice
+keeps small avatars private without adding a paid dependency; bulk/clinical images
+continue to use their separate storage workflows. Replacement/removal updates all
+mounted avatars; no photo is kept in browser persistence.
+
+Admin operational endpoints use canonical IDs/dictionaries; retries rerun requests.
+Unfiltered clinician appointment reads use two SQL queries instead of three;
+exception summaries use three grouped queries instead of five separate counts.
+These are query/request measurements, not claims about production response times.
+Recovery logs lookup/transport/total duration without recipient/token contents.
+Mailbox display delay remains external until correlated provider events prove its
+source. Prototype support mutations and admin preferences without a server workflow
+are clearly unavailable rather than claiming success.

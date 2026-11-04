@@ -11,6 +11,7 @@ import { ICONS } from '@/constants/icons'
 import type { Physician, PhysicianProfileContent } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'
 import DoctorCard from '@/components/cards/DoctorCard'
+import DoctorAvatar from '@/components/cards/DoctorAvatar'
 import dynamic from 'next/dynamic'
 
 // Dynamically import Leaflet to avoid SSR issues
@@ -389,7 +390,7 @@ function PhysicianProfilePageContent() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '108px minmax(0, 1fr) auto', gap: '14px', alignItems: 'center' }}>
               <div style={{ width: '108px', height: '108px', borderRadius: '20px', overflow: 'hidden', border: "1px solid var(--border)", background: 'linear-gradient(135deg, rgba(32,181,223,0.24), rgba(52,140,234,0.3))', display: 'grid', placeItems: 'center', color: T.navy, fontSize: '30px', fontWeight: 700, transition: 'transform 0.2s ease' }}>
-                {physician.name.split(' ').slice(0, 2).map((chunk) => chunk[0]).join('')}
+                <DoctorAvatar name={physician.name} imageUrl={physician.imageUrl} size={108} />
               </div>
 
               <div>

@@ -3,11 +3,12 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import ProfileImage from '@/components/patient/ProfileImage'
 import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
+import { PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 import { getPatientSettings, isAuthError, clearAuthTokens, logoutCurrentUser, type PatientSettings } from '@/lib/api'
 
 type PatientPortalShellProps = {
@@ -35,7 +36,6 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
     router.replace('/auth/sign-in')
   }
   const fullName = userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'
-  const initials = fullName ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'P'
 
   return (
     <>
@@ -45,23 +45,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
         style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))',
-              border: "1px solid var(--border)",
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: T.navy,
-              fontWeight: 700,
-              fontSize: '16px',
-            }}
-          >
-            {initials}
-          </div>
+          <ProfileImage name={fullName} size={42} />
           <div>
             <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{fullName}</p>
             <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Patient account</p>
@@ -272,7 +256,7 @@ export default function PatientPortalShell({
 
         {/* Right rail */}
         {rightRail ? (
-          <aside className='pps-right'>
+          <aside id='patient-secondary-sidebar' className='pps-right'>
             <div className='pps-right-rail'>{rightRail}</div>
           </aside>
         ) : null}

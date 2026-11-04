@@ -6,11 +6,12 @@ import { useLoginCooldown } from '@/lib/use-login-cooldown'
 import { getOnboarding, onboardingPath } from '@/lib/patient-onboarding'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { T, Sh } from '@/lib/tokens'
-import { getOnboardingRedirectPath, readAuthFlowState, setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
+import { T } from '@/lib/tokens'
+import { setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
 import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginPatient, loginPatientWithPasskey, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import SocialSignInButtons from '@/components/auth/SocialSignInButtons'
 
 // ─── Page bg ──────────────────────────────────────────────────────────────────
 
@@ -240,55 +241,6 @@ function Checkbox({ checked, onChange, children }: { checked: boolean; onChange:
       </div>
       <span style={{ fontSize: '13px', color: T.slate, letterSpacing: '-0.005em' }}>{children}</span>
     </label>
-  )
-}
-
-function SocialBtn({ provider, onClick }: { provider: 'google' | 'apple'; onClick?: () => void }) {
-  const [h, setH] = useState(false)
-  const isApple = provider === 'apple'
-  const label = isApple ? 'Continue with Apple' : 'Continue with Google'
-
-  const googleIcon = (
-    <svg width="17" height="17" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
-      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908C16.658 14.075 17.64 11.767 17.64 9.2z" fill="#4285F4"/>
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-      <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-    </svg>
-  )
-  const appleIcon = (
-    <svg width="16" height="16" viewBox="0 0 814 1000" fill="white" style={{ flexShrink: 0 }}>
-      <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-47.4-148.2-87.5c-50.2-45.2-91.2-116.4-91.2-183.9 0-191.3 133.4-293.3 264.4-293.3 64 0 117.4 42.2 158.1 42.2 39 0 99.5-44.4 168.1-44.4 27.4 0 109.8 2.6 168.1 71.2zm-56.7-194.4c26.1-30.8 44.9-73.8 44.9-116.8 0-5.8-.6-11.6-1.9-16.8-42.2 1.9-91.9 28.1-122 62.8-23.8 26.7-45.8 70.6-45.8 114.2 0 6.4.6 12.9 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 37.4 0 82.8-23.2 109.3-62.8z"/>
-    </svg>
-  )
-
-  return (
-    <button
-      type="button"
-      className="signin-social-btn"
-      onClick={onClick}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
-      style={{
-        flex: 1, padding: '11px 14px', borderRadius: '11px', cursor: 'pointer',
-        border: isApple ? 'none' : `1.5px solid ${h ? "var(--border)" : T.border}`,
-        background: isApple
-          ? h ? T.brandNavy : T.brandNavy
-          : h ? "var(--surface-glass)" : "var(--surface-glass)",
-        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px',
-        fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 600,
-        color: isApple ? '#fff' : T.navy,
-        letterSpacing: '-0.01em', transition: 'all 0.14s ease',
-        boxShadow: isApple
-          ? h ? '0 4px 14px rgba(4,53,77,0.3)' : Sh.inner
-          : h ? '0 2px 8px rgba(4,53,77,0.09)' : 'inset 0 1px 0 rgba(255,255,255,0.85)',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {isApple ? appleIcon : googleIcon}
-      {label}
-    </button>
   )
 }
 
@@ -640,22 +592,7 @@ export default function SignInPage() {
                 <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
                 <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
               </div>
-              <div className="signin-social-row" style={{ display: 'flex', gap: '10px' }}>
-                <SocialBtn provider="google" onClick={() => {
-                  const authFlowState = readAuthFlowState()
-                  const nextRoute = authFlowState?.isAuthenticated && !authFlowState.onboardingCompleted
-                    ? getOnboardingRedirectPath(authFlowState)
-                    : '/patient/dashboard'
-                  router.push(nextRoute)
-                }} />
-                <SocialBtn provider="apple" onClick={() => {
-                  const authFlowState = readAuthFlowState()
-                  const nextRoute = authFlowState?.isAuthenticated && !authFlowState.onboardingCompleted
-                    ? getOnboardingRedirectPath(authFlowState)
-                    : '/patient/dashboard'
-                  router.push(nextRoute)
-                }} />
-              </div>
+              <SocialSignInButtons portal='PATIENT' />
             </div>
 
             {/* Trust indicators */}

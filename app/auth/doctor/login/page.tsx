@@ -2,6 +2,7 @@
 
 import { useState, useId } from 'react'
 import Link from 'next/link'
+import SocialSignInButtons from '@/components/auth/SocialSignInButtons'
 import { useLoginCooldown } from '@/lib/use-login-cooldown'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -429,6 +430,8 @@ export default function DoctorLoginPage() {
                 {!loading && <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />}
               </button>
             </form>
+
+            <SocialSignInButtons portal='PROVIDER' />
 
             {/* 2FA notice */}
             <div style={{ marginTop: '20px', padding: '12px 16px', borderRadius: '11px', background: 'rgba(32,181,223,0.06)', border: '1px solid rgba(32,181,223,0.12)' }}>

@@ -118,7 +118,7 @@ for (const [role, portal, path] of [
     await page.getByRole('button', { name: 'Hide sidebar', exact: true }).click()
     await expect(page.locator(`#${portal}-primary-sidebar`)).toBeHidden()
     await expect(page.locator('html')).toHaveAttribute(`data-${portal}-sidebar`, 'collapsed')
-    await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+    await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
     await page.reload()
     await expect(page.getByRole('button', { name: 'Show sidebar', exact: true })).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
@@ -143,7 +143,7 @@ for (const [role, portal, path] of [
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
     if (portal === 'patient') {
       const logo = page.getByRole('link', { name: 'Qarevo Health Patient Dashboard', exact: true }).filter({ visible: true })
-      const toggle = page.getByRole('button', { name: 'Dark mode', exact: true })
+      const toggle = page.getByRole('button', { name: /^(Dark|Light) mode$/ })
       expect((await logo.boundingBox())!.x).toBeGreaterThan((await toggle.boundingBox())!.x)
       await page.getByRole('button', { name: 'Open navigation menu' }).click()
       await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toBeVisible()

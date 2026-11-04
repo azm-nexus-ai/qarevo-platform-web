@@ -1,4 +1,5 @@
 'use client'
+import ProfileImage from '@/components/patient/ProfileImage'
 
 import Link from 'next/link'
 import Image from 'next/image'
@@ -156,12 +157,6 @@ function getGreeting(): string {
   if (hour < 12) return 'Good Morning'
   if (hour < 18) return 'Good Afternoon'
   return 'Good Evening'
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return 'P'
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('')
 }
 
 const iconLookup = ICONS as Record<string, string | readonly string[]>
@@ -381,7 +376,6 @@ export default function PatientDashboardPage() {
   const pathname = usePathname()
   const specialtyMenuRef = useRef<HTMLDivElement>(null)
   const displayPatientName = patientName || 'Patient'
-  const patientInitials = getInitials(displayPatientName)
 
   const handleLogout = () => {
     void logoutCurrentUser().catch(() => console.warn('Server logout could not be confirmed.'))
@@ -948,7 +942,7 @@ export default function PatientDashboardPage() {
           <div className='pd-sidebar' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '16px' }}>
             <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>{patientInitials}</div>
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}><ProfileImage name={displayPatientName}/></div>
                 <div>
                   <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{displayPatientName}</p>
                   <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Care Plan: {carePlanStatus}</p>
@@ -1125,7 +1119,7 @@ export default function PatientDashboardPage() {
                 >
                   <Ico p={ICONS.message} size={16} sw={1.8} />
                 </HoverBtn>
-                <button type='button' className='pd-profile-avatar' aria-label='Open profile settings' onClick={() => router.push(PATIENT_ROUTES.settings)} style={{ width: '42px', height: '42px', borderRadius: '50%', border: "1px solid var(--border)", background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))', color: T.navy, fontWeight: 700, cursor: 'pointer' }}>{patientInitials}</button>
+                <button type='button' className='pd-profile-avatar' aria-label='Open profile settings' onClick={() => router.push(PATIENT_ROUTES.settings)} style={{ width: '42px', height: '42px', borderRadius: '50%', border: "1px solid var(--border)", background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))', color: T.navy, fontWeight: 700, cursor: 'pointer' }}><ProfileImage name={displayPatientName}/></button>
               </div>
             </div>
           </header>
@@ -1656,7 +1650,7 @@ export default function PatientDashboardPage() {
           </>}
         </section>
 
-        {!dashboardLoading && !dashboardError && <aside className='pd-right'>
+        {!dashboardLoading && !dashboardError && <aside id='patient-secondary-sidebar' className='pd-right'>
           <div style={{ position: 'sticky', top: '18px', display: 'grid', gap: '14px' }}>
             <SectionCard title='Today’s Schedule' sub='The key moments and commitments for the day.'>
               {todayScheduleItems.length ? (

@@ -1,0 +1,45 @@
+'use client'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { finishSocial } from '@/lib/social-auth'
+import { getApiErrorDetail, storeAuthTokens } from '@/lib/api'
+import { getOnboarding, onboardingPath } from '@/lib/patient-onboarding'
+
+export default function SocialCallback() {
+  const router=useRouter()
+  const started=useRef(false)
+  const [error,setError]=useState('')
+  const [connected,setConnected]=useState(false)
+  useEffect(()=>{
+    if(started.current)return
+    started.current=true
+    const url=new URL(window.location.href)
+    const query=new URLSearchParams(url.hash.slice(1) || url.search.slice(1))
+    window.history.replaceState(window.history.state,'',url.pathname)
+    const exchange = async () => {
+      if(query.get('error')) throw new Error('Provider sign-in was cancelled or declined. You can try again or use email and password.')
+      const code=query.get('code'),state=query.get('state')
+      if(!code || !state) throw new Error('The provider callback is missing. Start sign-in again in this browser tab.')
+      return finishSocial(code,state)
+    }
+    void exchange().then(async result=>{
+      if(result.connected){setConnected(true);return}
+      if(result.role==='PROVIDER' && result.temp_token){
+        localStorage.setItem('doctor_temp_token',result.temp_token)
+        localStorage.setItem('doctor_identifier',result.identifier || '')
+        router.replace('/auth/doctor/2fa');return
+      }
+      if(result.role==='PATIENT' && result.access_token && result.refresh_token){
+        storeAuthTokens({access_token:result.access_token,refresh_token:result.refresh_token,user_id:result.user_id,role:'PATIENT'})
+        const progress=await getOnboarding()
+        router.replace(progress.complete?'/patient/dashboard':onboardingPath(progress.next_step));return
+      }
+      throw new Error('The sign-in response was incomplete. Please use email and password.')
+    }).catch(failure=>setError(getApiErrorDetail(failure) || 'Provider sign-in failed. Please try again.'))
+  },[router])
+  return <main style={{maxWidth:560,margin:'60px auto',padding:24,color:'var(--text)'}}><h1>{connected?'Sign-in provider connected':'Completing secure sign-in'}</h1>
+    {error?<p role='alert'>{error}</p>:connected?<p>Your provider is now linked to this account. Future provider sign-in still enforces the account’s role, status and any required second factor.</p>:<p role='status'>Verifying the provider response…</p>}
+    {(error || connected) && <nav aria-label='Return to sign-in' style={{display:'flex',gap:20,flexWrap:'wrap'}}><Link href='/auth/sign-in'>Patient sign-in</Link><Link href='/auth/doctor/login'>Clinician sign-in</Link></nav>}
+  </main>
+}

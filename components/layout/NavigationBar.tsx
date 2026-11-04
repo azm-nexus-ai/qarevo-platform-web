@@ -4,13 +4,14 @@ import { ThemeToggle } from '@/components/ui/ThemeProvider'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { usePortalHome } from '@/lib/portal-navigation'
 import { useRouter } from 'next/navigation'
 import { T, Glass } from '@/lib/tokens'
 import { NAV_LINKS, NAV_ANCHORS } from '@/constants/navigation'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
-import { logoutCurrentUser, clearAuthTokens, readAccessToken } from '@/lib/api'
+import { logoutCurrentUser, readAccessToken } from '@/lib/api'
 
 export default function NavigationBar() {
   const [activeSection, setActiveSection] = useState<string>('Platform Overview')
@@ -21,6 +22,7 @@ export default function NavigationBar() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const router = useRouter()
+  const home = usePortalHome()
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
 
@@ -174,7 +176,7 @@ export default function NavigationBar() {
               <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                 {/* Logo */}
                 <Link
-                  href="/"
+                  href={home}
                   aria-label="Qarevo Health home"
                   onClick={() => {
                     handleNavClick('Platform Overview')
@@ -226,7 +228,7 @@ export default function NavigationBar() {
                   {isAuthenticated ? (
                     <>
                       <Link
-                        href="/patient/dashboard"
+                        href={home}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -331,7 +333,7 @@ export default function NavigationBar() {
               {/* Mobile layout */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', justifyContent: 'space-between' }}>
                 <Link
-                  href="/"
+                  href={home}
                   aria-label="Qarevo Health home"
                   onClick={() => {
                     if (mobileOpen) setMobileOpen(false)
@@ -511,7 +513,7 @@ export default function NavigationBar() {
           {isAuthenticated ? (
             <>
               <Link
-                href="/patient/dashboard"
+                href={home}
                 onClick={() => setMobileOpen(false)}
                 style={{
                   display: 'block',

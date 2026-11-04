@@ -62,7 +62,7 @@ test('read-only operator has responsive dark-mode visibility without retry autho
   const card = page.getByRole('region', { name: 'Clinical workflow delivery' })
   await expect(card.getByText('Operations access required to retry.')).toBeVisible()
   await expect(card.getByRole('button', { name: /Retry update for/ })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await page.reload()

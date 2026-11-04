@@ -1,5 +1,7 @@
 'use client'
 
+import { buildBookingQueryParams } from '@/lib/booking'
+
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
@@ -85,23 +87,7 @@ function buildBookingHref(
   },
 ) {
   const serviceType = getQuickBookServiceType(state.consultationType, physician.consultationTypes)
-  const params = new URLSearchParams({
-    physicianId: physician.id,
-    provider_id: physician.id,
-    physicianName: physician.name,
-    physicianSpecialty: physician.specialty,
-    physicianHospital: physician.hospital,
-    physicianImageUrl: physician.imageUrl,
-    physicianConsultationFee: String(physician.consultationFee),
-    physicianExperienceYears: String(physician.experienceYears),
-    physicianRating: String(physician.rating),
-    physicianLanguages: physician.languages.join(','),
-    physicianInsurance: physician.insurance.join(','),
-    insurance: state.insurance === 'Any' ? physician.insurance[0] ?? 'Self pay' : state.insurance,
-    service: serviceType,
-    service_type: serviceType,
-    from: 'find-doctor',
-  })
+  const params = buildBookingQueryParams(new URLSearchParams({ from: 'find-doctor' }), physician, serviceType)
 
   return `/patient/consultation-booking/date-time?${params.toString()}`
 }
@@ -140,6 +126,7 @@ export default function FindDoctorPage() {
   const [hasNextPage, setHasNextPage] = useState(false)
   const [hasPreviousPage, setHasPreviousPage] = useState(false)
   const [loadError, setLoadError] = useState('')
+  const [reload, setReload] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showAllSpecialties, setShowAllSpecialties] = useState(false)
   const [showFiltersMobile, setShowFiltersMobile] = useState(false)
@@ -263,7 +250,7 @@ export default function FindDoctorPage() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sortBy, page])
+  }, [q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sortBy, page, reload])
 
   function toggleFavorite(id: string) {
     setFavorites((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -666,8 +653,9 @@ export default function FindDoctorPage() {
                 <span style={{ fontSize: "13px", color: T.slate2 }}>{totalDoctors} doctors</span>
               </div>
               {loadError && (
-                <div style={{ marginBottom: '10px', borderRadius: '12px', border: '1px solid rgba(217,119,6,0.22)', background: 'rgba(255,251,235,0.86)', color: T.slate, padding: '10px 12px', fontSize: "13px" }}>
+                <div role='alert' style={{ marginBottom: '10px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface)', color: T.slate, padding: '10px 12px', fontSize: "13px" }}>
                   {loadError}
+                  <button type='button' onClick={()=>setReload(value=>value+1)} style={{ minHeight:44, marginLeft:12, color:'var(--link)' }}>Retry physician search</button>
                 </div>
               )}
 
@@ -676,7 +664,7 @@ export default function FindDoctorPage() {
                   [1, 2, 3].map((k) => (
                     <div key={k} style={{ borderRadius: '18px', border: "1px solid var(--border)", background: 'linear-gradient(90deg, rgba(4,53,77,0.06) 0%, rgba(32,181,223,0.12) 50%, rgba(4,53,77,0.06) 100%)', backgroundSize: '220% 100%', animation: 'fd-shimmer 1.2s infinite linear', minHeight: '208px' }} />
                   ))
-                ) : filteredPhysicians.length === 0 ? (
+                ) : loadError ? null : filteredPhysicians.length === 0 ? (
                   <article style={{ borderRadius: '20px', border: "1px solid var(--border)", background: "var(--surface-glass)", boxShadow: Sh.card, padding: '26px', textAlign: 'center' }}>
                     <div style={{ width: '68px', height: '68px', borderRadius: '18px', margin: '0 auto 12px', background: 'rgba(165,224,218,0.35)', border: "1px solid var(--border)", color: "var(--link)", display: 'grid', placeItems: 'center' }}>
                       <Ico p={ICONS.search} size={30} sw={1.6} />
@@ -794,7 +782,7 @@ export default function FindDoctorPage() {
           </div>
         </section>
 
-        <aside className='fd-right'>
+        <aside id='patient-secondary-sidebar' className='fd-right'>
           <div style={{ position: 'sticky', top: '18px', display: 'grid', gap: '14px' }}>
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
               <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Search Insights</h3>

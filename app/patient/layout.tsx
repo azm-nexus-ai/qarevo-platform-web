@@ -34,7 +34,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
     <>
       <PatientMobileNavigation />
       <nav aria-label="Patient appearance" className="patient-appearance-navigation">
-        <SidebarToggle role='patient' /><span className='patient-portal-label'>Patient portal</span><ThemeToggle /><Link href='/patient/dashboard' aria-label='Qarevo Health patient dashboard' className='patient-top-right-logo'><AuthenticatedLogo width={156} /></Link>
+        <SidebarToggle role='patient' /><span className='patient-portal-label'>Patient portal</span><ThemeToggle /><SidebarToggle role='patient' side='right' /><Link href='/patient/dashboard' aria-label='Qarevo Health patient dashboard' className='patient-top-right-logo'><AuthenticatedLogo width={156} /></Link>
       </nav>
       {mounted ? children : null}
     </>

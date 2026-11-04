@@ -1,19 +1,18 @@
 'use client'
 
+import { buildBookingQueryParams } from '@/lib/booking'
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 function ConsultationBookingPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? ''
+  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
   const serviceType = searchParams.get('service') || 'video'
 
   useEffect(() => {
     // Redirect to date-time selection with default service type
-    const params = new URLSearchParams()
-    params.set('provider_id', physicianId)
-    params.set('service_type', serviceType)
+    const params = buildBookingQueryParams(new URLSearchParams({ provider_id: physicianId }), null, serviceType)
     params.set('from', 'redirect')
     router.replace(`/patient/consultation-booking/date-time?${params.toString()}`)
   }, [router, physicianId, serviceType])

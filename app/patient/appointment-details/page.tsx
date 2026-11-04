@@ -1,11 +1,11 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import AppointmentRescheduleDialog from '@/components/patient/AppointmentRescheduleDialog'
-import { apiGet, getApiErrorDetail } from '@/lib/api'
+import { usePatientResource } from '@/lib/use-patient-resource'
 
 type Appointment = {
   id: string
@@ -22,24 +22,10 @@ type Appointment = {
 function AppointmentDetails() {
   const params = useSearchParams()
   const id = params.get('appointmentId')
-  const [appointment, setAppointment] = useState<Appointment | null>(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [reschedule, setReschedule] = useState(false)
-  const [revision, setRevision] = useState(0)
-  useEffect(() => {
-    let active = true
-    setAppointment(null)
-    setError('')
-    if (!id) { setLoading(false); return }
-    setLoading(true)
-    apiGet<Appointment>(`/api/v1/patient/appointments/${encodeURIComponent(id)}`).then(data => {
-      if (active) setAppointment(data)
-    }).catch(error => {
-      if (active) setError(getApiErrorDetail(error) || 'Your appointment could not be loaded. Please retry.')
-    }).finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [id, revision])
+  const resource = usePatientResource<Appointment>(id ? `/api/v1/patient/appointments/${encodeURIComponent(id)}` : null)
+  const { data: appointment, loading } = resource
+  const error = resource.error ? resource.errorMessage || 'Your appointment could not be loaded. Please retry.' : ''
+  const [rescheduleFor, setRescheduleFor] = useState<string | null>(null)
   const active = appointment && ['BOOKED', 'SCHEDULED', 'CONFIRMED'].includes(appointment.status || '')
   const formatTime = (value: string) => new Date(value).toLocaleString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -49,7 +35,7 @@ function AppointmentDetails() {
     <section className="rounded-3xl border border-theme bg-surface p-6 md:p-8" aria-busy={loading}>
       {loading && <p role="status">Loading your appointment…</p>}
       {!id && <p>Select an appointment to view its details.</p>}
-      {error && <div role="alert"><p>{error}</p><button className="mt-4 min-h-11 text-link underline" onClick={() => setRevision(value => value + 1)}>Retry loading appointment</button></div>}
+      {error && <div role="alert"><p>{error}</p><button className="mt-4 min-h-11 text-link underline" onClick={() => resource.retry()}>Retry loading appointment</button></div>}
       {appointment && <>
         <p className="text-sm font-medium text-muted">{appointment.status?.replaceAll('_', ' ') || 'Status unavailable'}</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight">{appointment.provider_name || 'Assigned clinician'}</h2>
@@ -66,7 +52,7 @@ function AppointmentDetails() {
           <div className="mt-5 flex flex-wrap gap-3">
             <Link className="inline-flex min-h-11 items-center rounded-xl border border-theme px-4 text-link" href="/patient/video-consultation/device-check">Check camera and microphone</Link>
             {active && appointment.consultation_id && <Link className="inline-flex min-h-11 items-center rounded-xl border border-theme px-4 text-link" href={`/patient/video-consultation/waiting-room?consultationId=${encodeURIComponent(appointment.consultation_id)}`}>Open video room</Link>}
-            {active && <button className="min-h-11 rounded-xl border border-theme px-4 text-link" onClick={() => setReschedule(true)}>Reschedule appointment</button>}
+            {active && <button className="min-h-11 rounded-xl border border-theme px-4 text-link" onClick={() => setRescheduleFor(id)}>Reschedule appointment</button>}
           </div>
         </div>}
         {appointment.status === 'COMPLETED' && appointment.consultation_id && <div className="border-t border-theme pt-6">
@@ -78,7 +64,7 @@ function AppointmentDetails() {
       </>}
       <Link className="mt-6 inline-flex min-h-11 items-center text-link underline" href="/patient/appointments">Back to appointments</Link>
     </section>
-    {reschedule && appointment && <AppointmentRescheduleDialog appointment={{ id: appointment.id, providerId: appointment.provider_id, physician: appointment.provider_name || 'Assigned clinician' }} onClose={() => setReschedule(false)} onSaved={() => { setReschedule(false); setRevision(value => value + 1) }} />}
+    {rescheduleFor === id && appointment && <AppointmentRescheduleDialog appointment={{ id: appointment.id, providerId: appointment.provider_id, physician: appointment.provider_name || 'Assigned clinician' }} onClose={() => setRescheduleFor(null)} onSaved={() => { setRescheduleFor(null); resource.retry() }} />}
   </PatientPortalShell>
 }
 

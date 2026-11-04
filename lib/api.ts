@@ -1441,8 +1441,18 @@ export async function getEpisodeTimeline(
   );
 }
 
+const doctorProfileRequests = new Map<string, Promise<DoctorProfileResponse>>();
+
 export async function getDoctorProfile(): Promise<DoctorProfileResponse> {
-    return apiGet<DoctorProfileResponse>("/api/v1/doctor/profile");
+    const scope = readAccountScope();
+    if (!scope) return apiGet<DoctorProfileResponse>("/api/v1/doctor/profile");
+    const existing = doctorProfileRequests.get(scope);
+    if (existing) return existing;
+    const pending = apiGet<DoctorProfileResponse>("/api/v1/doctor/profile").finally(() => {
+        if (doctorProfileRequests.get(scope) === pending) doctorProfileRequests.delete(scope);
+    });
+    doctorProfileRequests.set(scope, pending);
+    return pending;
 }
 
 export async function updateDoctorProfile(body: DoctorProfileUpdate): Promise<DoctorProfileResponse> {
@@ -2920,7 +2930,7 @@ export async function deleteAdminUser(adminId: string): Promise<AdminUser> {
 
 // Admin Exceptions Types
 export type AdminException = {
-    exception_id: string;
+    id: string;
     type: string;
     severity: string;
     source: string;
@@ -2944,12 +2954,9 @@ export type AdminExceptionStats = {
 
 export type AdminExceptionsListResponse = {
     exceptions: AdminException[];
-    total_count: number;
-    filtered_count: number;
-    page: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
+    total: number;
+    limit: number;
+    offset: number;
 };
 
 export type AdminCreateExceptionRequest = {
@@ -3012,13 +3019,13 @@ export type AdminBulkUpdateConfigsRequest = {
 
 // Admin Audit Types
 export type AdminAuditLog = {
-    log_id: string;
+    id: string;
     admin_user_id: string;
     admin_user_name?: string;
     action: string;
     target_type: string;
     target_id?: string;
-    changes?: Record<string, { old: unknown; new: unknown }>;
+    changes?: Record<string, unknown>;
     ip_address?: string;
     user_agent?: string;
     created_at: string;
@@ -3026,12 +3033,9 @@ export type AdminAuditLog = {
 
 export type AdminAuditLogsListResponse = {
     logs: AdminAuditLog[];
-    total_count: number;
-    filtered_count: number;
-    page: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
+    total: number;
+    limit: number;
+    offset: number;
 };
 
 export type AdminActionSummary = {
@@ -3184,11 +3188,11 @@ export async function exportAdminAuditLogs(dateFrom?: string, dateTo?: string, f
     return apiGet<Record<string, unknown>>(`/api/v1/admin/audit-logs/export/data?${params.toString()}`);
 }
 
-export async function getActionSummary(dateFrom?: string, dateTo?: string): Promise<AdminActionSummary[]> {
+export async function getActionSummary(dateFrom?: string, dateTo?: string): Promise<{ actions: AdminActionSummary[] }> {
     const params = new URLSearchParams();
     if (dateFrom) params.set("date_from", dateFrom);
     if (dateTo) params.set("date_to", dateTo);
-    return apiGet<AdminActionSummary[]>(`/api/v1/admin/audit-logs/summary/actions?${params.toString()}`);
+    return apiGet<{ actions: AdminActionSummary[] }>(`/api/v1/admin/audit-logs/summary/actions?${params.toString()}`);
 }
 
 export async function getAuditLog(logId: string): Promise<AdminAuditLog> {

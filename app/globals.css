@@ -407,3 +407,51 @@ button:disabled { cursor: wait; }
   html[data-doctor-sidebar=collapsed] .corporate-footer[data-portal-footer=doctor],html[data-admin-sidebar=collapsed] .corporate-footer[data-portal-footer=admin] { margin-left: 0; }
 }
 @media(max-width:600px) { .corporate-footer-content { grid-template-columns: minmax(0,1fr); } .preferences-dialog-actions .theme-toggle { white-space: normal; text-align: left; } }
+
+/* Portal chrome is independent from the page's content width. */
+.portal-desktop-navbar { position: sticky; top: 0; width: 100%; z-index: 30 !important; }
+.portal-navbar-title { flex: 1; min-width: 0; }
+.portal-navbar-brand { margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; }
+@media (min-width:921px) {
+  .portal-desktop-navbar { height: 80px; }
+  .patient-appearance-navigation { min-height: 80px; position: sticky; top: 0; z-index: 30; }
+  html[data-patient-right-sidebar=collapsed] #patient-secondary-sidebar { display: none !important; }
+  html[data-patient-right-sidebar=collapsed] .pps-shell-has-rail,
+  html[data-patient-right-sidebar=collapsed] .pd-shell,
+  html[data-patient-right-sidebar=collapsed] .fd-shell { grid-template-columns: 260px minmax(0,1fr); }
+  html[data-patient-sidebar=collapsed][data-patient-right-sidebar=collapsed] .pps-shell-has-rail,
+  html[data-patient-sidebar=collapsed][data-patient-right-sidebar=collapsed] .pd-shell,
+  html[data-patient-sidebar=collapsed][data-patient-right-sidebar=collapsed] .fd-shell { grid-template-columns: minmax(0,1fr); }
+}
+@media(max-width:920px) { .portal-desktop-navbar { display: none !important; } }
+.support-help-card { padding:clamp(18px,4vw,28px); margin-bottom:20px; border:1px solid var(--border); border-radius:18px; background:var(--surface); color:var(--text); }
+.support-help-card h2 { font-size:20px; font-weight:700; margin:0 0 12px; }
+.support-help-card p { font-size:15px; line-height:1.7; color:var(--text-secondary); margin:12px 0; }
+.support-help-card label { display:block; font-size:14px; font-weight:600; margin-bottom:8px; }
+.support-help-card input { width:100%; min-height:44px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--surface-subtle); color:var(--text); }
+.support-help-card details { padding:14px 0; border-bottom:1px solid var(--border); }
+.support-help-card details:last-child { border:0; }
+.support-help-card summary { min-height:44px; cursor:pointer; font-weight:600; padding:10px 0; }
+.portal-access-links { position:relative; font-size:13px; }
+.portal-access-links > summary { cursor:pointer; min-height:44px; display:flex; align-items:center; padding:8px 12px; border:1px solid var(--border); border-radius:10px; color:var(--text); }
+.portal-access-links > nav { position:absolute; right:0; top:calc(100% + 8px); z-index:45; width:min(300px,calc(100vw - 32px)); padding:16px; border:1px solid var(--border); border-radius:14px; background:var(--surface); box-shadow:var(--shadow-float); }
+.portal-access-links p { font-size:13px; line-height:1.6; margin:0 0 10px; color:var(--text-secondary); }
+.portal-access-links a { display:flex; min-height:44px; align-items:center; color:var(--link); }
+@media(max-width:920px) { .admin-mobile-navigation .portal-access-links > nav { position:static; width:auto; max-height:none; padding:8px; box-shadow:none; } }
+@media(min-width:921px) and (max-width:1280px) {
+  .pps-shell-has-rail,.pd-shell,.fd-shell { grid-template-columns:240px minmax(0,1fr) !important; }
+  #patient-secondary-sidebar,.sidebar-toggle[aria-controls=patient-secondary-sidebar] { display:none !important; }
+  html[data-patient-sidebar=collapsed] .pps-shell-has-rail,html[data-patient-sidebar=collapsed] .pd-shell,html[data-patient-sidebar=collapsed] .fd-shell { grid-template-columns:minmax(0,1fr) !important; }
+}
+@media(min-width:921px) {
+  .patient-appearance-navigation .theme-toggle span:last-child { display:none; }
+}
+@media(min-width:921px) { .pd-sidebar,.pps-sidebar,.fd-sidebar { top:98px !important; max-height:calc(100dvh - 116px) !important; overflow:auto; } }
+@media(max-width:920px) {
+  .admin-mobile-navigation { flex-wrap:nowrap; gap:8px; padding:8px 12px; }
+  .admin-mobile-navigation > details { order:0; }
+  .admin-mobile-navigation > .theme-toggle { order:1; margin-left:auto; }
+  .admin-mobile-navigation > a { order:2; flex:0 0 auto; }
+  .admin-mobile-navigation > .theme-toggle span:last-child { display:none; }
+}
+@media(min-width:921px) and (max-width:1100px) { .portal-navbar-title p { display:none; } .portal-navbar-title h2 { font-size:16px !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } }

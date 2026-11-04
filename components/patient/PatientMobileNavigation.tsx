@@ -6,17 +6,12 @@ import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import ProfileImage from '@/components/patient/ProfileImage'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 import { logoutCurrentUser, clearAuthTokens, getPatientSettings, isAuthError, readAccessToken } from '@/lib/api'
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return 'P'
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('')
-}
 
 export default function PatientMobileNavigation() {
   const pathname = usePathname()
@@ -26,7 +21,6 @@ export default function PatientMobileNavigation() {
   const [patientName, setPatientName] = useState('Loading...')
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
-  const patientInitials = getInitials(patientName)
 
   // Body scroll lock
   useEffect(() => {
@@ -246,7 +240,7 @@ export default function PatientMobileNavigation() {
               fontSize: '15px',
             }}
           >
-            {patientInitials}
+            <ProfileImage name={patientName} size={34} />
           </button>
           <Link
             href="/patient/dashboard"
@@ -282,7 +276,7 @@ export default function PatientMobileNavigation() {
         </button>
 
         <div style={{ marginBottom: '18px', paddingTop: '8px' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+          <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
             <AuthenticatedLogo />
           </Link>
         </div>
@@ -292,22 +286,7 @@ export default function PatientMobileNavigation() {
           style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))',
-                border: "1px solid var(--border)",
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: T.navy,
-                fontWeight: 700,
-              }}
-            >
-              {patientInitials}
-            </div>
+            <ProfileImage name={patientName} size={42} />
             <div>
               <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{patientName}</p>
               <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Patient account</p>

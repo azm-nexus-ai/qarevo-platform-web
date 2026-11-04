@@ -251,10 +251,12 @@ function IntakePageContent() {
             <FieldFeedback name="complaint" error={attempted ? errors.complaint : undefined} hint="Describe your main concern in up to 2,000 characters." />
 
             <div>
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Symptoms
+              <label htmlFor="symptoms" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+                Symptoms (Optional, up to 5,000 characters)
               </label>
               <textarea
+                id="symptoms"
+                maxLength={5000}
                 value={symptoms}
                 onChange={(e) => setSymptoms(e.target.value)}
                 placeholder="Describe your symptoms in detail (e.g., throbbing pain, nausea, dizziness)"
@@ -263,10 +265,12 @@ function IntakePageContent() {
             </div>
 
             <div>
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Medical History
+              <label htmlFor="medical-history" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+                Medical History (Optional, up to 5,000 characters)
               </label>
               <textarea
+                id="medical-history"
+                maxLength={5000}
                 value={medicalHistory}
                 onChange={(e) => setMedicalHistory(e.target.value)}
                 placeholder="Any relevant medical history, previous conditions, or ongoing treatments"
@@ -276,12 +280,14 @@ function IntakePageContent() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                  Duration
-                </label>
+                <label htmlFor="reported-duration" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+                Duration (Optional, up to 500 characters)
+              </label>
                 <input
                   type="text"
-                  value={reportedDuration}
+                  id="reported-duration"
+                maxLength={500}
+                value={reportedDuration}
                   onChange={(e) => setReportedDuration(e.target.value)}
                   placeholder="e.g., 3 days, 2 weeks"
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
@@ -289,12 +295,14 @@ function IntakePageContent() {
               </div>
 
               <div>
-                <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                  Location
-                </label>
+                <label htmlFor="reported-location" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+                Location (Optional, up to 500 characters)
+              </label>
                 <input
                   type="text"
-                  value={reportedLocation}
+                  id="reported-location"
+                maxLength={500}
+                value={reportedLocation}
                   onChange={(e) => setReportedLocation(e.target.value)}
                   placeholder="e.g., left side of head, lower back"
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
@@ -304,12 +312,14 @@ function IntakePageContent() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                  Onset
-                </label>
+                <label htmlFor="reported-onset" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+                Onset (Optional, up to 500 characters)
+              </label>
                 <input
                   type="text"
-                  value={reportedOnset}
+                  id="reported-onset"
+                maxLength={500}
+                value={reportedOnset}
                   onChange={(e) => setReportedOnset(e.target.value)}
                   placeholder="e.g., sudden, gradual"
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
@@ -317,11 +327,12 @@ function IntakePageContent() {
               </div>
 
               <div>
-                <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                  Severity
-                </label>
+                <label htmlFor="reported-severity" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+                Severity (Optional)
+              </label>
                 <select
-                  value={reportedSeverity}
+                  id="reported-severity"
+                value={reportedSeverity}
                   onChange={(e) => setReportedSeverity(e.target.value)}
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                 >
@@ -334,10 +345,12 @@ function IntakePageContent() {
             </div>
 
             <div>
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Associated Factors
+              <label htmlFor="associated-factors" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+                Associated Factors (Optional, up to 5,000 characters)
               </label>
               <textarea
+                id="associated-factors"
+                maxLength={5000}
                 value={associatedFactors}
                 onChange={(e) => setAssociatedFactors(e.target.value)}
                 placeholder="Anything that makes it better or worse (e.g., rest, movement, certain foods)"

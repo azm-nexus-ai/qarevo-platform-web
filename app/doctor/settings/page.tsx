@@ -1,4 +1,5 @@
 'use client'
+import AccountSecurity from '@/components/security/AccountSecurity'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -96,10 +97,6 @@ export default function DoctorSettingsPage() {
       ? settingsData.available_days.filter((item) => item !== day)
       : [...settingsData.available_days, day]
     updateDraft('available_days', WEEK_DAYS.filter((item) => nextDays.includes(item)))
-  }
-
-  const handleLogoutClick = () => {
-    setShowLogoutConfirm(true)
   }
 
   const handleConfirmLogout = async () => {
@@ -251,17 +248,7 @@ export default function DoctorSettingsPage() {
             </div>
             <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Security</h3>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <button onClick={() => router.push('/auth/forgot-password')} style={{ padding: '12px 20px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
-              Change Password
-            </button>
-            <button onClick={() => setMessage('Two-factor authentication is enforced during secure doctor login.')} style={{ padding: '12px 20px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
-              {settingsData.two_factor_enabled ? 'Two-Factor Authentication Enabled' : 'Two-Factor Authentication'}
-            </button>
-            <button disabled={saving} onClick={handleLogoutClick} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(220,38,38,0.05)', color: T.red, fontSize: '13px', fontWeight: 600, cursor: saving ? 'wait' : 'pointer', textAlign: 'left', opacity: saving ? 0.7 : 1 }}>
-              Sign Out Current Device
-            </button>
-          </div>
+          <AccountSecurity/>
         </div>
 
         {/* Availability Settings */}

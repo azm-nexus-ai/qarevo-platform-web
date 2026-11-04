@@ -10,6 +10,7 @@ import { ICONS } from '@/constants/icons'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import Link from 'next/link'
 import DoctorMobileNavigation from '@/components/doctor/DoctorMobileNavigation'
 import {
   clearAuthTokens,
@@ -127,126 +128,26 @@ export default function DoctorLayout({
           }
         }
       `}</style>
-      <div style={{ display: 'flex' }}>
-        {/* Sidebar */}
-        <aside id="doctor-primary-sidebar" style={{
-          width: '260px',
-          background: "var(--surface-subtle)",
-          backdropFilter: 'blur(22px) saturate(175%)',
-          WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-          borderRight: "1px solid var(--border)",
-          minHeight: '100vh',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          zIndex: 10,
-          boxShadow: Sh.nav,
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <AuthenticatedLogo width={140} />
-            <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate2, fontWeight: 500 }}>Doctor Portal</p>
-          </div>
-
-          <nav style={{ padding: '16px 12px', flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {DOCTOR_SIDEBAR_ITEMS.map((item) => {
-                const isActive = isDoctorNavActive(pathname, item.href)
-                const isLogout = item.href === DOCTOR_ROUTES.logout
-                return (
-                  <li key={item.href}>
-                    {isLogout ? (
-                      <button
-                        type="button"
-                        onClick={handleLogoutClick}
-                        disabled={loggingOut}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          width: '100%',
-                          padding: '12px 14px',
-                          borderRadius: '12px',
-                          border: 'none',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          textDecoration: 'none',
-                          transition: 'all 0.15s ease',
-                          color: T.red,
-                          background: 'transparent',
-                          cursor: loggingOut ? 'wait' : 'pointer',
-                          opacity: loggingOut ? 0.65 : 1,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(220,38,38,0.06)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent'
-                        }}
-                      >
-                        <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={T.red} /></span>
-                        {loggingOut ? 'Signing out...' : item.label}
-                      </button>
-                    ) : (
-                      <a
-                        href={item.href}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '12px 14px',
-                          borderRadius: '12px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          textDecoration: 'none',
-                          transition: 'all 0.15s ease',
-                          ...(isActive
-                            ? { background: 'rgba(32,181,223,0.12)', color: T.link, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }
-                            : { color: T.slate, background: 'transparent' }
-                          ),
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.background = 'rgba(4,53,77,0.04)'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.background = 'transparent'
-                          }
-                        }}
-                      >
-                        <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={isActive ? T.blue : T.slate2} /></span>
-                        {item.label}
-                      </a>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </nav>
-        </aside>
-
-        {/* Main content */}
-        <main data-portal-main='doctor' style={{ flex: 1, marginLeft: '260px' }}>
           {/* Header */}
-          <header style={{
+          <header className="portal-desktop-navbar" aria-label="Doctor main navigation" style={{
             background: "var(--surface-glass)",
             backdropFilter: 'blur(22px) saturate(175%)',
             WebkitBackdropFilter: 'blur(22px) saturate(175%)',
             borderBottom: "1px solid var(--border)",
-            padding: '16px 32px',
+            padding: '12px 24px', minHeight: '80px',
             position: 'sticky',
             top: 0,
             zIndex: 5,
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
+            <div className='portal-navbar-row' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+              <SidebarToggle role='doctor' />
+              <div className='portal-navbar-title'>
                 <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Welcome, {fullName}</h2>
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Manage your consultations and patients</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <SidebarToggle role='doctor' /><ThemeToggle />
+                <ThemeToggle />
                 <button
                   onClick={handleSettingsClick}
                   style={{
@@ -295,8 +196,111 @@ export default function DoctorLayout({
                   </div>
                 </button>
               </div>
+              <Link href='/doctor/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health doctor dashboard'><AuthenticatedLogo width={156} /></Link>
             </div>
           </header>
+      <div style={{ display: 'flex' }}>
+        {/* Sidebar */}
+        <aside id="doctor-primary-sidebar" style={{
+          width: '260px',
+          background: "var(--surface-subtle)",
+          backdropFilter: 'blur(22px) saturate(175%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(175%)',
+          borderRight: "1px solid var(--border)",
+          minHeight: 0, height: 'calc(100dvh - 80px)',
+          position: 'fixed',
+          left: 0,
+          top: '80px',
+          zIndex: 10,
+          boxShadow: Sh.nav,
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+            <Link href='/doctor/dashboard' aria-label='Qarevo Health doctor dashboard'><AuthenticatedLogo width={140} /></Link>
+            <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate2, fontWeight: 500 }}>Doctor Portal</p>
+          </div>
+
+          <nav style={{ padding: '16px 12px', flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {DOCTOR_SIDEBAR_ITEMS.map((item) => {
+                const isActive = isDoctorNavActive(pathname, item.href)
+                const isLogout = item.href === DOCTOR_ROUTES.logout
+                return (
+                  <li key={item.href}>
+                    {isLogout ? (
+                      <button
+                        type="button"
+                        onClick={handleLogoutClick}
+                        disabled={loggingOut}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          width: '100%',
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          border: 'none',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                          transition: 'all 0.15s ease',
+                          color: T.red,
+                          background: 'transparent',
+                          cursor: loggingOut ? 'wait' : 'pointer',
+                          opacity: loggingOut ? 0.65 : 1,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(220,38,38,0.06)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent'
+                        }}
+                      >
+                        <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={T.red} /></span>
+                        {loggingOut ? 'Signing out...' : item.label}
+                      </button>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                          transition: 'all 0.15s ease',
+                          ...(isActive
+                            ? { background: 'rgba(32,181,223,0.12)', color: T.link, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }
+                            : { color: T.slate, background: 'transparent' }
+                          ),
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'rgba(4,53,77,0.04)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'transparent'
+                          }
+                        }}
+                      >
+                        <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={isActive ? T.blue : T.slate2} /></span>
+                        {item.label}
+                      </Link>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
+        </aside>
+
+        {/* Main content */}
+        <main data-portal-main='doctor' style={{ flex: 1, marginLeft: '260px' }}>
+
 
           {/* Page content */}
           <div style={{ padding: '28px 32px' }}>

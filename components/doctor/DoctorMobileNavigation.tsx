@@ -222,13 +222,7 @@ export default function DoctorMobileNavigation() {
             <span />
             <span />
           </button>
-          <Link
-            href="/doctor/dashboard"
-            aria-label="Qarevo Health Doctor Dashboard"
-            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
-          >
-            <AuthenticatedLogo width={100} />
-          </Link>
+
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
           <ThemeToggle />
@@ -250,6 +244,13 @@ export default function DoctorMobileNavigation() {
           >
             {doctorInitials}
           </button>
+          <Link
+            href="/doctor/dashboard"
+            aria-label="Qarevo Health Doctor Dashboard"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+          >
+            <AuthenticatedLogo width={100} />
+          </Link>
         </div>
       </div>
 
@@ -277,7 +278,7 @@ export default function DoctorMobileNavigation() {
         </button>
 
         <div style={{ marginBottom: '18px', paddingTop: '8px' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+          <Link href="/doctor/dashboard" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
             <AuthenticatedLogo />
           </Link>
         </div>

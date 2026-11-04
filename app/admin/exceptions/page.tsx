@@ -3,13 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
 import {
   clearAuthTokens,
   getExceptionStats,
   getAdminExceptions,
-  getAdminException,
   assignException,
   resolveException,
   closeException,
@@ -113,7 +110,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
           </span>
         </div>
         <span style={{ fontSize: "13px", color: T.slate }}>
-          #{exception.exception_id.slice(-8)}
+          #{exception.id.slice(-8)}
         </span>
       </div>
 
@@ -141,7 +138,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
           <>
             <button
               type="button"
-              onClick={() => onAssign(exception.exception_id)}
+              onClick={() => onAssign(exception.id)}
               style={{
                 padding: '8px 16px',
                 borderRadius: '10px',
@@ -158,7 +155,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
             </button>
             <button
               type="button"
-              onClick={() => onResolve(exception.exception_id)}
+              onClick={() => onResolve(exception.id)}
               style={{
                 padding: '8px 16px',
                 borderRadius: '10px',
@@ -178,7 +175,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
         {exception.status === 'resolved' && (
           <button
             type="button"
-            onClick={() => onClose(exception.exception_id)}
+            onClick={() => onClose(exception.id)}
             style={{
               padding: '8px 16px',
               borderRadius: '10px',
@@ -204,6 +201,7 @@ export default function AdminExceptionsPage() {
   const [exceptions, setExceptions] = useState<AdminException[]>([])
   const [stats, setStats] = useState<AdminExceptionStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [retry, setRetry] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState('')
   const [severityFilter, setSeverityFilter] = useState('')
@@ -224,11 +222,13 @@ export default function AdminExceptionsPage() {
     let cancelled = false
 
     async function fetchData() {
+      setLoading(true)
       try {
         const [statsData, exceptionsData] = await Promise.all([
           getExceptionStats(),
           getAdminExceptions(statusFilter, severityFilter, typeFilter),
         ])
+        if (!Array.isArray(exceptionsData.exceptions) || !statsData.by_status || !statsData.by_severity || !statsData.by_type) throw new Error('Unexpected exceptions service response')
         if (!cancelled) {
           setStats(statsData)
           setExceptions(exceptionsData.exceptions)
@@ -252,7 +252,7 @@ export default function AdminExceptionsPage() {
     return () => {
       cancelled = true
     }
-  }, [router, statusFilter, severityFilter, typeFilter])
+  }, [router, statusFilter, severityFilter, typeFilter, retry])
 
   const handleAssign = async (exceptionId: string) => {
     const adminId = prompt('Enter admin user ID to assign this exception:')
@@ -306,7 +306,8 @@ export default function AdminExceptionsPage() {
   if (error) {
     return (
       <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
-        {error}
+        <p role='alert'>{error}</p>
+        <button type='button' className='theme-toggle' onClick={() => setRetry(value => value + 1)}>Try again</button>
       </div>
     )
   }
@@ -447,7 +448,7 @@ export default function AdminExceptionsPage() {
         ) : (
           exceptions.map((exception) => (
             <ExceptionCard
-              key={exception.exception_id}
+              key={exception.id}
               exception={exception}
               onAssign={handleAssign}
               onResolve={handleResolve}

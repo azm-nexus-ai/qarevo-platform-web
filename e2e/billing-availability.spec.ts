@@ -62,7 +62,7 @@ test('billing remains readable on mobile with persistent dark mode and legacy in
   await page.setViewportSize({ width: 320, height: 844 })
   await page.goto('/patient/billing')
   await expect(page.getByText('Not verified', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await page.reload()

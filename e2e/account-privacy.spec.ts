@@ -47,6 +47,7 @@ async function mockApi(context: BrowserContext) {
     const account = saved.get(owner) || {}
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'Content-Type,Authorization', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' }
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    if (pathname === '/api/v1/patient/profile-image') return route.fulfill({headers:cors,json:{image:null}})
     if (pathname === '/api/v1/session' || pathname === '/api/v1/session/activity') return route.fulfill({ headers: cors, json: { server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
     if (pathname === '/api/v1/auth/login' || pathname === '/api/v1/auth/verify-email-code') {
       const body = request.postDataJSON()
@@ -512,7 +513,7 @@ test('doctor registration exposes required fields and consent without a disabled
 test('global theme survives refresh, route changes, logout and a fresh browser session', async ({ page, context, browser }) => {
   await signIn(page, alpha)
   await page.goto('/patient/settings')
-  const toggle = page.getByRole('button', { name: 'Dark mode', exact: true })
+  const toggle = page.getByRole('button', { name: /^(Dark|Light) mode$/ })
   await toggle.click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.reload()
@@ -523,9 +524,9 @@ test('global theme survives refresh, route changes, logout and a fresh browser s
   await second.goto('/privacy')
   await expect(second.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.goto('/patient/settings')
-  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
   await expect(second.locator('html')).toHaveAttribute('data-theme', 'light')
-  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
   const state = await context.storageState()
   const fresh = await browser.newContext({ storageState: { cookies: [], origins: state.origins.map(origin => ({ ...origin, localStorage: origin.localStorage.filter(item => item.name === 'qarevo.theme.v1') })) } })
   const freshPage = await fresh.newPage()
@@ -553,7 +554,7 @@ for (const portal of ['doctor', 'admin'] as const) {
     })
     const path = portal === 'admin' ? '/admin/admin-users' : '/doctor/patients'
     await page.goto(path)
-    await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+    await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
@@ -566,7 +567,7 @@ for (const portal of ['doctor', 'admin'] as const) {
       await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
     }
     await page.setViewportSize({ width: 390, height: 844 })
-    await expect(page.getByRole('button', { name: 'Dark mode', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^(Dark|Light) mode$/ })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   })
 }
@@ -600,7 +601,7 @@ test('administrator can review credentials and suspend access with visible valid
   const card = page.getByRole('article', { name: 'Synthetic Clinician' })
   await expect(card.getByText('ACTIVE', { exact: true })).toBeVisible()
   await expect(card.getByText('Blocked', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await page.getByRole('button', { name: 'View', exact: true }).click()
@@ -753,7 +754,7 @@ test('unapproved legal and technical materials are not presented as certificatio
 test('main navigation exposes dark mode on desktop and mobile and synchronizes tabs', async ({ page, context }) => {
   await page.goto('/')
   const navigation = page.getByRole('navigation', { name: 'Main navigation', exact: true })
-  const toggle = navigation.getByRole('button', { name: 'Dark mode', exact: true })
+  const toggle = navigation.getByRole('button', { name: /^(Dark|Light) mode$/ })
   await expect(toggle).toBeVisible()
   await expect(toggle).toContainText('Dark mode')
   await toggle.click()
@@ -784,7 +785,7 @@ test('patient dashboard and discovery retain the shared theme control outside th
   await page.getByRole('link', { name: 'Continue to Dashboard', exact: true }).click()
   for (const route of ['/patient/dashboard', '/patient/find-doctor']) {
     await page.goto(route)
-    const toggle = page.getByRole('button', { name: 'Dark mode', exact: true })
+    const toggle = page.getByRole('button', { name: /^(Dark|Light) mode$/ })
     await expect(toggle).toBeVisible()
     await expect(page.getByRole('dialog', { name: 'Navigation menu', exact: true })).toHaveCount(0)
     await page.setViewportSize({ width: 320, height: 844 })
@@ -937,7 +938,7 @@ for (const role of ['patient', 'doctor'] as const) {
     expect(awsRequests).toEqual([])
     await expect(page.getByText('Connected · Other participant present', { exact: true })).toHaveCount(0)
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+    await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     allowed = false
     await page.reload()
@@ -1024,7 +1025,7 @@ test('clinician draft persists and requires explicit review, with recoverable pu
   const storageText = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))
   expect(storageText).not.toContain('Synthetic patient summary')
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
 })
 
@@ -1052,7 +1053,7 @@ for (const width of [320, 820, 1440]) {
     await page.goto('/auth/profile-setup/insurance-privacy-consent')
     const submit = page.getByRole('button', { name: 'Complete Profile', exact: true })
     await expect(submit).toBeEnabled()
-    await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+    await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
     await submit.click()
     await expect(page.locator('#coverage-type-error')).toHaveText('Select a funding type.')
     await expect(page.locator('input[type=checkbox][required][aria-invalid=true]')).toHaveCount(4)
@@ -1077,7 +1078,7 @@ for (const role of ['admin', 'doctor']) {
   test(`${role} sign-in exposes required labels, errors and safe password recovery`, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 844 })
     await page.goto(`/auth/${role}/login`)
-    await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+    await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
     const passwordField = page.getByLabel('Password (Required)', { exact: true })
     await expect(passwordField).toHaveAttribute('autocomplete', 'current-password')
     await page.locator('button[type=submit]').click()
@@ -1298,3 +1299,31 @@ for (const [role,path,endpoint] of [
     expect(attempts).toBe(1)
   })
 }
+
+
+test('patient profile image previews, validates, saves and removes without changing another identity',async({page,context})=>{
+  let image:string|null=null
+  let saves=0
+  await context.route('**/api/v1/patient/profile-image',route=>{
+    if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}})
+    if(route.request().method()==='POST'){saves++;image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAfElEQVR4nNXOQREAMAjAsK7KkT4RPLhGQR4MZRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncV4Htj5g3AEAi5NIywAAAABJRU5ErkJggg=='}
+    if(route.request().method()==='DELETE')image=null
+    return route.fulfill({json:{image}})
+  })
+  await signIn(page,alpha)
+  await page.goto('/patient/settings')
+  const editor=page.getByRole('region',{name:'Profile image',exact:true})
+  await editor.getByLabel('Profile image',{exact:true}).setInputFiles({name:'unsafe.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg/>')})
+  await expect(editor.getByRole('alert').filter({hasText:'Choose a JPEG, PNG or WebP image, up to 2 MB.'})).toBeVisible()
+  expect(saves).toBe(0)
+  await editor.getByLabel('Profile image',{exact:true}).setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAfElEQVR4nNXOQREAMAjAsK7KkT4RPLhGQR4MZRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncV4Htj5g3AEAi5NIywAAAABJRU5ErkJggg==','base64')})
+  await expect(editor.getByAltText('Selected profile image preview')).toBeVisible()
+  await editor.getByRole('button',{name:'Save image',exact:true}).click()
+  await expect(editor.getByRole('status').filter({hasText:'Profile image updated.'})).toBeVisible()
+  expect(saves).toBe(1)
+  await page.reload()
+  await expect(editor.getByRole('button',{name:'Remove image',exact:true})).toBeVisible()
+  await editor.getByRole('button',{name:'Remove image',exact:true}).click()
+  await expect(editor.getByRole('status').filter({hasText:'Profile image removed.'})).toBeVisible()
+  await expect(editor.getByRole('button',{name:'Remove image',exact:true})).toHaveCount(0)
+})

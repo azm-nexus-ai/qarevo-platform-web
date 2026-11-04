@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
+import RoleHomeLink from '@/components/branding/RoleHomeLink'
 import { usePathname } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { THEME_KEY } from '@/lib/theme'
+import { usePortalRole } from '@/lib/portal-navigation'
 import { SIDEBAR_PREFERENCE_CHANGED } from '@/components/layout/SidebarToggle'
 
 const LINKS = [
@@ -24,7 +26,8 @@ const SOCIAL_LINKS = [
 
 export default function Footer() {
   const path = usePathname()
-  const portal = path.split('/')[1]
+  const role = usePortalRole()
+  const portal = ['patient', 'doctor', 'admin'].includes(path.split('/')[1]) ? path.split('/')[1] : role
   const dialog = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const { setTheme } = useTheme()
@@ -33,7 +36,7 @@ export default function Footer() {
     let persisted = true
     setTheme('light')
     try { localStorage.removeItem(THEME_KEY) } catch { persisted = false }
-    for (const role of ['patient', 'doctor', 'admin']) {
+    for (const role of ['patient', 'patient-right', 'doctor', 'admin']) {
       document.documentElement.setAttribute(`data-${role}-sidebar`, 'expanded')
       try { localStorage.removeItem(`qarevo.sidebar.${role}`) } catch { persisted = false }
     }
@@ -43,7 +46,7 @@ export default function Footer() {
   return <footer className='corporate-footer' data-portal-footer={portal}>
     <div className='corporate-footer-content'>
       <div className='corporate-footer-brand'>
-        <Link href='/' aria-label='Qarevo Health home'><AuthenticatedLogo width={142} /></Link>
+        <RoleHomeLink aria-label='Qarevo Health home'><AuthenticatedLogo width={142} /></RoleHomeLink>
         <p>Connecting patients and independent practices through clinician-led digital care.</p>
         <span className='corporate-footer-preview'>Development preview · Synthetic test data only</span>
         <nav aria-label='Qarevo Health social profiles'>
