@@ -1,4 +1,6 @@
 'use client'
+import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
+import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
 
 import { useState, useId } from 'react'
 import Link from 'next/link'
@@ -290,6 +292,7 @@ export default function SignInPage() {
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [touched,  setTouched]  = useState({ email: false, password: false })
   const [authError, setAuthError] = useState('')
+  const [handoff, setHandoff] = useState<PortalHandoff | null>(null)
   const cooldown = useLoginCooldown()
 
   const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : ''
@@ -301,7 +304,7 @@ export default function SignInPage() {
     setTouched({ email: true, password: true })
     if (!EMAIL_RE.test(email.trim()) || !password) return
     setLoading(true)
-    setAuthError('')
+    setAuthError(''); setHandoff(null)
 
     try {
       const response = await loginPatient({ email: email.trim(), password })
@@ -309,7 +312,9 @@ export default function SignInPage() {
       await completePatientSignIn()
     } catch (error) {
       cooldown.record(error)
-      setAuthError(getFriendlySignInError(error))
+      const wrongPortal = authenticatedPortalHandoff(error)
+      setHandoff(wrongPortal)
+      setAuthError(wrongPortal ? '' : getFriendlySignInError(error))
     } finally {
       setLoading(false)
     }
@@ -322,7 +327,8 @@ export default function SignInPage() {
       return
     }
     const progress = await getOnboarding()
-    router.replace(progress.complete ? '/patient/dashboard' : onboardingPath(progress.next_step))
+    const intended = safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PATIENT')
+    router.replace(progress.complete ? intended || '/patient/dashboard' : onboardingPath(progress.next_step))
   }
 
   const handlePasskeySignIn = async () => {
@@ -330,14 +336,16 @@ export default function SignInPage() {
     if (!EMAIL_RE.test(email.trim())) return
 
     setPasskeyLoading(true)
-    setAuthError('')
+    setAuthError(''); setHandoff(null)
     try {
       const response = await loginPatientWithPasskey(email.trim())
       storeAuthTokens({ ...response, role: 'PATIENT' })
       await completePatientSignIn()
     } catch (error) {
       cooldown.record(error)
-      setAuthError(getFriendlySignInError(error))
+      const wrongPortal = authenticatedPortalHandoff(error)
+      setHandoff(wrongPortal)
+      setAuthError(wrongPortal ? '' : getFriendlySignInError(error))
     } finally {
       setPasskeyLoading(false)
     }
@@ -475,6 +483,7 @@ export default function SignInPage() {
               </div>
             </div>
 
+            {handoff && <WrongPortalNotice handoff={handoff}/>}
             {/* Auth error banner */}
             {(cooldown.message || authError) && (
               <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
@@ -492,7 +501,7 @@ export default function SignInPage() {
                   placeholder="emma@example.com"
                   type="email"
                   value={email}
-                  onChange={v => { setEmail(v); setAuthError('') }}
+                  onChange={v => { setEmail(v); setAuthError(''); setHandoff(null) }}
                   onBlur={() => setTouched(t => ({ ...t, email: true }))}
                   error={emailErr}
                   success={EMAIL_RE.test(email.trim())}
@@ -514,7 +523,7 @@ export default function SignInPage() {
                     placeholder="Your password"
                     type={showPw ? 'text' : 'password'}
                     value={password}
-                    onChange={v => { setPassword(v); setAuthError('') }}
+                    onChange={v => { setPassword(v); setAuthError(''); setHandoff(null) }}
                     onBlur={() => setTouched(t => ({ ...t, password: true }))}
                     error={passErr}
                     icon={ICONS.lock}
@@ -592,6 +601,7 @@ export default function SignInPage() {
                 <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
                 <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
               </div>
+              <PortalSignInReference portal='PATIENT'/>
               <SocialSignInButtons portal='PATIENT' />
             </div>
 

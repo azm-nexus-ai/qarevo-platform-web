@@ -26,6 +26,7 @@ test('admin security retries its request, explains unavailable MFA, revokes sess
   await page.getByRole('button',{name:'Retry security settings'}).click()
   await expect(page.getByRole('button',{name:'Two-factor enrollment unavailable'})).toBeDisabled()
   await page.getByRole('button',{name:'Sign out other devices'}).click()
+  await page.getByRole('alertdialog').getByRole('button',{name:'Sign out other devices',exact:true}).click()
   await expect(page.getByRole('status').filter({hasText:'Security action completed'})).toBeVisible()
   await page.getByRole('button',{name:'Change password and sign out'}).click()
   await expect(page.getByRole('alert').filter({hasText:'Enter your current password.'})).toBeVisible()

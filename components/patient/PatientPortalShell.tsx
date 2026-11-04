@@ -163,7 +163,7 @@ export default function PatientPortalShell({
           grid-template-columns: 260px minmax(0, 1fr) 320px;
         }
         .pps-left, .pps-main, .pps-right { min-width: 0; }
-        .pps-sidebar, .pps-right-rail { position: sticky; top: 18px; }
+
         .patient-portal-shell.pps-font-small { font-size: 14px; }
         .patient-portal-shell.pps-font-large { font-size: 16.5px; }
         .patient-portal-shell.pps-theme-contrast .pps-main,
@@ -208,7 +208,7 @@ export default function PatientPortalShell({
         {/* Desktop Sidebar */}
         <aside id='patient-primary-sidebar' className='pps-left'>
           <div
-            className='pps-sidebar'
+            className='pps-sidebar portal-sidebar-content'
             style={{
               background: "var(--surface-glass)",
               backdropFilter: 'blur(22px) saturate(180%)',
@@ -257,7 +257,7 @@ export default function PatientPortalShell({
         {/* Right rail */}
         {rightRail ? (
           <aside id='patient-secondary-sidebar' className='pps-right'>
-            <div className='pps-right-rail'>{rightRail}</div>
+            <div className='pps-right-rail portal-sidebar-content portal-sidebar-stack'>{rightRail}</div>
           </aside>
         ) : null}
       </div>

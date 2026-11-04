@@ -639,7 +639,7 @@ export default function PatientSettingsPage() {
     <div className='grid gap-3'>
       <PortalCard>
         <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Profile Health</p>
-        <h2 style={{ margin: '0 0 10px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Your preferences are current</h2>
+        <h2 className='portal-h2'>Your preferences are current</h2>
         <div className='grid gap-2'>
           {[
             ['Security status', sessionStatus === 'checking' ? 'Checking' : sessionStatus === 'active' ? 'Active session' : 'Signed out'],
@@ -678,8 +678,8 @@ export default function PatientSettingsPage() {
       appearance={settingsAppearance}
     >
       <style>{`
-        .settings-stack { display: grid; gap: 16px; }
-        .settings-card { position: relative; overflow: hidden; }
+        .settings-stack { display: grid; gap: var(--space-6); }
+        .settings-card { --portal-card-padding: clamp(20px, 3vw, 28px); position: relative; min-width: 0; }
         .settings-two-up { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .settings-info-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .settings-profile-grid { display: grid; gap: 16px; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); }
@@ -687,55 +687,15 @@ export default function PatientSettingsPage() {
         .settings-field-value { overflow-wrap: anywhere; word-break: break-word; }
         .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface-subtle); padding: 12px; }
         .settings-row-control { flex: 0 0 auto; }
-        .pps-theme-dark .settings-card {
-          background: rgba(11, 32, 48, 0.96) !important;
-          border-color: rgba(125, 211, 252, 0.2) !important;
-          box-shadow: 0 18px 48px rgba(0,0,0,0.26) !important;
-        }
-        .pps-theme-dark .settings-card h2,
-        .pps-theme-dark .settings-card p,
-        .pps-theme-dark .settings-card span,
-        .pps-theme-dark .settings-card strong,
-        .pps-theme-dark .settings-card label {
-          color: #E6F6FF !important;
-        }
-        .pps-theme-dark .settings-card [style*="color: rgb(114, 139, 154)"],
-        .pps-theme-dark .settings-card [style*="color: rgb(78, 111, 130)"] {
-          color: #B8D6E7 !important;
-        }
-        .pps-theme-dark .settings-row,
-        .pps-theme-dark .settings-info-grid > div,
-        .pps-theme-dark .settings-profile-grid [style*="background: rgba(247,250,252"] {
-          background: rgba(15, 47, 70, 0.9) !important;
-          border-color: rgba(125, 211, 252, 0.18) !important;
-        }
-        .pps-theme-dark .settings-row[aria-pressed="true"] {
-          background: rgba(32,181,223,0.14) !important;
-          border-color: rgba(32,181,223,0.4) !important;
-        }
-        .pps-theme-dark .settings-card input,
-        .pps-theme-dark .settings-card select {
-          background: rgba(7, 23, 35, 0.96) !important;
-          border-color: rgba(125, 211, 252, 0.24) !important;
-          color: #E6F6FF !important;
-        }
-        .pps-theme-dark .settings-card button:not([style*="linear-gradient"]) {
-          background: rgba(15, 47, 70, 0.96) !important;
-          border-color: rgba(125, 211, 252, 0.24) !important;
-          color: #E6F6FF !important;
-        }
-        .pps-theme-dark .settings-card button[style*="linear-gradient"] {
-          color: #fff !important;
-        }
         @media (max-width: 900px) {
           .settings-two-up { grid-template-columns: 1fr; }
           .settings-profile-grid { grid-template-columns: 1fr; }
           .settings-profile-avatar { justify-content: flex-start !important; }
         }
         @media (max-width: 640px) {
-          .settings-stack { gap: 12px; }
+          .settings-stack { gap: var(--space-4); }
           .settings-info-grid { grid-template-columns: 1fr; }
-          .settings-card-title { font-size: 18px !important; line-height: 1.25 !important; }
+
           .settings-row { align-items: stretch; flex-direction: column; }
           .settings-row-control,
           .settings-row-control button,
@@ -759,7 +719,7 @@ export default function PatientSettingsPage() {
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Account Information</p>
-                <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Profile and contact identity</h2>
+                <h2 className='portal-h2 settings-card-title'>Profile and contact identity</h2>
               </div>
               <PortalButton tone='secondary' onClick={() => { if (!showProfileEdit) openProfileEdit(); else setShowProfileEdit(false) }}>
                 {showProfileEdit ? 'Cancel' : 'Edit'}
@@ -861,7 +821,7 @@ export default function PatientSettingsPage() {
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Health Information</p>
-              <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Vital signs and medical details</h2>
+              <h2 className='portal-h2 settings-card-title'>Vital signs and medical details</h2>
               </div>
             </div>
             <div className='settings-info-grid'>
@@ -895,7 +855,7 @@ export default function PatientSettingsPage() {
           <PortalCard className='settings-card'>
             <div className='mb-4'>
               <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Security</p>
-              <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Secure access controls</h2><AccountSecurity/>
+              <AccountSecurity/>
             </div>
             <div className='grid gap-3'>
               {SECURITY_ITEMS.filter(item => item.title !== 'Change Password').map((item) => (
@@ -923,7 +883,7 @@ export default function PatientSettingsPage() {
           <PortalCard className='settings-card'>
             <div className='mb-4'>
               <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Notification Preferences</p>
-              <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Care communication and reminders</h2>
+              <h2 className='portal-h2 settings-card-title'>Care communication and reminders</h2>
             </div>
             <div className='grid gap-3'>
               {[
@@ -944,7 +904,7 @@ export default function PatientSettingsPage() {
             <PortalCard className='settings-card'>
               <div className='mb-4'>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Privacy</p>
-                <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Control your health data</h2>
+                <h2 className='portal-h2 settings-card-title'>Control your health data</h2>
               </div>
               <div className='grid gap-3'>
                 <p style={{ color: T.slate, lineHeight: 1.6 }}>Privacy choices and consent withdrawal for a real-patient service are awaiting implementation and approved texts. This development environment is for synthetic test data only.</p>
@@ -957,7 +917,7 @@ export default function PatientSettingsPage() {
             <PortalCard className='settings-card'>
               <div className='mb-4'>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Accessibility</p>
-                <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Personalize readability and comfort</h2>
+                <h2 className='portal-h2 settings-card-title'>Personalize readability and comfort</h2>
               </div>
               <div className='grid gap-3'>
                 <ToggleRow label='Dark Mode' enabled={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} description='Saved automatically in this browser across every Qarevo portal, including after sign-out.' />
@@ -974,7 +934,7 @@ export default function PatientSettingsPage() {
               <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Emergency Contacts</p>
-                  <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>People to contact quickly</h2>
+                  <h2 className='portal-h2 settings-card-title'>People to contact quickly</h2>
                 </div>
                 <PortalButton tone='primary' onClick={() => setShowAddContactForm(!showAddContactForm)}>
                   {showAddContactForm ? 'Cancel' : 'Add Contact'}
@@ -1099,7 +1059,7 @@ export default function PatientSettingsPage() {
               <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Information</p>
-                  <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Coverage and card upload</h2>
+                  <h2 className='portal-h2 settings-card-title'>Coverage and card upload</h2>
                 </div>
                 <div className='flex gap-2'>
                   {insurance && <PortalBadge tone='success'>Coverage Active</PortalBadge>}
@@ -1316,7 +1276,7 @@ function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { tit
           padding: '20px',
         }}
       >
-        <h2 id='confirm-dialog-title' style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800, color: T.navy }}>{title}</h2>
+        <h2 id='confirm-dialog-title' className='portal-h2'>{title}</h2>
         <p style={{ margin: '0 0 18px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>{body}</p>
         <div className='flex flex-wrap justify-end gap-2'>
           <PortalButton tone='secondary' onClick={onCancel}>Cancel</PortalButton>
@@ -1362,7 +1322,7 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
       >
         <div className='mb-4 flex items-start justify-between gap-3'>
           <div>
-            <h2 id='login-history-title' style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800, color: T.navy }}>Login history</h2>
+            <h2 id='login-history-title' className='portal-h2'>Login history</h2>
             <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Recent security events from your account audit log.</p>
           </div>
           <button
@@ -1461,7 +1421,7 @@ function ActiveDevicesDialog({
       >
         <div className='mb-4 flex items-start justify-between gap-3'>
           <div>
-            <h2 id='active-devices-title' style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800, color: T.navy }}>Active devices</h2>
+            <h2 id='active-devices-title' className='portal-h2'>Active devices</h2>
             <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>These are browser sessions that can currently refresh access to your account.</p>
           </div>
           <button
@@ -1576,7 +1536,7 @@ function PasskeysDialog({
       >
         <div className='mb-4 flex items-start justify-between gap-3'>
           <div>
-            <h2 id='passkeys-title' style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800, color: T.navy }}>Passkeys</h2>
+            <h2 id='passkeys-title' className='portal-h2'>Passkeys</h2>
             <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Use your device security, such as Face ID, Touch ID, or a screen lock, to sign in without a password.</p>
           </div>
           <button

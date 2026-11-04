@@ -101,6 +101,7 @@ export default function AdminLayout({
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94)',
           }}>
             <div className='portal-navbar-row' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+              <Link href='/admin/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health admin dashboard'><AuthenticatedLogo width={156} /></Link>
               <SidebarToggle role='admin' />
               <div className='portal-navbar-title'>
                 <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Admin Portal</h2>
@@ -129,7 +130,6 @@ export default function AdminLayout({
                   {loggingOut ? 'Signing out...' : 'Sign out'}
                 </button>
               </div>
-              <Link href='/admin/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health admin dashboard'><AuthenticatedLogo width={156} /></Link>
             </div>
           </header>
       <div style={{ display: 'flex' }}>

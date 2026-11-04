@@ -8,9 +8,9 @@ import { BookingProvider } from '@/contexts/BookingContext'
 import { SessionGuard } from '@/components/ui/SessionGuard'
 import { NavigationGuards } from '@/components/ui/NavigationGuards'
 
-const inter = localFont({
-  src: '../public/fonts/InterVariable.woff2',
-  variable: '--font-inter',
+const publicSans = localFont({
+  src: '../public/fonts/PublicSans-Variable.ttf',
+  variable: '--font-public-sans',
   weight: '100 900',
   display: 'swap',
 })
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html suppressHydrationWarning lang="en" className={inter.variable}>
+    <html suppressHydrationWarning lang="en" className={publicSans.variable}>
       <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body>
         <NavigationGuards><ThemeProvider><BookingProvider><SessionGuard>{children}<Footer /></SessionGuard></BookingProvider></ThemeProvider></NavigationGuards>

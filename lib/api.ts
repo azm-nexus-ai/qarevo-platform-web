@@ -1292,6 +1292,8 @@ export type DoctorAppointmentDetail = DoctorAppointmentSummary & {
     chief_complaint: string | null;
     intake_submitted_at: string | null;
     ai_draft_ready: boolean;
+    ai_available?: boolean;
+    clinical_context_available?: boolean;
     cancellation_reason: string | null;
     cancelled_at: string | null;
 };
@@ -1318,6 +1320,7 @@ export type DoctorWorkspaceResponse = {
 
 export type DoctorConsultationDetail = {
     consultation_id: string;
+    episode_id?: string | null;
     patient_id: string;
     patient_name: string;
     patient_email: string | null;
@@ -1713,8 +1716,8 @@ export async function updatePatientEpisodeIntake(
   });
 }
 
-export async function submitPatientEpisodeIntake(episodeId: string): Promise<IntakeSubmitResponse> {
-  return apiPost<IntakeSubmitResponse>(`/api/v1/patient/episodes/${episodeId}/intake/submit`, {});
+export async function submitPatientEpisodeIntake(episodeId: string, fieldValues?: Record<string, unknown>): Promise<IntakeSubmitResponse> {
+  return apiPost<IntakeSubmitResponse>(`/api/v1/patient/episodes/${episodeId}/intake/submit`, fieldValues ? {field_values: fieldValues} : {});
 }
 
 export async function getPatientEpisode(episodeId: string): Promise<EpisodeResponse> {

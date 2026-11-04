@@ -1,4 +1,6 @@
 'use client'
+import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
+import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
 
 import { useState, useId } from 'react'
 import Link from 'next/link'
@@ -262,6 +264,7 @@ export default function DoctorLoginPage() {
 
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
+  const [handoff, setHandoff] = useState<PortalHandoff | null>(null)
   const cooldown = useLoginCooldown()
 
   const identifierErr = touched.identifier && !identifier ? 'Email, username, or phone is required' : ''
@@ -277,7 +280,7 @@ export default function DoctorLoginPage() {
     }
 
     setLoading(true)
-    setAuthError('')
+    setAuthError(''); setHandoff(null)
 
     try {
       const loginData: DoctorLoginRequest = {
@@ -293,10 +296,13 @@ export default function DoctorLoginPage() {
       localStorage.setItem('doctor_identifier', identifier)
 
       // Redirect to 2FA verification page
-      router.push('/auth/doctor/2fa')
+      const intended = safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PROVIDER')
+      router.push('/auth/doctor/2fa' + (intended ? `?${new URLSearchParams({ next: intended })}` : ''))
     } catch (error) {
       cooldown.record(error)
-      setAuthError(getFriendlyDoctorLoginError(error))
+      const wrongPortal = authenticatedPortalHandoff(error)
+      setHandoff(wrongPortal)
+      setAuthError(wrongPortal ? '' : getFriendlyDoctorLoginError(error))
     } finally {
       setLoading(false)
     }
@@ -356,6 +362,7 @@ export default function DoctorLoginPage() {
               </div>
             </div>
 
+            {handoff && <WrongPortalNotice handoff={handoff}/>}
             {/* Error banner */}
             {(cooldown.message || authError) && (
               <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
@@ -431,7 +438,8 @@ export default function DoctorLoginPage() {
               </button>
             </form>
 
-            <SocialSignInButtons portal='PROVIDER' />
+            <PortalSignInReference portal='PROVIDER'/>
+              <SocialSignInButtons portal='PROVIDER' />
 
             {/* 2FA notice */}
             <div style={{ marginTop: '20px', padding: '12px 16px', borderRadius: '11px', background: 'rgba(32,181,223,0.06)', border: '1px solid rgba(32,181,223,0.12)' }}>

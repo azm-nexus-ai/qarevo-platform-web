@@ -1,10 +1,10 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
-import { getPatientDoctor, createPatientEpisode, updatePatientEpisodeIntake, submitPatientEpisodeIntake, type PatientDoctor } from '@/lib/api'
+import { getPatientDoctor, createPatientEpisode, submitPatientEpisodeIntake, getApiErrorDetail, type PatientDoctor } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -92,6 +92,9 @@ function IntakePageContent() {
     complaint: !chiefComplaint.trim() ? 'Describe the main reason for your visit.' : chiefComplaint.length > 2000 ? 'Use no more than 2,000 characters for the main concern.' : undefined,
     processing: !processingConsent ? 'Confirm the required data-processing choice before submitting this intake.' : undefined,
   }
+  const submitting = useRef(false)
+  const episodeRef = useRef(searchParams.get('episode_id') || '')
+  const [submitStage, setSubmitStage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
@@ -124,7 +127,8 @@ function IntakePageContent() {
   }
 
   const handleSubmit = async () => {
-    if (isSubmitting) return
+    if (submitting.current) return
+    const validationStarted = performance.now()
     setAttempted(true)
     if (Object.values(errors).some(Boolean)) {
       const form = document.getElementById('clinical-intake-form')
@@ -132,11 +136,15 @@ function IntakePageContent() {
       return
     }
 
+    submitting.current = true
+    const validationMs = performance.now() - validationStarted
     setIsSubmitting(true)
+    setSubmitStage('Opening your clinical intake…')
     setSubmitError('')
 
     try {
-      const episodeResponse = await createPatientEpisode({
+      const apiStarted = performance.now()
+      const episodeResponse = episodeRef.current ? {id: episodeRef.current} : await createPatientEpisode({
         pack_id: 'patient-booking-intake',
         pack_version: '1.0.0',
         bundesland: 'general',
@@ -153,6 +161,12 @@ function IntakePageContent() {
       })
 
       const newEpisodeId = episodeResponse.id
+      episodeRef.current = newEpisodeId
+      const recoveryUrl = new URL(window.location.href)
+      recoveryUrl.searchParams.set('episode_id', newEpisodeId)
+      window.history.replaceState(window.history.state, '', recoveryUrl.pathname + recoveryUrl.search)
+      setSubmitStage('Saving and submitting your intake…')
+      const serializationStarted = performance.now()
 
       const intakeData = {
         chief_complaint: chiefComplaint,
@@ -166,8 +180,10 @@ function IntakePageContent() {
         raw_text: `${chiefComplaint}. ${symptoms}. ${medicalHistory}`,
       }
 
-      await updatePatientEpisodeIntake(newEpisodeId, intakeData)
-      await submitPatientEpisodeIntake(newEpisodeId)
+      JSON.stringify(intakeData)
+      const serializationMs = performance.now() - serializationStarted
+      await submitPatientEpisodeIntake(newEpisodeId, intakeData)
+      if (process.env.NODE_ENV === 'development') console.info('intake.performance', {validation_ms:validationMs, serialization_ms:serializationMs, api_ms:performance.now()-apiStarted})
 
       const reviewParams = buildBookingQueryParams(searchParams, physicianData, service)
       reviewParams.set('episode_id', newEpisodeId)
@@ -175,9 +191,11 @@ function IntakePageContent() {
       router.push(`/patient/consultation-booking/review?${reviewParams.toString()}`)
     } catch (error) {
       console.error('Failed to submit intake:', error)
-      setSubmitError(error instanceof Error ? error.message : 'Failed to submit your intake information. Please try again.')
+      setSubmitError(getApiErrorDetail(error) || 'Your intake could not be submitted. Please retry; your existing care episode will be reused.')
     } finally {
+      submitting.current = false
       setIsSubmitting(false)
+      setSubmitStage('')
     }
   }
 
@@ -222,13 +240,14 @@ function IntakePageContent() {
             Please provide details about your medical condition so Dr. {physicianData.name} can prepare for your consultation.
           </p>
 
+          {submitStage && <p role='status' aria-live='polite'>{submitStage}</p>}
           {submitError && (
             <div role="alert" style={{ background: "var(--danger-soft)", border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
               <p style={{ color: '#dc2626', margin: 0, fontSize: '14px' }}>{submitError}</p>
             </div>
           )}
 
-          <form id="clinical-intake-form" noValidate onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <form aria-busy={isSubmitting} id="clinical-intake-form" noValidate onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <p className="field-hint">Development testing only. Use synthetic information. The legal documents are drafts awaiting approval.</p>
             {attempted && <ValidationSummary errors={errors} />}
             <div>

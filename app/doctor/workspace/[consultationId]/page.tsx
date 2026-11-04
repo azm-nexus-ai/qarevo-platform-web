@@ -1,4 +1,5 @@
 'use client'
+import '@/components/doctor/doctor-clinical.css'
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
@@ -36,7 +37,7 @@ export default function ConsultationDetailPage() {
       } catch (err) {
         if (isAuthError(err)) {
           clearAuthTokens()
-          router.replace('/auth/sign-in')
+          router.replace('/auth/doctor/login')
           return
         }
         setError(err instanceof Error ? err.message : 'Failed to fetch consultation details')
@@ -100,7 +101,7 @@ export default function ConsultationDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div className="flex items-center space-x-4">
           <button
             onClick={handleBack}
@@ -110,19 +111,19 @@ export default function ConsultationDetailPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-ink">Consultation Details</h1>
-            <p className="text-muted mt-1">ID: {consultation.consultation_id}</p>
+            <p className="text-muted mt-1 break-all">ID: {consultation.consultation_id}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
           {can_join_video && (
             <button
               onClick={handleJoinVideo}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="clinical-action clinical-action--primary"
             >
               Join Video
             </button>
           )}
-
+          {consultation.episode_id && <button type="button" className="clinical-action clinical-action--ai" onClick={()=>router.push(`/doctor/episodes/${consultation.episode_id}`)}>View Intake & AI Draft</button>}
         </div>
       </div>
 

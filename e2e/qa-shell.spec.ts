@@ -48,7 +48,7 @@ for(const [role,portal,home] of [
     const header=portal==='patient'?page.getByRole('navigation',{name:'Patient appearance'}):page.getByRole('banner',{name:portal==='doctor'?'Doctor main navigation':'Admin main navigation'})
     const brand=header.getByRole('link',{name:new RegExp(`Qarevo Health ${portal} dashboard`,'i')})
     const left=header.getByRole('button',{name:'Hide sidebar',exact:true})
-    expect((await brand.boundingBox())!.x).toBeGreaterThan((await left.boundingBox())!.x)
+    expect((await brand.boundingBox())!.x).toBeLessThan((await left.boundingBox())!.x)
     if(portal!=='patient') {
       const bounds=await header.boundingBox(),sidebar=await page.locator(`#${portal}-primary-sidebar`).boundingBox()
       expect(bounds!.x).toBe(0)

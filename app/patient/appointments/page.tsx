@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
+import DoctorAvatar from '@/components/cards/DoctorAvatar'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh, Glass } from '@/lib/tokens'
@@ -34,7 +34,7 @@ type Appointment = {
   physician: string
   specialty: string
   hospital: string
-  imageUrl: string
+  imageUrl?: string | null
   consultationType: ConsultationType
   date: string
   time: string
@@ -60,6 +60,7 @@ type ApiAppointment = {
   consultation_id?: string | null
   provider_id?: string | null
   provider_name?: string | null
+  provider_image_url?: string | null
   specialty?: string | null
   consultation_modality?: string | null
   start_at?: string | null
@@ -176,14 +177,7 @@ function TodayBanner({ appt, onJoin, onDetails }: { appt: Appointment; onJoin: (
         </span>
       </div>
       <div className='appt-today-grid'>
-        <Image
-          src={appt.imageUrl}
-          alt={appt.physician}
-          width={80}
-          height={80}
-          loading="eager"
-          style={{ width: '80px', height: '80px', borderRadius: '14px', objectFit: 'cover', border: "1px solid var(--border)", boxShadow: '0 6px 16px rgba(4,53,77,0.14)', flexShrink: 0 }}
-        />
+        <DoctorAvatar imageUrl={appt.imageUrl || undefined} name={appt.physician} size={80}/>
         <div style={{ minWidth: 0 }}>
           <h3 style={{ margin: '0 0 3px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, letterSpacing: '-0.025em', color: T.navy }}>{appt.physician}</h3>
           <p style={{ margin: '0 0 10px', fontSize: '13px', color: T.slate2 }}>{appt.specialty} · {appt.hospital}</p>
@@ -235,14 +229,7 @@ function UpcomingCard({ appt, onJoin, onDetails, onReschedule, onCancel }: {
   return (
     <SCard style={{ padding: '18px' }}>
       <div className='appt-card-grid'>
-        <Image
-          src={appt.imageUrl}
-          alt={appt.physician}
-          width={72}
-          height={72}
-          loading="lazy"
-          style={{ width: '72px', height: '72px', borderRadius: '14px', objectFit: 'cover', border: "1px solid var(--border)", boxShadow: '0 4px 12px rgba(4,53,77,0.12)', flexShrink: 0 }}
-        />
+        <DoctorAvatar imageUrl={appt.imageUrl || undefined} name={appt.physician} size={72}/>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
             <div>
@@ -306,14 +293,7 @@ function PastCard({ appt, onReview }: { appt: Appointment; onReview: (appt: Appo
   return (
     <SCard style={{ padding: '18px' }}>
       <div className='appt-card-grid'>
-        <Image
-          src={appt.imageUrl}
-          alt={appt.physician}
-          width={72}
-          height={72}
-          loading="lazy"
-          style={{ width: '72px', height: '72px', borderRadius: '14px', objectFit: 'cover', border: "1px solid var(--border)", boxShadow: '0 4px 12px rgba(4,53,77,0.08)', flexShrink: 0 }}
-        />
+        <DoctorAvatar imageUrl={appt.imageUrl || undefined} name={appt.physician} size={72}/>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
             <div>
@@ -395,14 +375,7 @@ function CancelledCard({ appt }: { appt: Appointment }) {
   return (
     <SCard style={{ padding: '18px', opacity: 0.88 }}>
       <div className='appt-card-grid'>
-        <Image
-          src={appt.imageUrl}
-          alt={appt.physician}
-          width={72}
-          height={72}
-          loading="lazy"
-          style={{ width: '72px', height: '72px', borderRadius: '14px', objectFit: 'cover', border: "1px solid var(--border)", boxShadow: '0 4px 12px rgba(4,53,77,0.08)', flexShrink: 0, filter: 'grayscale(25%)' }}
-        />
+        <DoctorAvatar imageUrl={appt.imageUrl || undefined} name={appt.physician} size={72}/>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
             <div>
@@ -588,7 +561,7 @@ function AppointmentsPageInner() {
             consultationId: apt.consultation_id,
             specialty: apt.specialty || 'Care team',
             hospital: 'Qarevo Health',
-            imageUrl: '/icons/profilePic.svg',
+            imageUrl: apt.provider_image_url || undefined,
             consultationType: apt.consultation_modality === 'in_person' ? 'In-Person' : 'Video Consultation',
             date: startsAt.toLocaleDateString('en-CA', { timeZone: userTimeZone }) === new Date().toLocaleDateString('en-CA', { timeZone: userTimeZone }) ? 'Today' : startsAt.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', timeZone: userTimeZone }),
             time: startsAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: userTimeZone }),

@@ -1,0 +1,6 @@
+.reference { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 10px; margin-block: var(--space-4, 16px); padding: var(--space-3, 12px) var(--space-4, 16px); border: 1px solid var(--border); border-radius: var(--radius-md, 12px); background: var(--surface-subtle); color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+.reference a { display: inline-flex; align-items: center; min-height: var(--control-height, 44px); color: var(--link); font-weight: 700; text-decoration: none; border-radius: var(--radius-sm, 8px); }
+.reference a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.reference a:focus-visible { outline: var(--focus-ring, 3px solid var(--link)); outline-offset: 4px; }
+.handoff { display: grid; gap: var(--space-3, 12px); margin-bottom: var(--space-5, 20px); padding: var(--space-4, 16px); border: 1px solid var(--border); border-radius: var(--radius-lg, 16px); background: var(--surface-subtle); color: var(--text); }
+.handoff p { margin: 0; font-size: 14px; line-height: 1.65; }

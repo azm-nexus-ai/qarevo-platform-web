@@ -1,6 +1,5 @@
 'use client'
 
-import { T, Sh, Glass } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import DoctorAvatar from './DoctorAvatar'
@@ -11,128 +10,32 @@ interface DoctorCardProps {
   verification: string
   tags?: string[]
   imageUrl?: string
+  selected?: boolean
+  disabled?: boolean
+  loading?: boolean
+  onSelect?: () => void
 }
 
-export default function DoctorCard({ name, specialty, verification, tags = [], imageUrl }: DoctorCardProps) {
-
-  return (
-    <div
-      className='doctor-card'
-      style={{
-        background: 'linear-gradient(145deg, #F6F9FF 0%, #EEF4FF 100%)',
-        borderRadius: '14px',
-        border: '1px solid rgba(32,181,223,0.09)',
-        padding: '18px',
-        display: 'flex',
-        gap: '14px',
-        boxShadow: Sh.inner,
-      }}
-    >
-      <style>{`
-        .doctor-card { min-width: 0; }
-        .doctor-card-main { min-width: 0; }
-        .doctor-card-name, .doctor-card-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .doctor-card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-        @media (max-width: 430px) {
-          .doctor-card {
-            align-items: flex-start !important;
-            gap: 12px !important;
-            padding: 14px !important;
-          }
-          .doctor-card-avatar {
-            width: 46px !important;
-            height: 46px !important;
-          }
-          .doctor-card-name {
-            font-size: 14px !important;
-          }
-          .doctor-card-meta {
-            white-space: normal;
-            font-size: 12px !important;
-            line-height: 1.45;
-            margin-bottom: 10px !important;
-          }
-          .doctor-card-focus {
-            font-size: 9px !important;
-            margin-bottom: 6px !important;
-          }
-          .doctor-card-tags span {
-            padding: 4px 9px !important;
-            font-size: 11.5px !important;
-          }
-        }
-      `}</style>
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <DoctorAvatar name={name} imageUrl={imageUrl} />
-        <span
-          aria-label="Verified physician"
-          style={{
-            position: 'absolute',
-            bottom: '-1px',
-            right: '-1px',
-            width: '20px',
-            height: '20px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: "2px solid var(--border)",
-            ...Glass.verifyBadge,
-          }}
-        >
-          <Ico p={ICONS.check} size={9} sw={2.5} style={{ color: '#fff' }} />
-        </span>
+/** Shared physician summary; optional selection never bypasses booking authorization. */
+export default function DoctorCard({ name, specialty, verification, tags = [], imageUrl, selected = false, disabled = false, loading = false, onSelect }: DoctorCardProps) {
+  const unavailable = disabled || loading
+  const verified = /^(verified|approved|active)$/i.test(verification.trim())
+  return <div className='doctor-card' data-selected={selected || undefined} data-disabled={disabled || undefined}
+    role={onSelect ? 'button' : undefined} tabIndex={onSelect && !unavailable ? 0 : undefined}
+    aria-label={onSelect ? `Select ${name}` : undefined} aria-pressed={onSelect ? selected : undefined}
+    aria-disabled={onSelect ? unavailable : undefined} aria-busy={loading || undefined}
+    onClick={onSelect && !unavailable ? onSelect : undefined}
+    onKeyDown={event => { if (onSelect && !unavailable && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelect() } }}>
+    {loading ? <div role='status' className='doctor-card-loading'><span className='doctor-card-skeleton'/><span>Loading clinician details…</span></div> : <>
+      <div className='doctor-card-portrait'>
+        <DoctorAvatar name={name} imageUrl={imageUrl}/>
+        {verified && <span className='doctor-card-verified' aria-label='Verified physician'><Ico p={ICONS.check} size={10} sw={2.5}/></span>}
       </div>
-
-      <div className='doctor-card-main' style={{ flex: 1, minWidth: 0 }}>
-        <div
-          className='doctor-card-name'
-          style={{
-            fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
-            fontSize: '15px',
-            fontWeight: 700,
-            color: T.navy,
-            letterSpacing: '-0.025em',
-            marginBottom: '3px',
-          }}
-        >
-          {name}
-        </div>
-        <div className='doctor-card-meta' style={{ fontSize: "13px", color: T.slate2, marginBottom: '16px', letterSpacing: '-0.01em' }}>
-          {specialty} · Clinical Ver: {verification}
-        </div>
-        <div
-          className='doctor-card-focus'
-          style={{
-            fontSize: "13px",
-            fontWeight: 700,
-            color: T.slate2,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            marginBottom: '8px',
-          }}
-        >
-          Clinical Focus
-        </div>
-        <div className='doctor-card-tags'>
-          {tags.map((tag, index) => (
-            <span
-              key={`${tag}-${index}`}
-              style={{
-                padding: '4px 11px',
-                borderRadius: '100px',
-                color: T.link,
-                fontSize: "13px",
-                fontWeight: 500,
-                letterSpacing: '-0.01em',
-                ...Glass.chip,
-              }}
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+      <div className='doctor-card-main'>
+        <p className='doctor-card-name'>{name}</p>
+        <p className='doctor-card-meta'>{specialty} · {verification}</p>
+        {tags.length > 0 && <><p className='doctor-card-focus'>Clinical focus</p><div className='doctor-card-tags'>{tags.map((tag,index)=><span key={`${tag}-${index}`}>{tag}</span>)}</div></>}
       </div>
-    </div>
-  )
+    </>}
+  </div>
 }

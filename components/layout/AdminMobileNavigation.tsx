@@ -10,6 +10,7 @@ import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 export default function AdminMobileNavigation({ onSignOut }: { onSignOut: () => void }) {
   const pathname = usePathname()
   return <div className="admin-mobile-navigation">
+    <Link href={ADMIN_ROUTES.dashboard} aria-label="Admin dashboard"><AuthenticatedLogo width={100} /></Link>
     <ThemeToggle />
     <details key={pathname} onKeyDown={event => {
       if (event.key === 'Escape') {
@@ -24,7 +25,6 @@ export default function AdminMobileNavigation({ onSignOut }: { onSignOut: () => 
         <PortalAccessLinks /><button type="button" onClick={onSignOut}>Sign out</button>
       </nav>
     </details>
-    <Link href={ADMIN_ROUTES.dashboard} aria-label="Admin dashboard"><AuthenticatedLogo width={100} /></Link>
 
   </div>
 }

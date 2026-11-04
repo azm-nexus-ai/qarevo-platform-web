@@ -10,7 +10,6 @@ import {
   clearAuthTokens,
   getDoctorSettings,
   isAuthError,
-  logoutCurrentUser,
   readAccessToken,
   updateDoctorSettings,
   type DoctorSettingsResponse,
@@ -26,7 +25,6 @@ export default function DoctorSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   useEffect(() => {
     if (!readAccessToken()) {
@@ -47,7 +45,7 @@ export default function DoctorSettingsPage() {
       } catch (err) {
         if (isAuthError(err)) {
           clearAuthTokens()
-          router.replace('/auth/sign-in')
+          router.replace('/auth/doctor/login')
           return
         }
         console.error('Failed to load doctor settings', err)
@@ -80,7 +78,7 @@ export default function DoctorSettingsPage() {
     } catch (err) {
       if (isAuthError(err)) {
         clearAuthTokens()
-        router.replace('/auth/sign-in')
+        router.replace('/auth/doctor/login')
         return
       }
       console.error('Failed to save doctor settings', err)
@@ -99,17 +97,6 @@ export default function DoctorSettingsPage() {
     updateDraft('available_days', WEEK_DAYS.filter((item) => nextDays.includes(item)))
   }
 
-  const handleConfirmLogout = async () => {
-    setSaving(true)
-    try {
-      await logoutCurrentUser()
-    } catch (err) {
-      console.error('Logout failed before local cleanup', err)
-    } finally {
-      setShowLogoutConfirm(false)
-      router.replace('/auth/sign-in')
-    }
-  }
 
   if (loading) {
     return (
@@ -242,12 +229,6 @@ export default function DoctorSettingsPage() {
           boxShadow: Sh.card,
           padding: '24px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(220,38,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Ico p={ICONS.lock} size={20} sw={1.5} color={T.red} />
-            </div>
-            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Security</h3>
-          </div>
           <AccountSecurity/>
         </div>
 
@@ -318,65 +299,7 @@ export default function DoctorSettingsPage() {
           </div>
         </div>
       </div>
-      {showLogoutConfirm && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="settings-logout-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            background: "var(--surface-hover)",
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-          }}
-        >
-          <div style={{
-            width: '100%',
-            maxWidth: '380px',
-            borderRadius: '18px',
-            border: "1px solid var(--border)",
-            background: "var(--surface-glass)",
-            boxShadow: '0 24px 64px rgba(4,53,77,0.2)',
-            padding: '24px',
-          }}>
-            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(220,38,38,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Ico p={ICONS.logout} size={20} sw={1.8} color={T.red} />
-              </div>
-              <div>
-                <h2 id="settings-logout-title" style={{ margin: '0 0 6px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Sign out?</h2>
-                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: T.slate }}>
-                  You will need to sign in again to access the doctor portal.
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '24px' }}>
-              <button
-                type="button"
-                onClick={() => setShowLogoutConfirm(false)}
-                disabled={saving}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer' }}
-              >
-                No, stay
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmLogout}
-                disabled={saving}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: T.red, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.7 : 1 }}
-              >
-                {saving ? 'Signing out...' : 'Yes, sign out'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   )
 }

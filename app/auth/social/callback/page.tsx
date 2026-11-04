@@ -1,4 +1,6 @@
 'use client'
+import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
+import { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -10,6 +12,7 @@ export default function SocialCallback() {
   const router=useRouter()
   const started=useRef(false)
   const [error,setError]=useState('')
+  const [handoff,setHandoff]=useState<PortalHandoff | null>(null)
   const [connected,setConnected]=useState(false)
   useEffect(()=>{
     if(started.current)return
@@ -28,18 +31,20 @@ export default function SocialCallback() {
       if(result.role==='PROVIDER' && result.temp_token){
         localStorage.setItem('doctor_temp_token',result.temp_token)
         localStorage.setItem('doctor_identifier',result.identifier || '')
-        router.replace('/auth/doctor/2fa');return
+        const intended = safePortalDestination(result.intended || null, 'PROVIDER')
+        router.replace('/auth/doctor/2fa' + (intended ? `?${new URLSearchParams({ next: intended })}` : ''));return
       }
       if(result.role==='PATIENT' && result.access_token && result.refresh_token){
         storeAuthTokens({access_token:result.access_token,refresh_token:result.refresh_token,user_id:result.user_id,role:'PATIENT'})
         const progress=await getOnboarding()
-        router.replace(progress.complete?'/patient/dashboard':onboardingPath(progress.next_step));return
+        router.replace(progress.complete ? safePortalDestination(result.intended || null, 'PATIENT') || '/patient/dashboard' : onboardingPath(progress.next_step));return
       }
       throw new Error('The sign-in response was incomplete. Please use email and password.')
-    }).catch(failure=>setError(getApiErrorDetail(failure) || 'Provider sign-in failed. Please try again.'))
+    }).catch(failure=>{const wrong = authenticatedPortalHandoff(failure);setHandoff(wrong);setError(wrong ? '' : getApiErrorDetail(failure) || 'Provider sign-in failed. Please try again.')})
   },[router])
   return <main style={{maxWidth:560,margin:'60px auto',padding:24,color:'var(--text)'}}><h1>{connected?'Sign-in provider connected':'Completing secure sign-in'}</h1>
-    {error?<p role='alert'>{error}</p>:connected?<p>Your provider is now linked to this account. Future provider sign-in still enforces the account’s role, status and any required second factor.</p>:<p role='status'>Verifying the provider response…</p>}
-    {(error || connected) && <nav aria-label='Return to sign-in' style={{display:'flex',gap:20,flexWrap:'wrap'}}><Link href='/auth/sign-in'>Patient sign-in</Link><Link href='/auth/doctor/login'>Clinician sign-in</Link></nav>}
+    {handoff && <WrongPortalNotice handoff={handoff}/>}
+    {handoff ? null : error?<p role='alert'>{error}</p>:connected?<p>Your provider is now linked to this account. Future provider sign-in still enforces the account’s role, status and any required second factor.</p>:<p role='status'>Verifying the provider response…</p>}
+    {(error || connected || handoff) && <nav aria-label='Return to sign-in' style={{display:'flex',gap:20,flexWrap:'wrap'}}><Link href='/auth/sign-in'>Patient sign-in</Link><Link href='/auth/doctor/login'>Clinician sign-in</Link></nav>}
   </main>
 }

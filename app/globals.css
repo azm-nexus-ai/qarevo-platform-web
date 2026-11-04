@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 html {
-  font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -241,55 +241,102 @@ button {
 }
 
 /* Shared design foundation: patient, clinician, administration and public routes. */
+/* Approved Qarevo kit hex values; functional tones preserve contrast. */
 :root {
   color-scheme: light;
-  --canvas: #f4f7fa;
+  --brand-cyan: #20B5DF;
+  --brand-navy: #04354D;
+  --brand-blue: #348CEA;
+  --brand-aqua: #A5E0DA;
+  --brand-paper: #F7FAFC;
+  --brand-ink: #0E151A;
+  --font-body: var(--font-public-sans), 'Public Sans', system-ui, sans-serif;
+  --font-inter: var(--font-public-sans);
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-7: 28px; --space-8: 32px;
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px;
+  --control-height: 44px;
+  --portal-navbar-height: 80px;
+  --portal-sticky-offset: calc(var(--portal-navbar-height) + 18px);
+  --canvas: var(--brand-paper);
   --surface: #ffffff;
   --surface-glass: rgba(255,255,255,.96);
-  --surface-subtle: #eef3f7;
-  --surface-hover: rgba(15,48,66,.055);
-  --text: #143548;
-  --text-secondary: #365568;
-  --text-muted: #526b7a;
+  --surface-subtle: #edf4f6;
+  --surface-hover: rgba(4,53,77,.055);
+  --text: var(--brand-navy);
+  --text-secondary: #3e5b69;
+  --text-muted: #526b78;
   --primary: #087795;
-  --primary-end: #1764a6;
-  --link: #086f91;
-  --primary-soft: #e5f4f8;
-  --primary-border: #9bcedb;
-  --border: #cbd8e1;
-  --border-subtle: #e2eaf0;
-  --success: #087a58;
-  --success-soft: #e7f6ef;
-  --warning: #9a5804;
-  --danger: #b92332;
-  --danger-soft: #fff0f1;
-  --shadow-sm: 0 1px 3px rgba(20,53,72,.07);
-  --shadow-card: 0 1px 3px rgba(20,53,72,.05), 0 12px 32px rgba(20,53,72,.06);
-  --shadow-float: 0 8px 32px rgba(20,53,72,.16);
+  --primary-end: #226db5;
+  --link: #086b89;
+  --primary-soft: #e4f4f8;
+  --primary-border: #91cbdc;
+  --border: #c8d8df;
+  --border-subtle: #dfe9ee;
+  --interactive-hover: #e5f1f5;
+  --interactive-active: #d4e9f0;
+  --focus-ring: #087795;
+  --action-primary: var(--brand-navy);
+  --action-primary-hover: #0a4b66;
+  --action-primary-text: #ffffff;
+  --action-secondary-bg: var(--surface);
+  --action-secondary-hover: var(--interactive-hover);
+  --action-secondary-fg: var(--brand-navy);
+  --clinical-accent: #73519c;
+  --clinical-accent-soft: #f0ebf7;
+  --clinical-accent-border: #d9cce9;
+  --clinical-accent-fg: #61418a;
+  --success: #087a58; --success-soft: #e7f6ef;
+  --warning: #945500;
+  --danger: #b92332; --danger-soft: #fff0f1;
+  --shadow-sm: 0 1px 3px rgba(4,53,77,.07);
+  --shadow-card: 0 1px 3px rgba(4,53,77,.05), 0 10px 28px rgba(4,53,77,.055);
+  --shadow-float: 0 8px 28px rgba(4,53,77,.15);
+  --page-background: radial-gradient(ellipse at 8% 4%,rgba(165,224,218,.12),transparent 48%), var(--canvas);
+  --brand-pattern: url('/brand/qarevo-pattern-aqua.svg');
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --canvas: #0b1721;
-  --surface: #132633;
-  --surface-glass: rgba(19,38,51,.97);
-  --surface-subtle: #19313f;
-  --surface-hover: rgba(193,221,239,.08);
-  --text: #edf5fa;
-  --text-secondary: #cbdae5;
-  --text-muted: #acbfce;
-  --link: #87d9ef;
-  --primary-soft: #193e4c;
-  --primary-border: #3c7686;
-  --border: #3b5567;
-  --border-subtle: #294251;
-  --success: #77e1b2;
-  --success-soft: #153b30;
+  --canvas: var(--brand-ink);
+  --surface: #17252e;
+  --surface-glass: rgba(23,37,46,.97);
+  --surface-subtle: #20343f;
+  --surface-hover: rgba(165,224,218,.08);
+  --text: var(--brand-paper);
+  --text-secondary: #d0dfe5;
+  --text-muted: #aec4cf;
+  --link: #8ad6e9;
+  --primary-soft: #173f4b;
+  --primary-border: #497d89;
+  --border: #5b7280;
+  --border-subtle: #344c59;
+  --interactive-hover: #253f4c;
+  --interactive-active: #2e4d5b;
+  --focus-ring: var(--brand-aqua);
+  --action-primary: var(--brand-aqua);
+  --action-primary-hover: #c0ece7;
+  --action-primary-text: var(--brand-navy);
+  --action-secondary-bg: #20343f;
+  --action-secondary-hover: #2a4553;
+  --action-secondary-fg: var(--brand-paper);
+  --clinical-accent: #c7b4e0;
+  --clinical-accent-soft: #2c263a;
+  --clinical-accent-border: #64507d;
+  --clinical-accent-fg: #dac8f1;
+  --success: #77e1b2; --success-soft: #153b30;
   --warning: #f6c576;
-  --danger: #ffabb3;
-  --danger-soft: #41232e;
+  --danger: #ffabb3; --danger-soft: #41232e;
   --shadow-sm: 0 1px 3px rgba(0,0,0,.16);
-  --shadow-card: 0 1px 3px rgba(0,0,0,.12), 0 12px 32px rgba(0,0,0,.16);
-  --shadow-float: 0 8px 32px rgba(0,0,0,.35);
+  --shadow-card: 0 1px 3px rgba(0,0,0,.12), 0 10px 28px rgba(0,0,0,.16);
+  --shadow-float: 0 8px 28px rgba(0,0,0,.35);
+  --page-background: radial-gradient(ellipse at 8% 4%,rgba(4,53,77,.18),transparent 48%), var(--canvas);
+}
+:root {
+  --action-primary-bg: var(--action-primary);
+  --action-primary-fg: var(--action-primary-text);
+  --ai-surface: var(--clinical-accent-soft);
+  --ai-border: var(--clinical-accent-border);
+  --ai-text: var(--clinical-accent-fg);
 }
 body { font-size: 15px; line-height: 1.6; }
 h1,h2,h3,h4 { text-wrap: balance; }
@@ -303,8 +350,8 @@ select { padding-right: 30px; }
 option { background: var(--surface); color: var(--text); }
 input::placeholder,textarea::placeholder { color: var(--text-muted) !important; opacity: 1; }
 input[aria-invalid=true],select[aria-invalid=true],textarea[aria-invalid=true] { border-color: var(--danger) !important; }
-:focus-visible { outline: 3px solid var(--link) !important; outline-offset: 3px; }
-button:disabled { cursor: wait; }
+:focus-visible { outline: 3px solid var(--focus-ring) !important; outline-offset: 3px; }
+button:disabled { cursor: not-allowed; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
 .field-hint { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .field-error { margin: 0; color: var(--danger); font-size: 13px; line-height: 1.5; }
@@ -365,7 +412,7 @@ button:disabled { cursor: wait; }
 .auth-appearance-navigation { display: flex; justify-content: flex-end; align-items: center; padding: 10px clamp(16px, 4vw, 40px); background: var(--surface); border-bottom: 1px solid var(--border); }
 .patient-appearance-navigation { justify-content: flex-start; }
 .patient-portal-label { margin-right: auto; }
-.patient-top-right-logo { margin-left: 8px; display: inline-flex; align-items: center; }
+
 @media (min-width: 921px) {
   html[data-patient-sidebar=collapsed] #patient-primary-sidebar,
   html[data-doctor-sidebar=collapsed] #doctor-primary-sidebar,
@@ -411,7 +458,7 @@ button:disabled { cursor: wait; }
 /* Portal chrome is independent from the page's content width. */
 .portal-desktop-navbar { position: sticky; top: 0; width: 100%; z-index: 30 !important; }
 .portal-navbar-title { flex: 1; min-width: 0; }
-.portal-navbar-brand { margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; }
+.portal-navbar-brand { margin-right: 4px; flex: 0 0 auto; display: inline-flex; align-items: center; }
 @media (min-width:921px) {
   .portal-desktop-navbar { height: 80px; }
   .patient-appearance-navigation { min-height: 80px; position: sticky; top: 0; z-index: 30; }
@@ -446,12 +493,63 @@ button:disabled { cursor: wait; }
 @media(min-width:921px) {
   .patient-appearance-navigation .theme-toggle span:last-child { display:none; }
 }
-@media(min-width:921px) { .pd-sidebar,.pps-sidebar,.fd-sidebar { top:98px !important; max-height:calc(100dvh - 116px) !important; overflow:auto; } }
+
 @media(max-width:920px) {
   .admin-mobile-navigation { flex-wrap:nowrap; gap:8px; padding:8px 12px; }
-  .admin-mobile-navigation > details { order:0; }
-  .admin-mobile-navigation > .theme-toggle { order:1; margin-left:auto; }
-  .admin-mobile-navigation > a { order:2; flex:0 0 auto; }
+  .admin-mobile-navigation > details { order:1; }
+  .admin-mobile-navigation > .theme-toggle { order:2; margin-left:auto; }
+  .admin-mobile-navigation > a { order:0; flex:0 0 auto; }
   .admin-mobile-navigation > .theme-toggle span:last-child { display:none; }
 }
 @media(min-width:921px) and (max-width:1100px) { .portal-navbar-title p { display:none; } .portal-navbar-title h2 { font-size:16px !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } }
+
+/* Shared, role-aware type hierarchy. Do not embed typography in each card. */
+.portal-h2,.portal-card h2,.patient-application h2 {
+  margin:0 0 14px; font-family:var(--font-body); font-size:20px; font-weight:800;
+  line-height:1.3; letter-spacing:-.025em; color:var(--text);
+}
+.portal-h3,.portal-card h3,.patient-application h3 {
+  margin:0 0 10px; font-family:var(--font-body); font-size:clamp(16px,1.1vw,18px);
+  font-weight:700; line-height:1.4; letter-spacing:-.015em; color:var(--text);
+}
+.q-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:var(--control-height); padding:10px 16px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); color:var(--text); font:600 14px/1.4 var(--font-body); text-decoration:none; cursor:pointer; transition:background .16s,color .16s,border-color .16s,box-shadow .16s; }
+.q-button:hover:not(:disabled):not([aria-disabled=true]) { background:var(--interactive-hover); }
+.q-button:active:not(:disabled):not([aria-disabled=true]) { background:var(--interactive-active); }
+.q-button-primary { background:var(--action-primary); color:var(--action-primary-text); border-color:transparent; }
+.q-button-primary:hover:not(:disabled):not([aria-disabled=true]) { background:var(--action-primary-hover); }
+.q-button-secondary { background:var(--action-secondary-bg); color:var(--action-secondary-fg); }
+.q-button-secondary:hover:not(:disabled):not([aria-disabled=true]) { background:var(--action-secondary-hover); }
+.q-button-danger { color:var(--danger); background:var(--danger-soft); border-color:var(--danger); }
+.q-button:disabled,.q-button[aria-disabled=true] { opacity:.55; cursor:not-allowed; }
+.q-button[aria-busy=true] { cursor:progress; }
+.brand-pattern-panel { position:relative; isolation:isolate; overflow:hidden; }
+.brand-pattern-panel::before { content:''; position:absolute; pointer-events:none; z-index:-1; right:-32px; top:10%; width:220px; height:220px; opacity:.045; background:var(--brand-pattern) center/contain no-repeat; }
+/* Each rail is sticky within its own full-height grid item, never the viewport. */
+@media(min-width:921px) {
+  .portal-sidebar-content { position:sticky; top:var(--portal-sticky-offset); max-height:calc(100dvh - var(--portal-sticky-offset) - 18px); overflow-y:auto; overscroll-behavior-y:contain; scrollbar-gutter:stable; }
+  .portal-sidebar-stack { display:grid; gap:14px; align-content:start; }
+  .pd-left,.pd-right,.pps-left,.pps-right,.fd-left,.fd-right { align-self:stretch; }
+}
+@media(prefers-reduced-motion:reduce) { .q-button { transition:none; } }
+
+/* One physician-card contract for every portal and theme. */
+.doctor-card { min-width:0; display:flex; align-items:flex-start; gap:14px; padding:18px; border:1px solid var(--border-subtle); border-radius:var(--radius-lg); background:var(--surface); color:var(--text); box-shadow:var(--shadow-sm); transition:background .16s,border-color .16s,box-shadow .16s; }
+.doctor-card:hover:not([data-disabled=true]):not([aria-busy=true]) { background:var(--surface-subtle); border-color:var(--primary-border); }
+.doctor-card[role=button] { cursor:pointer; }
+.doctor-card:focus-within { border-color:var(--focus-ring); }
+.doctor-card:focus-visible { outline:3px solid var(--focus-ring); outline-offset:3px; }
+.doctor-card[data-selected=true] { background:var(--primary-soft); border-color:var(--link); box-shadow:inset 0 0 0 1px var(--link); }
+.doctor-card[data-disabled=true] { opacity:.58; cursor:not-allowed; box-shadow:none; }
+.doctor-card[aria-busy=true] { cursor:progress; }
+.doctor-card-portrait { position:relative; flex-shrink:0; }
+.doctor-card-verified { position:absolute; bottom:-1px; right:-1px; width:20px; height:20px; border-radius:50%; display:grid; place-items:center; border:2px solid var(--surface); background:var(--action-primary); color:var(--action-primary-text); }
+.doctor-card-main { min-width:0; flex:1; }
+.doctor-card-name { margin:0 0 3px; font:700 15px/1.4 var(--font-body); letter-spacing:-.02em; color:var(--text); overflow-wrap:anywhere; }
+.doctor-card-meta { margin:0 0 14px; font-size:13px; line-height:1.5; color:var(--text-secondary); overflow-wrap:anywhere; }
+.doctor-card-focus { margin:0 0 8px; font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:.06em; text-transform:uppercase; }
+.doctor-card-tags { display:flex; flex-wrap:wrap; gap:6px; }
+.doctor-card-tags span { padding:4px 10px; border:1px solid var(--primary-border); border-radius:999px; color:var(--link); background:var(--primary-soft); font-size:12px; line-height:1.45; }
+.doctor-card-loading { display:flex; align-items:center; gap:14px; min-height:72px; font-size:13px; color:var(--text-muted); }
+.doctor-card-skeleton { display:block; width:56px; height:56px; flex-shrink:0; border-radius:50%; background:var(--surface-subtle); border:1px solid var(--border); }
+@media(max-width:430px) { .doctor-card { gap:12px; padding:14px; } .doctor-card-name { font-size:14px; } .doctor-card-meta { font-size:12px; margin-bottom:10px; } }
+@media(prefers-reduced-motion:reduce) { .doctor-card { transition:none; } }

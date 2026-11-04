@@ -237,7 +237,7 @@ function SectionCard({ title, sub, action, children }: { title: string; sub?: st
     >
       <header className='pd-section-header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
         <div className='pd-section-copy'>
-          <h2 className='pd-section-title' style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.028em', color: T.navy }}>{title}</h2>
+          <h2 className='portal-h2 pd-section-title'>{title}</h2>
           {sub && <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>{sub}</p>}
         </div>
         {action ? <div className='pd-section-action'>{action}</div> : null}
@@ -831,20 +831,19 @@ export default function PatientDashboardPage() {
   ].slice(0, 3)
 
   return (
-    <main style={{ minHeight: '100vh', background: PAGE_BG, position: 'relative' }}>
+    <main className='patient-dashboard' style={{ minHeight: '100vh', background: PAGE_BG, position: 'relative' }}>
       <style>{`
         * { box-sizing: border-box; }
         .pd-shell { display: grid; grid-template-columns: 260px minmax(0, 1fr) 320px; gap: 18px; max-width: 1440px; margin: 0 auto; padding: 18px; }
         .pd-left, .pd-main, .pd-right { min-width: 0; }
-        .pd-sidebar { position: sticky; top: 18px; max-height: calc(100vh - 36px); overflow: auto; }
+
         .pd-head-row { display: flex; gap: 12px; align-items: center; }
         .pd-dashboard-header-row { display: grid; grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr); gap: 16px; align-items: center; }
         .pd-greeting-block { min-width: 0; }
-        .pd-greeting-title { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; line-height: 1.14; font-weight: 800; color: ${T.navy}; }
+        .pd-greeting-title { margin: 0; font-family: var(--font-body); font-size: 24px; line-height: 1.14; font-weight: 800; color: ${T.navy}; }
         .pd-greeting-kicker, .pd-greeting-name { display: block; }
         .pd-greeting-name { overflow-wrap: anywhere; }
         .pd-section-header, .pd-section-copy { min-width: 0; }
-        .pd-section-title { font-size: 18px !important; line-height: 1.2 !important; letter-spacing: 0 !important; }
         .pd-section-action { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: flex-end; }
         .pd-section-action a { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; border-radius: 11px; padding: 0 10px; background: var(--surface); border: 1px solid var(--border); box-shadow: inset 0 1px 0 rgba(255,255,255,0.9); line-height: 1.2; white-space: nowrap; }
         .pd-toolbar { display: grid; grid-template-columns: minmax(170px, 1fr) 38px 38px 42px; justify-content: flex-end; min-width: 0; width: 100%; max-width: 560px; margin-left: auto; }
@@ -916,7 +915,6 @@ export default function PatientDashboardPage() {
           .pd-snapshot-grid { grid-template-columns: 1fr; }
           .pd-doctor-carousel { grid-auto-flow: row; grid-template-columns: 1fr; overflow-x: visible; }
           .pd-section-header { display: grid !important; grid-template-columns: 1fr; gap: 10px !important; }
-          .pd-section-title { font-size: 19px !important; }
           .pd-section-action { justify-content: stretch; width: 100%; }
           .pd-section-action a { width: 100%; min-height: 38px; }
           .pd-doctor-footer { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 0; }
@@ -929,7 +927,6 @@ export default function PatientDashboardPage() {
           .pd-shell { padding-left: 12px; padding-right: 12px; }
           .pd-main section { padding: 18px !important; }
           .pd-greeting-title { font-size: 21px; line-height: 1.16; }
-          .pd-section-title { font-size: 18px !important; }
           .pd-section-action a { justify-content: space-between; padding: 0 12px; }
           .pd-doctor-actions { grid-template-columns: 1fr; }
         }
@@ -939,7 +936,7 @@ export default function PatientDashboardPage() {
 
       <div className='pd-shell'>
         <aside id='patient-primary-sidebar' className='pd-left'>
-          <div className='pd-sidebar' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '16px' }}>
+          <div className='pd-sidebar portal-sidebar-content' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '16px' }}>
             <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}><ProfileImage name={displayPatientName}/></div>
@@ -1130,7 +1127,7 @@ export default function PatientDashboardPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '18px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ maxWidth: '620px' }}>
                 <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: "var(--link)" }}>Your Care Journey</p>
-                <h2 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '29px', lineHeight: 1.1, fontWeight: 800, letterSpacing: '-0.035em', color: T.navy }}>
+                <h2 className='portal-h2'>
                   Welcome back, {displayPatientName}. {hasCareActivity ? 'Your health plan is on track.' : 'Let’s start your care journey.'}
                 </h2>
                 <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.65, color: T.slate }}>
@@ -1331,7 +1328,7 @@ export default function PatientDashboardPage() {
               <div className='pd-appointment-grid' style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
                 <Image src='https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=160&h=160&fit=crop' alt={primaryPhysician.value || 'Physician'} width={96} height={96} style={{ width: '96px', height: '96px', borderRadius: '14px', objectFit: 'cover', border: "1px solid var(--border)", boxShadow: '0 8px 18px rgba(4,53,77,0.16)' }} />
                 <div>
-                  <h3 style={{ margin: '0 0 5px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{primaryPhysician.value || 'Physician'}</h3>
+                  <h3 className='portal-h3'>{primaryPhysician.value || 'Physician'}</h3>
                   <p style={{ margin: '0 0 10px', fontSize: '13px', color: T.slate2 }}>{primaryPhysician.sub || 'Specialty'} · Virtual consultation</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
                     <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Date:</strong> {currentAppointment.sub?.split(' at ')[0] || 'Scheduled'}</p>
@@ -1363,7 +1360,7 @@ export default function PatientDashboardPage() {
                 <div key={plan.name} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <div>
-                      <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 800, color: T.navy }}>{plan.name}</h3>
+                      <h3 className='portal-h3'>{plan.name}</h3>
                       <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{plan.physician} · {plan.eta}</p>
                     </div>
                     <div style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: T.link }}>{plan.progress}% complete</div>
@@ -1388,7 +1385,7 @@ export default function PatientDashboardPage() {
                 <div key={item.name} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                     <div>
-                      <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 800, color: T.navy }}>{item.name}</h3>
+                      <h3 className='portal-h3'>{item.name}</h3>
                       <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{item.dosage} · {item.frequency} · {item.remaining}</p>
                     </div>
                     <div style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: T.green }}>{item.status}</div>
@@ -1418,7 +1415,7 @@ export default function PatientDashboardPage() {
               {displayLabData.map((item) => (
                 <div key={item.title} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 800, color: T.navy }}>{item.title}</h3>
+                    <h3 className='portal-h3'>{item.title}</h3>
                     <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>{item.value} · {item.status}</p>
                     <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>{item.detail}</p>
                   </div>
@@ -1442,7 +1439,7 @@ export default function PatientDashboardPage() {
                 <div key={item.name} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <div>
-                      <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 800, color: T.navy }}>{item.name}</h3>
+                      <h3 className='portal-h3'>{item.name}</h3>
                       <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{item.detail}</p>
                     </div>
                     <div style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: T.link }}>{item.status}</div>
@@ -1511,7 +1508,7 @@ export default function PatientDashboardPage() {
               )}
               {displayDocs.map((doc) => (
                 <Link key={doc.name} href={doc.href} style={{ textDecoration: 'none', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '12px' }}>
-                  <h3 style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 800, color: T.navy }}>{doc.name}</h3>
+                  <h3 className='portal-h3'>{doc.name}</h3>
                   <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{doc.count}</p>
                 </Link>
               ))}
@@ -1651,7 +1648,7 @@ export default function PatientDashboardPage() {
         </section>
 
         {!dashboardLoading && !dashboardError && <aside id='patient-secondary-sidebar' className='pd-right'>
-          <div style={{ position: 'sticky', top: '18px', display: 'grid', gap: '14px' }}>
+          <div className='portal-sidebar-content portal-sidebar-stack'>
             <SectionCard title='Today’s Schedule' sub='The key moments and commitments for the day.'>
               {todayScheduleItems.length ? (
                 <div style={{ display: 'grid', gap: '8px' }}>

@@ -288,7 +288,7 @@ export default function FindDoctorPage() {
         * { box-sizing: border-box; }
         .fd-shell { display: grid; grid-template-columns: 260px minmax(0, 1fr) 290px; gap: 18px; max-width: 1480px; margin: 0 auto; padding: 18px; }
         .fd-left, .fd-main, .fd-right { min-width: 0; }
-        .fd-sidebar { position: sticky; top: 18px; max-height: calc(100vh - 36px); overflow: auto; }
+
         .fd-content { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; }
         .fd-results { display: grid; gap: 12px; }
         .fd-specialties { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -323,7 +323,7 @@ export default function FindDoctorPage() {
 
       <div className='fd-shell'>
         <aside id='patient-primary-sidebar' className='fd-left'>
-          <div className='fd-sidebar' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '16px' }}>
+          <div className='fd-sidebar portal-sidebar-content' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '16px' }}>
             <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>
@@ -492,7 +492,7 @@ export default function FindDoctorPage() {
             <aside className={`fd-filter-panel ${showFiltersMobile ? 'fd-open' : ''}`}>
               <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Smart Filters</h2>
+                  <h2 className='portal-h2'>Smart Filters</h2>
                   <button type='button' onClick={resetFilters} style={{ border: 'none', background: 'transparent', color: "var(--link)", fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>Reset</button>
                 </div>
 
@@ -624,7 +624,7 @@ export default function FindDoctorPage() {
               {!recommendedLoading && recommendedDoctors.length > 0 && (
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>
+                    <h2 className='portal-h2'>
                       <span style={{ color: "var(--link)" }}>Recommended for You</span>
                     </h2>
                     <span style={{ fontSize: "13px", color: T.slate2 }}>Based on your preferences</span>
@@ -649,7 +649,7 @@ export default function FindDoctorPage() {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Featured Physicians</h2>
+                <h2 className='portal-h2'>Featured Physicians</h2>
                 <span style={{ fontSize: "13px", color: T.slate2 }}>{totalDoctors} doctors</span>
               </div>
               {loadError && (
@@ -669,7 +669,7 @@ export default function FindDoctorPage() {
                     <div style={{ width: '68px', height: '68px', borderRadius: '18px', margin: '0 auto 12px', background: 'rgba(165,224,218,0.35)', border: "1px solid var(--border)", color: "var(--link)", display: 'grid', placeItems: 'center' }}>
                       <Ico p={ICONS.search} size={30} sw={1.6} />
                     </div>
-                    <h3 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '23px', letterSpacing: '-0.03em', color: T.navy }}>No physicians found.</h3>
+                    <h3 className='portal-h3'>No physicians found.</h3>
                     <p style={{ margin: '0 0 14px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>Try adjusting your filters or searching another specialty.</p>
                     <HoverBtn
                       base={{
@@ -769,7 +769,7 @@ export default function FindDoctorPage() {
               <div style={{ height: '14px' }} />
 
               <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-                <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Trust Signals</h3>
+                <h3 className='portal-h3'>Trust Signals</h3>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   <TrustCard label='Verified Physicians' sub='Every doctor is identity-verified.' icon={ICONS.check} accent='#20B5DF' />
                   <TrustCard label='Licensed Professionals' sub='Credentials are clinically reviewed.' icon={ICONS.shield} accent='#348CEA' />
@@ -783,14 +783,14 @@ export default function FindDoctorPage() {
         </section>
 
         <aside id='patient-secondary-sidebar' className='fd-right'>
-          <div style={{ position: 'sticky', top: '18px', display: 'grid', gap: '14px' }}>
+          <div className='portal-sidebar-content portal-sidebar-stack'>
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Search Insights</h3>
+              <h3 className='portal-h3'>Search Insights</h3>
               <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>Use specialty plus condition to improve match quality. Example: Cardiology and Hypertension.</p>
             </section>
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Saved Doctors</h3>
+              <h3 className='portal-h3'>Saved Doctors</h3>
               <div style={{ marginTop: '10px', display: 'grid', gap: '8px' }}>
                 {Object.entries(favorites).filter(([, val]) => val).length === 0 ? (
                   <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Tap the heart icon on any doctor card to save favorites.</p>

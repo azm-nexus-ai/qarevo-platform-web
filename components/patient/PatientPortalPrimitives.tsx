@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } from 'react'
 import { T, Sh } from '@/lib/tokens'
 
@@ -34,10 +35,10 @@ export function PortalCard({ children, style, ...props }: PortalCardProps) {
         background: "var(--surface-glass)",
         backdropFilter: 'blur(22px) saturate(180%)',
         WebkitBackdropFilter: 'blur(22px) saturate(180%)',
-        borderRadius: '24px',
+        borderRadius: 'var(--radius-xl, 24px)',
         border: "1px solid var(--border)",
         boxShadow: Sh.card,
-        padding: '20px',
+        padding: 'var(--portal-card-padding, 20px)',
         ...style,
       }}
     >
@@ -46,58 +47,14 @@ export function PortalCard({ children, style, ...props }: PortalCardProps) {
   )
 }
 
-function getButtonStyles(tone: 'primary' | 'secondary' | 'danger', fullWidth?: boolean): CSSProperties {
-  const shared: CSSProperties = {
-    minHeight: '44px',
-    padding: '0 14px',
-    borderRadius: '12px',
-    fontSize: '13px',
-    fontWeight: 700,
-    transition: 'all 0.18s ease',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    textDecoration: 'none',
-    width: fullWidth ? '100%' : undefined,
-    cursor: 'pointer',
-  }
-
-  if (tone === 'primary') {
-    return {
-      ...shared,
-      border: 'none',
-      color: '#fff',
-      background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
-      boxShadow: '0 8px 22px rgba(32,181,223,0.24)',
-    }
-  }
-
-  if (tone === 'danger') {
-    return {
-      ...shared,
-      border: '1px solid rgba(220,38,38,0.18)',
-      color: T.red,
-      background: 'rgba(255,245,245,0.96)',
-    }
-  }
-
-  return {
-    ...shared,
-    border: "1px solid var(--border)",
-    color: T.navy,
-    background: "var(--surface-glass)",
-  }
-}
-
 export function PortalButton({ children, tone = 'secondary', fullWidth = false, style, ...props }: PortalButtonProps) {
-  const className = ['portal-button', `portal-button-${tone}`, props.className].filter(Boolean).join(' ')
+  const className = ['portal-button', `portal-button-${tone}`, 'q-button', `q-button-${tone}`, props.className].filter(Boolean).join(' ')
   return (
     <button
       {...props}
       className={className}
       style={{
-        ...getButtonStyles(tone, fullWidth),
+        width: fullWidth ? '100%' : undefined,
         ...(props.disabled
           ? {
               opacity: 0.6,
@@ -115,19 +72,19 @@ export function PortalButton({ children, tone = 'secondary', fullWidth = false, 
 
 export function PortalLinkButton({ children, href, tone = 'secondary', fullWidth = false }: PortalLinkButtonProps) {
   return (
-    <a href={href} className={`portal-button portal-button-${tone}`} style={getButtonStyles(tone, fullWidth)}>
+    <Link href={href} className={`portal-button portal-button-${tone} q-button q-button-${tone}`} style={{width: fullWidth ? '100%' : undefined}}>
       {children}
-    </a>
+    </Link>
   )
 }
 
 export function PortalBadge({ children, tone = 'neutral' }: PortalBadgeProps) {
   const tones: Record<NonNullable<PortalBadgeProps['tone']>, CSSProperties> = {
-    info: { background: 'rgba(32,181,223,0.1)', color: T.link },
-    success: { background: 'rgba(15,158,119,0.12)', color: T.green },
-    warning: { background: 'rgba(217,119,6,0.12)', color: T.amber },
+    info: { background: 'var(--primary-soft)', color: T.link },
+    success: { background: 'var(--success-soft)', color: T.green },
+    warning: { background: 'var(--warning-soft)', color: T.amber },
     neutral: { background: "var(--surface-hover)", color: T.slate },
-    danger: { background: 'rgba(220,38,38,0.1)', color: T.red },
+    danger: { background: 'var(--danger-soft)', color: T.red },
   }
 
   return (

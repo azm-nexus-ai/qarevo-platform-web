@@ -209,6 +209,13 @@ export default function DoctorMobileNavigation() {
 
       {/* Mobile Top Bar */}
       <div className="dmn-topbar" role="banner">
+          <Link
+            href="/doctor/dashboard"
+            aria-label="Qarevo Health Doctor Dashboard"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+          >
+            <AuthenticatedLogo width={100} />
+          </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
           <button
             ref={hamburgerRef}
@@ -244,13 +251,7 @@ export default function DoctorMobileNavigation() {
           >
             {doctorInitials}
           </button>
-          <Link
-            href="/doctor/dashboard"
-            aria-label="Qarevo Health Doctor Dashboard"
-            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
-          >
-            <AuthenticatedLogo width={100} />
-          </Link>
+
         </div>
       </div>
 

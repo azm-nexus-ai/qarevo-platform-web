@@ -1,4 +1,5 @@
 'use client'
+import { safePortalDestination } from '@/lib/portal-handoff'
 
 import { useState, useEffect, useId, useRef } from 'react'
 import Link from 'next/link'
@@ -275,7 +276,7 @@ export default function Doctor2FAPage() {
       storeAuthTokens({ ...response, role: 'PROVIDER' })
 
       // Redirect to doctor dashboard
-      router.push('/doctor/dashboard')
+      router.push(safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PROVIDER') || '/doctor/dashboard')
     } catch (error) {
       setAuthError(getFriendlyVerificationError(error, 'email'))
     } finally {

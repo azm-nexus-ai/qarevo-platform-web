@@ -141,6 +141,7 @@ export default function DoctorLayout({
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94)',
           }}>
             <div className='portal-navbar-row' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+              <Link href='/doctor/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health doctor dashboard'><AuthenticatedLogo width={156} /></Link>
               <SidebarToggle role='doctor' />
               <div className='portal-navbar-title'>
                 <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Welcome, {fullName}</h2>
@@ -196,7 +197,6 @@ export default function DoctorLayout({
                   </div>
                 </button>
               </div>
-              <Link href='/doctor/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health doctor dashboard'><AuthenticatedLogo width={156} /></Link>
             </div>
           </header>
       <div style={{ display: 'flex' }}>

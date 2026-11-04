@@ -186,6 +186,13 @@ export default function PatientMobileNavigation() {
 
       {/* Mobile Top Bar */}
       <div className="pmn-topbar" role="banner">
+          <Link
+            href="/patient/dashboard"
+            aria-label="Qarevo Health Patient Dashboard"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', minWidth: 0, width: '100px', flexShrink: 0 }}
+          >
+            <AuthenticatedLogo width={100} />
+          </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
           <button
             ref={hamburgerRef}
@@ -242,13 +249,7 @@ export default function PatientMobileNavigation() {
           >
             <ProfileImage name={patientName} size={34} />
           </button>
-          <Link
-            href="/patient/dashboard"
-            aria-label="Qarevo Health Patient Dashboard"
-            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', minWidth: 0, width: '100px', flexShrink: 0 }}
-          >
-            <AuthenticatedLogo width={100} />
-          </Link>
+
         </div>
       </div>
 

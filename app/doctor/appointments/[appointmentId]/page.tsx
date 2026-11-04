@@ -1,4 +1,5 @@
 'use client'
+import '@/components/doctor/doctor-clinical.css'
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
@@ -37,7 +38,7 @@ export default function AppointmentDetailPage() {
       } catch (err) {
         if (isAuthError(err)) {
           clearAuthTokens()
-          router.replace('/auth/sign-in')
+          router.replace('/auth/doctor/login')
           return
         }
         setError(err instanceof Error ? err.message : 'Failed to fetch appointment details')
@@ -72,7 +73,7 @@ export default function AppointmentDetailPage() {
     } catch (err) {
       if (isAuthError(err)) {
         clearAuthTokens()
-        router.replace('/auth/sign-in')
+        router.replace('/auth/doctor/login')
         return
       }
       setError(err instanceof Error ? err.message : 'Failed to update status')
@@ -141,7 +142,7 @@ export default function AppointmentDetailPage() {
           {appointmentData.consultation_id && (
             <button
               onClick={handleGoToConsultation}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="clinical-action clinical-action--primary"
             >
               Go to Consultation
             </button>
@@ -149,14 +150,16 @@ export default function AppointmentDetailPage() {
           {appointmentData.episode_id && (
             <button
               onClick={handleGoToEpisode}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              className="clinical-action clinical-action--ai"
             >
-              View Intake & AI Draft
+              {appointmentData.ai_draft_ready ? 'View AI Draft' : 'View Intake & AI Draft'}
             </button>
           )}
         </div>
       </div>
 
+      {appointmentData.ai_available === false && <p className="clinical-info" role="status">AI draft status is temporarily unavailable. Your saved appointment and intake remain accessible; open intake to retry clinical review.</p>}
+      {appointmentData.clinical_context_available === false && <p className="clinical-info" role="status">Clinical context could not be checked. The appointment is still saved; open intake to retry.</p>}
       {/* Patient Information */}
       <div className="bg-surface rounded-lg shadow-sm border border-theme">
         <div className="p-6 border-b border-theme">
@@ -271,7 +274,7 @@ export default function AppointmentDetailPage() {
                 <div className="pt-4 border-t border-theme">
                   <button
                     onClick={handleGoToEpisode}
-                    className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+                    className="clinical-action clinical-action--ai"
                   >
                     View Full Intake & AI Draft →
                   </button>
