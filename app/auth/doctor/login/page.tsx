@@ -1,5 +1,6 @@
 'use client'
 import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
+import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
 import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
 
 import { useState, useId } from 'react'
@@ -162,38 +163,6 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
   )
 }
 
-// Checkbox component
-function Checkbox({ checked, onChange, children }: { checked: boolean; onChange: () => void; children: React.ReactNode }) {
-  return (
-    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', cursor: 'pointer', userSelect: 'none' }}>
-      <div
-        role="checkbox"
-        aria-checked={checked}
-        tabIndex={0}
-        onClick={onChange}
-        onKeyDown={e => e.key === ' ' && onChange()}
-        style={{
-          width: '17px',
-          height: '17px',
-          borderRadius: '5px',
-          flexShrink: 0,
-          border: `1.5px solid ${checked ? T.blue : "var(--border)"}`,
-          background: checked ? T.blue : "var(--surface)",
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.14s',
-          boxShadow: checked ? '0 1px 4px rgba(32,181,223,0.25)' : 'none',
-          outline: 'none',
-        }}
-      >
-        {checked && <Ico p={ICONS.check} size={9} sw={3} color="#fff" />}
-      </div>
-      <span style={{ fontSize: '13px', color: T.slate, letterSpacing: '-0.005em' }}>{children}</span>
-    </label>
-  )
-}
-
 // Left panel component
 function LeftPanel() {
   return (
@@ -233,7 +202,7 @@ function LeftPanel() {
           Physician Portal
         </h2>
         <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-          Access your clinical workspace and manage patient consultations with AI-powered support.
+          Access your clinical workspace and manage your patient consultations.
         </p>
       </div>
 
@@ -255,7 +224,6 @@ export default function DoctorLoginPage() {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [remember, setRemember] = useState(false)
 
   const [touched, setTouched] = useState({
     identifier: false,
@@ -286,7 +254,6 @@ export default function DoctorLoginPage() {
       const loginData: DoctorLoginRequest = {
         identifier: identifier.trim(),
         password,
-        remember_me: remember,
       }
 
       const response = await apiPost('/api/v1/auth/doctor/login', loginData) as { temp_token: string }
@@ -397,13 +364,8 @@ export default function DoctorLoginPage() {
                 autoComplete="current-password"
               />
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Checkbox
-                  checked={remember}
-                  onChange={() => setRemember(!remember)}
-                >
-                  Remember me
-                </Checkbox>
+              <SessionPolicyHint />
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Link href="/auth/doctor/forgot-password" style={{ fontSize: '13px', color: T.link, textDecoration: 'none', fontWeight: 500 }}>
                   Forgot password?
                 </Link>

@@ -1,8 +1,9 @@
 'use client'
 import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
+import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
 import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
 
-import { useState, useId } from 'react'
+import { useState, useId, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useLoginCooldown } from '@/lib/use-login-cooldown'
 import { getOnboarding, onboardingPath } from '@/lib/patient-onboarding'
@@ -35,9 +36,9 @@ const LEFT_BG = [
 ].join(', ')
 
 const TRUST_FEATURES = [
-  { icon: ICONS.lock,     label: 'Secure Medical Records',     sub: 'AES-256 encrypted at rest and in transit' },
-  { icon: ICONS.brain,    label: 'AI-Assisted Healthcare',     sub: 'Personalised clinical intelligence' },
-  { icon: ICONS.video,    label: 'Virtual Consultations',      sub: 'HD video with verified physicians' },
+  { icon: ICONS.lock,     label: 'Medical Records',            sub: 'View the records saved to your account' },
+  { icon: ICONS.steth,    label: 'Clinician-Led Care',         sub: 'Your clinician reviews consultation information' },
+  { icon: ICONS.video,    label: 'Consultation Appointments',   sub: 'View and manage your appointments' },
   { icon: ICONS.shield,   label: 'Account-Based Access',      sub: 'Access your saved account information' },
 ]
 
@@ -135,7 +136,7 @@ function LeftPanel() {
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your care awaits.</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Continue managing your health with trusted physicians and AI-powered clinical intelligence.
+            Access your appointments, saved medical records and clinician-approved care information.
           </p>
         </div>
       </div>
@@ -221,34 +222,12 @@ function Field({ label, placeholder, type = 'text', value, onChange, onBlur, err
   )
 }
 
-function Checkbox({ checked, onChange, children }: { checked: boolean; onChange: () => void; children: React.ReactNode }) {
-  return (
-    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', cursor: 'pointer', userSelect: 'none' }}>
-      <div
-        role="checkbox"
-        aria-checked={checked}
-        tabIndex={0}
-        onClick={onChange}
-        onKeyDown={e => e.key === ' ' && onChange()}
-        style={{
-          width: '17px', height: '17px', borderRadius: '5px', flexShrink: 0,
-          border: `1.5px solid ${checked ? T.blue : "var(--border)"}`,
-          background: checked ? T.blue : "var(--surface)",
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.14s', boxShadow: checked ? '0 1px 4px rgba(32,181,223,0.25)' : 'none',
-          outline: 'none',
-        }}
-      >
-        {checked && <Ico p={ICONS.check} size={9} sw={3} color="#fff" />}
-      </div>
-      <span style={{ fontSize: '13px', color: T.slate, letterSpacing: '-0.005em' }}>{children}</span>
-    </label>
-  )
-}
-
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const subscribeToPasskeySupport = () => () => {}
+const passkeySupported = () => window.isSecureContext && !!window.PublicKeyCredential && !!navigator.credentials?.get
+const serverPasskeySupport = () => false
 
 function getFriendlySignInError(error: unknown) {
   const throttle = getLoginThrottleMessage(error)
@@ -286,7 +265,6 @@ export default function SignInPage() {
 
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [remember, setRemember] = useState(false)
   const [showPw,   setShowPw]   = useState(false)
   const [loading,  setLoading]  = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
@@ -294,6 +272,7 @@ export default function SignInPage() {
   const [authError, setAuthError] = useState('')
   const [handoff, setHandoff] = useState<PortalHandoff | null>(null)
   const cooldown = useLoginCooldown()
+  const supportsPasskeys = useSyncExternalStore(subscribeToPasskeySupport, passkeySupported, serverPasskeySupport)
 
   const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : ''
   const passErr  = touched.password && password.length < 1 ? 'Password is required' : ''
@@ -332,6 +311,7 @@ export default function SignInPage() {
   }
 
   const handlePasskeySignIn = async () => {
+    if (!supportsPasskeys || loading || passkeyLoading || cooldown.seconds > 0) return
     setTouched((current) => ({ ...current, email: true }))
     if (!EMAIL_RE.test(email.trim())) return
 
@@ -532,10 +512,7 @@ export default function SignInPage() {
                   />
                 </div>
 
-                {/* Remember me */}
-                <Checkbox checked={remember} onChange={() => setRemember(r => !r)}>
-                  Remember me for 30 days
-                </Checkbox>
+                <SessionPolicyHint />
 
                 {/* Submit */}
                 <button
@@ -560,7 +537,8 @@ export default function SignInPage() {
                 <button
                   type="button"
                   onClick={handlePasskeySignIn}
-                  disabled={passkeyLoading || loading}
+                  disabled={!supportsPasskeys || passkeyLoading || loading || cooldown.seconds > 0}
+                  aria-describedby='patient-passkey-help'
                   style={{
                     width: '100%',
                     padding: '12px 18px',
@@ -572,7 +550,7 @@ export default function SignInPage() {
                     fontSize: '14px',
                     fontWeight: 700,
                     letterSpacing: '-0.01em',
-                    cursor: passkeyLoading || loading ? 'not-allowed' : 'pointer',
+                    cursor: !supportsPasskeys || passkeyLoading || loading || cooldown.seconds > 0 ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -585,6 +563,11 @@ export default function SignInPage() {
                     ? <><span style={{ width: '14px', height: '14px', border: "2px solid var(--border)", borderTopColor: T.blue, borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Checking passkey…</>
                     : <><Ico p={ICONS.shield} size={15} sw={1.8} /> Sign in with passkey</>}
                 </button>
+                <p id='patient-passkey-help' style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+                  {supportsPasskeys
+                    ? 'Use a passkey previously registered in patient Settings. The same session limits apply.'
+                    : 'Passkeys require a supported browser on HTTPS or localhost. Use your password to sign in.'}
+                </p>
 
                 {/* Create account */}
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '2px 0 0', letterSpacing: '-0.01em' }}>
@@ -609,10 +592,10 @@ export default function SignInPage() {
             <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
               <div className="signin-trust-grid" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
                 {[
-                  { icon: ICONS.lock,     label: 'Secure Login'    },
-                  { icon: ICONS.shield,   label: 'Encrypted Data'  },
+                  { icon: ICONS.lock,     label: 'Account Sign-In' },
+                  { icon: ICONS.shield,   label: 'Session Expiry'  },
                   { icon: ICONS.check,    label: 'Development Preview'    },
-                  { icon: ICONS.activity, label: 'MFA Support'     },
+                  { icon: ICONS.activity, label: 'Password Recovery' },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />

@@ -754,11 +754,11 @@ function AppointmentsPageInner() {
                   onDetails={() => handleDetails(todayAppt)}
                 />
               )}
-              {upcoming.filter(a => a.date !== 'Today').length > 0 && (
+              {upcoming.length > 0 && (
                 <SCard>
-                  <h2 style={{ margin: '0 0 14px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Upcoming Consultations</h2>
+                  <h2 className="portal-h2">Upcoming Consultations</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {upcoming.filter(a => a.date !== 'Today').map(appt => (
+                    {upcoming.map(appt => (
                       <UpcomingCard
                         key={appt.id}
                         appt={appt}
@@ -769,17 +769,6 @@ function AppointmentsPageInner() {
                       />
                     ))}
                   </div>
-                </SCard>
-              )}
-              {todayAppt && (
-                <SCard style={{ padding: '18px' }}>
-                  <UpcomingCard
-                    appt={todayAppt}
-                    onJoin={() => handleJoin(todayAppt)}
-                    onDetails={() => handleDetails(todayAppt)}
-                    onReschedule={() => setRescheduleTarget(todayAppt)}
-                    onCancel={() => setCancelTarget(todayAppt)}
-                  />
                 </SCard>
               )}
               {upcoming.length === 0 && (

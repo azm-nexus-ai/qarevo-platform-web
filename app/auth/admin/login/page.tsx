@@ -9,6 +9,7 @@ import { T } from '@/lib/tokens'
 import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginAdmin, storeAuthTokens } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
 
 const PAGE_BG = [
   'radial-gradient(ellipse 65% 55% at 12% 8%,   rgba(32,181,223,0.08) 0%, transparent 55%)',
@@ -229,6 +230,8 @@ export default function AdminLoginPage() {
               <p style={{ margin: 0, fontSize: '13px', color: T.red, lineHeight: 1.4 }}>{cooldown.message || authError}</p>
             </div>
           )}
+
+          <SessionPolicyHint />
 
           {/* Submit button */}
           <button

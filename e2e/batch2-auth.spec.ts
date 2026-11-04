@@ -5,6 +5,29 @@ async function providers(context: BrowserContext, enabled = false) {
   await context.route('**/api/v1/auth/social/providers', route => route.fulfill({ headers: cors, json: { google: { enabled, message: null }, apple: { enabled, message: null } } }))
 }
 
+test('sign-in policy never promises extended persistence and unsupported passkeys cannot start authentication', async ({ page, context }) => {
+  await providers(context)
+  await context.addInitScript(() => Object.defineProperty(window, 'PublicKeyCredential', { configurable: true, value: undefined }))
+  let passkeyRequests = 0
+  await context.route('**/api/v1/auth/passkeys/**', route => {
+    passkeyRequests++
+    return route.fulfill({ status: 400, headers: cors, json: { detail: 'Unexpected synthetic passkey request' } })
+  })
+  for (const path of ['/auth/sign-in', '/auth/doctor/login', '/auth/admin/login']) {
+    await page.goto(path)
+    await expect(page.getByText('For your security, sessions expire after inactivity or the maximum session duration. Save your work when an expiry warning appears.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('checkbox', { name: /remember/i })).toHaveCount(0)
+    await expect(page.getByText(/30 days|AES-256|Personalised clinical intelligence|HD video with verified physicians/)).toHaveCount(0)
+    if (path === '/auth/sign-in') {
+      const passkey = page.getByRole('button', { name: 'Sign in with passkey', exact: true })
+      await expect(passkey).toBeDisabled()
+      await expect(passkey).toHaveAttribute('aria-describedby', 'patient-passkey-help')
+      await expect(page.locator('#patient-passkey-help')).toHaveText('Passkeys require a supported browser on HTTPS or localhost. Use your password to sign in.')
+    }
+  }
+  expect(passkeyRequests).toBe(0)
+})
+
 for (const [portal, opposite, path, endpoint, intended, action] of [
   ['PATIENT', 'PROVIDER', '/auth/sign-in', '/api/v1/auth/login', '/doctor/appointments', 'Continue to physician sign-in'],
   ['PROVIDER', 'PATIENT', '/auth/doctor/login', '/api/v1/auth/doctor/login', '/patient/appointments', 'Continue to patient sign-in'],

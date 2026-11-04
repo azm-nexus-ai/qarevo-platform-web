@@ -4,3 +4,4 @@
 .reference a:focus-visible { outline: var(--focus-ring, 3px solid var(--link)); outline-offset: 4px; }
 .handoff { display: grid; gap: var(--space-3, 12px); margin-bottom: var(--space-5, 20px); padding: var(--space-4, 16px); border: 1px solid var(--border); border-radius: var(--radius-lg, 16px); background: var(--surface-subtle); color: var(--text); }
 .handoff p { margin: 0; font-size: 14px; line-height: 1.65; }
+.policy { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.65; }
