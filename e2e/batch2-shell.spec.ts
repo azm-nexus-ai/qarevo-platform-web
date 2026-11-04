@@ -1,4 +1,5 @@
 import {test,expect,type BrowserContext} from '@playwright/test'
+import type {PatientDoctor} from '../lib/api'
 
 async function prepare(context:BrowserContext,role:'PATIENT'|'PROVIDER'|'ADMIN') {
   await context.addInitScript(role=>{localStorage.setItem('qarevo_access_token','synthetic-brand-access');localStorage.setItem('qarevo_refresh_token','synthetic-brand-refresh');localStorage.setItem('qarevo_user_id','synthetic-brand-user');localStorage.setItem('qarevo_role',role)},role)
@@ -10,7 +11,7 @@ async function prepare(context:BrowserContext,role:'PATIENT'|'PROVIDER'|'ADMIN')
     if(path.endsWith('/settings'))return route.fulfill({headers,json:{user_id:'synthetic-brand-user',first_name:'Synthetic',last_name:'Patient',email:'synthetic@example.com',emergency_contacts:[]}})
     if(path.endsWith('/profile'))return route.fulfill({headers,json:{full_name:'Synthetic Clinician'}})
     if(path.endsWith('/profile-image'))return route.fulfill({headers,json:{image:null}})
-    if(path.includes('/doctors'))return route.fulfill({headers,json:{doctors:Array.from({length:24},(_,index)=>({id:`aaaaaaaa-aaaa-4aaa-8aaa-${String(index).padStart(12,'0')}`,name:`Synthetic Physician ${index+1}`,specialty:'General Medicine',verification:'Verified',tags:['Primary care'],imageUrl:null,rating:0,reviews:0,experienceYears:5,nextAvailable:'Review availability',languages:['English']})),total:24,filtered_count:24,page:1,page_size:24,has_next:false,has_previous:false}})
+    if(path.includes('/doctors'))return route.fulfill({headers,json:{doctors:Array.from({length:24},(_,index)=>({id:`aaaaaaaa-aaaa-4aaa-8aaa-${String(index).padStart(12,'0')}`,name:`Synthetic Physician ${index+1}`,specialty:'General Medicine',verification:'Verified',tags:['Primary care'],imageUrl:'',rating:0,reviews:0,experienceYears:5,nextAvailable:'Review availability',languages:['English'],hospital:'Synthetic Practice',consultationFee:0,insurance:['Self-pay'],gender:'other',consultationTypes:['video'],distanceKm:0,conditions:[]} satisfies PatientDoctor)),total:24,filtered_count:24,page:1,page_size:24,has_next:false,has_previous:false}})
     if(path.endsWith('/dashboard'))return route.fulfill({headers,json:{patient_name:'Synthetic Patient',upcoming_appointments:[],health_summary:{},notifications:[],recommended_doctors:[]}})
     return route.fulfill({headers,json:{}})
   })
@@ -47,6 +48,7 @@ for(const route of ['/patient/dashboard','/patient/find-doctor']) {
     await prepare(context,'PATIENT')
     await page.setViewportSize({width:1600,height:900})
     await page.goto(route)
+    if(route==='/patient/find-doctor')await expect(page.getByText('Page 1 · Showing 24 of 24',{exact:true})).toBeVisible()
     const rail=page.locator('#patient-secondary-sidebar > .portal-sidebar-content')
     await expect(rail).toBeVisible()
     const heading=page.locator('.patient-application h2').first()
@@ -77,13 +79,17 @@ for(const route of ['/patient/dashboard','/patient/find-doctor']) {
 
 test('doctor cards use brand tokens and accessible contrast in both themes',async({page,context})=>{
   await prepare(context,'PATIENT')
+  await page.emulateMedia({reducedMotion:'reduce'})
   await page.goto('/patient/find-doctor')
+  await expect(page.getByText('Page 1 · Showing 24 of 24',{exact:true})).toBeVisible()
   const card=page.locator('.doctor-card').first()
   await expect(card).toBeVisible()
   const color=()=>card.evaluate(node=>({background:getComputedStyle(node).backgroundColor,text:getComputedStyle(node.querySelector('.doctor-card-name')!).color,border:getComputedStyle(node).borderTopColor,font:getComputedStyle(node).fontFamily}))
   const light=await color()
   expect(light.font.toLowerCase()).toContain('public')
   await page.getByRole('button',{name:'Dark mode',exact:true}).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark')
+  await expect.poll(async()=> (await color()).background).not.toBe(light.background)
   const dark=await color()
   expect(dark.background).not.toBe(light.background)
   expect(dark.text).not.toBe(light.text)

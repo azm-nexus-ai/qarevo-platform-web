@@ -368,6 +368,10 @@ button:disabled { cursor: not-allowed; }
 .portal-shell aside nav { padding-bottom: 88px !important; }
 .portal-shell main { min-width: 0; }
 .portal-card { border-color: var(--border-subtle); }
+.portal-form-heading-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.portal-form-card { padding: clamp(16px, 4vw, 32px); min-width: 0; }
+.portal-form-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+@media (max-width: 480px) { .portal-form-actions > .q-button { flex: 1 1 100%; } }
 @media(max-width:920px) { .portal-appearance { left: auto; right: 16px; bottom: 88px; } .portal-appearance .theme-toggle span:last-child { display: none; } }
 @media(max-width:600px) { input,select,textarea { font-size: 16px !important; } .public-appearance { bottom: 16px; left: 16px; } }
 @media(prefers-reduced-motion:reduce) {

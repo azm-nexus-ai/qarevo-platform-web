@@ -2,42 +2,12 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
+import { Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
 import { getPatientDoctor, createPatientEpisode, submitPatientEpisodeIntake, getApiErrorDetail, type PatientDoctor } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
-import HoverBtn from '@/components/buttons/HoverBtn'
+import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
-
-function readLabel(service: string | null) {
-  switch (service) {
-    case 'physical':
-      return 'In-person Consultation'
-    case 'follow-up':
-      return 'Follow-up Consultation'
-    default:
-      return 'Video Consultation'
-  }
-}
-
-function profileServices(doctor: PatientDoctor | null) {
-  const services = doctor?.services ?? doctor?.profile?.services
-  if (!Array.isArray(services)) return []
-
-  return services
-    .map((service) => {
-      if (!service || typeof service !== 'object') return null
-      const item = service as Record<string, unknown>
-      return {
-        type: typeof item.type === 'string' ? item.type : '',
-        duration: typeof item.duration === 'string' || typeof item.duration === 'number' ? String(item.duration) : '',
-        price: typeof item.price === 'number' ? item.price : null,
-      }
-    })
-    .filter((service): service is { type: string; duration: string; price: number | null } => Boolean(service))
-}
 
 function doctorToBookingFallback(doctor: PatientDoctor | null) {
   if (!doctor) return undefined
@@ -66,15 +36,7 @@ function IntakePageContent() {
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
 
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
-  const serviceDetail = useMemo(() => {
-    const services = profileServices(remoteDoctor)
-    return services.find((item) => item.type === service) ?? services[0]
-  }, [remoteDoctor, service])
-  const fee = Number(searchParams.get('fee') ?? serviceDetail?.price ?? physicianData.consultationFee ?? 0)
-  const duration = searchParams.get('duration') ?? serviceDetail?.duration ?? '30 min'
   const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
-  const date = searchParams.get('date') ?? 'Today'
-  const slot = searchParams.get('slot') ?? '4:30 PM'
 
   const [chiefComplaint, setChiefComplaint] = useState('')
   const [symptoms, setSymptoms] = useState('')
@@ -203,10 +165,10 @@ function IntakePageContent() {
     return (
       <main style={{ minHeight: '100vh', background: PAGE_BG, padding: '20px' }}>
         <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ color: '#ef4444', marginBottom: '20px', fontSize: '14px' }}>{doctorLoadError}</p>
-          <button onClick={handleBack} style={{ display: 'inline-block', padding: '12px 24px', borderRadius: '8px', background: '#348cea', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
+          <p role="alert" style={{ color: 'var(--danger)', marginBottom: '20px', fontSize: '14px' }}>{doctorLoadError}</p>
+          <PortalButton onClick={handleBack}>
             Go Back
-          </button>
+          </PortalButton>
         </div>
       </main>
     )
@@ -214,36 +176,36 @@ function IntakePageContent() {
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG }}>
-      <header style={{ background: "var(--surface)", borderBottom: '1px solid #e2e8f0', padding: '16px 24px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header style={{ background: "var(--surface)", borderBottom: '1px solid var(--border-subtle)', padding: '16px 24px' }}>
+        <div className="portal-form-heading-row" style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button onClick={handleBack} style={{ padding: '8px', borderRadius: '8px', background: "var(--canvas)", border: 'none', cursor: 'pointer' }}>
+            <button aria-label="Back to appointment time" disabled={isSubmitting} onClick={handleBack} style={{ minWidth: 44, minHeight: 44, padding: '8px', borderRadius: '8px', background: "var(--canvas)", border: 'none', cursor: 'pointer' }}>
               <span style={{ fontSize: '20px', color: "var(--text-muted)" }}>←</span>
             </button>
-            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: "var(--text)" }}>Intake Information</h1>
+            <h1 style={{ margin: 0, fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: 700, color: "var(--text)" }}>Intake Information</h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: "var(--text-muted)" }}>
             <span>Step 2 of 3</span>
             <div style={{ display: 'flex', gap: '4px' }}>
-              <div style={{ width: '24px', height: '4px', background: '#348cea', borderRadius: '2px' }} />
-              <div style={{ width: '24px', height: '4px', background: '#348cea', borderRadius: '2px' }} />
-              <div style={{ width: '24px', height: '4px', background: '#e2e8f0', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '4px', background: 'var(--action-primary)', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '4px', background: 'var(--action-primary)', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '4px', background: 'var(--border)', borderRadius: '2px' }} />
             </div>
           </div>
         </div>
       </header>
 
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 24px' }}>
-        <div style={{ ...Glass, padding: '32px', borderRadius: '16px' }}>
-          <h2 style={{ marginBottom: '8px', fontSize: '18px', fontWeight: 600, color: "var(--text)" }}>Tell us about your health concern</h2>
+        <div className="portal-form-card" style={{ ...Glass.pill, borderRadius: 'var(--radius-lg)' }}>
+          <h2 className="portal-h2">Tell us about your health concern</h2>
           <p style={{ color: "var(--text-muted)", marginBottom: '24px', fontSize: '14px' }}>
             Please provide details about your medical condition so Dr. {physicianData.name} can prepare for your consultation.
           </p>
 
           {submitStage && <p role='status' aria-live='polite'>{submitStage}</p>}
           {submitError && (
-            <div role="alert" style={{ background: "var(--danger-soft)", border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
-              <p style={{ color: '#dc2626', margin: 0, fontSize: '14px' }}>{submitError}</p>
+            <div role="alert" style={{ background: "var(--danger-soft)", border: '1px solid var(--danger)', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
+              <p style={{ color: 'var(--danger)', margin: 0, fontSize: '14px' }}>{submitError}</p>
             </div>
           )}
 
@@ -388,21 +350,22 @@ function IntakePageContent() {
                 <span>Allow optional AI assistance to prepare a draft for clinician review. Declining does not prevent clinician-led care.</span>
               </label>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-              <button
+            <div className="portal-form-actions">
+              <PortalButton
                 type="button"
+                tone="secondary"
+                disabled={isSubmitting}
                 onClick={handleBack}
-                style={{ padding: '12px 24px', borderRadius: '8px', background: "var(--canvas)", color: "var(--text-muted)", border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}
               >
                 Back
-              </button>
-              <button
+              </PortalButton>
+              <PortalButton
                 type="submit"
+                tone="primary"
                 disabled={isSubmitting}
-                style={{ padding: '12px 32px', borderRadius: '8px', background: '#348cea', color: '#fff', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: 600, opacity: isSubmitting ? 0.6 : 1 }}
               >
                 {isSubmitting ? 'Submitting...' : 'Continue to Review'}
-              </button>
+              </PortalButton>
             </div>
           </form>
         </div>

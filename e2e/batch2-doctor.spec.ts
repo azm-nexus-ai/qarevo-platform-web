@@ -27,11 +27,28 @@ async function prepare(context:BrowserContext) {
 test('recent appointment dark hover returns to its actual normal state and supports keyboard focus',async({page,context})=>{
   await prepare(context);await page.goto('/doctor/dashboard')
   await page.getByRole('button',{name:'Dark mode',exact:true}).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark')
   const row=page.getByRole('button').filter({hasText:'Synthetic Patient'})
   await expect(row).toBeVisible()
+  await page.mouse.move(0,0)
+  const colors=await row.evaluate(element=>{
+    const probe=document.createElement('span')
+    probe.style.cssText='position:absolute;visibility:hidden;pointer-events:none'
+    element.append(probe)
+    probe.style.backgroundColor='var(--surface-subtle)'
+    const normal=getComputedStyle(probe).backgroundColor
+    probe.style.backgroundColor='var(--surface-hover)'
+    const hover=getComputedStyle(probe).backgroundColor
+    probe.remove()
+    return {normal,hover}
+  })
+  // A theme change animates the row's background. Capture the resting state
+  // only after it reaches the new semantic color, rather than during transition.
+  await expect(row).toHaveCSS('background-color',colors.normal)
   const normal=await row.evaluate(element=>getComputedStyle(element).backgroundColor)
   await row.hover()
-  await expect.poll(()=>row.evaluate(element=>getComputedStyle(element).backgroundColor)).not.toBe(normal)
+  await expect(row).toHaveCSS('background-color',colors.hover)
+  expect(colors.hover).not.toBe(normal)
   await page.mouse.move(0,0)
   await expect.poll(()=>row.evaluate(element=>getComputedStyle(element).backgroundColor)).toBe(normal)
   await row.focus();await expect(row).toBeFocused()

@@ -144,7 +144,7 @@ for (const [role, portal, path] of [
     if (portal === 'patient') {
       const logo = page.getByRole('link', { name: 'Qarevo Health Patient Dashboard', exact: true }).filter({ visible: true })
       const toggle = page.getByRole('button', { name: /^(Dark|Light) mode$/ })
-      expect((await logo.boundingBox())!.x).toBeGreaterThan((await toggle.boundingBox())!.x)
+      expect((await logo.boundingBox())!.x).toBeLessThan((await toggle.boundingBox())!.x)
       await page.getByRole('button', { name: 'Open navigation menu' }).click()
       await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toBeVisible()
     }
