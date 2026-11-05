@@ -10,12 +10,12 @@ import Ico from '@/components/ui/Ico'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import {
   bookPatientLabRequest,
-  clearAuthTokens,
+  clearPortalSession,
   downloadMedicalRecord,
   getApiErrorDetail,
   getPatientLabRequests,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   uploadPatientLabResult,
   type PatientLabRequest,
   type PatientLabRequestsResponse,
@@ -94,7 +94,7 @@ function LabRequestsPageContent() {
       if (firstRequest) syncBookingFields(firstRequest)
     } catch (err) {
       if (isAuthError(err)) {
-        clearAuthTokens()
+        clearPortalSession()
         router.replace('/auth/sign-in')
         return
       }
@@ -105,8 +105,8 @@ function LabRequestsPageContent() {
   }
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/sign-in')
       return
     }

@@ -256,11 +256,11 @@ export default function DoctorLoginPage() {
         password,
       }
 
-      const response = await apiPost('/api/v1/auth/doctor/login', loginData) as { temp_token: string }
+      const response = await apiPost('/api/v1/auth/doctor/login', loginData) as { mfa_pending: boolean }
 
       // Store TEMP_AUTH token for 2FA flow
-      localStorage.setItem('doctor_temp_token', response.temp_token)
-      localStorage.setItem('doctor_identifier', identifier)
+      if (!response.mfa_pending) throw new Error('Secure clinician verification could not be started. Please retry.')
+      sessionStorage.setItem('qarevo:doctor:identifier', identifier)
 
       // Redirect to 2FA verification page
       const intended = safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PROVIDER')

@@ -4,8 +4,7 @@ import './globals.css'
 import Footer from '@/components/layout/Footer'
 import { THEME_BOOTSTRAP } from '@/lib/theme'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
-import { BookingProvider } from '@/contexts/BookingContext'
-import { SessionGuard } from '@/components/ui/SessionGuard'
+import { PortalSessionBoundary } from '@/components/ui/PortalSessionBoundary'
 import { NavigationGuards } from '@/components/ui/NavigationGuards'
 
 const publicSans = localFont({
@@ -40,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html suppressHydrationWarning lang="en" className={publicSans.variable}>
       <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body>
-        <NavigationGuards><ThemeProvider><BookingProvider><SessionGuard>{children}<Footer /></SessionGuard></BookingProvider></ThemeProvider></NavigationGuards>
+        <NavigationGuards><ThemeProvider><PortalSessionBoundary>{children}<Footer /></PortalSessionBoundary></ThemeProvider></NavigationGuards>
       </body>
     </html>
   )

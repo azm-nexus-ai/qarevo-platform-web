@@ -5,10 +5,10 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import ClinicalRecordEditor from '@/components/doctor/ClinicalRecordEditor'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorConsultation,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   type DoctorConsultationDetailResponse,
 } from '@/lib/api'
 
@@ -22,8 +22,8 @@ export default function ConsultationDetailPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -36,7 +36,7 @@ export default function ConsultationDetailPage() {
         if (!cancelled) setConsultationData(data)
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/doctor/login')
           return
         }

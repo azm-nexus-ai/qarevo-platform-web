@@ -11,7 +11,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
-import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginPatient, loginPatientWithPasskey, storeAuthTokens } from '@/lib/api'
+import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginPatient, loginPatientWithPasskey } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import SocialSignInButtons from '@/components/auth/SocialSignInButtons'
@@ -101,16 +101,18 @@ function LeftPanel() {
     <div style={{
       width: '380px', flexShrink: 0,
       background: LEFT_BG,
-      position: 'sticky', top: 0, height: '100vh',
+      position: 'relative', flex: 1, minHeight: '100%',
       display: 'flex', flexDirection: 'column',
       justifyContent: 'space-between',
+      gap: '32px',
       padding: '44px 44px 44px',
-      overflow: 'hidden',
     }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
       {/* Dot grid */}
       <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1.2px)', backgroundSize: '22px 22px', pointerEvents: 'none' }} />
       <div aria-hidden style={{ position: 'absolute', top: '-80px', left: '-60px', width: '380px', height: '380px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(32,181,223,0.2) 0%, transparent 65%)', pointerEvents: 'none' }} />
       <div aria-hidden style={{ position: 'absolute', bottom: '-80px', right: '-60px', width: '340px', height: '340px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(52,140,234,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
+      </div>
 
       {/* Logo */}
       <div style={{ position: 'relative', zIndex: 1 }}>
@@ -287,7 +289,6 @@ export default function SignInPage() {
 
     try {
       const response = await loginPatient({ email: email.trim(), password })
-      storeAuthTokens({ ...response, role: 'PATIENT' })
       await completePatientSignIn()
     } catch (error) {
       cooldown.record(error)
@@ -319,7 +320,6 @@ export default function SignInPage() {
     setAuthError(''); setHandoff(null)
     try {
       const response = await loginPatientWithPasskey(email.trim())
-      storeAuthTokens({ ...response, role: 'PATIENT' })
       await completePatientSignIn()
     } catch (error) {
       cooldown.record(error)
@@ -344,7 +344,7 @@ export default function SignInPage() {
   )
 
   return (
-    <div className="signin-page" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', width: '100%', overflowX: 'hidden' }}>
+    <div className="signin-page" style={{ minHeight: '100dvh', background: PAGE_BG, display: 'flex', alignItems: 'stretch', width: '100%' }}>
       <style>{`
         * { box-sizing: border-box; }
         input::placeholder { color: var(--text-muted); }
@@ -371,6 +371,7 @@ export default function SignInPage() {
           }
         }
         .signin-page { min-width: 0; }
+        .signin-left { display: flex; align-self: stretch; min-height: 100dvh; }
         .signin-form-area,
         .signin-form-wrap,
         .signin-card { min-width: 0; }

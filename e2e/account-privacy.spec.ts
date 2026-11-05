@@ -1,5 +1,6 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 import { clinicalFields, type PublishedClinicalRecord } from '../lib/clinical-record'
+import { seedPortalSession, type TestPortal, type TestPortalIdentity } from './helpers/portal-session'
 
 const personal = '/auth/profile-setup/personal-information'
 const alpha = 'alpha@example.invalid'
@@ -14,6 +15,8 @@ type RenewalScenario = {
   holdRefresh?: Promise<void>
   holdRecords?: Promise<void>
   holdDashboard?: Promise<void>
+  holdLogout?: Promise<void>
+  preserveSessionAfterLogout?: boolean
   recordsStatus?: number
   dashboardStatus?: number
   records?: Record<string, unknown>
@@ -23,13 +26,19 @@ type RenewalScenario = {
   onboardingComplete?: boolean
 }
 const scenarios = new WeakMap<BrowserContext, RenewalScenario>()
+const seededIdentities = new WeakMap<BrowserContext, Partial<Record<TestPortal, TestPortalIdentity>>>()
+async function seedRole(context: BrowserContext, portal: TestPortal, details: Partial<TestPortalIdentity> = {}) {
+  const identity = await seedPortalSession(context, portal, details)
+  const identities = seededIdentities.get(context) || {}
+  identities[portal] = identity
+  seededIdentities.set(context, identities)
+  return identity
+}
 
-function tokens(email: string) {
+function authSession(email: string) {
   return {
-    user_id: email, role: 'PATIENT',
-    access_token: 'test-access:' + email,
-    refresh_token: 'test-refresh:' + email,
-    token_type: 'bearer', expires_in: 900,
+    browser_session: { user_id: email, role: 'PATIENT' as const, session_id: 'test-session:' + email },
+    user_id: email, role: 'PATIENT', token_type: 'bearer', expires_in: 900,
     email_verified: true, phone_verified: false,
   }
 }
@@ -37,21 +46,32 @@ function tokens(email: string) {
 // All API requests are intercepted: these tests never create real accounts or send email.
 async function mockApi(context: BrowserContext) {
   const scenario: RenewalScenario = { expireAccess: false, failure: 'none', refreshes: 0, rejectedAccess: 0 }
-  const consumed = new Set<string>()
+  const renewedSessions = new Set<string>()
+  let activePatient: TestPortalIdentity | undefined
   const saved = new Map<string, Record<string, Record<string, unknown>>>()
   scenarios.set(context, scenario)
   await context.route('**/api/**', async route => {
     const request = route.request()
     const pathname = new URL(request.url()).pathname
-    const owner = (request.headers().authorization || '').replace(/^Bearer (test|renewed)-access:/, '')
+    // Mock the server-side HttpOnly session authority; browser requests carry only
+    // a public concurrency marker, never Authorization or refresh credentials.
+    expect(request.headers().authorization).toBeUndefined()
+    const portal = (request.headers()['x-qarevo-portal'] || 'patient') as TestPortal
+    const current = (portal === 'patient' ? activePatient : undefined) || seededIdentities.get(context)?.[portal]
+    const marker = request.headers()['x-qarevo-session']
+    const owner = current?.user_id || ''
     const account = saved.get(owner) || {}
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'Content-Type,Authorization', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' }
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    if (pathname === '/api/v1/browser-csrf') return route.fulfill({ json: { csrf_token: 'synthetic-browser-csrf' } })
+    if (!pathname.startsWith('/api/v1/auth/') && current && marker && current.session_id !== marker) return route.fulfill({ status: 409, json: { detail: { error_code: 'SESSION_CHANGED', message: 'Your session changed.' } } })
     if (pathname === '/api/v1/patient/profile-image') return route.fulfill({headers:cors,json:{image:null}})
-    if (pathname === '/api/v1/session' || pathname === '/api/v1/session/activity') return route.fulfill({ headers: cors, json: { server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
+    if (pathname === '/api/v1/session' || pathname === '/api/v1/session/activity') return current ? route.fulfill({ headers: cors, json: { browser_session: current, server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } }) : route.fulfill({ status: 401, json: { detail: 'Please sign in.' } })
     if (pathname === '/api/v1/auth/login' || pathname === '/api/v1/auth/verify-email-code') {
       const body = request.postDataJSON()
-      return route.fulfill({ headers: cors, json: tokens(body.email) })
+      activePatient = authSession(body.email).browser_session
+      renewedSessions.delete(activePatient.session_id)
+      return route.fulfill({ headers: cors, json: authSession(body.email) })
     }
     if (pathname === '/api/v1/auth/forgot-password') return route.fulfill({ headers: cors, json: { message: 'If an account exists, instructions have been requested.' } })
     if (pathname === '/api/v1/auth/reset-password') return route.fulfill({ headers: cors, json: { message: 'Password has been reset successfully.' } })
@@ -63,24 +83,20 @@ async function mockApi(context: BrowserContext) {
       await scenario.holdRefresh
       if (scenario.failure === 'network') return route.abort('connectionfailed')
       if (scenario.failure === 'unavailable') return route.fulfill({ status: 503, headers: cors, json: { detail: 'Temporary outage' } })
-      const token = request.postDataJSON().refresh_token as string
-      if (scenario.failure === 'rejected' || consumed.has(token)) return route.fulfill({ status: 401, headers: cors, json: { detail: 'Refresh token rejected' } })
-      consumed.add(token)
-      const email = token.replace('test-refresh:', '')
-      return route.fulfill({ headers: cors, json: {
-        user_id: email, access_token: 'renewed-access:' + email,
-        refresh_token: 'renewed-refresh:' + email, token_type: 'bearer', expires_in: 900,
-      } })
+      expect(request.postDataJSON()).toEqual({})
+      if (scenario.failure === 'rejected' || !current || marker !== current.session_id) return route.fulfill({ status: 401, headers: cors, json: { detail: 'Refresh session rejected' } })
+      if (activePatient && marker !== activePatient.session_id) return route.fulfill({ status: 409, headers: cors, json: { detail: { error_code: 'SESSION_CHANGED' } } })
+      renewedSessions.add(current.session_id)
+      return route.fulfill({ headers: cors, json: authSession(current.user_id) })
     }
     if (pathname === '/api/v1/patient/settings') {
       await scenario.holdSettings
       if (scenario.settingsStatus) return route.fulfill({ headers: cors, status: scenario.settingsStatus, json: { detail: 'Settings unavailable' } })
-      const authorization = request.headers().authorization || ''
-      if (scenario.expireAccess && authorization.startsWith('Bearer test-access:')) {
+      if (scenario.expireAccess && current && !renewedSessions.has(current.session_id)) {
         scenario.rejectedAccess++
         return route.fulfill({ status: 401, headers: cors, json: { detail: 'Invalid or expired access token' } })
       }
-      const email = authorization.replace(/^Bearer (test|renewed)-access:/, '')
+      const email = owner
       return route.fulfill({ headers: cors, json: { user_id: email, email, phone: '+4915112345678', emergency_contacts: [], ...(account.personal || {}) } })
     }
     if (pathname === '/api/v1/patient/settings/profile' && request.method() === 'PUT') {
@@ -100,6 +116,8 @@ async function mockApi(context: BrowserContext) {
     }
     if (pathname === '/api/v1/auth/logout') {
       scenario.logoutCount = (scenario.logoutCount || 0) + 1
+      await scenario.holdLogout
+      if (!scenario.preserveSessionAfterLogout && portal === 'patient' && activePatient?.session_id === marker) activePatient = undefined
       return route.fulfill({ headers: cors, json: { message: 'Logged out.' } })
     }
     if (pathname === '/api/v1/patient/prescription-care-plan') {
@@ -262,7 +280,8 @@ for (const failure of ['unavailable', 'network'] as const) {
     await page.reload()
     await expect(page.getByText("We couldn't renew your session right now. Please try again shortly.", { exact: true })).toBeVisible()
     await expect(page.locator('#emergencyName')).toHaveValue('Unsaved contact survives outage')
-    expect(await page.evaluate(() => localStorage.getItem('qarevo_refresh_token'))).toBe('test-refresh:' + alpha)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('qarevo:patient:identity') || 'null')?.session_id)).toBe('test-session:' + alpha)
+    expect(await page.evaluate(() => localStorage.getItem('qarevo_refresh_token'))).toBeNull()
     expect(scenario.refreshes).toBe(1)
     scenario.failure = 'none'
     await page.clock.setFixedTime(new Date(Date.now() + 11_000))
@@ -271,7 +290,8 @@ for (const failure of ['unavailable', 'network'] as const) {
     await expect(page.locator('#email')).toHaveValue(alpha)
     await expect(page.getByText("We couldn't renew your session right now. Please try again shortly.", { exact: true })).toHaveCount(0)
     await expect(page.locator('#emergencyName')).toHaveValue('Unsaved contact survives outage')
-    expect(await page.evaluate(() => localStorage.getItem('qarevo_refresh_token'))).toBe('renewed-refresh:' + alpha)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('qarevo:patient:identity') || 'null')?.session_id)).toBe('test-session:' + alpha)
+    expect(await page.evaluate(() => localStorage.getItem('qarevo_refresh_token'))).toBeNull()
   })
 }
 
@@ -284,8 +304,8 @@ test('a rejected refresh ends the session and removes its private draft', async 
   scenario.failure = 'rejected'
   await page.goto('/auth/profile-setup/contact-information')
   await expect(page).toHaveURL(/\/auth\/sign-in$/)
-  expect(await page.evaluate(() => localStorage.getItem('qarevo_refresh_token'))).toBeNull()
-  expect(await page.evaluate(() => Object.keys(sessionStorage).filter(key => key.startsWith('qarevo.draft.v2:')))).toEqual([])
+  expect(await page.evaluate(() => localStorage.getItem('qarevo:patient:identity'))).toBeNull()
+  expect(await page.evaluate(() => Object.keys(sessionStorage).filter(key => key.startsWith('qarevo.draft.v3:patient:')))).toEqual([])
 })
 
 test('prescriptions wait for real data and never show sample medication', async ({ page, context }) => {
@@ -360,8 +380,42 @@ test('sidebar logout clears private browser state and revokes the refresh sessio
   await page.locator('.pps-sidebar').getByRole('button', { name: 'Logout', exact: true }).click()
   await expect(page).toHaveURL(/\/auth\/sign-in$/)
   await expect.poll(() => scenarios.get(context)!.logoutCount || 0).toBe(1)
-  expect(await page.evaluate(() => localStorage.getItem('qarevo_access_token'))).toBeNull()
+  expect(await page.evaluate(() => localStorage.getItem('qarevo:patient:identity'))).toBeNull()
   expect(await page.evaluate(() => Object.entries(sessionStorage).some(([key, value]) => key.includes(alpha) || value.includes('Private logout draft')))).toBe(false)
+})
+
+test('queued logout hides private UI until revocation settles and refuses stale cookie-only restoration', async ({ page, context }) => {
+  await signIn(page, alpha)
+  await page.goto('/patient/prescription-care-plan')
+  await expect(page.getByRole('heading', { name: 'No medications recorded', exact: true })).toBeVisible()
+  const scenario = scenarios.get(context)!
+  let releaseRefresh!: () => void, releaseLogout!: () => void
+  scenario.holdRefresh = new Promise<void>(resolve => { releaseRefresh = resolve })
+  scenario.holdLogout = new Promise<void>(resolve => { releaseLogout = resolve })
+  // Deliberately retain the synthetic server authority after logout so the
+  // browser tombstone, rather than a mocked server rejection, proves this gate.
+  scenario.preserveSessionAfterLogout = true
+  scenario.expireAccess = true
+  await page.reload()
+  try {
+    await expect.poll(() => scenario.refreshes).toBe(1)
+    await page.locator('.pps-sidebar').getByRole('button', { name: 'Logout', exact: true }).click()
+    const signingOut = page.getByRole('status').filter({ hasText: 'Signing out securely' })
+    await expect(signingOut).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'No medications recorded', exact: true })).toHaveCount(0)
+    await expect(page).toHaveURL(/\/patient\/prescription-care-plan$/)
+    expect(scenario.logoutCount || 0).toBe(0)
+    releaseRefresh()
+    await expect.poll(() => scenario.logoutCount || 0).toBe(1)
+    await expect(signingOut).toBeVisible()
+    await expect(page).toHaveURL(/\/patient\/prescription-care-plan$/)
+  } finally { releaseRefresh(); releaseLogout() }
+  await expect(page).toHaveURL(/\/auth\/sign-in(?:\?|$)/)
+  expect(await page.evaluate(() => localStorage.getItem('qarevo:patient:logout-pending'))).toBeNull()
+  expect(await page.evaluate(() => localStorage.getItem('qarevo:patient:signed-out'))).toBe('test-session:' + alpha)
+  await page.goto('/patient/prescription-care-plan')
+  await expect(page).toHaveURL(/\/auth\/sign-in(?:\?|$)/)
+  await expect(page.getByRole('heading', { name: 'No medications recorded', exact: true })).toHaveCount(0)
 })
 
 test('all profile steps save, survive a fresh sign-in and keep funding distinct', async ({ page, context }) => {
@@ -510,7 +564,7 @@ test('doctor registration exposes required fields and consent without a disabled
   await expect(page.locator('input[aria-invalid=true]').first()).toBeFocused()
 })
 
-test('global theme survives refresh, route changes, logout and a fresh browser session', async ({ page, context, browser }) => {
+test('patient theme survives refresh, route changes and a fresh browser session', async ({ page, context, browser }) => {
   await signIn(page, alpha)
   await page.goto('/patient/settings')
   const toggle = page.getByRole('button', { name: /^(Dark|Light) mode$/ })
@@ -528,7 +582,7 @@ test('global theme survives refresh, route changes, logout and a fresh browser s
   await expect(second.locator('html')).toHaveAttribute('data-theme', 'light')
   await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
   const state = await context.storageState()
-  const fresh = await browser.newContext({ storageState: { cookies: [], origins: state.origins.map(origin => ({ ...origin, localStorage: origin.localStorage.filter(item => item.name === 'qarevo.theme.v1') })) } })
+  const fresh = await browser.newContext({ storageState: { cookies: [], origins: state.origins.map(origin => ({ ...origin, localStorage: origin.localStorage.filter(item => item.name === 'qarevo:patient:theme') })) } })
   const freshPage = await fresh.newPage()
   await freshPage.goto('/auth/sign-in')
   await expect(freshPage.locator('html')).toHaveAttribute('data-theme', 'dark')
@@ -538,12 +592,7 @@ test('global theme survives refresh, route changes, logout and a fresh browser s
 
 for (const portal of ['doctor', 'admin'] as const) {
   test(`${portal} has persistent theme and readable controls on desktop and mobile`, async ({ page, context }) => {
-    await context.addInitScript(role => {
-      localStorage.setItem('qarevo_access_token', 'synthetic-role-token')
-      localStorage.setItem('qarevo_refresh_token', 'synthetic-role-refresh')
-      localStorage.setItem('qarevo_user_id', 'synthetic-role-owner')
-      localStorage.setItem('qarevo_role', role)
-    }, portal === 'doctor' ? 'PROVIDER' : 'ADMIN')
+    await seedRole(context, portal, { user_id: 'synthetic-role-owner' })
     await context.route(`**/api/v1/${portal}/**`, route => {
       const path = new URL(route.request().url()).pathname
       const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'Content-Type,Authorization', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' }
@@ -574,12 +623,7 @@ for (const portal of ['doctor', 'admin'] as const) {
 
 test('administrator can review credentials and suspend access with visible validation', async ({ page, context }) => {
   await page.setViewportSize({ width: 320, height: 844 })
-  await context.addInitScript(() => {
-    localStorage.setItem('qarevo_access_token', 'synthetic-admin-token')
-    localStorage.setItem('qarevo_refresh_token', 'synthetic-admin-refresh')
-    localStorage.setItem('qarevo_user_id', 'synthetic-admin-owner')
-    localStorage.setItem('qarevo_role', 'ADMIN')
-  })
+  await seedRole(context, 'admin', { user_id: 'synthetic-admin-owner' })
   const clinician = { id: 'synthetic-provider', provider_id: 'synthetic-provider', user_id: 'synthetic-doctor', full_name: 'Synthetic Clinician', email: 'clinician@example.invalid', email_verified: true, phone: null, specialty: 'General Practice', license_number: 'TEST-LICENCE', status: 'ACTIVE', verification_status: 'PENDING_VERIFICATION', can_review: true,
     clinical_access: { status: 'blocked', reason: 'approval_required', message: 'Administrator review and approval are required before clinical access.' } }
   const decisions: Record<string, unknown>[] = []
@@ -631,11 +675,7 @@ test('administrator can review credentials and suspend access with visible valid
 })
 
 test('read-only administrator can inspect clinical eligibility without approval controls', async ({ page, context }) => {
-  await context.addInitScript(() => {
-    localStorage.setItem('qarevo_access_token', 'synthetic-admin-token')
-    localStorage.setItem('qarevo_user_id', 'synthetic-support')
-    localStorage.setItem('qarevo_role', 'ADMIN')
-  })
+  await seedRole(context, 'admin', { user_id: 'synthetic-support' })
   const clinician = { id: 'synthetic-provider', provider_id: 'synthetic-provider', full_name: 'Synthetic Clinician', email: 'clinician@example.invalid', status: 'ACTIVE', verification_status: 'PENDING_VERIFICATION', can_review: false,
     clinical_access: { status: 'blocked', reason: 'approval_required', message: 'Administrator review and approval are required before clinical access.' } }
   const writes: string[] = []
@@ -920,12 +960,7 @@ for (const role of ['patient', 'doctor'] as const) {
     })
     if (role === 'patient') await signIn(page, alpha)
     else {
-      await context.addInitScript(() => {
-        localStorage.setItem('qarevo_access_token', 'synthetic-role-token')
-        localStorage.setItem('qarevo_refresh_token', 'synthetic-role-refresh')
-        localStorage.setItem('qarevo_user_id', 'synthetic-role-owner')
-        localStorage.setItem('qarevo_role', 'PROVIDER')
-      })
+      await seedRole(context, 'doctor', { user_id: 'synthetic-role-owner' })
       await context.route('**/api/v1/doctor/profile', route => route.fulfill({ headers, json: { full_name: 'Synthetic Doctor', specialty: 'General Medicine' } }))
     }
     const path = role === 'patient' ? '/patient/video-consultation/waiting-room' : '/doctor/video-consultation'
@@ -964,12 +999,7 @@ test('clinician draft persists and requires explicit review, with recoverable pu
   let publicationFailure = true
   let publications = 0
   const savedBodies: Record<string, unknown>[] = []
-  await context.addInitScript(() => {
-    localStorage.setItem('qarevo_access_token', 'synthetic-role-token')
-    localStorage.setItem('qarevo_refresh_token', 'synthetic-role-refresh')
-    localStorage.setItem('qarevo_user_id', 'synthetic-role-owner')
-    localStorage.setItem('qarevo_role', 'PROVIDER')
-  })
+  await seedRole(context, 'doctor', { user_id: 'synthetic-role-owner' })
   await context.route('**/api/v1/doctor/profile', route => route.fulfill({ headers, json: { full_name: 'Synthetic Doctor', specialty: 'General Medicine' } }))
   await context.route(`**/api/v1/doctor/workspace/${recordConsultation}**`, route => {
     const request = route.request()
@@ -1142,12 +1172,7 @@ test('administrator invitation validates passwords, clears the URL secret and re
 
 for (const managing of [true, false]) {
   test(`administrator directory enforces ${managing ? 'owner controls and canonical contracts' : 'read-only controls'}`, async ({page,context}) => {
-    await context.addInitScript(() => {
-      localStorage.setItem('qarevo_access_token','synthetic-admin')
-      localStorage.setItem('qarevo_refresh_token','synthetic-refresh')
-      localStorage.setItem('qarevo_user_id','synthetic-owner-user')
-      localStorage.setItem('qarevo_role','ADMIN')
-    })
+    await seedRole(context, 'admin', { user_id: 'synthetic-owner-user' })
     const rows = [{id:'synthetic-owner',user_id:'synthetic-owner-user',email:'owner@example.invalid',full_name:'Synthetic Owner',role:'super_admin',status:'ACTIVE',created_at:'2026-11-03T00:00:00Z',last_login_at:null}]
     const writes: Record<string,unknown>[]=[]
     const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { clearAuthTokens, getApiErrorDetail, registerPatient } from '@/lib/api'
+import { clearPortalSession, getApiErrorDetail, registerPatient } from '@/lib/api'
 
 // ─── Page background ──────────────────────────────────────────────────────────
 
@@ -407,7 +407,7 @@ export default function SignUpPage() {
         },
       })
 
-      clearAuthTokens()
+      clearPortalSession()
       try {
         window.sessionStorage.setItem(
           SIGNUP_STORAGE_KEY,

@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorAppointments,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   type DoctorAppointmentsResponse,
 } from '@/lib/api'
 
@@ -20,8 +20,8 @@ export default function DoctorAppointments() {
   const pageSize = 10
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -38,7 +38,7 @@ export default function DoctorAppointments() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }

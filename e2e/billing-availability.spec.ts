@@ -1,18 +1,15 @@
+import {seedPortalSession} from './helpers/portal-session'
 import { test, expect, type BrowserContext } from '@playwright/test'
 
 async function prepare(context: BrowserContext) {
   const state = { status: 200, hold: Promise.resolve(), insuranceStatus: 'unverified' }
-  await context.addInitScript(() => {
-    localStorage.setItem('qarevo_access_token', 'synthetic-patient-token')
-    localStorage.setItem('qarevo_refresh_token', 'synthetic-patient-refresh')
-    localStorage.setItem('qarevo_user_id', 'synthetic-patient')
-    localStorage.setItem('qarevo_role', 'PATIENT')
-  })
+  const identity = await seedPortalSession(context, 'patient', {user_id:'synthetic-patient'})
   await context.route('**/api/v1/**', async route => {
     const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
     const path = new URL(route.request().url()).pathname
-    if (path === '/api/v1/session' || path === '/api/v1/session/activity') return route.fulfill({ headers: headers, json: { server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
+    if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
+    if (path === '/api/v1/session' || path === '/api/v1/session/activity') return route.fulfill({ headers: headers, json:{browser_session:identity,server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
     if (path.endsWith('/billing')) {
       await state.hold
       if (state.status !== 200) return route.fulfill({ status: state.status, headers, json: { detail: 'Synthetic billing service unavailable.' } })

@@ -4,10 +4,10 @@ import '@/components/doctor/doctor-clinical.css'
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorAppointment,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   updateDoctorAppointmentStatus,
   type DoctorAppointmentDetail,
 } from '@/lib/api'
@@ -23,8 +23,8 @@ export default function AppointmentDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -37,7 +37,7 @@ export default function AppointmentDetailPage() {
         if (!cancelled) setAppointmentData(data)
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/doctor/login')
           return
         }
@@ -72,7 +72,7 @@ export default function AppointmentDetailPage() {
       setError(null)
     } catch (err) {
       if (isAuthError(err)) {
-        clearAuthTokens()
+        clearPortalSession()
         router.replace('/auth/doctor/login')
         return
       }

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ApiError, acceptAdminInvitation, validateAdminInvitation, clearAuthTokens, getApiErrorDetail, getLoginThrottleMessage } from '@/lib/api'
+import { ApiError, acceptAdminInvitation, validateAdminInvitation, clearPortalSession, getApiErrorDetail, getLoginThrottleMessage } from '@/lib/api'
 import { ValidationSummary } from '@/components/ui/ValidationFeedback'
 
 type Status = 'checking' | 'valid' | 'unavailable' | 'error' | 'complete'
@@ -78,7 +78,7 @@ export default function AcceptAdminInvitation() {
     setSaving(true)
     try {
       await acceptAdminInvitation(token.current, password)
-      clearAuthTokens(); token.current = ''; setPassword(''); setConfirmation(''); setStatus('complete')
+      clearPortalSession(); token.current = ''; setPassword(''); setConfirmation(''); setStatus('complete')
     } catch (error) {
       if (error instanceof ApiError && error.status === 400) {
         token.current = ''; setPassword(''); setConfirmation(''); setStatus('unavailable')

@@ -6,14 +6,14 @@ import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getAdminPatients,
   getAdminPatient,
   getAdminPatientEpisodes,
   exportAdminPatientData,
   updateAdminPatient,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   isAdmin,
   type AdminPatient,
   type AdminPatientEpisode,
@@ -151,8 +151,8 @@ export default function AdminPatientsPage() {
   const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/admin/login')
       return
     }
@@ -173,7 +173,7 @@ export default function AdminPatientsPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/admin/login')
           return
         }

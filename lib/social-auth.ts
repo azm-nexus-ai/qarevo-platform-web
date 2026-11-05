@@ -1,3 +1,4 @@
+import { rememberPortal, type PortalIdentity } from '@/lib/portal-scope'
 import { safePortalDestination } from '@/lib/portal-handoff'
 import { apiGet, apiPost } from '@/lib/api'
 export type SocialProvider = 'google' | 'apple'
@@ -21,13 +22,14 @@ export async function beginSocial(provider: SocialProvider, portal: SocialPortal
   sessionStorage.setItem(TRANSACTION, JSON.stringify({ verifier, state: result.state, provider, portal, linking, intended: safePortalDestination(new URLSearchParams(window.location.search).get('next'), portal), expires: Date.now() + Math.min(result.expires_in, 300) * 1000 }))
   window.location.assign(destination.href)
 }
-export type SocialResult = { intended?: string | null; connected?: boolean; provider?: SocialProvider; access_token?: string; refresh_token?: string; role?: SocialPortal; temp_token?: string; identifier?: string; user_id?: string }
+export type SocialResult = { intended?: string | null; connected?: boolean; provider?: SocialProvider; browser_session?: PortalIdentity; role?: SocialPortal; mfa_pending?: boolean; identifier?: string; user_id?: string }
 export async function finishSocial(code: string, state: string) {
   const raw = sessionStorage.getItem(TRANSACTION)
   sessionStorage.removeItem(TRANSACTION)
   if (!raw) throw new Error('This sign-in request is missing. Start again in this browser tab.')
   const saved = JSON.parse(raw)
   if (saved.state !== state || saved.expires <= Date.now() || !['google','apple'].includes(saved.provider) || !['PATIENT','PROVIDER'].includes(saved.portal)) throw new Error('This sign-in request expired or does not match this browser tab. Start again.')
+  rememberPortal(saved.portal === 'PROVIDER' ? 'doctor' : 'patient')
   const result = await apiPost<SocialResult>(`/api/v1/auth/social/${saved.provider}/${saved.linking ? 'link/' : ''}finish`, { code, state, verifier: saved.verifier })
   if (result.role && result.role !== saved.portal) throw new Error('The sign-in portal does not match this account.')
   return { ...result, intended: safePortalDestination(saved.intended || null, saved.portal) }

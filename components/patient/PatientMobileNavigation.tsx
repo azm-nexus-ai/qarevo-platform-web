@@ -7,11 +7,14 @@ import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import ProfileImage from '@/components/patient/ProfileImage'
+import PatientAccountMenu from '@/components/patient/PatientAccountMenu'
+import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
+import { isPortalEvent } from '@/lib/portal-scope'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
-import { logoutCurrentUser, clearAuthTokens, getPatientSettings, isAuthError, readAccessToken } from '@/lib/api'
+import { logoutCurrentUser, clearPortalSession, getPatientSettings, isAuthError, readSessionMarker } from '@/lib/api'
 
 export default function PatientMobileNavigation() {
   const pathname = usePathname()
@@ -19,6 +22,7 @@ export default function PatientMobileNavigation() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [patientName, setPatientName] = useState('Loading...')
+  const [identityRevision, setIdentityRevision] = useState(0)
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
 
@@ -53,34 +57,44 @@ export default function PatientMobileNavigation() {
     hamburgerRef.current?.focus()
   }, [])
 
-  const handleLogout = () => {
-    void logoutCurrentUser().catch(() => console.warn('Server logout could not be confirmed.'))
-    setShowLogoutModal(false)
-    closeDrawer()
-    router.push('/auth/sign-in')
+  const handleLogout = async () => {
+    try { await logoutCurrentUser() }
+    catch { console.warn('Server logout could not be confirmed.') }
+    finally {
+      setShowLogoutModal(false)
+      closeDrawer()
+      router.replace('/auth/sign-in')
+    }
   }
 
   useEffect(() => {
-    const token = readAccessToken()
+    const token = readSessionMarker()
     if (!token) return
+    let active = true
+    const scope = readAccountScope('patient')
 
     const fetchPatientChrome = async () => {
       try {
         const settings = await getPatientSettings()
-        setPatientName([settings.first_name, settings.last_name].filter(Boolean).join(' ') || 'Patient account')
+        if (active && scope === readAccountScope('patient')) setPatientName([settings.first_name, settings.last_name].filter(Boolean).join(' ') || 'Patient account')
       } catch (error) {
+        if (!active || scope !== readAccountScope('patient')) return
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }
         console.error('Failed to fetch dashboard profile:', error)
-        setPatientName('Patient account')
+        if (active && scope === readAccountScope('patient')) setPatientName('Patient account')
       }
     }
 
-    fetchPatientChrome()
-  }, [router])
+    void fetchPatientChrome()
+    const reset = (event: Event) => { if (!isPortalEvent(event, 'patient')) return; setPatientName('Patient account'); setIdentityRevision(value => value + 1) }
+    window.addEventListener(ACCOUNT_CHANGED, reset)
+    window.addEventListener('storage', reset)
+    return () => { active = false; window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset) }
+  }, [router, identityRevision])
 
   return (
     <div>
@@ -185,7 +199,7 @@ export default function PatientMobileNavigation() {
       `}</style>
 
       {/* Mobile Top Bar */}
-      <div className="pmn-topbar" role="banner">
+      <div className="pmn-topbar portal-mobile-navbar" role="banner">
           <Link
             href="/patient/dashboard"
             aria-label="Qarevo Health Patient Dashboard"
@@ -231,24 +245,7 @@ export default function PatientMobileNavigation() {
             <Ico p={ICONS.message} size={18} sw={1.8} />
 
           </button>
-          <button
-            type="button"
-            aria-label="Profile"
-            onClick={() => router.push('/patient/settings')}
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              border: "1px solid var(--border)",
-              background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))',
-              color: T.navy,
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontSize: '15px',
-            }}
-          >
-            <ProfileImage name={patientName} size={34} />
-          </button>
+          <PatientAccountMenu name={patientName} />
 
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
+import { currentPortal, isPortalEvent, portalKey, type Portal } from '@/lib/portal-scope'
 import {
   ACCOUNT_CHANGED, assertCurrentAccount, clearPrivateBrowserState,
   createAccountDraftStorage, readAccountScope,
@@ -28,21 +29,24 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined)
 const initialState: BookingState = { step: 'discovery' }
 const STORAGE_KEY = 'qarevo_booking_state'
 
-function returnToSignIn() {
-  const path = window.location.pathname
-  const destination = path.startsWith('/doctor') || path.startsWith('/auth/doctor')
+function returnToSignIn(portal: Portal) {
+  const destination = portal === 'doctor'
     ? '/auth/doctor/login'
-    : path.startsWith('/admin') || path.startsWith('/auth/admin')
+    : portal === 'admin'
       ? '/auth/admin/login'
       : '/auth/sign-in'
   window.location.replace(destination)
 }
 
 export function BookingProvider({ children }: { children: ReactNode }) {
+  // PortalSessionBoundary remounts this provider when the active portal changes.
+  const [portal] = useState(currentPortal)
   const [bookingState, setBookingState] = useState<BookingState>(initialState)
   const [draftStorage, setDraftStorage] = useState(createAccountDraftStorage)
   const [blocked, setBlocked] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  const logoutSeen = useRef(false)
 
   useEffect(() => {
     try {
@@ -56,27 +60,39 @@ export function BookingProvider({ children }: { children: ReactNode }) {
   }, [draftStorage])
 
   useEffect(() => {
-    const reset = () => {
+    const logoutPending = () => {
+      try { return Boolean(window.localStorage.getItem(portalKey('logout-pending', portal))) } catch { return false }
+    }
+    const reset = (event: Event) => {
+      if (!isPortalEvent(event, portal)) return
+      if (logoutPending()) { logoutSeen.current = true; setSigningOut(true); setBlocked(true); return }
+      if (logoutSeen.current && !readAccountScope(portal)) { returnToSignIn(portal); return }
       const path = window.location.pathname
-      if (!readAccountScope() && (
+      if (!readAccountScope(portal) && (
         path.startsWith('/patient') || path.startsWith('/doctor') ||
         path.startsWith('/admin') || path.startsWith('/auth/profile-setup')
       )) {
         setBlocked(true)
-        returnToSignIn()
+        returnToSignIn(portal)
         return
       }
+      logoutSeen.current = false
+      setSigningOut(false)
+      setBlocked(false)
       setHydrated(false)
       setBookingState(initialState)
       setDraftStorage(createAccountDraftStorage())
     }
-    const check = () => {
+    const check = (event?: Event) => {
+      if (event && !isPortalEvent(event, portal)) return
+      if (logoutPending()) { logoutSeen.current = true; setSigningOut(true); setBlocked(true); return }
+      if (logoutSeen.current && !readAccountScope(portal)) { returnToSignIn(portal); return }
       try {
-        assertCurrentAccount()
+        assertCurrentAccount(portal)
       } catch {
         setBlocked(true)
-        try { clearPrivateBrowserState() } finally {
-          returnToSignIn()
+        try { clearPrivateBrowserState(portal) } finally {
+          returnToSignIn(portal)
         }
       }
     }
@@ -91,21 +107,21 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', check)
       window.removeEventListener('pageshow', check)
     }
-  }, [])
+  }, [portal])
 
   const updateBookingState = useCallback((updates: Partial<BookingState>) => {
-    assertCurrentAccount()
+    assertCurrentAccount(portal)
     setBookingState(previous => ({ ...previous, ...updates }))
-  }, [])
+  }, [portal])
 
   useEffect(() => {
-    if (!hydrated || !readAccountScope()) return
+    if (!hydrated || !readAccountScope(portal)) return
     try {
       draftStorage.setItem(STORAGE_KEY, JSON.stringify(bookingState))
     } catch {
       // Keep the current in-memory draft; never fall back to shared storage.
     }
-  }, [bookingState, draftStorage, hydrated])
+  }, [bookingState, draftStorage, hydrated, portal])
 
   const resetBookingState = useCallback(() => {
     setBookingState(initialState)
@@ -116,7 +132,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     updateBookingState({ step })
   }, [updateBookingState])
 
-  if (blocked) return <p role="status">Your session changed. Returning to sign in...</p>
+  if (blocked) return <p role="status">{signingOut ? 'Signing out securely…' : 'Your session changed. Returning to sign in…'}</p>
 
   return (
     <BookingContext.Provider value={{ bookingState, updateBookingState, resetBookingState, setBookingStep }}>

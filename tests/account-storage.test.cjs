@@ -62,73 +62,124 @@ function locksFor(localStorage) {
   }
   return lockManagers.get(localStorage)
 }
-
-function tab(localStorage = storage(), fetch = async () => new Response('{}'), overrides = {}) {
+class BrowserCustomEvent extends Event {
+  constructor(name, options = {}) { super(name); this.detail = options.detail }
+}
+function tab(localStorage = storage(), fetchImpl = async () => new Response('{}'), overrides = {}) {
   const events = []
+  const eventListeners = new Map()
   const window = {
     localStorage,
     sessionStorage: storage(),
-    dispatchEvent(event) { events.push(event.type) },
+    location: { origin: 'https://web.qarevo.example', hostname: 'web.qarevo.example', pathname: '/patient/dashboard' },
+    dispatchEvent(event) { events.push(event.type); for (const listener of eventListeners.get(event.type) || []) listener(event) },
+    addEventListener(name, listener) { if (!eventListeners.has(name)) eventListeners.set(name, new Set()); eventListeners.get(name).add(listener) },
+    removeEventListener(name, listener) { eventListeners.get(name)?.delete(listener) },
+  }
+  const fetch = async (url, init) => {
+    if (new URL(url).pathname === '/api/v1/browser-csrf') return Response.json({ csrf_token: 'synthetic-csrf-check' })
+    return fetchImpl(url, init)
   }
   const shared = {
-    window, fetch, Headers, Response, Event, URL, URLSearchParams,
+    window, fetch, Headers, Response, Event, CustomEvent: BrowserCustomEvent, URL, URLSearchParams,
     crypto: webcrypto, console, AbortController, AbortSignal, setTimeout, clearTimeout,
     navigator: { locks: locksFor(localStorage) },
     process: { env: { NEXT_PUBLIC_API_BASE_URL: 'https://qarevo.invalid' } },
     ...overrides,
   }
+  const portal = { exports: {} }
+  vm.runInNewContext(compile('portal-scope.ts'), { ...shared, module: portal, exports: portal.exports })
   const core = { exports: {} }
-  vm.runInNewContext(storageCode, { ...shared, module: core, exports: core.exports })
+  vm.runInNewContext(storageCode, {
+    ...shared, module: core, exports: core.exports,
+    require(name) { if (name === './portal-scope') return portal.exports; throw new Error('Unexpected import: ' + name) },
+  })
   const api = { exports: {} }
   vm.runInNewContext(apiCode, {
     ...shared, module: api, exports: api.exports,
     require(name) {
       if (name === '@/lib/account-storage' || name === './account-storage') return core.exports
+      if (name === '@/lib/portal-scope' || name === './portal-scope') return portal.exports
+      if (name === '@/lib/profile-events') return { notifyProfileChanged() {} }
       throw new Error('Unexpected import: ' + name)
     },
   })
-  return { ...window, events, core: core.exports, api: api.exports }
+  return { ...window, events, core: core.exports, portal: portal.exports, api: api.exports }
 }
-
-function login(t, id) {
-  t.api.storeAuthTokens({
-    user_id: id, role: 'PATIENT',
-    access_token: 'access-' + id, refresh_token: 'refresh-' + id,
-  })
+const roles = { patient: 'PATIENT', doctor: 'PROVIDER', admin: 'ADMIN' }
+function identity(id = 'A', portal = 'patient', session = `session-${id}`) {
+  return { user_id: id, role: roles[portal], session_id: session, provider_id: portal === 'doctor' ? `profile-${id}` : null }
 }
-
+function login(t, id, { portal = t.portal.currentPortal(), session = `session-${id}` } = {}) {
+  const current = identity(id, portal, session)
+  t.api.storeBrowserSession({ browser_session: current }, portal)
+  return current
+}
 function deferred() {
   let resolve
   const promise = new Promise(done => { resolve = done })
   return { promise, resolve }
 }
+const renewed = (id = 'A', portal = 'patient', session = `session-${id}`) => Response.json({ browser_session: identity(id, portal, session) })
+
+// Credentials are represented exclusively by server-owned closure state in these
+// tests. JavaScript sees only the stable, non-secret session marker.
+function cookieServer({ firstFailure = null } = {}) {
+  let rotated = false, rotations = 0
+  return {
+    get rotations() { return rotations },
+    get rotated() { return rotated },
+    async fetch(url, init) {
+      const headers = new Headers(init.headers)
+      assert.equal(headers.get('Authorization'), null)
+      assert.equal(headers.get('X-Qarevo-Refresh-Token'), null)
+      assert.equal(init.credentials, 'same-origin')
+      if (url.endsWith('/auth/refresh')) {
+        assert.deepEqual(JSON.parse(init.body), {})
+        if (++rotations === 1 && firstFailure) return firstFailure()
+        rotated = true
+        return renewed()
+      }
+      return Response.json({ ok: true }, { status: rotated ? 200 : 401 })
+    },
+  }
+}
 
 test('legacy personal, health, consent, signup, flow and booking drafts are discarded', () => {
   const t = tab()
   const keys = ['qarevo.onboarding.personal-information.v1', 'qarevo.onboarding.health-profile.v1',
-    'qarevo.onboarding.insurance-privacy-consent.v1', 'qarevo.auth.signup.v1',
-    'qarevo.auth.flow.v1', 'qarevo_booking_state']
+    'qarevo.onboarding.insurance-privacy-consent.v1', 'qarevo.auth.signup.v1', 'qarevo.auth.flow.v1', 'qarevo_booking_state']
   for (const key of keys) t.localStorage.setItem(key, 'previous patient data')
-  t.localStorage.setItem('theme', 'dark')
+  t.localStorage.setItem('qarevo:patient:theme', 'dark')
+  for (const key of ['qarevo_access_token', 'qarevo_refresh_token', 'doctor_temp_token']) {
+    t.localStorage.setItem(key, 'retired-secret'); t.sessionStorage.setItem(key, 'retired-secret')
+  }
   login(t, 'A')
   for (const key of keys) assert.equal(t.localStorage.getItem(key), null)
-  assert.equal(t.localStorage.getItem('theme'), 'dark')
+  assert.equal(t.localStorage.getItem('qarevo:patient:theme'), 'dark')
+  assert.doesNotMatch(JSON.stringify([t.localStorage, t.sessionStorage]), /retired-secret/)
 })
 
-test('same-account draft survives a new reader and token renewal', () => {
+test('browser stores only role-scoped identity metadata and never API credentials', () => {
   const t = tab()
-  login(t, 'A')
-  const draft = t.core.createAccountDraftStorage()
-  draft.setItem('personal', 'A only')
-  t.api.storeAuthTokens({ user_id: 'A', access_token: 'renewed-A', refresh_token: 'renewed-refresh-A' })
+  const meta = identity()
+  t.api.storeBrowserSession({ browser_session: meta, access_token: 'must-not-store-access', refresh_token: 'must-not-store-refresh', temp_token: 'must-not-store-mfa' })
+  assert.equal(t.api.readSessionMarker(), 'session-A')
+  assert.deepEqual(JSON.parse(t.localStorage.getItem('qarevo:patient:identity')), meta)
+  assert.doesNotMatch(JSON.stringify([t.localStorage, t.sessionStorage]), /must-not-store/)
+  assert.throws(() => t.api.storeBrowserSession({ access_token: 'legacy-only' }), /secure session/)
+})
+
+test('same-account draft survives a new reader and cookie renewal with a stable marker', () => {
+  const t = tab(); login(t, 'A')
+  t.core.createAccountDraftStorage().setItem('personal', 'A only')
+  t.api.storeBrowserSession({ browser_session: identity() })
   assert.equal(t.core.createAccountDraftStorage().getItem('personal'), 'A only')
 })
 
 test('account switch rejects stale reads and writes and clears prior drafts', () => {
-  const t = tab()
-  login(t, 'A')
-  const stale = t.core.createAccountDraftStorage()
-  stale.setItem('health', 'A only')
+  const t = tab(); login(t, 'A')
+  const stale = t.core.createAccountDraftStorage(); stale.setItem('health', 'A only')
   login(t, 'B')
   assert.equal(stale.getItem('health'), null)
   assert.throws(() => stale.setItem('health', 'stale write'), /session changed/i)
@@ -136,323 +187,477 @@ test('account switch rejects stale reads and writes and clears prior drafts', ()
   assert.equal(Object.keys(t.sessionStorage).length, 0)
 })
 
-test('drafts are tab-specific and another tab cannot adopt the new identity', () => {
-  const first = tab()
-  login(first, 'A')
+test('drafts are tab-specific and a stale tab cannot adopt a changed identity', () => {
+  const first = tab(); login(first, 'A')
   first.core.createAccountDraftStorage().setItem('health', 'first tab only')
   const second = tab(first.localStorage)
   const stale = second.core.createAccountDraftStorage()
   assert.equal(stale.getItem('health'), null)
   stale.setItem('health', 'second tab A')
+  second.core.assertCurrentAccount()
   login(first, 'B')
   assert.throws(() => second.core.assertCurrentAccount(), /another tab/i)
   assert.equal(stale.getItem('health'), null)
   assert.throws(() => stale.setItem('health', 'stale second tab'), /session changed/i)
-  assert.throws(() => second.api.readAccessToken(), /another tab/i)
+  assert.throws(() => second.api.readSessionMarker(), /another tab/i)
 })
 
-test('logout clears private state and anonymous writes fail', () => {
-  const t = tab()
-  login(t, 'A')
+test('logout clears this portal private state and anonymous writes fail', () => {
+  const t = tab(); login(t, 'A')
   t.core.createAccountDraftStorage().setItem('health', 'A only')
-  t.sessionStorage.setItem('qarevo.auth.signup.v1', '{"email":"test@example.invalid"}')
-  t.api.clearAuthTokens()
+  t.sessionStorage.setItem('qarevo.auth.signup.v1', '{"email":"synthetic@example.test"}')
+  t.api.clearPortalSession()
   assert.equal(Object.keys(t.sessionStorage).length, 0)
-  assert.equal(t.localStorage.getItem('qarevo_access_token'), null)
+  assert.equal(t.localStorage.getItem('qarevo:patient:identity'), null)
   assert.throws(() => t.core.createAccountDraftStorage().setItem('health', 'anonymous'), /session changed/i)
 })
 
-test('a later login of the same account does not revive an old draft writer', () => {
-  const t = tab()
-  login(t, 'A')
+test('a new session of the same account cannot revive an old draft writer', () => {
+  const t = tab(); login(t, 'A')
   const stale = t.core.createAccountDraftStorage()
-  t.api.clearAuthTokens()
-  login(t, 'A')
+  t.api.clearPortalSession(); login(t, 'A', { session: 'new-family-A' })
   assert.throws(() => stale.setItem('health', 'old session'), /session changed/i)
 })
 
-test('late success response cannot cross an account change', async () => {
-  const response = deferred()
-  const t = tab(undefined, () => response.promise)
-  login(t, 'A')
-  const request = t.api.apiGet('/private')
-  login(t, 'B')
-  response.resolve(new Response('{"patient":"A"}'))
-  await assert.rejects(request, /session changed/i)
-  assert.equal(t.api.readAccessToken(), 'access-B')
+test('patient, doctor and admin identities, drafts and logout remain independent', () => {
+  const local = storage(), patient = tab(local), doctor = tab(local), admin = tab(local)
+  doctor.location.pathname = '/doctor/workspace'; admin.location.pathname = '/admin/dashboard'
+  login(patient, 'P'); login(doctor, 'D'); login(admin, 'O')
+  patient.core.createAccountDraftStorage().setItem('draft', 'patient private')
+  doctor.core.createAccountDraftStorage().setItem('draft', 'doctor private')
+  admin.core.createAccountDraftStorage().setItem('draft', 'admin private')
+  for (const portal of ['patient', 'doctor', 'admin']) local.setItem(`qarevo:${portal}:theme`, portal === 'doctor' ? 'light' : 'dark')
+  patient.api.clearPortalSession()
+  assert.equal(patient.api.readSessionMarker(), null)
+  assert.equal(doctor.api.readSessionMarker(), 'session-D')
+  assert.equal(admin.api.readSessionMarker(), 'session-O')
+  assert.equal(doctor.core.createAccountDraftStorage().getItem('draft'), 'doctor private')
+  assert.equal(admin.core.createAccountDraftStorage().getItem('draft'), 'admin private')
+  assert.equal(local.getItem('qarevo:doctor:theme'), 'light')
+  assert.equal(local.getItem('qarevo:patient:theme'), 'dark')
 })
 
-test('late JSON body cannot cross an account change', async () => {
-  const body = deferred()
-  const reading = deferred()
-  const response = new Response('{}')
-  response.json = () => { reading.resolve(); return body.promise }
-  const t = tab(undefined, async () => response)
-  login(t, 'A')
-  const request = t.api.apiGet('/private')
-  await reading.promise
-  login(t, 'B')
-  body.resolve({ patient: 'A' })
+test('late success response cannot cross an account change', async () => {
+  const response = deferred(); const t = tab(undefined, () => response.promise); login(t, 'A')
+  const request = t.api.apiGet('/private'); login(t, 'B')
+  response.resolve(Response.json({ patient: 'A' }))
   await assert.rejects(request, /session changed/i)
-  assert.equal(t.api.readAccessToken(), 'access-B')
+  assert.equal(t.api.readSessionMarker(), 'session-B')
+})
+
+test('late success body cannot cross an account change after headers are accepted', async () => {
+  const body = deferred(), reading = deferred(), response = new Response('{}')
+  response.text = () => { reading.resolve(); return body.promise }
+  const t = tab(undefined, async () => response); login(t, 'A')
+  const request = t.api.apiGet('/private'); await reading.promise; login(t, 'B')
+  body.resolve('{"patient":"A"}')
+  await assert.rejects(request, /session changed/i)
+  assert.equal(t.api.readSessionMarker(), 'session-B')
 })
 
 test('late error body cannot expire a newer account', async () => {
-  const body = deferred()
-  const reading = deferred()
-  const response = new Response('', { status: 401 })
+  const body = deferred(), reading = deferred(), response = new Response('', { status: 401 })
   response.text = () => { reading.resolve(); return body.promise }
-  const t = tab(undefined, async () => response)
-  login(t, 'A')
-  const request = t.api.apiPost('/api/v1/auth/login', {})
-  await reading.promise
-  login(t, 'B')
+  const t = tab(undefined, async () => response); login(t, 'A')
+  const request = t.api.apiPost('/api/v1/auth/login', {}); await reading.promise; login(t, 'B')
   body.resolve('{"detail":"Invalid credentials"}')
   await assert.rejects(request, /session changed/i)
-  assert.equal(t.api.readAccessToken(), 'access-B')
+  assert.equal(t.api.readSessionMarker(), 'session-B')
 })
 
-test('late refresh cannot restore the old account', async () => {
-  const response = deferred()
-  const refreshing = deferred()
-  let count = 0
-  const t = tab(undefined, async () => {
-    if (++count === 1) return new Response('{}', { status: 401 })
-    refreshing.resolve()
-    return response.promise
-  })
-  login(t, 'A')
-  const request = t.api.apiGet('/private')
+test('late refresh response cannot restore an older account', async () => {
+  const response = deferred(), refreshing = deferred()
+  const t = tab(undefined, async url => { if (!url.endsWith('/auth/refresh')) return new Response('{}', { status: 401 }); refreshing.resolve(); return response.promise })
+  login(t, 'A'); const request = t.api.apiGet('/private'); await refreshing.promise; login(t, 'B')
+  response.resolve(renewed()); await assert.rejects(request, /session changed/i)
+  assert.equal(t.api.readSessionMarker(), 'session-B')
+})
+
+test('late refresh JSON body cannot restore an older account', async () => {
+  const body = deferred(), reading = deferred(), response = new Response('{}')
+  response.json = () => { reading.resolve(); return body.promise }
+  const t = tab(undefined, async url => url.endsWith('/auth/refresh') ? response : new Response('{}', { status: 401 }))
+  login(t, 'A'); const request = t.api.apiGet('/private'); await reading.promise; login(t, 'B')
+  body.resolve({ browser_session: identity() }); await assert.rejects(request, /session changed/i)
+  assert.equal(t.api.readSessionMarker(), 'session-B')
+})
+
+test('cookie-arrival race: a delayed A refresh completes before queued B login can issue its cookies', async () => {
+  const release = deferred(), refreshing = deferred()
+  const cookieJar = { owner: 'A', renewed: false }
+  let loginStarted = false
+  const fetch = async (url, init) => {
+    const marker = new Headers(init.headers).get('X-Qarevo-Session')
+    if (url.endsWith('/auth/refresh')) {
+      refreshing.resolve(); await release.promise
+      // Model browser Set-Cookie processing before JavaScript receives headers.
+      cookieJar.owner = 'A'; cookieJar.renewed = true
+      return renewed()
+    }
+    if (url.endsWith('/auth/login')) {
+      loginStarted = true; cookieJar.owner = 'B'
+      return Response.json({ browser_session: identity('B') }, { headers: { 'X-Qarevo-Session-Id': 'session-B' } })
+    }
+    if (marker !== `session-${cookieJar.owner}`) return Response.json({ detail: { error_code: 'SESSION_CHANGED' } }, { status: 409 })
+    return Response.json({ patient: cookieJar.owner }, { status: cookieJar.renewed ? 200 : 401, headers: { 'X-Qarevo-Session-Id': `session-${cookieJar.owner}` } })
+  }
+  const first = tab(undefined, fetch); login(first, 'A')
+  const second = tab(first.localStorage, fetch)
+  const previousRequest = first.api.apiGet('/private').then(() => null, error => error)
   await refreshing.promise
-  login(t, 'B')
-  response.resolve(new Response(JSON.stringify({
-    user_id: 'A', access_token: 'late-A', refresh_token: 'late-refresh-A',
-  })))
-  await assert.rejects(request, /session changed/i)
-  assert.equal(t.api.readAccessToken(), 'access-B')
+  const signIn = second.api.loginPatient({ email: 'synthetic-b@example.test', password: 'test-only' })
+  try {
+    await settled()
+    assert.equal(loginStarted, false, 'new sign-in must share the portal cookie-mutation lock')
+  } finally { release.resolve() }
+  await signIn
+  const previousFailure = await previousRequest
+  if (previousFailure) assert.match(previousFailure.message, /session changed|another tab/i)
+  assert.equal(cookieJar.owner, 'B')
+  assert.equal(second.api.readSessionMarker(), 'session-B', 'new metadata must be committed before releasing the lock')
 })
 
-test('late logout cannot clear a newer account', async () => {
-  const response = deferred()
-  const t = tab(undefined, () => response.promise)
-  login(t, 'A')
-  const request = t.api.logoutCurrentUser()
-  assert.equal(t.api.readAccessToken(), null)
-  login(t, 'B')
-  response.resolve(new Response('{}'))
-  await request
-  assert.equal(t.api.readAccessToken(), 'access-B')
-})
+for (const path of ['/api/v1/security/password', '/api/v1/security/sessions/revoke-all']) {
+  test(`credential mutation ${path} can renew expired access without re-entering its own WebLock`, async () => {
+    let held = false, entries = 0
+    const locks = { async request(name, options, callback) {
+      assert.equal(held, false, 'Web Locks are not re-entrant; renewal must reuse the held portal lock')
+      assert.equal(name, 'qarevo:patient:session-refresh')
+      entries++; held = true
+      try { return await callback() } finally { held = false }
+    } }
+    const server = cookieServer()
+    const t = tab(undefined, server.fetch, { navigator: { locks } })
+    login(t, 'A')
+    assert.equal((await t.api.apiPost(path, { synthetic: true })).ok, true)
+    assert.equal(server.rotations, 1)
+    assert.equal(entries, 1)
+    assert.equal(t.api.readSessionMarker(), null, 'successful security change ends only this portal session')
+  })
+}
 
-test('logout starts revocation before session-change listeners can navigate', async () => {
-  const response = deferred()
-  let started = false
-  const t = tab(undefined, (url, init) => {
-    assert.ok(url.endsWith('/auth/logout'))
-    assert.equal(init.keepalive, true)
-    assert.equal(JSON.parse(init.body).refresh_token, 'refresh-A')
-    assert.equal(t.localStorage.getItem('qarevo_access_token'), 'access-A')
-    started = true
-    return response.promise
+test('held security mutation renews without awaiting an external renewal queued behind its own lock', async () => {
+  const entered = deferred(), release = deferred()
+  let calls = 0, rotations = 0
+  const t = tab(undefined, async url => {
+    if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }
+    if (url.endsWith('/security/password')) {
+      if (++calls === 1) { entered.resolve(); await release.promise; return new Response('', { status: 401 }) }
+      return Response.json({ ok: true })
+    }
+    return new Response('', { status: 401 })
   })
   login(t, 'A')
-  const request = t.api.logoutCurrentUser()
-  assert.equal(started, true)
-  assert.equal(t.api.readAccessToken(), null)
-  response.resolve(new Response('{}'))
-  await request
+  const mutation = t.api.apiPost('/api/v1/security/password', { synthetic: true })
+  await entered.promise
+  const external = t.api.apiGet('/private').then(() => null, error => error)
+  try { await settled() } finally { release.resolve() }
+  assert.equal((await mutation).ok, true)
+  assert.equal(rotations, 1)
+  const failure = await external
+  assert.match(failure.message, /session changed|another tab/i)
+  assert.equal(t.api.readSessionMarker(), null)
 })
 
-test('retry uses the renewed access token and keeps the account draft', async () => {
-  let count = 0
+test('queued physician security mutation keeps its captured portal when navigation changes to patient', async () => {
+  const entered = deferred(), release = deferred()
+  let rotated = false, securityCalls = 0
   const t = tab(undefined, async (url, init) => {
-    count++
-    if (count === 1) return new Response('{}', { status: 401 })
-    if (count === 2) return new Response(JSON.stringify({
-      user_id: 'A', access_token: 'renewed-A', refresh_token: 'renewed-refresh-A',
-    }))
-    assert.equal(new Headers(init.headers).get('Authorization'), 'Bearer renewed-A')
-    return new Response('{"ok":true}')
+    const headers = new Headers(init.headers)
+    assert.equal(headers.get('X-Qarevo-Portal'), 'doctor')
+    assert.equal(headers.get('X-Qarevo-Session'), 'session-D')
+    if (url.endsWith('/auth/refresh')) { entered.resolve(); await release.promise; rotated = true; return renewed('D', 'doctor') }
+    if (url.endsWith('/security/password')) { securityCalls++; return Response.json({ ok: true }) }
+    return Response.json({ ok: true }, { status: rotated ? 200 : 401 })
+  })
+  t.location.pathname = '/doctor/workspace'
+  login(t, 'D'); login(t, 'P', { portal: 'patient' })
+  const oldRead = t.api.apiGet('/api/v1/doctor/workspace').then(() => null, error => error)
+  await entered.promise
+  const mutation = t.api.apiPost('/api/v1/security/password', { synthetic: true })
+  t.location.pathname = '/patient/dashboard'
+  release.resolve()
+  assert.equal((await mutation).ok, true)
+  const oldFailure = await oldRead
+  if (oldFailure) assert.match(oldFailure.message, /session changed|another tab/i)
+  assert.equal(securityCalls, 1)
+  assert.equal(t.api.readSessionMarker(), 'session-P')
+  assert.equal(t.localStorage.getItem('qarevo:doctor:identity'), null)
+})
+
+test('late logout cannot clear a newer local identity', async () => {
+  const response = deferred(), started = deferred()
+  const t = tab(undefined, () => { started.resolve(); return response.promise }); login(t, 'A')
+  const request = t.api.logoutCurrentUser(); assert.equal(t.api.readSessionMarker(), null)
+  await started.promise; login(t, 'B'); response.resolve(Response.json({}))
+  await request; assert.equal(t.api.readSessionMarker(), 'session-B')
+})
+
+test('logout captures the original portal/session before local listeners navigate', async () => {
+  let captured
+  const t = tab(undefined, async (url, init) => {
+    captured = { url, init }
+    assert.equal(new Headers(init.headers).get('X-Qarevo-Portal'), 'patient')
+    assert.equal(new Headers(init.headers).get('X-Qarevo-Session'), 'session-A')
+    assert.equal(init.keepalive, true)
+    assert.deepEqual(JSON.parse(init.body), {})
+    return Response.json({})
   })
   login(t, 'A')
+  t.addEventListener('qarevo:account-changed', () => { t.location.pathname = '/doctor/workspace' })
+  await t.api.logoutCurrentUser()
+  assert.ok(captured.url.endsWith('/auth/logout'))
+  assert.equal(t.localStorage.getItem('qarevo:patient:identity'), null)
+})
+
+test('queued logout hides private state immediately and retains a signed-out tombstone until verified sign-in', async () => {
+  const unlock = deferred(), queued = deferred(), posted = deferred(), response = deferred()
+  let started = false
+  const locks = { async request(name, options, callback) {
+    assert.equal(name, 'qarevo:patient:session-refresh')
+    queued.resolve(); await unlock.promise; return callback()
+  } }
+  const t = tab(undefined, async (_url, init) => {
+    started = true
+    const headers = new Headers(init.headers)
+    assert.equal(headers.get('X-Qarevo-Portal'), 'patient')
+    assert.equal(headers.get('X-Qarevo-Session'), 'session-A')
+    assert.deepEqual(JSON.parse(init.body), {})
+    posted.resolve(); return response.promise
+  }, { navigator: { locks } })
+  login(t, 'A'); login(t, 'D', { portal: 'doctor' })
+  const draft = t.core.createAccountDraftStorage(); draft.setItem('health', 'Private before logout')
+  const logout = t.api.logoutCurrentUser()
+  assert.equal(t.api.readSessionMarker(), null)
+  assert.equal(draft.getItem('health'), null)
+  assert.equal(t.localStorage.getItem('qarevo:patient:signed-out'), 'session-A')
+  assert.equal(t.localStorage.getItem('qarevo:patient:logout-pending'), 'session-A')
+  await queued.promise; assert.equal(started, false)
+  t.location.pathname = '/doctor/workspace'
+  unlock.resolve(); await posted.promise
+  assert.equal(t.localStorage.getItem('qarevo:patient:logout-pending'), 'session-A')
+  assert.equal(t.api.readSessionMarker(), 'session-D')
+  response.resolve(Response.json({})); await logout
+  assert.equal(t.localStorage.getItem('qarevo:patient:logout-pending'), null)
+  assert.equal(t.localStorage.getItem('qarevo:patient:signed-out'), 'session-A')
+  assert.equal(t.api.readSessionMarker(), 'session-D')
+  t.location.pathname = '/patient/dashboard'
+  login(t, 'B')
+  assert.equal(t.localStorage.getItem('qarevo:patient:signed-out'), null)
+  assert.equal(t.api.readSessionMarker(), 'session-B')
+})
+
+test('failed logout clears the pending state but keeps the signed-out tombstone to refuse cookie bootstrap', async () => {
+  const t = tab(undefined, async () => { throw new Error('Synthetic offline logout') })
+  login(t, 'A')
+  await assert.rejects(t.api.logoutCurrentUser(), /offline logout/)
+  assert.equal(t.localStorage.getItem('qarevo:patient:logout-pending'), null)
+  assert.equal(t.localStorage.getItem('qarevo:patient:signed-out'), 'session-A')
+  assert.equal(t.api.readSessionMarker(), null)
+})
+
+test('a stale A tab cannot adopt and revoke another tab’s newer B session during logout', async () => {
+  let requests = 0
+  const t = tab(undefined, async () => { requests++; return Response.json({}) })
+  login(t, 'A')
+  t.core.assertCurrentAccount()
+  // Browser storage changes before the stale tab receives its storage event.
+  t.localStorage.setItem('qarevo:patient:identity', JSON.stringify(identity('B')))
+  await assert.rejects(t.api.logoutCurrentUser(), /another tab|session changed/i)
+  assert.equal(requests, 0)
+  assert.equal(JSON.parse(t.localStorage.getItem('qarevo:patient:identity')).session_id, 'session-B')
+  assert.equal(t.localStorage.getItem('qarevo:patient:signed-out'), null)
+  assert.equal(t.localStorage.getItem('qarevo:patient:logout-pending'), null)
+})
+
+test('retry uses refreshed HttpOnly state and preserves a stable marker and account draft', async () => {
+  const server = cookieServer(), t = tab(undefined, server.fetch); login(t, 'A')
   t.core.createAccountDraftStorage().setItem('health', 'keep me')
   assert.equal((await t.api.apiGet('/private')).ok, true)
-  assert.equal(count, 3)
+  assert.equal(server.rotations, 1)
+  assert.equal(t.api.readSessionMarker(), 'session-A')
   assert.equal(t.core.createAccountDraftStorage().getItem('health'), 'keep me')
 })
 
-test('login failures and explicit temporary credentials do not trigger session refresh', async () => {
+test('explicit sign-in failures do not rotate cookies and browser Authorization is stripped', async () => {
   let count = 0
-  const t = tab(undefined, async () => { count++; return new Response('{}', { status: 401 }) })
+  const t = tab(undefined, async (_url, init) => { count++; assert.equal(new Headers(init.headers).get('Authorization'), null); return new Response('{}', { status: 401 }) })
   login(t, 'A')
-  await assert.rejects(t.api.apiPost('/api/v1/auth/login', {}), error => error.status === 401)
-  await assert.rejects(t.api.apiPost('/private', {}, { Authorization: 'Bearer temporary' }), error => error.status === 401)
-  assert.equal(count, 2)
-  assert.equal(t.api.readAccessToken(), 'access-A')
+  await assert.rejects(t.api.apiPost('/api/v1/auth/login', {}, { Authorization: 'Bearer must-strip' }), error => error.status === 401)
+  assert.equal(count, 1); assert.equal(t.api.readSessionMarker(), 'session-A')
 })
 
-const renewed = () => new Response(JSON.stringify({
-  user_id: 'A', access_token: 'renewed-A', refresh_token: 'renewed-refresh-A',
-}))
+test('an explicit new sign-in may establish a different verified session without accepting a late old response', async () => {
+  const t = tab(undefined, async () => Response.json({ browser_session: identity('B') }, { headers: { 'X-Qarevo-Session-Id': 'session-B' } }))
+  login(t, 'A')
+  const result = await t.api.loginPatient({ email: 'synthetic-b@example.test', password: 'test-only' })
+  t.api.storeBrowserSession(result)
+  assert.equal(t.api.readSessionMarker(), 'session-B')
+})
 
-test('parallel reads and writes share one rotation and retry with unchanged method/body', async () => {
-  let rotations = 0
+test('parallel reads and writes share one cookie rotation and retain unchanged method/body', async () => {
+  let rotated = false, rotations = 0
   const retries = []
   const t = tab(undefined, async (url, init) => {
-    if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }
-    if (new Headers(init.headers).get('Authorization') === 'Bearer access-A') return new Response('', { status: 401 })
-    retries.push({ method: init.method || 'GET', body: init.body })
-    return new Response('{"ok":true}')
+    if (url.endsWith('/auth/refresh')) { rotations++; rotated = true; return renewed() }
+    if (!rotated) return new Response('', { status: 401 })
+    retries.push({ method: init.method || 'GET', body: init.body }); return Response.json({ ok: true })
   })
   login(t, 'A')
   await Promise.all([t.api.apiGet('/private'), t.api.apiPost('/private', { draft: 'keep' }), t.api.apiGet('/private')])
-  assert.equal(rotations, 1)
-  assert.equal(retries.length, 3)
+  assert.equal(rotations, 1); assert.equal(retries.length, 3)
   assert.deepEqual(retries.find(item => item.method === 'POST'), { method: 'POST', body: '{"draft":"keep"}' })
 })
 
-test('two tabs serialize a single-use token and retain each tab draft', async () => {
-  let rotations = 0
-  const fetch = async (url, init) => {
-    if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }
-    return new Response('{"ok":true}', { status: new Headers(init.headers).get('Authorization') === 'Bearer renewed-A' ? 200 : 401 })
-  }
-  const first = tab(undefined, fetch)
-  login(first, 'A')
-  const second = tab(first.localStorage, fetch)
-  first.core.createAccountDraftStorage().setItem('health', 'first')
-  second.core.createAccountDraftStorage().setItem('health', 'second')
+test('two tabs serialize one cookie rotation and retain each tab draft', async () => {
+  const server = cookieServer(), first = tab(undefined, server.fetch); login(first, 'A')
+  const second = tab(first.localStorage, server.fetch)
+  first.core.createAccountDraftStorage().setItem('health', 'first'); second.core.createAccountDraftStorage().setItem('health', 'second')
   await Promise.all([first.api.apiGet('/private'), second.api.apiGet('/private')])
-  assert.equal(rotations, 1)
+  assert.equal(server.rotations, 1)
   assert.equal(first.core.createAccountDraftStorage().getItem('health'), 'first')
   assert.equal(second.core.createAccountDraftStorage().getItem('health'), 'second')
 })
 
-test('a delayed 401 uses an already-renewed token without rotating again', async () => {
-  const late = deferred()
-  let rotations = 0
-  const t = tab(undefined, async (url, init) => {
-    if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }
-    if (new Headers(init.headers).get('Authorization') === 'Bearer renewed-A') return new Response('{}')
+test('a pending physician renewal cannot block patient renewal or overwrite another portal', async () => {
+  const local = storage(), hold = deferred(), doctorStarted = deferred()
+  const renewedPortals = new Set(), rotations = { patient: 0, doctor: 0 }
+  const fetch = async (url, init) => {
+    const portal = new Headers(init.headers).get('X-Qarevo-Portal')
+    if (url.endsWith('/auth/refresh')) {
+      rotations[portal]++
+      if (portal === 'doctor') { doctorStarted.resolve(); await hold.promise }
+      renewedPortals.add(portal)
+      return renewed(portal === 'doctor' ? 'D' : 'P', portal)
+    }
+    return Response.json({ ok: true }, { status: renewedPortals.has(portal) ? 200 : 401 })
+  }
+  const patient = tab(local, fetch), doctor = tab(local, fetch)
+  doctor.location.pathname = '/doctor/workspace'
+  login(patient, 'P'); login(doctor, 'D')
+  const pendingDoctor = doctor.api.apiGet('/api/v1/doctor/workspace')
+  await doctorStarted.promise
+  assert.equal((await patient.api.apiGet('/api/v1/patient/dashboard')).ok, true)
+  assert.equal(patient.api.readSessionMarker(), 'session-P')
+  assert.equal(doctor.api.readSessionMarker(), 'session-D')
+  hold.resolve(); await pendingDoctor
+  assert.deepEqual(rotations, { patient: 1, doctor: 1 })
+})
+
+test('request headers cannot override the captured portal/session or supply browser credentials', async () => {
+  const t = tab(undefined, async (_url, init) => {
+    const headers = new Headers(init.headers)
+    assert.equal(headers.get('X-Qarevo-Portal'), 'patient')
+    assert.equal(headers.get('X-Qarevo-Session'), 'session-A')
+    assert.equal(headers.get('Authorization'), null)
+    assert.equal(headers.get('X-Qarevo-Refresh-Token'), null)
+    return Response.json({})
+  })
+  login(t, 'A')
+  await t.api.apiGet('/private', { 'X-Qarevo-Portal': 'admin', 'X-Qarevo-Session': 'forged', Authorization: 'Bearer forbidden', 'X-Qarevo-Refresh-Token': 'forbidden' })
+})
+
+test('a delayed 401 observes an existing cookie renewal without rotating again', async () => {
+  const late = deferred(); let rotated = false, rotations = 0
+  const t = tab(undefined, async url => {
+    if (url.endsWith('/auth/refresh')) { rotations++; rotated = true; return renewed() }
+    if (rotated) return Response.json({})
     if (url.endsWith('/late')) return late.promise
     return new Response('', { status: 401 })
   })
-  login(t, 'A')
-  const delayedRequest = t.api.apiGet('/late')
-  await t.api.apiGet('/private')
-  late.resolve(new Response('', { status: 401 }))
-  await delayedRequest
+  login(t, 'A'); const delayed = t.api.apiGet('/late'); await t.api.apiGet('/private')
+  late.resolve(new Response('', { status: 401 })); await delayed
   assert.equal(rotations, 1)
 })
 
 for (const failure of ['network', 429, 500, 503, 422]) {
-  test(`refresh ${failure} preserves session and drafts, backs off across tabs, and can recover`, async () => {
-    let rotations = 0
-    let now = Date.now()
-    class Clock extends Date { static now() { return now } }
-    const fetch = async (url, init) => {
-      if (url.endsWith('/auth/refresh')) {
-        if (++rotations > 1) return renewed()
-        if (failure === 'network') throw new TypeError('Offline')
-        return new Response('{}', { status: failure, headers: { 'Retry-After': '10' } })
-      }
-      return new Response('{}', { status: new Headers(init.headers).get('Authorization') === 'Bearer renewed-A' ? 200 : 401 })
-    }
-    const t = tab(undefined, fetch, { Date: Clock })
-    login(t, 'A')
-    const second = tab(t.localStorage, fetch, { Date: Clock })
+  test(`refresh ${failure} preserves identity and drafts, shares backoff and can recover`, async () => {
+    let now = Date.now(); class Clock extends Date { static now() { return now } }
+    const server = cookieServer({ firstFailure: () => { if (failure === 'network') throw new TypeError('Offline'); return new Response('{}', { status: failure, headers: { 'Retry-After': '10' } }) } })
+    const t = tab(undefined, server.fetch, { Date: Clock }); login(t, 'A')
+    const second = tab(t.localStorage, server.fetch, { Date: Clock })
     t.core.createAccountDraftStorage().setItem('health', 'keep')
     const temporary = error => error.name === 'SessionRefreshError' && !t.api.isAuthError(error)
-    await assert.rejects(t.api.apiGet('/private'), temporary)
-    await assert.rejects(second.api.apiGet('/private'), temporary)
-    assert.equal(rotations, 1)
-    assert.equal(t.api.readRefreshToken(), 'refresh-A')
+    await assert.rejects(t.api.apiGet('/private'), temporary); await assert.rejects(second.api.apiGet('/private'), temporary)
+    assert.equal(server.rotations, 1); assert.equal(t.api.readSessionMarker(), 'session-A')
     assert.equal(t.core.createAccountDraftStorage().getItem('health'), 'keep')
     assert.equal(t.events.includes('qarevo:auth-session-expired'), false)
-    now += 11_000
-    await t.api.apiGet('/private')
-    assert.equal(rotations, 2)
-    assert.equal(t.api.readRefreshToken(), 'renewed-refresh-A')
-    assert.equal(t.core.createAccountDraftStorage().getItem('health'), 'keep')
+    now += 11_000; await t.api.apiGet('/private'); assert.equal(server.rotations, 2)
+    assert.equal(t.api.readSessionMarker(), 'session-A'); assert.equal(t.core.createAccountDraftStorage().getItem('health'), 'keep')
   })
 }
 
 for (const status of [401, 403]) {
-  test(`definitive refresh rejection ${status} clears credentials and drafts`, async () => {
-    const t = tab(undefined, async url => new Response('{}', { status: url.endsWith('/auth/refresh') ? status : 401 }))
-    login(t, 'A')
-    t.core.createAccountDraftStorage().setItem('health', 'clear on expiry')
+  test(`definitive refresh rejection ${status} clears only the active portal identity/drafts`, async () => {
+    const t = tab(undefined, async url => new Response('{}', { status: url.endsWith('/auth/refresh') ? status : 401 })); login(t, 'A')
+    login(t, 'D', { portal: 'doctor' }); t.core.createAccountDraftStorage().setItem('health', 'clear on expiry')
     await assert.rejects(t.api.apiGet('/private'))
-    assert.equal(t.api.readAccessToken(), null)
-    assert.equal(t.api.readRefreshToken(), null)
+    assert.equal(t.api.readSessionMarker(), null)
+    assert.ok(t.localStorage.getItem('qarevo:doctor:identity'))
     assert.equal(Object.keys(t.sessionStorage).length, 0)
     assert.equal(t.events.filter(event => event === 'qarevo:auth-session-expired').length, 1)
   })
 }
 
-for (const body of ['not JSON', '{}', '{"access_token":"new","refresh_token":" "}', '{"access_token":"new","refresh_token":"new-r","user_id":"B"}']) {
-  test(`invalid refresh payload cannot corrupt credentials: ${body}`, async () => {
-    const t = tab(undefined, async url => url.endsWith('/auth/refresh') ? new Response(body) : new Response('', { status: 401 }))
-    login(t, 'A')
+for (const body of ['not JSON', '{}', '{"browser_session":null}', JSON.stringify({ browser_session: identity('B') }), JSON.stringify({ browser_session: identity('A', 'doctor') })]) {
+  test(`invalid renewal payload cannot corrupt identity and is treated as transient: ${body}`, async () => {
+    const t = tab(undefined, async url => url.endsWith('/auth/refresh') ? new Response(body) : new Response('', { status: 401 })); login(t, 'A')
     await assert.rejects(t.api.apiGet('/private'), error => error.name === 'SessionRefreshError')
-    assert.equal(t.api.readAccessToken(), 'access-A')
-    assert.equal(t.api.readRefreshToken(), 'refresh-A')
+    assert.equal(t.api.readSessionMarker(), 'session-A')
+    assert.ok(Number(t.localStorage.getItem('qarevo:patient:refresh-retry')) > Date.now())
   })
 }
 
-test('a renewal timeout preserves the session and releases the in-flight request', async () => {
-  const started = deferred()
-  let timeout
+test('a renewal timeout preserves identity and releases the in-flight operation', async () => {
+  const started = deferred(); let timeout
   const t = tab(undefined, async (url, init) => {
     if (!url.endsWith('/auth/refresh')) return new Response('', { status: 401 })
-    return new Promise((resolve, reject) => {
-      init.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
-      started.resolve()
-    })
+    return new Promise((resolve, reject) => { init.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true }); started.resolve() })
   }, { setTimeout(callback) { timeout = callback; return 1 }, clearTimeout() {} })
-  login(t, 'A')
-  const request = t.api.apiGet('/private')
+  login(t, 'A'); const request = t.api.apiGet('/private')
   const rejection = assert.rejects(request, error => error.name === 'SessionRefreshError')
-  await started.promise
-  timeout()
-  await rejection
-  assert.equal(t.api.readRefreshToken(), 'refresh-A')
+  await started.promise; timeout(); await rejection
+  assert.equal(t.api.readSessionMarker(), 'session-A')
   await assert.rejects(t.api.apiGet('/private'), error => error.name === 'SessionRefreshError')
 })
 
-test('unsupported lock coordination fails safely without sending a rotating token', async () => {
+test('unsupported lock coordination fails safely without requesting cookie rotation', async () => {
   let requests = 0
-  const t = tab(undefined, async () => { requests++; return new Response('', { status: 401 }) }, { navigator: {} })
-  login(t, 'A')
+  const t = tab(undefined, async () => { requests++; return new Response('', { status: 401 }) }, { navigator: {} }); login(t, 'A')
   await assert.rejects(t.api.apiGet('/private'), /current browser/i)
-  assert.equal(requests, 1)
-  assert.equal(t.api.readRefreshToken(), 'refresh-A')
+  assert.equal(requests, 1); assert.equal(t.api.readSessionMarker(), 'session-A')
 })
 
-test('a protected request retries only once even if the renewed token is rejected', async () => {
-  let requests = 0
-  let rotations = 0
-  const t = tab(undefined, async url => {
-    if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }
-    requests++
-    return new Response('', { status: 401 })
-  })
-  login(t, 'A')
-  await assert.rejects(t.api.apiGet('/private'), error => t.api.isAuthError(error))
-  assert.equal(rotations, 1)
-  assert.equal(requests, 2)
+test('a protected request retries only once if refreshed server credentials are rejected', async () => {
+  let requests = 0, rotations = 0
+  const t = tab(undefined, async url => { if (url.endsWith('/auth/refresh')) { rotations++; return renewed() }; requests++; return new Response('', { status: 401 }) })
+  login(t, 'A'); await assert.rejects(t.api.apiGet('/private'), error => t.api.isAuthError(error))
+  assert.equal(rotations, 1); assert.equal(requests, 2)
 })
 
-test('network failure during logout still removes credentials and drafts', async () => {
+test('network failure during logout still removes local identity/drafts without exposing refresh secrets', async () => {
   let posted
-  const t = tab(undefined, async (url, init) => { posted = JSON.parse(init.body); throw new Error('Offline') })
-  login(t, 'A')
+  const t = tab(undefined, async (_url, init) => { posted = JSON.parse(init.body); throw new Error('Offline') }); login(t, 'A')
   t.core.createAccountDraftStorage().setItem('health', 'Private')
   await assert.rejects(t.api.logoutCurrentUser(), /Offline/)
-  assert.equal(posted.refresh_token, 'refresh-A')
-  assert.equal(t.api.readAccessToken(), null)
-  assert.equal(t.api.readRefreshToken(), null)
+  assert.deepEqual(posted, {}); assert.equal(t.api.readSessionMarker(), null)
   assert.equal(Object.keys(t.sessionStorage).length, 0)
+})
+
+test('BFF session mismatch response is rejected before exposing any private body', async () => {
+  let read = false
+  const response = Response.json({ patient: 'B' }, { headers: { 'X-Qarevo-Session-Id': 'session-B' } })
+  response.text = async () => { read = true; return '{"patient":"B"}' }
+  const t = tab(undefined, async () => response); login(t, 'A')
+  await assert.rejects(t.api.apiGet('/private'), /session changed/i)
+  assert.equal(read, false); assert.equal(t.api.readSessionMarker(), 'session-A')
+})
+
+test('stale-tab 409 never refreshes or clears the newer cookie-bound identity', async () => {
+  let calls = 0
+  const t = tab(undefined, async () => { calls++; return Response.json({ detail: { error_code: 'SESSION_CHANGED' } }, { status: 409 }) }); login(t, 'A')
+  await assert.rejects(t.api.apiPost('/private', {}), /session changed/i)
+  assert.equal(calls, 1); assert.equal(t.api.readSessionMarker(), 'session-A')
 })
 
 function hydration() {
@@ -632,4 +837,21 @@ test('booking navigation excludes profile images and clinical payloads and stays
   const malicious = new URLSearchParams({physicianId:'x'.repeat(300000),slot:'x'.repeat(300000),service:'javascript:bad',episode_id:'medical/private text'})
   assert.equal(booking.exports.buildBookingQueryParams(malicious,null,null).toString(),'')
   assert.equal(booking.exports.getBookingPhysician(new URLSearchParams({physicianName:'Forged clinician',physicianConsultationFee:'0'}),doctor).name,'Synthetic Doctor')
+})
+
+test('administrator guards use scoped nonsecret identity and reject retired shared role flags', () => {
+  const t = tab()
+  t.localStorage.setItem('qarevo_role', 'ADMIN')
+  assert.equal(t.api.readAdminRole(), null)
+  assert.equal(t.api.isAdmin(), false)
+  login(t, 'synthetic-owner', { portal: 'admin' })
+  assert.equal(t.localStorage.getItem('qarevo_role'), null)
+  assert.equal(t.localStorage.getItem('qarevo_access_token'), null)
+  assert.equal(t.api.readAdminRole(), 'ADMIN')
+  assert.equal(t.api.isAdmin(), true)
+  login(t, 'synthetic-patient', { portal: 'patient' })
+  assert.equal(t.api.isAdmin(), true)
+  t.api.clearPortalSession('admin')
+  assert.equal(t.api.isAdmin(), false)
+  assert.equal(t.portal.readPortalIdentity('patient').user_id, 'synthetic-patient')
 })

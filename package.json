@@ -8,12 +8,12 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node --test tests/account-storage.test.cjs tests/brand-components.test.cjs && next build",
+    "build": "node --test tests/*.test.cjs && next build",
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "playwright test",
-    "test:privacy": "node --test tests/account-storage.test.cjs tests/brand-components.test.cjs",
-    "test:e2e:privacy": "playwright test e2e/account-privacy.spec.ts e2e/clinical-navigation.spec.ts e2e/admin-workflow.spec.ts e2e/billing-availability.spec.ts e2e/session-timeout.spec.ts e2e/qa-*.spec.ts e2e/batch2-*.spec.ts"
+    "test:privacy": "node --test tests/*.test.cjs",
+    "test:e2e:privacy": "playwright test"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",

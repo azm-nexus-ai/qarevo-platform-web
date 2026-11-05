@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react'
 import { ACCOUNT_CHANGED } from '@/lib/account-storage'
-import { readAccessToken, readUserRole } from '@/lib/api'
+import { readSessionMarker, readUserRole } from '@/lib/api'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import { DOCTOR_ROUTES } from '@/constants/doctor-navigation'
 import { ADMIN_ROUTES } from '@/constants/admin-navigation'
@@ -12,7 +12,7 @@ export type PortalRole = 'patient' | 'doctor' | 'admin'
 /** Navigation context only; protected layouts and APIs still verify authority. */
 export function currentPortalRole(): PortalRole | null {
   try {
-    if (!readAccessToken()) return null
+    if (!readSessionMarker()) return null
     const role = readUserRole()
     return role === 'PATIENT' ? 'patient' : role === 'PROVIDER' ? 'doctor' : role === 'ADMIN' ? 'admin' : null
   } catch { return null }

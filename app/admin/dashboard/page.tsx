@@ -7,14 +7,14 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import WorkflowDeliveryCard from '@/components/admin/WorkflowDeliveryCard'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getAdminDashboardOverview,
   getAdminDashboardActivity,
   getAdminDashboardHealth,
   getAdminDashboardDoctorsSummary,
   getAdminDashboardPatientsSummary,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   isAdmin,
   type AdminDashboardOverview,
   type AdminDashboardActivity,
@@ -166,8 +166,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/admin/login')
       return
     }
@@ -199,7 +199,7 @@ export default function AdminDashboard() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/admin/login')
           return
         }

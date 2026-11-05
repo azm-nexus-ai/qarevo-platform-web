@@ -6,10 +6,10 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { useRouter } from 'next/navigation'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorPatients,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   type DoctorPatient,
   type DoctorPatientsResponse,
 } from '@/lib/api'
@@ -24,8 +24,8 @@ export default function PatientsPage() {
   const pageSize = 10
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -45,7 +45,7 @@ export default function PatientsPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }

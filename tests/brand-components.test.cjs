@@ -24,10 +24,11 @@ function load(source) {
     if (extension === undefined) throw new Error(`Missing local component dependency: ${name}`)
     return load(base + extension)
   }
-  vm.runInNewContext(code, { module: compiled, exports: compiled.exports, require: resolveImport, React }, { filename })
+  vm.runInNewContext(code, { module: compiled, exports: compiled.exports, require: resolveImport, React, URL }, { filename })
   return compiled.exports
 }
 const DoctorCard = load('components/cards/DoctorCard.tsx').default
+const {default: ProfileAvatar, profileImageSource} = load('components/branding/ProfileAvatar.tsx')
 const details = { name: 'Synthetic Physician', specialty: 'General medicine', verification: 'Verified', tags: ['Primary care'] }
 const render = props => renderToStaticMarkup(React.createElement(DoctorCard, { ...details, ...props }))
 
@@ -84,4 +85,22 @@ test('null optional presentation fields never crash or claim verified credential
 
 test('account activity is not proof of clinical verification', () => {
   assert.doesNotMatch(render({ verification: 'Active' }), /aria-label="Verified physician"/)
+})
+
+test('account avatars use owned portraits and a named initial fallback without substituting another person', () => {
+  const renderAvatar = props => renderToStaticMarkup(React.createElement(ProfileAvatar, props))
+  const physician = renderAvatar({name:'Dr. Synthetic Hart',src:'/owned-doctor.png',kind:'doctor',size:36})
+  assert.match(physician, /src="\/owned-doctor.png"/)
+  assert.match(physician, /aria-label="Dr. Synthetic Hart profile image"/)
+  assert.match(physician, /width:36px;height:36px/)
+  const patient = renderAvatar({name:'Synthetic Patient',src:null,kind:'patient'})
+  assert.match(patient, />SP<\/span>/)
+  assert.doesNotMatch(patient, /<img/)
+})
+
+test('avatar sources reject mixed-content, executable, credential-bearing and ambiguous URLs', () => {
+  for (const source of ['http://unsafe.example/image.png','javascript:alert(1)','data:image/svg+xml,<svg/>','//other.example/image.png','/\\other.example/image.png','https://name:synthetic-secret@example.test/image.png','https://example.test/\nimage.png']) assert.equal(profileImageSource(source),null)
+  assert.equal(profileImageSource('/profile-image'),'/profile-image')
+  assert.equal(profileImageSource('https://images.example.test/owned.png'),'https://images.example.test/owned.png')
+  assert.equal(profileImageSource('data:image/png;base64,c3ludGhldGlj'),'data:image/png;base64,c3ludGhldGlj')
 })

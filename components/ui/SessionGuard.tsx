@@ -4,14 +4,18 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { ApiError, getSessionStatus, logoutCurrentUser } from '@/lib/api'
-import { sessionTiming } from '@/lib/session-timeout'
+import { sessionTiming, type SessionStatus } from '@/lib/session-timeout'
+import { currentPortal, isPortalEvent } from '@/lib/portal-scope'
 
 type Timing = ReturnType<typeof sessionTiming>
 const button = 'rounded-xl px-5 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-60'
 
-export function SessionGuard({ children }: { children: ReactNode }) {
+export type InitialSessionCheck = {status:SessionStatus; receivedAt:number; requestDuration:number; scope:string|null}
+export function SessionGuard({ children, initialCheck }: { children: ReactNode; initialCheck?:InitialSessionCheck }) {
   const pathname = usePathname()
+  const portal = currentPortal()
   const protectedPage = /^\/(patient|doctor|admin)(\/|$)|^\/auth\/profile-setup(\/|$)/.test(pathname)
+  const monitorSession = protectedPage || /^\/support(?:\/|$)/.test(pathname)
   const [scope, setScope] = useState<string | null>(null)
   const [checked, setChecked] = useState(false)
   const [timing, setTiming] = useState<Timing | null>(null)
@@ -25,21 +29,21 @@ export function SessionGuard({ children }: { children: ReactNode }) {
   const warning = !!timing && remaining <= timing.warningMs && remaining > 0 && !(timing.absolute && absoluteDismissed)
 
   useEffect(() => {
-    const changed = () => { setScope(readAccountScope()); setChecked(true) }
+    const changed = (event?: Event) => { if(event && !isPortalEvent(event,portal))return; setScope(readAccountScope(portal)); setChecked(true) }
     changed()
     window.addEventListener(ACCOUNT_CHANGED, changed)
     // BookingProvider separately blocks a different account opened in another tab.
     window.addEventListener('storage', changed)
     return () => { window.removeEventListener(ACCOUNT_CHANGED, changed); window.removeEventListener('storage', changed) }
-  }, [])
+  }, [portal])
 
   useEffect(() => {
     setTiming(null); setRemaining(Infinity); setError(''); setAbsoluteDismissed(false)
-    if (!scope) return
+    if (!scope || !monitorSession) return
     let alive = true, ended = false, pending = false, lastActivityRequest = -Infinity
     let current: Timing | null = null
-    const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('qarevo-session-activity')
-    const valid = () => alive && !ended && scope === readAccountScope()
+    const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(`qarevo:${portal}:session-activity`)
+    const valid = () => alive && !ended && scope === readAccountScope(portal)
     const end = () => {
       if (!valid()) return
       ended = true; setTiming(null); setRemaining(0)
@@ -88,7 +92,11 @@ export function SessionGuard({ children }: { children: ReactNode }) {
     window.addEventListener('focus', focus)
     window.addEventListener('pageshow', focus)
     document.addEventListener('visibilitychange', focus)
-    void check()
+    if(initialCheck && initialCheck.scope===scope) {
+      current=sessionTiming(initialCheck.status,initialCheck.receivedAt,initialCheck.requestDuration);
+      setTiming(current);setRemaining(current.deadline-performance.now());
+      if(current.deadline<=performance.now())end();
+    } else void check()
     return () => {
       alive = false; controller.current = null; channel?.close()
       clearInterval(timer); clearInterval(authorityCheck)
@@ -96,7 +104,7 @@ export function SessionGuard({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', focus); window.removeEventListener('pageshow', focus)
       document.removeEventListener('visibilitychange', focus)
     }
-  }, [scope])
+  }, [scope,portal,monitorSession,initialCheck])
 
   useEffect(() => {
     if (warning && dialog.current && !dialog.current.open) dialog.current.showModal()

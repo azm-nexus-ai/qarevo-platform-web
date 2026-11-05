@@ -12,7 +12,7 @@ import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/compone
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { T } from '@/lib/tokens'
-import { clearAuthTokens, createEmergencyContact, createInsurance, deactivatePatientAccount, deleteEmergencyContact, deletePatientPasskey, downloadPatientDataExport, getApiErrorDetail, getPatientActiveDevices, getPatientHealthInfo, getPatientLoginHistory, getPatientPasskeyStatus, getPatientPasskeys, getPatientSettings, isAuthError, readAccessToken, registerPatientPasskey, revokeOtherPatientActiveDevices, revokePatientActiveDevice, updateEmergencyContact, updateInsurance, updatePatientSettings, updateProfile, uploadMedicalRecord, type PatientActiveDevice, type PatientLoginHistoryItem, type PatientPasskeyCredential, type PatientPasskeyStatus, type EmergencyContact, type Insurance, type EmergencyContactCreate } from '@/lib/api'
+import { clearPortalSession, createEmergencyContact, createInsurance, deactivatePatientAccount, deleteEmergencyContact, deletePatientPasskey, downloadPatientDataExport, getApiErrorDetail, getPatientActiveDevices, getPatientHealthInfo, getPatientLoginHistory, getPatientPasskeyStatus, getPatientPasskeys, getPatientSettings, isAuthError, readSessionMarker, registerPatientPasskey, revokeOtherPatientActiveDevices, revokePatientActiveDevice, updateEmergencyContact, updateInsurance, updatePatientSettings, updateProfile, uploadMedicalRecord, type PatientActiveDevice, type PatientLoginHistoryItem, type PatientPasskeyCredential, type PatientPasskeyStatus, type EmergencyContact, type Insurance, type EmergencyContactCreate } from '@/lib/api'
 
 type ToggleKey =
   | 'emailNotifications'
@@ -145,7 +145,7 @@ export default function PatientSettingsPage() {
     setLoading(true)
     setLoadError('')
 
-    const hasAccessToken = Boolean(readAccessToken())
+    const hasAccessToken = Boolean(readSessionMarker())
     const sessionTimer = window.setTimeout(() => {
       setSessionStatus(hasAccessToken ? 'active' : 'signed-out')
     }, 0)
@@ -220,7 +220,7 @@ export default function PatientSettingsPage() {
         })
       } catch (error) {
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }
@@ -267,7 +267,7 @@ export default function PatientSettingsPage() {
 
   function showError(error: unknown, fallback: string) {
     if (isAuthError(error)) {
-      clearAuthTokens()
+      clearPortalSession()
       router.replace('/auth/sign-in')
       return
     }
@@ -445,7 +445,7 @@ export default function PatientSettingsPage() {
     } catch (error) {
       if (isAuthError(error)) {
         setSaving(false)
-        clearAuthTokens()
+        clearPortalSession()
         router.replace('/auth/sign-in')
         return
       }
@@ -514,7 +514,7 @@ export default function PatientSettingsPage() {
     try {
       await revokePatientActiveDevice(deviceId)
       if (isCurrent) {
-        clearAuthTokens()
+        clearPortalSession()
         router.replace('/auth/sign-in')
         return
       }
@@ -590,7 +590,7 @@ export default function PatientSettingsPage() {
   async function handleDeactivateAccount() {
     try {
       await deactivatePatientAccount()
-      clearAuthTokens()
+      clearPortalSession()
       router.replace('/auth/sign-in')
     } catch (error) {
       showError(error, 'Failed to deactivate account.')

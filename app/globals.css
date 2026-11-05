@@ -359,6 +359,7 @@ button:disabled { cursor: not-allowed; }
 .validation-summary ul { margin: 8px 0 0; padding-left: 20px; list-style: disc; }
 .theme-toggle { flex-shrink: 0; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); }
 .theme-toggle:hover { background: var(--surface-subtle); }
+@media(max-width:600px) { .portal-mobile-navbar .theme-toggle span:last-child { display:none; } }
 .theme-light-icon,.theme-dark-icon { font-size: 20px; line-height: 1; }
 .theme-dark-icon { display: none; }
 [data-theme=dark] .theme-light-icon { display: none; }

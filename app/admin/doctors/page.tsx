@@ -7,11 +7,11 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import DoctorReviewDialog from '@/components/admin/DoctorReviewDialog'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getAdminDoctors,
   getPendingDoctors,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   isAdmin,
   type AdminDoctor,
   type AdminDoctorVerification,
@@ -161,8 +161,8 @@ export default function AdminDoctorsPage() {
   const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/admin/login')
       return
     }
@@ -187,7 +187,7 @@ export default function AdminDoctorsPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/admin/login')
           return
         }

@@ -1,13 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import { T, Sh } from '@/lib/tokens'
 import {
-  clearAuthTokens,
+  apiGet,
+  apiPost,
+  apiDelete,
+  getApiErrorDetail,
   getDoctorPatients,
   isAuthError,
-  readAccessToken,
   type DoctorPatient,
 } from '@/lib/api'
 
@@ -21,34 +24,31 @@ type CarePlan = {
   created_by: string
 }
 
+const EMPTY_CARE_PLAN = { title: '', status: 'Active', progress: 0, description: '', episode_id: '' }
+
 export default function DoctorCarePlansPage() {
   const router = useRouter()
   const [patients, setPatients] = useState<DoctorPatient[]>([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const [carePlans, setCarePlans] = useState<CarePlan[]>([])
   const [loading, setLoading] = useState(false)
+  const operationInFlight = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newPlan, setNewPlan] = useState({ title: '', status: 'Active', progress: 0, description: '', episode_id: '' })
+  const [newPlan, setNewPlan] = useState(EMPTY_CARE_PLAN)
+  const [pendingPatientId, setPendingPatientId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
-      router.replace('/auth/doctor/login')
-      return
-    }
-
     const fetchPatients = async () => {
       try {
         const data = await getDoctorPatients()
         setPatients(data.patients || [])
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
           router.replace('/auth/doctor/login')
           return
         }
-        console.error('Failed to load patients', err)
+        setError(getApiErrorDetail(err) || 'Unable to load assigned patients. Refresh this page to retry.')
       }
     }
 
@@ -58,31 +58,22 @@ export default function DoctorCarePlansPage() {
   const fetchCarePlans = async () => {
     if (!selectedPatientId) return
 
+    if (operationInFlight.current) return
+    operationInFlight.current = true
     setLoading(true)
     setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/care-plans/${selectedPatientId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch care plans')
-      }
-
-      const data = await response.json()
+      const data = await apiGet<{care_plans: CarePlan[]}>(`/api/v1/doctor/care-plans/${selectedPatientId}`)
       setCarePlans(data.care_plans || [])
     } catch (err) {
       if (isAuthError(err)) {
-        clearAuthTokens()
         router.replace('/auth/doctor/login')
         return
       }
       console.error('Failed to load care plans', err)
-      setError('Unable to load care plans')
+      setError(getApiErrorDetail(err) || 'Unable to load care plans. Please retry.')
     } finally {
+      operationInFlight.current = false
       setLoading(false)
     }
   }
@@ -90,33 +81,20 @@ export default function DoctorCarePlansPage() {
   const handleAddCarePlan = async () => {
     if (!selectedPatientId || !newPlan.title) { setError('Select a patient and enter a care plan title.'); return }
 
+    if (operationInFlight.current) return
+    operationInFlight.current = true
     setLoading(true)
+    setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/care-plans`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          patient_id: selectedPatientId,
-          ...newPlan,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create care plan')
-      }
-
-      const data = await response.json()
+      const data = await apiPost<{care_plans: CarePlan[]}>(`/api/v1/doctor/care-plans`, { patient_id: selectedPatientId, ...newPlan })
       setCarePlans(data.care_plans || [])
-      setNewPlan({ title: '', status: 'Active', progress: 0, description: '', episode_id: '' })
+      setNewPlan(EMPTY_CARE_PLAN)
       setShowAddForm(false)
     } catch (err) {
-      console.error('Failed to create care plan', err)
-      setError('Failed to create care plan')
+      if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
+      setError(getApiErrorDetail(err) || 'Unable to create care plan. Please retry.')
     } finally {
+      operationInFlight.current = false
       setLoading(false)
     }
   }
@@ -124,28 +102,33 @@ export default function DoctorCarePlansPage() {
   const handleDeleteCarePlan = async (planId: string) => {
     if (!selectedPatientId) return
 
+    if (operationInFlight.current) return
+    operationInFlight.current = true
     setLoading(true)
+    setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/care-plans/${selectedPatientId}/${planId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete care plan')
-      }
-
-      const data = await response.json()
+      const data = await apiDelete<{care_plans: CarePlan[]}>(`/api/v1/doctor/care-plans/${selectedPatientId}/${planId}`)
       setCarePlans(data.care_plans || [])
     } catch (err) {
-      console.error('Failed to delete care plan', err)
-      setError('Failed to delete care plan')
+      if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
+      setError(getApiErrorDetail(err) || 'Unable to delete care plan. Please retry.')
     } finally {
+      operationInFlight.current = false
       setLoading(false)
     }
+  }
+
+  const changePatient = (patientId: string) => {
+    setSelectedPatientId(patientId)
+    setCarePlans([])
+    setNewPlan(EMPTY_CARE_PLAN)
+    setError(null)
+    setShowAddForm(false)
+    setPendingPatientId(null)
+  }
+  const requestPatientChange = (patientId: string) => {
+    if (JSON.stringify(newPlan) !== JSON.stringify(EMPTY_CARE_PLAN)) setPendingPatientId(patientId)
+    else changePatient(patientId)
   }
 
   return (
@@ -160,10 +143,11 @@ export default function DoctorCarePlansPage() {
 
       {/* Patient Selection */}
       <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
-        <select
+        <label htmlFor="clinical-patient-select" style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
+        <select id="clinical-patient-select"
           value={selectedPatientId}
-          onChange={(e) => setSelectedPatientId(e.target.value)}
+          onChange={(e) => requestPatientChange(e.target.value)}
+          disabled={loading}
           style={{
             width: '100%',
             padding: '14px 16px',
@@ -212,7 +196,7 @@ export default function DoctorCarePlansPage() {
       </div>
 
       {error && (
-        <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
+        <div role="alert" style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
       )}
 
       {/* Add Care Plan Button */}
@@ -398,11 +382,14 @@ export default function DoctorCarePlansPage() {
         </div>
       )}
 
-      {carePlans.length === 0 && selectedPatientId && !loading && (
+      {carePlans.length === 0 && selectedPatientId && !loading && !error && (
         <div style={{ textAlign: 'center', padding: '40px', color: T.slate2 }}>
           <p>No care plans found for this patient</p>
         </div>
       )}
+      <UnsavedChangesDialog open={pendingPatientId !== null} busy={loading}
+        onKeepEditing={() => setPendingPatientId(null)}
+        onDiscard={() => { if (pendingPatientId !== null) changePatient(pendingPatientId) }} />
     </div>
   )
 }

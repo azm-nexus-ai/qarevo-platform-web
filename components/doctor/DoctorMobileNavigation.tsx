@@ -7,22 +7,21 @@ import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
+import ProfileAvatar from '@/components/branding/ProfileAvatar'
+import PortalAccountMenu from '@/components/layout/PortalAccountMenu'
+import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
+import { isPortalEvent } from '@/lib/portal-scope'
+import { subscribeProfileChanges } from '@/lib/profile-events'
 import { T, Glass } from '@/lib/tokens'
 import { DOCTOR_SIDEBAR_ITEMS, DOCTOR_ROUTES, isDoctorNavActive } from '@/constants/doctor-navigation'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorProfile,
   isAuthError,
   logoutCurrentUser,
-  readAccessToken,
+  readSessionMarker,
   type DoctorProfileResponse,
 } from '@/lib/api'
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return 'DR'
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('')
-}
 
 export default function DoctorMobileNavigation() {
   const pathname = usePathname()
@@ -30,6 +29,7 @@ export default function DoctorMobileNavigation() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [doctorProfile, setDoctorProfile] = useState<DoctorProfileResponse | null>(null)
+  const [identityRevision, setIdentityRevision] = useState(0)
   const [loggingOut, setLoggingOut] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
@@ -37,7 +37,6 @@ export default function DoctorMobileNavigation() {
   const fullName = doctorProfile?.full_name?.trim() || 'Doctor'
   const displayName = fullName.toLowerCase().startsWith('dr.') ? fullName : `Dr. ${fullName}`
   const specialty = doctorProfile?.specialty || 'Doctor'
-  const doctorInitials = getInitials(fullName)
 
   // Body scroll lock
   useEffect(() => {
@@ -84,30 +83,38 @@ export default function DoctorMobileNavigation() {
     } finally {
       setShowLogoutModal(false)
       closeDrawer()
-      router.replace('/auth/sign-in')
+      router.replace('/auth/doctor/login')
     }
   }
 
   useEffect(() => {
-    const token = readAccessToken()
+    const token = readSessionMarker()
     if (!token) return
+    let active = true
+    const scope = readAccountScope('doctor')
 
     const fetchProfile = async () => {
       try {
         const profile = await getDoctorProfile()
-        setDoctorProfile(profile)
+        if (active && scope === readAccountScope('doctor')) setDoctorProfile(profile)
       } catch (error) {
+        if (!active || scope !== readAccountScope('doctor')) return
         if (isAuthError(error)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
+          clearPortalSession()
+          router.replace('/auth/doctor/login')
           return
         }
         console.error('Failed to load doctor profile:', error)
       }
     }
 
-    fetchProfile()
-  }, [router])
+    void fetchProfile()
+    const unsubscribe = subscribeProfileChanges('doctor', () => { void fetchProfile() })
+    const reset = (event: Event) => { if (!isPortalEvent(event, 'doctor')) return; setDoctorProfile(null); setIdentityRevision(value => value + 1) }
+    window.addEventListener(ACCOUNT_CHANGED, reset)
+    window.addEventListener('storage', reset)
+    return () => { active = false; unsubscribe(); window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset) }
+  }, [router, identityRevision])
 
   return (
     <div>
@@ -208,7 +215,7 @@ export default function DoctorMobileNavigation() {
       `}</style>
 
       {/* Mobile Top Bar */}
-      <div className="dmn-topbar" role="banner">
+      <div className="dmn-topbar portal-mobile-navbar" role="banner">
           <Link
             href="/doctor/dashboard"
             aria-label="Qarevo Health Doctor Dashboard"
@@ -233,24 +240,7 @@ export default function DoctorMobileNavigation() {
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
           <ThemeToggle />
-          <button
-            type="button"
-            aria-label="Profile"
-            onClick={() => router.push('/doctor/profile')}
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              border: "1px solid var(--border)",
-              background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))',
-              color: T.navy,
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontSize: '15px',
-            }}
-          >
-            {doctorInitials}
-          </button>
+          <PortalAccountMenu portal='doctor' name={displayName} description={specialty} avatar={<ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={34} />} profileHref='/doctor/profile' settingsHref='/doctor/settings' />
 
         </div>
       </div>
@@ -289,22 +279,7 @@ export default function DoctorMobileNavigation() {
           style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))',
-                border: "1px solid var(--border)",
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: T.navy,
-                fontWeight: 700,
-              }}
-            >
-              {doctorInitials}
-            </div>
+            <ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={42} />
             <div>
               <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{displayName}</p>
               <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{specialty}</p>

@@ -1,20 +1,17 @@
+import {seedPortalSession} from './helpers/portal-session'
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
 
 const consultationId = '88888888-8888-4888-8888-888888888888'
 
 async function prepare(context: BrowserContext, page: Page, canRetry = true) {
   const state = { pending: true, failRetry: true, failLoad: false, disabled: false, retries: [] as string[] }
-  await context.addInitScript(() => {
-    localStorage.setItem('qarevo_access_token', 'synthetic-admin-token')
-    localStorage.setItem('qarevo_refresh_token', 'synthetic-admin-refresh')
-    localStorage.setItem('qarevo_user_id', 'synthetic-admin')
-    localStorage.setItem('qarevo_role', 'ADMIN')
-  })
+  const identity = await seedPortalSession(context, 'admin', {user_id:'synthetic-admin'})
   await context.route('**/api/v1/**', route => {
     const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
     const path = new URL(route.request().url()).pathname
-    if (path === '/api/v1/session' || path === '/api/v1/session/activity') return route.fulfill({ headers: headers, json: { server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
+    if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
+    if (path === '/api/v1/session' || path === '/api/v1/session/activity') return route.fulfill({ headers: headers, json:{browser_session:identity,server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
     if (path.endsWith('/retry')) {
       state.retries.push(path)
       if (state.failRetry) return route.fulfill({ status: 503, headers, json: { detail: 'Synthetic clinical service unavailable. The update remains pending.' } })

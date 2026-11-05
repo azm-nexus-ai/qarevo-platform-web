@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { finishSocial } from '@/lib/social-auth'
-import { getApiErrorDetail, storeAuthTokens } from '@/lib/api'
+import { getApiErrorDetail } from '@/lib/api'
 import { getOnboarding, onboardingPath } from '@/lib/patient-onboarding'
 
 export default function SocialCallback() {
@@ -28,14 +28,12 @@ export default function SocialCallback() {
     }
     void exchange().then(async result=>{
       if(result.connected){setConnected(true);return}
-      if(result.role==='PROVIDER' && result.temp_token){
-        localStorage.setItem('doctor_temp_token',result.temp_token)
-        localStorage.setItem('doctor_identifier',result.identifier || '')
+      if(result.role==='PROVIDER' && result.mfa_pending){
+        sessionStorage.setItem('qarevo:doctor:identifier',result.identifier || '')
         const intended = safePortalDestination(result.intended || null, 'PROVIDER')
         router.replace('/auth/doctor/2fa' + (intended ? `?${new URLSearchParams({ next: intended })}` : ''));return
       }
-      if(result.role==='PATIENT' && result.access_token && result.refresh_token){
-        storeAuthTokens({access_token:result.access_token,refresh_token:result.refresh_token,user_id:result.user_id,role:'PATIENT'})
+      if(result.role==='PATIENT' && result.browser_session){
         const progress=await getOnboarding()
         router.replace(progress.complete ? safePortalDestination(result.intended || null, 'PATIENT') || '/patient/dashboard' : onboardingPath(progress.next_step));return
       }

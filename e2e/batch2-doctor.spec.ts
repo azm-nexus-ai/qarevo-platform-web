@@ -1,16 +1,18 @@
+import {seedPortalSession} from './helpers/portal-session'
 import {test,expect,type BrowserContext} from '@playwright/test'
 
 const appointmentId='88888888-8888-4888-8888-888888888888'
 const consultationId='99999999-9999-4999-8999-999999999999'
 const episodeId='77777777-7777-4777-8777-777777777777'
 async function prepare(context:BrowserContext) {
-  await context.addInitScript(()=>{localStorage.setItem('qarevo_access_token','synthetic-batch2');localStorage.setItem('qarevo_refresh_token','synthetic-refresh');localStorage.setItem('qarevo_user_id','synthetic-clinician');localStorage.setItem('qarevo_role','PROVIDER')})
+  const identity = await seedPortalSession(context, 'doctor', {user_id:'synthetic-clinician'})
   const state={joins:0,metadata:0,release:()=>{},hold:false}
   await context.route('**/api/v1/**',async route=>{
     const path=new URL(route.request().url()).pathname
+    if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
     const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}
     if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers})
-    if(path.startsWith('/api/v1/session'))return route.fulfill({headers,json:{server_time:new Date().toISOString(),idle_expires_at:new Date(Date.now()+900000).toISOString(),absolute_expires_at:new Date(Date.now()+28800000).toISOString(),warning_seconds:120,idle_timeout_seconds:900}})
+    if(path.startsWith('/api/v1/session'))return route.fulfill({headers,json:{browser_session:identity,server_time:new Date().toISOString(),idle_expires_at:new Date(Date.now()+900000).toISOString(),absolute_expires_at:new Date(Date.now()+28800000).toISOString(),warning_seconds:120,idle_timeout_seconds:900}})
     if(path.endsWith('/doctor/profile'))return route.fulfill({headers,json:{full_name:'Synthetic Clinician',specialty:'General Medicine'}})
     if(path.endsWith('/doctor/dashboard'))return route.fulfill({headers,json:{stats:{today_appointments:1,pending_patients:0,assigned_episodes:0,ai_drafts_ready:0},recent_appointments:[{appointment_id:appointmentId,patient_name:'Synthetic Patient',scheduled_time:'2030-07-10T08:00:00Z',status:'BOOKED'}],recent_consultations:[]}})
     if(path.endsWith('/doctor/episodes'))return route.fulfill({headers,json:{episodes:[],total_count:0,page:1,page_size:25,has_next:false,has_previous:false}})

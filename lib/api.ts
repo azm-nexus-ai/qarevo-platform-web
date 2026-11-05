@@ -1,59 +1,29 @@
-import {
-    accountChanged,
-    assertCurrentAccount,
-    readAccountScope,
-} from "@/lib/account-storage";
+import { accountChanged, assertCurrentAccount, readAccountScope, storePortalIdentity } from '@/lib/account-storage';
+import { currentPortal, portalKey, readPortalIdentity, retireLegacyCredentials, type Portal, type PortalIdentity } from '@/lib/portal-scope';
+import { notifyProfileChanged } from '@/lib/profile-events';
 
-const getBaseUrl = () => {
-    const baseUrl = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseUrl) {
-        console.error("API_BASE_URL or NEXT_PUBLIC_API_BASE_URL not set, defaulting to http://localhost:8000");
-        return "http://localhost:8000";
-    }
-    return baseUrl;
-};
-
-export function readAccessToken(): string | null {
-    if (typeof window === "undefined") return null;
-    assertCurrentAccount();
-    return window.localStorage.getItem("qarevo_access_token");
+const getBaseUrl = () => typeof window !== 'undefined' ? window.location.origin : (process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000');
+/** Public session marker only; credentials are held exclusively in HttpOnly cookies. */
+export function readSessionMarker(): string | null { assertCurrentAccount(); return readPortalIdentity()?.session_id ?? null; }
+export function readUserRole() { return readPortalIdentity()?.role ?? null; }
+export function isPatient() { return readUserRole() === 'PATIENT'; }
+export function isProvider() { return readUserRole() === 'PROVIDER'; }
+export function clearPortalSession(portal = currentPortal()) {
+    if (typeof window === 'undefined') return;
+    const previous=readPortalIdentity(portal);
+    if(previous)window.localStorage.setItem(portalKey('signed-out',portal),previous.session_id);
+    window.localStorage.removeItem(portalKey('identity', portal));
+    window.localStorage.removeItem(portalKey('renewal', portal));
+    window.localStorage.removeItem(portalKey('refresh-retry', portal));
+    retireLegacyCredentials(); accountChanged(portal);
 }
-
-export function readRefreshToken(): string | null {
-    if (typeof window === "undefined") return null;
-    assertCurrentAccount();
-    return window.localStorage.getItem("qarevo_refresh_token");
-}
-
-export function readUserRole(): 'PATIENT' | 'PROVIDER' | 'ADMIN' | null {
-    if (typeof window === "undefined") return null;
-    const role = window.localStorage.getItem("qarevo_role");
-    return (role === 'PATIENT' || role === 'PROVIDER' || role === 'ADMIN') ? role : null;
-}
-
-export function isPatient(): boolean {
-    return readUserRole() === 'PATIENT';
-}
-
-export function isProvider(): boolean {
-    return readUserRole() === 'PROVIDER';
-}
-
-export function clearAuthTokens() {
-    if (typeof window === "undefined") return;
-    [
-        "qarevo_access_token",
-        "qarevo_refresh_token",
-        "qarevo_token_type",
-        "qarevo_expires_in",
-        "qarevo_user_id",
-        "qarevo_provider_id",
-        "qarevo_role",
-        "qarevo_temp_auth",
-        "qarevo_temp_token",
-        "qarevo_refresh_retry_after",
-    ].forEach((key) => window.localStorage.removeItem(key));
-    accountChanged();
+export type BrowserSessionResponse = { browser_session: PortalIdentity };
+export function storeBrowserSession(payload: { browser_session?: PortalIdentity }, portal = currentPortal()) {
+    if (!payload.browser_session) throw new Error('The server could not establish a secure session. Please sign in again.');
+    retireLegacyCredentials();
+    window.localStorage.removeItem(portalKey('signed-out',portal));
+    window.localStorage.removeItem(portalKey('logout-pending',portal));
+    storePortalIdentity(payload.browser_session, portal);
 }
 
 export class ApiError extends Error {
@@ -129,381 +99,126 @@ export class SessionRefreshError extends Error {
     }
 }
 
-const REFRESH_RETRY_KEY = "qarevo_refresh_retry_after";
 const refreshRequests = new Map<string, Promise<boolean>>();
-
-function refreshRetryAt(scope: string): number {
-    try {
-        const saved = JSON.parse(window.localStorage.getItem(REFRESH_RETRY_KEY) || "null");
-        return saved?.scope === scope && Number.isFinite(saved.retryAt) ? saved.retryAt : 0;
-    } catch {
-        return 0;
-    }
+const csrfRequests = new Map<Portal, Promise<string>>();
+function savedCsrf(portal: Portal): string | null {
+    if(typeof document==='undefined')return null;
+    const entry=document.cookie.split(';').map(value=>value.trim()).find(value=>value.startsWith(`qarevo_${portal}_csrf=`));
+    const value=entry?.split('=')[1]; return value && /^[a-f0-9]{64}$/.test(value) ? value : null;
 }
-
-function deferRefresh(scope: string, response?: Response) {
-    const retryAfter = response?.headers.get("Retry-After");
-    const requested = retryAfter
-        ? (/^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now())
-        : 0;
-    const delay = Math.min(60_000, Math.max(5_000, Number.isFinite(requested) ? requested : 0));
-    try {
-        window.localStorage.setItem(REFRESH_RETRY_KEY, JSON.stringify({ scope, retryAt: Date.now() + delay }));
-    } catch {
-        // Renewal remains serialized even if the optional backoff cannot be saved.
-    }
-}
-
-export function storeAuthTokens(payload: {
-    access_token: string;
-    refresh_token: string;
-    token_type?: string;
-    expires_in?: number;
-    user_id?: string;
-    provider_id?: string;
-    role?: string;
-}) {
-    if (typeof window === "undefined") return;
-    const newSession =
-        Boolean(payload.role) ||
-        Boolean(
-            payload.user_id &&
-            payload.user_id !== window.localStorage.getItem("qarevo_user_id")
-        );
-    if (newSession) {
-        window.localStorage.removeItem("qarevo_role");
-        window.localStorage.removeItem("qarevo_provider_id");
-        window.localStorage.removeItem(REFRESH_RETRY_KEY);
-    }
-    window.localStorage.setItem("qarevo_access_token", payload.access_token);
-    window.localStorage.setItem("qarevo_refresh_token", payload.refresh_token);
-    window.localStorage.setItem("qarevo_token_type", payload.token_type ?? "bearer");
-    if (payload.expires_in) window.localStorage.setItem("qarevo_expires_in", String(payload.expires_in));
-    if (payload.user_id) window.localStorage.setItem("qarevo_user_id", payload.user_id);
-    if (payload.provider_id) window.localStorage.setItem("qarevo_provider_id", payload.provider_id);
-    if (payload.role) window.localStorage.setItem("qarevo_role", payload.role);
-    if (newSession) accountChanged();
-}
-
-async function refreshAuthToken(scope: string, accessAtStart: string, refreshAtStart: string): Promise<boolean> {
-    const existing = refreshRequests.get(scope);
-    if (existing) return existing;
-
+async function csrfToken(portal: Portal): Promise<string> {
+    const saved=savedCsrf(portal); if(saved)return saved;
+    const existing = csrfRequests.get(portal); if (existing) return existing;
     const pending = (async () => {
-        // Web Locks serialize rotation across tabs on this origin. An in-memory
-        // promise alone cannot protect a single-use refresh token in another tab.
-        if (typeof navigator === "undefined" || !navigator.locks) {
-            throw new SessionRefreshError("Automatic session renewal requires a current browser on HTTPS or localhost. Your draft has been kept.");
-        }
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 15_000);
-        const check = () => {
-            assertCurrentAccount();
-            if (scope !== readAccountScope()) throw new Error("Your session changed. Reload this page.");
-        };
-        const renewedElsewhere = () => readAccessToken() !== accessAtStart || readRefreshToken() !== refreshAtStart;
-        try {
-            return await navigator.locks.request("qarevo:session-refresh", { signal: controller.signal }, async () => {
-                check();
-                // A late 401 may arrive after another request/tab already renewed.
-                if (renewedElsewhere()) return true;
-                if (refreshRetryAt(scope) > Date.now()) throw new SessionRefreshError();
-
-                let res: Response;
-                try {
-                    res = await fetch(`${getBaseUrl()}/api/v1/auth/refresh`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ refresh_token: refreshAtStart }),
-                        cache: "no-store",
-                        signal: controller.signal,
-                    });
-                } catch {
-                    check();
-                    if (renewedElsewhere()) return true;
-                    deferRefresh(scope);
-                    throw new SessionRefreshError();
-                }
-
-                check();
-                if (renewedElsewhere()) return true;
-                if (res.status === 401 || res.status === 403) {
-                    clearAuthTokens();
-                    window.dispatchEvent(new Event("qarevo:auth-session-expired"));
-                    return false;
-                }
-                if (!res.ok) {
-                    deferRefresh(scope, res);
-                    throw new SessionRefreshError();
-                }
-
-                const payload = await res.json().catch(() => null);
-                check();
-                if (renewedElsewhere()) return true;
-                if (!payload || typeof payload.access_token !== "string" || !payload.access_token.trim() ||
-                    typeof payload.refresh_token !== "string" || !payload.refresh_token.trim() ||
-                    (payload.user_id != null && payload.user_id !== window.localStorage.getItem("qarevo_user_id"))) {
-                    deferRefresh(scope);
-                    throw new SessionRefreshError();
-                }
-                // Renewal cannot change identity, role, or the draft ownership revision.
-                storeAuthTokens({
-                    access_token: payload.access_token,
-                    refresh_token: payload.refresh_token,
-                    token_type: "bearer",
-                    expires_in: typeof payload.expires_in === "number" && payload.expires_in > 0 ? payload.expires_in : undefined,
-                });
-                window.localStorage.removeItem(REFRESH_RETRY_KEY);
-                return true;
-            });
-        } catch (error) {
-            // Expiration intentionally changes the scope; keep its result distinct
-            // from network/timeout failures and from a newer account's session.
-            if (controller.signal.aborted) {
-                check();
-                throw new SessionRefreshError();
-            }
-            throw error;
-        } finally {
-            clearTimeout(timer);
-        }
+        const response = await fetch(`${getBaseUrl()}/api/v1/browser-csrf`, { headers: {'X-Qarevo-Portal':portal}, cache:'no-store', credentials:'same-origin', signal:AbortSignal.timeout(10_000) });
+        const result = await response.json();
+        if (!response.ok || typeof result.csrf_token !== 'string') throw new SessionRefreshError('Secure request verification is unavailable. Please retry.');
+        return result.csrf_token as string;
     })();
-    refreshRequests.set(scope, pending);
-    try {
-        return await pending;
-    } finally {
-        if (refreshRequests.get(scope) === pending) refreshRequests.delete(scope);
-    }
+    csrfRequests.set(portal,pending);
+    try { return await pending; } finally { if(csrfRequests.get(portal)===pending) csrfRequests.delete(portal); }
 }
-
-function authHeaders(headers?: Record<string, string>): Record<string, string> {
-    const token = readAccessToken();
-    return {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...headers,
+function checkScope(portal: Portal, scope: string | null) {
+    assertCurrentAccount(portal);
+    if (scope !== readAccountScope(portal)) throw new Error('Your session changed. Reload this page.');
+}
+function requestHeaders(portal: Portal, marker: string | null, extra?: HeadersInit): Headers {
+    const headers = new Headers(extra);
+    // Browser credentials and refresh secrets must never be supplied by JavaScript.
+    headers.delete('Authorization'); headers.delete('X-Qarevo-Refresh-Token');
+    headers.set('X-Qarevo-Portal',portal);
+    if(marker) headers.set('X-Qarevo-Session',marker); else headers.delete('X-Qarevo-Session');
+    return headers;
+}
+function sessionMutation(path: string): boolean {
+    return /^\/api\/v1\/auth\/(?:login|(?:admin|doctor)\/login|mfa\/verify-(?:email|phone)|verify-(?:otp|email|email-code)|passkeys\/authenticate|social\/(?:google|apple)\/finish)$/.test(path) || ['/api/v1/security/password','/api/v1/security/sessions/revoke-all'].includes(path);
+}
+async function withSessionLock<T>(portal: Portal, operation: () => Promise<T>): Promise<T> {
+    if(typeof navigator==='undefined'||!navigator.locks) throw new SessionRefreshError('Secure sessions require a current browser on HTTPS or localhost. Please update your browser.');
+    const signal=AbortSignal.timeout(35_000);
+    return navigator.locks.request(`qarevo:${portal}:session-refresh`,{signal},operation);
+}
+async function send(input: string, init: RequestInit, portal: Portal, marker: string | null): Promise<Response> {
+    const headers = requestHeaders(portal,marker,init.headers);
+    if (!['GET','HEAD','OPTIONS'].includes((init.method || 'GET').toUpperCase())) headers.set('X-Qarevo-CSRF',await csrfToken(portal));
+    const response = await fetch(input,{...init,headers,cache:'no-store',credentials:'same-origin',signal:init.signal ?? AbortSignal.timeout(35_000)});
+    if (response.status === 409 && marker) throw new Error('Your session changed in another tab. Reload this page.');
+    const returned = response.headers.get('X-Qarevo-Session-Id');
+    const entry = sessionMutation(new URL(input).pathname);
+    if (returned && marker && returned !== marker && !entry) throw new Error('Your session changed. Reload this page.');
+    return response;
+}
+async function refreshAuthToken(portal: Portal, scope: string, revision: string | null, alreadyLocked = false): Promise<boolean> {
+    const existing = refreshRequests.get(scope); if(existing && !alreadyLocked) return existing;
+    const pending = (async () => {
+        if (typeof navigator === 'undefined' || !navigator.locks) throw new SessionRefreshError('Automatic session renewal requires a current browser on HTTPS or localhost. Your draft has been kept.');
+        const controller = new AbortController(); const timer = setTimeout(()=>controller.abort(),15_000);
+        const renew=async()=>{
+            const check = () => checkScope(portal,scope); check();
+            if(window.localStorage.getItem(portalKey('renewal',portal))!==revision) return true;
+            const retryAt = Number(window.localStorage.getItem(portalKey('refresh-retry',portal)) || 0);
+            if(retryAt>Date.now()) throw new SessionRefreshError();
+            let response: Response;
+            try { response=await send(`${getBaseUrl()}/api/v1/auth/refresh`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:controller.signal},portal,readPortalIdentity(portal)?.session_id ?? null); }
+            catch(error) { check(); window.localStorage.setItem(portalKey('refresh-retry',portal),String(Date.now()+5000)); throw error instanceof SessionRefreshError ? error : new SessionRefreshError(); }
+            check();
+            if([401,403].includes(response.status)) { clearPortalSession(portal); window.dispatchEvent(new CustomEvent('qarevo:auth-session-expired',{detail:{portal}})); return false; }
+            if(!response.ok) {
+                const requested = Number(response.headers.get('Retry-After'))*1000;
+                window.localStorage.setItem(portalKey('refresh-retry',portal),String(Date.now()+Math.min(60000,Math.max(5000,requested || 0)))); throw new SessionRefreshError();
+            }
+            let result: BrowserSessionResponse;
+            try { result = await response.json(); } catch { check(); window.localStorage.setItem(portalKey("refresh-retry",portal),String(Date.now()+5000)); throw new SessionRefreshError(); }
+            check();
+            const identity = result.browser_session as PortalIdentity | undefined;
+            if(!identity || JSON.stringify([portal,identity.user_id,identity.session_id])!==scope || identity.role!==readPortalIdentity(portal)?.role) {window.localStorage.setItem(portalKey('refresh-retry',portal),String(Date.now()+5000)); throw new SessionRefreshError();}
+            window.localStorage.setItem(portalKey('renewal',portal),crypto.randomUUID());
+            window.localStorage.removeItem(portalKey('refresh-retry',portal)); return true;
+        };
+        try { return alreadyLocked ? await renew() : await navigator.locks.request(`qarevo:${portal}:session-refresh`,{signal:controller.signal},renew); } finally {clearTimeout(timer);}
+    })();
+    if(!alreadyLocked)refreshRequests.set(scope,pending);
+    try {return await pending;} finally {if(refreshRequests.get(scope)===pending)refreshRequests.delete(scope);}
+}
+async function fetchWithAuthRetry(input: string, init: RequestInit, alreadyLocked = false, context?: {portal:Portal;scope:string|null}): Promise<Response> {
+    const portal=context?.portal ?? currentPortal(); assertCurrentAccount(portal);
+    const scope=context ? context.scope : readAccountScope(portal);
+    checkScope(portal,scope);
+    const marker=readPortalIdentity(portal)?.session_id ?? null;
+    const revision=typeof window==='undefined'?null:window.localStorage.getItem(portalKey('renewal',portal));
+    const check=()=>checkScope(portal,scope);
+    const response=await send(input,init,portal,marker); check();
+    // Explicit sign-in failures must not renew or invalidate an unrelated portal.
+    if(response.status!==401 || !scope || new URL(input).pathname.startsWith('/api/v1/auth/')) return response;
+    const renewed=await refreshAuthToken(portal,scope,revision,alreadyLocked);
+    if(!renewed) return response;
+    check(); const retried=await send(input,init,portal,marker); check(); return retried;
+}
+async function request<T>(path:string,init:RequestInit):Promise<T> {
+    const portal=currentPortal(),scope=readAccountScope(portal);
+    const perform=async()=>{
+        checkScope(portal,scope);
+        const response=await fetchWithAuthRetry(`${getBaseUrl()}${path}`,init,sessionMutation(path),{portal,scope});
+        const body=await response.text(); checkScope(portal,scope);
+        if(!response.ok) throw new ApiError(response.status,body);
+        const result=body ? JSON.parse(body) : undefined;
+        if(sessionMutation(path)) {
+            // Publish the verified identity before allowing any other tab's
+            // credential-changing operation to acquire this portal's lock.
+            if(result?.browser_session) storeBrowserSession(result,portal);
+            else if(result?.mfa_pending || ['/api/v1/security/password','/api/v1/security/sessions/revoke-all'].includes(path)) clearPortalSession(portal);
+        }
+        return result as T;
     };
+    return sessionMutation(path) ? withSessionLock(portal,perform) : perform();
 }
-
-async function fetchWithAuthRetry(
-    input: string,
-    init: RequestInit
-): Promise<Response> {
-    assertCurrentAccount();
-
-    const scope = readAccountScope();
-    const accessAtStart = readAccessToken();
-    const refreshAtStart = readRefreshToken();
-    const sessionRequest =
-        Boolean(accessAtStart) &&
-        new Headers(init.headers).get("Authorization") ===
-        "Bearer " + accessAtStart;
-    const authRequest = new URL(input).pathname.startsWith("/api/v1/auth/");
-
-    const check = () => {
-        assertCurrentAccount();
-        if (scope !== readAccountScope()) {
-            throw new Error("Your session changed. Reload this page.");
-        }
-    };
-
-    const res = await fetch(input, init);
-    check();
-
-    if (
-        res.status !== 401 ||
-        !sessionRequest ||
-        authRequest ||
-        !scope || !accessAtStart || !refreshAtStart
-    ) {
-        return res;
-    }
-
-    const refreshed = await refreshAuthToken(scope, accessAtStart, refreshAtStart);
-    check();
-    if (!refreshed) return res;
-
-    const headers = new Headers(init.headers);
-    const token = readAccessToken();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-
-    const retried = await fetch(input, { ...init, headers });
-    check();
-    return retried;
-}
-
-export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
-    const scope = readAccountScope();
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        headers: authHeaders(headers),
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        assertCurrentAccount();
-        if (scope !== readAccountScope()) {
-            throw new Error("Your session changed. Reload this page.");
-        }
-        throw new ApiError(res.status, text);
-    }
-
-    const result = (await res.json()) as T;
-    assertCurrentAccount();
-
-    if (scope !== readAccountScope()) {
-        throw new Error("Your session changed. Reload this page.");
-    }
-
-    return result;
-}
-
-export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
-    const scope = readAccountScope();
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            ...authHeaders(headers),
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        assertCurrentAccount();
-        if (scope !== readAccountScope()) {
-            throw new Error("Your session changed. Reload this page.");
-        }
-        throw new ApiError(res.status, text);
-    }
-
-    const result = (await res.json()) as T;
-    assertCurrentAccount();
-
-    if (scope !== readAccountScope()) {
-        throw new Error("Your session changed. Reload this page.");
-    }
-
-    return result;
-}
-
-export async function apiPut<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
-    const scope = readAccountScope();
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            ...authHeaders(headers),
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        assertCurrentAccount();
-        if (scope !== readAccountScope()) {
-            throw new Error("Your session changed. Reload this page.");
-        }
-        throw new ApiError(res.status, text);
-    }
-
-    const result = (await res.json()) as T;
-    assertCurrentAccount();
-
-    if (scope !== readAccountScope()) {
-        throw new Error("Your session changed. Reload this page.");
-    }
-
-    return result;
-}
-
-export async function apiPatch<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
-    const scope = readAccountScope();
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "PATCH",
-        headers: {
-            "Content-Type": "application/json",
-            ...authHeaders(headers),
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        assertCurrentAccount();
-        if (scope !== readAccountScope()) {
-            throw new Error("Your session changed. Reload this page.");
-        }
-        throw new ApiError(res.status, text);
-    }
-
-    const result = (await res.json()) as T;
-    assertCurrentAccount();
-
-    if (scope !== readAccountScope()) {
-        throw new Error("Your session changed. Reload this page.");
-    }
-
-    return result;
-}
-
-export async function apiDelete<T>(path: string, headers?: Record<string, string>): Promise<T> {
-    const scope = readAccountScope();
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "DELETE",
-        headers: authHeaders(headers),
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        assertCurrentAccount();
-        if (scope !== readAccountScope()) {
-            throw new Error("Your session changed. Reload this page.");
-        }
-        throw new ApiError(res.status, text);
-    }
-
-    const result = (await res.json()) as T;
-    assertCurrentAccount();
-
-    if (scope !== readAccountScope()) {
-        throw new Error("Your session changed. Reload this page.");
-    }
-
-    return result;
-}
-
-export async function apiUpload<T>(path: string, formData: FormData, headers?: Record<string, string>): Promise<T> {
-    const scope = readAccountScope();
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "POST",
-        headers: authHeaders(headers),
-        body: formData,
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        assertCurrentAccount();
-        if (scope !== readAccountScope()) {
-            throw new Error("Your session changed. Reload this page.");
-        }
-        throw new ApiError(res.status, text);
-    }
-
-    const result = (await res.json()) as T;
-    assertCurrentAccount();
-
-    if (scope !== readAccountScope()) {
-        throw new Error("Your session changed. Reload this page.");
-    }
-
-    return result;
-}
+export function apiGet<T>(path:string,headers?:Record<string,string>):Promise<T> { return request<T>(path,{headers}); }
+function jsonRequest<T,B>(method:string,path:string,body?:B,headers?:Record<string,string>):Promise<T> {return request<T>(path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});}
+export function apiPost<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>):Promise<T> {return jsonRequest<T,B>('POST',path,body,headers);}
+export function apiPut<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>):Promise<T> {return jsonRequest<T,B>('PUT',path,body,headers);}
+export function apiPatch<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>):Promise<T> {return jsonRequest<T,B>('PATCH',path,body,headers);}
+export function apiDelete<T>(path:string,headers?:Record<string,string>):Promise<T> {return request<T>(path,{method:'DELETE',headers});}
+export function apiUpload<T>(path:string,body:FormData,headers?:Record<string,string>):Promise<T> {return request<T>(path,{method:'POST',body,headers});}
 
 export type CreateMeetingRequest = {
     patient_id: string;
@@ -642,7 +357,7 @@ export type DoctorLoginRequest = {
 };
 
 export type DoctorLoginResponse = {
-    temp_token: string;
+    mfa_pending: boolean;
     token_type: string;
     expires_in: number;
     email_verified: boolean;
@@ -650,8 +365,7 @@ export type DoctorLoginResponse = {
 };
 
 export type AuthTokenResponse = {
-    access_token: string;
-    refresh_token: string;
+    browser_session: PortalIdentity;
     token_type: string;
     expires_in: number;
     email_verified: boolean;
@@ -982,8 +696,7 @@ export type VerifyEmailCodeRequest = {
 
 export type VerifyEmailCodeResponse = {
     message: string;
-    access_token?: string;
-    refresh_token?: string;
+    browser_session?: PortalIdentity;
     token_type?: string;
     expires_in?: number;
     email_verified?: boolean;
@@ -1019,8 +732,7 @@ export type VerifyOtpRequest = {
 
 export type VerifyOtpResponse = {
     message: string;
-    access_token?: string;
-    refresh_token?: string;
+    browser_session?: PortalIdentity;
     token_type?: string;
     expires_in?: number;
     email_verified?: boolean;
@@ -1055,35 +767,35 @@ export async function loginPatient(body: { email: string; password: string }): P
 export async function loginAdmin(body: { email: string; password: string }): Promise<AdminLoginResponse> {
   return apiPost<AdminLoginResponse>("/api/v1/auth/admin/login", body);
 }
-export async function getSessionStatus(activity = false): Promise<import('./session-timeout').SessionStatus> {
-    const response = await fetchWithAuthRetry(`${getBaseUrl()}/api/v1/session${activity ? '/activity' : ''}`, {
-        method: activity ? 'POST' : 'GET', headers: authHeaders(), cache: 'no-store',
-        signal: AbortSignal.timeout(15_000),
-    });
-    if (!response.ok) throw new ApiError(response.status, 'Session verification failed.');
-    return response.json();
+const sessionChecks = new Map<string, Promise<import('./session-timeout').SessionStatus & BrowserSessionResponse>>();
+export async function getSessionStatus(activity = false): Promise<import('./session-timeout').SessionStatus & BrowserSessionResponse> {
+    const key = JSON.stringify([currentPortal(),readAccountScope()]);
+    if(!activity && sessionChecks.has(key)) return sessionChecks.get(key)!;
+    const pending = activity ? apiPost<import('./session-timeout').SessionStatus & BrowserSessionResponse>('/api/v1/session/activity', {}) : apiGet<import('./session-timeout').SessionStatus & BrowserSessionResponse>('/api/v1/session');
+    if(!activity) { sessionChecks.set(key,pending); void pending.finally(()=>{if(sessionChecks.get(key)===pending)sessionChecks.delete(key);}).catch(()=>{}); }
+    return pending;
 }
-
 export async function logoutCurrentUser(): Promise<void> {
-    const refreshToken = readRefreshToken();
-    let request: Promise<Response> | undefined;
+    const portal=currentPortal(); assertCurrentAccount(portal);
+    const marker=readPortalIdentity(portal)?.session_id ?? null;
+    const init: RequestInit={method:'POST',headers:{'Content-Type':'application/json'},body:'{}',keepalive:true,credentials:'same-origin',cache:'no-store'};
+    const csrf=savedCsrf(portal);
+    const headers=requestHeaders(portal,marker,init.headers);
+    if(csrf)headers.set('X-Qarevo-CSRF',csrf);
+    // Hide private UI immediately but keep this document alive until its queued
+    // revocation is launched and settled. A persistent nonsecret tombstone also
+    // prevents cookie-only restoration after an offline/interrupted sign-out.
+    if(marker)window.localStorage.setItem(portalKey('logout-pending',portal),marker);
+    const pending=marker ? withSessionLock(portal,()=>{const bounded={...init,signal:AbortSignal.timeout(10_000)};return csrf ? fetch(`${getBaseUrl()}/api/v1/auth/logout`,{...bounded,headers}) : send(`${getBaseUrl()}/api/v1/auth/logout`,bounded,portal,marker)}) : undefined;
+    clearPortalSession(portal);
     try {
-        // Start revocation before accountChanged can navigate away. Keep local
-        // cleanup synchronous; never wait for the network to hide private data.
-        if (refreshToken) request = fetch(`${getBaseUrl()}/api/v1/auth/logout`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refresh_token: refreshToken }),
-            signal: AbortSignal.timeout(10_000),
-            keepalive: true,
-            cache: "no-store",
-        });
+        if(pending) { const response=await pending; if(!response.ok) throw new ApiError(response.status,'Server logout could not be confirmed.'); }
     } finally {
-        clearAuthTokens();
+        if(window.localStorage.getItem(portalKey('logout-pending',portal))===marker) {
+            window.localStorage.removeItem(portalKey('logout-pending',portal));
+            if(!readPortalIdentity(portal))accountChanged(portal);
+        }
     }
-    if (!request) return;
-    const response = await request;
-    if (!response.ok) throw new ApiError(response.status, "Server logout could not be confirmed.");
 }
 
 export type DoctorDashboardStats = {
@@ -1309,6 +1021,8 @@ export type DoctorConsultationInQueue = {
 };
 
 export type DoctorWorkspaceResponse = {
+    status_options?: { value: string; label: string }[];
+    active_consultation_count?: number;
     consultations: DoctorConsultationInQueue[];
     total_count: number;
     filtered_count: number;
@@ -1459,7 +1173,10 @@ export async function getDoctorProfile(): Promise<DoctorProfileResponse> {
 }
 
 export async function updateDoctorProfile(body: DoctorProfileUpdate): Promise<DoctorProfileResponse> {
-    return apiPut<DoctorProfileResponse, DoctorProfileUpdate>("/api/v1/doctor/profile", body);
+    const result = await apiPut<DoctorProfileResponse, DoctorProfileUpdate>("/api/v1/doctor/profile", body);
+    doctorProfileRequests.delete(readAccountScope() || "");
+    notifyProfileChanged("doctor");
+    return result;
 }
 
 export async function getDoctorSettings(): Promise<DoctorSettingsResponse> {
@@ -1690,17 +1407,10 @@ export async function markDoctorConversationRead(conversationId: string): Promis
 }
 
 export async function downloadAuthenticatedFile(path: string): Promise<Blob> {
-    const res = await fetch(`${getBaseUrl()}${path}`, {
-        headers: authHeaders(),
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new ApiError(res.status, text);
-    }
-
-    return res.blob();
+    const portal=currentPortal(),scope=readAccountScope(portal);
+    const response=await fetchWithAuthRetry(`${getBaseUrl()}${path}`,{cache:'no-store'},false,{portal,scope});
+    if(!response.ok) throw new ApiError(response.status,await response.text());
+    const result=await response.blob(); checkScope(portal,scope); return result;
 }
 
 export async function createPatientEpisode(body: EpisodeCreateRequest): Promise<EpisodeResponse> {
@@ -2315,10 +2025,8 @@ export async function getPatientLoginHistory(): Promise<PatientLoginHistoryRespo
 }
 
 export async function getPatientActiveDevices(): Promise<PatientActiveDevicesResponse> {
-    const refreshToken = readRefreshToken();
     return apiGet<PatientActiveDevicesResponse>(
         "/api/v1/patient/settings/active-devices",
-        refreshToken ? { "X-Qarevo-Refresh-Token": refreshToken } : undefined,
     );
 }
 
@@ -2327,11 +2035,9 @@ export async function revokePatientActiveDevice(deviceId: string): Promise<{ mes
 }
 
 export async function revokeOtherPatientActiveDevices(): Promise<{ message: string }> {
-    const refreshToken = readRefreshToken();
     return apiPost<{ message: string }>(
         "/api/v1/patient/settings/active-devices/revoke-others",
         {},
-        refreshToken ? { "X-Qarevo-Refresh-Token": refreshToken } : undefined,
     );
 }
 
@@ -2633,9 +2339,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
 // Admin API Functions
 export function readAdminRole(): 'ADMIN' | null {
-    if (typeof window === "undefined") return null;
-    const role = window.localStorage.getItem("qarevo_role");
-    return role === 'ADMIN' ? 'ADMIN' : null;
+    return readPortalIdentity('admin')?.role === 'ADMIN' ? 'ADMIN' : null;
 }
 
 export function isAdmin(): boolean {

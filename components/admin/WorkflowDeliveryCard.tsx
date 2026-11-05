@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { apiGet, apiPost, clearAuthTokens, isAuthError } from '@/lib/api'
+import { apiGet, apiPost, clearPortalSession, isAuthError } from '@/lib/api'
 
 type Delivery = {
   status: 'healthy' | 'warning' | 'disabled'
@@ -31,7 +31,7 @@ export default function WorkflowDeliveryCard() {
     apiGet<Delivery>(path).then(result => { if (current) setData(result) })
       .catch(error => {
         if (!current) return
-        if (isAuthError(error)) { clearAuthTokens(); router.replace('/auth/admin/login'); return }
+        if (isAuthError(error)) { clearPortalSession(); router.replace('/auth/admin/login'); return }
         setLoadError(error instanceof Error ? error.message : 'Workflow delivery could not be loaded.')
       }).finally(() => { if (current) setLoading(false) })
     return () => { current = false }
@@ -44,7 +44,7 @@ export default function WorkflowDeliveryCard() {
       if (result.delivered || result.status === 'already_delivered') setNotice('The clinical workflow update is confirmed.')
       else setActionError('The update is still pending. Review the latest result below before retrying.')
     } catch (error) {
-      if (isAuthError(error)) { clearAuthTokens(); router.replace('/auth/admin/login'); return }
+      if (isAuthError(error)) { clearPortalSession(); router.replace('/auth/admin/login'); return }
       setActionError(error instanceof Error ? error.message : 'Delivery could not be confirmed. The update remains saved for retry.')
     } finally { setBusy(null); setAttempt(value => value + 1) }
   }

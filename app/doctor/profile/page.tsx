@@ -5,11 +5,13 @@ import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
+import ProfileAvatar from '@/components/branding/ProfileAvatar'
+import { readAccountScope } from '@/lib/account-storage'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorProfile,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   updateDoctorProfile,
   getDoctorConsultationServices,
   createDoctorConsultationService,
@@ -257,6 +259,7 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
 export default function DoctorProfilePage() {
   const router = useRouter()
   const [profileData, setProfileData] = useState<DoctorProfileResponse | null>(null)
+  const [profileOwner, setProfileOwner] = useState<string | null>(null)
   const [draft, setDraft] = useState<ProfileDraft | null>(null)
   const [consultationServices, setConsultationServices] = useState<ConsultationService[]>([])
   const [loading, setLoading] = useState(true)
@@ -264,18 +267,20 @@ export default function DoctorProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [avatarError, setAvatarError] = useState('')
   const [editingService, setEditingService] = useState<ConsultationService | null>(null)
   const [showServiceForm, setShowServiceForm] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
 
     let cancelled = false
+    const scope = readAccountScope('doctor')
 
     const fetchProfile = async () => {
       try {
@@ -283,22 +288,24 @@ export default function DoctorProfilePage() {
           getDoctorProfile(),
           getDoctorConsultationServices(),
         ])
-        if (!cancelled) {
+        if (!cancelled && scope === readAccountScope('doctor')) {
           setProfileData(profile)
+          setProfileOwner(scope)
           setDraft(createProfileDraft(profile))
           setConsultationServices(services)
           setError(null)
         }
       } catch (err) {
+        if (cancelled || scope !== readAccountScope('doctor')) return
         if (isAuthError(err)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
+          clearPortalSession()
+          router.replace('/auth/doctor/login')
           return
         }
         console.error('Failed to load doctor profile', err)
         if (!cancelled) setError('Unable to load profile right now.')
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled && scope === readAccountScope('doctor')) setLoading(false)
       }
     }
 
@@ -325,7 +332,6 @@ export default function DoctorProfilePage() {
   if (!draft) return null
 
   const profileName = profileData.full_name || 'Doctor'
-  const profileInitials = profileName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'DR'
   const displayName = profileName.toLowerCase().startsWith('dr.') ? profileName : `Dr. ${profileName}`
 
   const updateDraft = <K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) => {
@@ -336,6 +342,10 @@ export default function DoctorProfilePage() {
   }
 
   const saveProfile = async () => {
+    if (!profileOwner || profileOwner !== readAccountScope('doctor')) {
+      setSaveError('Your session changed. Reload your profile before saving.')
+      return
+    }
     setSaving(true)
     setSaveMessage(null)
     setSaveError(null)
@@ -389,7 +399,9 @@ export default function DoctorProfilePage() {
     }
 
     try {
+      if (profileOwner !== readAccountScope('doctor')) return
       const saved = await updateDoctorProfile(payload)
+      if (profileOwner !== readAccountScope('doctor')) return
       setProfileData(saved)
       setDraft(createProfileDraft(saved))
       setSaveMessage('Professional profile updated.')
@@ -397,9 +409,10 @@ export default function DoctorProfilePage() {
       // Auto-dismiss success message after 4 seconds
       setTimeout(() => setSaveMessage(null), 4000)
     } catch (err) {
+      if (profileOwner !== readAccountScope('doctor')) return
       if (isAuthError(err)) {
-        clearAuthTokens()
-        router.replace('/auth/sign-in')
+        clearPortalSession()
+        router.replace('/auth/doctor/login')
         return
       }
       console.error('Failed to save doctor profile', err)
@@ -434,7 +447,7 @@ export default function DoctorProfilePage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0, overflowWrap: 'anywhere' }}>
       <style>{`
         @keyframes slideIn {
           from { transform: translateY(100px); opacity: 0; }
@@ -458,13 +471,7 @@ export default function DoctorProfilePage() {
         padding: '32px',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: "1px solid var(--border)", flexWrap: 'wrap' }}>
-          <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 24px rgba(32,181,223,0.3)' }}>
-            {profileData.avatar_url ? (
-              <img src={profileData.avatar_url} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              profileInitials
-            )}
-          </div>
+          <ProfileAvatar name={displayName} src={profileData.avatar_url} size={100} kind='doctor' />
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{displayName}</h2>
             <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{profileData.specialty || 'General Practice'} · {profileData.hospital || 'Qarevo Virtual Clinic'}</p>
@@ -483,7 +490,7 @@ export default function DoctorProfilePage() {
         </div>
 
         {/* Profile Details */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '24px' }}>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Specialty</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.specialty || 'Not provided'}</p>
@@ -529,7 +536,7 @@ export default function DoctorProfilePage() {
         padding: '28px',
         scrollMarginTop: '96px',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '22px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start', marginBottom: '22px' }}>
           <div>
             <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Professional Profile</h2>
             <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate2, lineHeight: 1.6 }}>Complete the clinical profile patients and care operations use for discovery, booking, and assignment.</p>
@@ -552,6 +559,8 @@ export default function DoctorProfilePage() {
             position: 'fixed',
             bottom: '24px',
             right: '24px',
+            maxWidth: 'calc(100vw - 48px)',
+            flexWrap: 'wrap',
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
@@ -576,7 +585,7 @@ export default function DoctorProfilePage() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px' }}>
           <div>
             <label style={labelStyle}>Specialty</label>
             <input value={draft.specialty} onChange={(event) => updateDraft('specialty', event.target.value)} placeholder="Cardiology" style={inputStyle} />
@@ -616,7 +625,7 @@ export default function DoctorProfilePage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px', marginTop: '16px' }}>
           <div>
             <label style={labelStyle}>Address</label>
             <input value={draft.address} onChange={(event) => updateDraft('address', event.target.value)} placeholder="Street address" style={inputStyle} />
@@ -643,7 +652,7 @@ export default function DoctorProfilePage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '16px', marginTop: '16px' }}>
           <div>
             <label style={labelStyle}>Bio</label>
             <textarea value={draft.about} onChange={(event) => updateDraft('about', event.target.value)} placeholder="Brief clinical background and care philosophy" rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
@@ -665,18 +674,30 @@ export default function DoctorProfilePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={saving}
                 onChange={(event) => {
                   const file = event.target.files?.[0] || null
+                  setAvatarError('')
+                  if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024)) {
+                    setAvatarError('Choose a JPEG, PNG or WebP image, up to 2 MB.')
+                    setDraft(current => current ? { ...current, avatar_file: null } : current)
+                    event.target.value = ''
+                    return
+                  }
                   setDraft((current) => current ? { ...current, avatar_file: file } : current)
+                  if (file) setHasUnsavedChanges(true)
                   setSaveMessage(null)
                   setSaveError(null)
                 }}
+                aria-describedby='doctor-avatar-help doctor-avatar-error'
                 style={{ display: 'none' }}
                 id="avatar-upload"
               />
-              <label
-                htmlFor="avatar-upload"
+              <button
+                type='button'
+                disabled={saving}
+                onClick={() => document.getElementById('avatar-upload')?.click()}
                 style={{
                   padding: '10px 16px',
                   borderRadius: '8px',
@@ -692,11 +713,13 @@ export default function DoctorProfilePage() {
                 }}
               >
                 {draft.avatar_file ? 'Change Profile Picture' : 'Upload Profile Picture'}
-              </label>
+              </button>
               {draft.avatar_file && (
                 <span style={{ fontSize: "13px", color: T.slate2 }}>{draft.avatar_file.name}</span>
               )}
             </div>
+            <p id='doctor-avatar-help' className='field-hint'>JPEG, PNG or WebP · up to 2 MB.</p>
+            <p id='doctor-avatar-error' className='field-error' role={avatarError ? 'alert' : undefined}>{avatarError}</p>
           </div>
         </div>
       </div>

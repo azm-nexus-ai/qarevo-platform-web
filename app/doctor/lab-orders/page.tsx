@@ -4,14 +4,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   createDoctorLabOrder,
   deleteDoctorLabOrder,
   getApiErrorDetail,
   getDoctorLabOrders,
   getDoctorPatients,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   updateDoctorLabOrder,
   uploadDoctorLabResult,
   type DoctorLabOrderPayload,
@@ -80,8 +80,8 @@ export default function DoctorLabOrdersPage() {
   )
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -92,7 +92,7 @@ export default function DoctorLabOrdersPage() {
         setPatients(data.patients || [])
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/doctor/login')
           return
         }
@@ -112,7 +112,7 @@ export default function DoctorLabOrdersPage() {
       setLabTests(data.test_requests || [])
     } catch (err) {
       if (isAuthError(err)) {
-        clearAuthTokens()
+        clearPortalSession()
         router.replace('/auth/doctor/login')
         return
       }

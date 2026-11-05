@@ -1,13 +1,15 @@
+import {seedPortalSession} from './helpers/portal-session'
 import {test,expect,type BrowserContext} from '@playwright/test'
 import type {PatientDoctor} from '../lib/api'
 
 async function prepare(context:BrowserContext,role:'PATIENT'|'PROVIDER'|'ADMIN') {
-  await context.addInitScript(role=>{localStorage.setItem('qarevo_access_token','synthetic-brand-access');localStorage.setItem('qarevo_refresh_token','synthetic-brand-refresh');localStorage.setItem('qarevo_user_id','synthetic-brand-user');localStorage.setItem('qarevo_role',role)},role)
+  const identity = await seedPortalSession(context, ({PATIENT:'patient',PROVIDER:'doctor',ADMIN:'admin'} as const)[role], {user_id:'synthetic-brand-user'})
   await context.route('**/api/v1/**',route=>{
     const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}
     if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers})
     const path=new URL(route.request().url()).pathname
-    if(path.startsWith('/api/v1/session'))return route.fulfill({headers,json:{server_time:new Date().toISOString(),idle_expires_at:new Date(Date.now()+900000).toISOString(),absolute_expires_at:new Date(Date.now()+28800000).toISOString(),warning_seconds:120,idle_timeout_seconds:900}})
+    if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
+    if(path.startsWith('/api/v1/session'))return route.fulfill({headers,json:{browser_session:identity,server_time:new Date().toISOString(),idle_expires_at:new Date(Date.now()+900000).toISOString(),absolute_expires_at:new Date(Date.now()+28800000).toISOString(),warning_seconds:120,idle_timeout_seconds:900}})
     if(path.endsWith('/settings'))return route.fulfill({headers,json:{user_id:'synthetic-brand-user',first_name:'Synthetic',last_name:'Patient',email:'synthetic@example.com',emergency_contacts:[]}})
     if(path.endsWith('/profile'))return route.fulfill({headers,json:{full_name:'Synthetic Clinician'}})
     if(path.endsWith('/profile-image'))return route.fulfill({headers,json:{image:null}})

@@ -1,14 +1,16 @@
+import {seedPortalSession} from './helpers/portal-session'
 import {test,expect,type BrowserContext} from '@playwright/test'
 import type {PatientDoctor} from '../lib/api'
 const episode='77777777-7777-4777-8777-777777777777'
 async function prepare(context:BrowserContext, now=Date.now()){
- await context.addInitScript(()=>{localStorage.setItem('qarevo_access_token','synthetic-patient');localStorage.setItem('qarevo_refresh_token','synthetic-refresh');localStorage.setItem('qarevo_user_id','synthetic-patient');localStorage.setItem('qarevo_role','PATIENT')})
+ const identity = await seedPortalSession(context, 'patient', {user_id:'synthetic-patient'})
  const state={created:0,saved:0,fail:true,finish:()=>{}}
  await context.route('**/api/v1/**',async route=>{
   const path=new URL(route.request().url()).pathname
+  if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
   const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}
   if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers})
-  if(path.startsWith('/api/v1/session'))return route.fulfill({headers,json:{server_time:new Date(now).toISOString(),idle_expires_at:new Date(now+900000).toISOString(),absolute_expires_at:new Date(now+28800000).toISOString(),warning_seconds:120,idle_timeout_seconds:900}})
+  if(path.startsWith('/api/v1/session'))return route.fulfill({headers,json:{browser_session:identity,server_time:new Date(now).toISOString(),idle_expires_at:new Date(now+900000).toISOString(),absolute_expires_at:new Date(now+28800000).toISOString(),warning_seconds:120,idle_timeout_seconds:900}})
   if(path.endsWith('/patient/settings'))return route.fulfill({headers,json:{first_name:'Synthetic',last_name:'Patient',emergency_contacts:[]}})
   if(path.endsWith('/profile-image'))return route.fulfill({headers,json:{image:null}})
   if(path.endsWith('/patient/episodes')){state.created++;return route.fulfill({headers,json:{id:episode}})}
@@ -96,6 +98,7 @@ for (const legacy of [true, false]) for (const width of [390, 1440]) {
   const recommended = {...base,...sparse,id:'33333333-3333-4333-8333-333333333333',name:'Dr. Synthetic Recommended',recommendationScore:60,recommendationReason:'Available clinician'}
   await context.route('**/api/v1/**',async route=>{
    const path=new URL(route.request().url()).pathname
+   if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
    const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}
    if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers})
    if(path==='/api/v1/patient/doctors/recommended')return route.fulfill({headers,json:{doctors:[recommended],recommendations:[recommended],total:1,filters:{}}})

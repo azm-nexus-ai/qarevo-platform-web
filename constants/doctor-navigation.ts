@@ -20,7 +20,7 @@ export const DOCTOR_ROUTES = {
   profile: '/doctor/profile',
   settings: '/doctor/settings',
   support: '/support',
-  logout: '/auth/sign-in',
+  logout: '/auth/doctor/login',
 } as const
 
 export const DOCTOR_SIDEBAR_ITEMS: DoctorNavItem[] = [

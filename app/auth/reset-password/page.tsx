@@ -8,7 +8,7 @@ import RecoverySignInLinks from '@/components/auth/RecoverySignInLinks'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { resetPassword, ApiError, getApiErrorDetail, clearAuthTokens, getLoginThrottleMessage } from '@/lib/api'
+import { resetPassword, ApiError, getApiErrorDetail, clearPortalSession, getLoginThrottleMessage } from '@/lib/api'
 
 type ErrorKind = 'weak' | 'mismatch' | 'expiredToken' | 'invalidToken' | 'server' | 'network' | null
 
@@ -616,7 +616,7 @@ function ResetPasswordPageContent() {
 
     try {
       await resetPassword(token, newPassword)
-      clearAuthTokens(); setToken(''); setNewPassword(''); setConfirmPassword('')
+      clearPortalSession(); setToken(''); setNewPassword(''); setConfirmPassword('')
       setUpdated(true)
       setErrorKind(null)
     } catch (error) {

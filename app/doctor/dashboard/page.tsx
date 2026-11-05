@@ -7,11 +7,11 @@ import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorDashboard,
   getDoctorEpisodes,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   type DoctorDashboardResponse,
   type DoctorEpisodeListResponse,
   type DoctorEpisodeSummary,
@@ -226,8 +226,8 @@ export default function DoctorDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -247,7 +247,7 @@ export default function DoctorDashboard() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/doctor/login')
           return
         }

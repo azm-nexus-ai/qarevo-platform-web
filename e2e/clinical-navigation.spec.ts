@@ -1,3 +1,4 @@
+import {seedPortalSession} from './helpers/portal-session'
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 
 const consultationId = '66666666-6666-4666-8666-666666666666'
@@ -11,16 +12,12 @@ async function prepare(page: Page, context: BrowserContext) {
   const consultation = { consultation_id: consultationId, patient_name: 'Synthetic navigation patient',
     patient_id: 'synthetic-patient', status: 'STARTED', started_at: '2030-07-10T07:00:00Z',
     scheduled_time: '2030-07-10T07:00:00Z', waiting_duration_minutes: null }
-  await context.addInitScript(() => {
-    localStorage.setItem('qarevo_access_token', 'synthetic-role-token')
-    localStorage.setItem('qarevo_refresh_token', 'synthetic-role-refresh')
-    localStorage.setItem('qarevo_user_id', 'synthetic-role-owner')
-    localStorage.setItem('qarevo_role', 'PROVIDER')
-  })
+  const identity = await seedPortalSession(context, 'doctor', {user_id:'synthetic-role-owner'})
   await context.route('**/api/v1/**', route => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
     const path = new URL(route.request().url()).pathname
-    if (path === '/api/v1/session' || path === '/api/v1/session/activity') return route.fulfill({ headers: headers, json: { server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
+    if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
+    if (path === '/api/v1/session' || path === '/api/v1/session/activity') return route.fulfill({ headers: headers, json:{browser_session:identity,server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
     if (path.endsWith('/clinical-record')) {
       if (route.request().method() === 'PUT') {
         if (controls.failSave) return route.fulfill({ status: 503, headers, json: { detail: 'Synthetic save unavailable. Your text is still here.' } })

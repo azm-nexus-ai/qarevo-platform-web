@@ -1,17 +1,17 @@
+import {seedPortalSession} from './helpers/portal-session'
 import { test, expect, type BrowserContext } from '@playwright/test'
 const id='11111111-1111-4111-8111-111111111111'
 const appt='22222222-2222-4222-8222-222222222222'
 const cors={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}
 const doctor={id,name:'Dr. Synthetic Clinician',specialty:'General Medicine',hospital:'Synthetic Practice',imageUrl:'/icons/missing-synthetic.png',consultationFee:0,experienceYears:5,rating:0,reviews:0,languages:['German'],insurance:['Self pay'],gender:'female',consultationTypes:['video'],distanceKm:0,conditions:[],verification:'Verified',tags:[]}
 async function signedIn(context:BrowserContext){
-  await context.addInitScript(()=>{
-    localStorage.setItem('qarevo_access_token','synthetic-patient-token');localStorage.setItem('qarevo_refresh_token','synthetic-patient-refresh');localStorage.setItem('qarevo_user_id','synthetic-patient');localStorage.setItem('qarevo_role','PATIENT')
-  })
+  const identity = await seedPortalSession(context, 'patient', {user_id:'synthetic-patient'})
   const control={appointmentFails:false,doctorsFail:false,emptyDoctors:false,reads:0}
   await context.route('**/api/v1/**',route=>{
     if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:cors})
     const path=new URL(route.request().url()).pathname
-    if(path==='/api/v1/session'||path==='/api/v1/session/activity')return route.fulfill({headers:cors,json:{server_time:new Date().toISOString(),idle_expires_at:new Date(Date.now()+900000).toISOString(),absolute_expires_at:new Date(Date.now()+28800000).toISOString(),warning_seconds:120,idle_timeout_seconds:900}})
+    if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
+    if(path==='/api/v1/session'||path==='/api/v1/session/activity')return route.fulfill({headers:cors,json:{browser_session:identity,server_time:new Date().toISOString(),idle_expires_at:new Date(Date.now()+900000).toISOString(),absolute_expires_at:new Date(Date.now()+28800000).toISOString(),warning_seconds:120,idle_timeout_seconds:900}})
     if(path==='/api/v1/patient/settings')return route.fulfill({headers:cors,json:{user_id:'synthetic-patient',first_name:'Synthetic',last_name:'Patient',email:'synthetic@example.com',emergency_contacts:[]}})
     if(path.endsWith('/settings/onboarding'))return route.fulfill({headers:cors,json:{complete:true,next_step:null,completed_steps:['personal','contact','health','coverage'],personal:{},contact:{},health:{},coverage:{}}})
     if(path===`/api/v1/patient/appointments/${appt}`){control.reads++;return route.fulfill({headers:cors,status:control.appointmentFails?503:200,json:control.appointmentFails?{detail:'Synthetic appointment read unavailable'}:{id:appt,provider_id:id,provider_name:doctor.name,specialty:doctor.specialty,consultation_id:'33333333-3333-4333-8333-333333333333',start_at:'2030-07-10T07:00:00Z',end_at:'2030-07-10T07:30:00Z',time_zone:'Europe/Berlin',status:'BOOKED'}})}

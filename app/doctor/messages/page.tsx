@@ -7,12 +7,12 @@ import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { Sh, T } from '@/lib/tokens'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   downloadAuthenticatedFile,
   getDoctorMessages,
   isAuthError,
   markDoctorConversationRead,
-  readAccessToken,
+  readSessionMarker,
   sendDoctorMessage,
   sendDoctorMessageAttachment,
   type PortalConversation,
@@ -110,7 +110,7 @@ export default function DoctorMessagesPage() {
       setError(null)
     } catch (err) {
       if (isAuthError(err)) {
-        clearAuthTokens()
+        clearPortalSession()
         router.replace('/auth/doctor/login')
         return
       }
@@ -123,8 +123,8 @@ export default function DoctorMessagesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }

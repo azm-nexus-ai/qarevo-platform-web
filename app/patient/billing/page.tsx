@@ -6,7 +6,7 @@ import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/components/patient/PatientPortalPrimitives'
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
-import { clearAuthTokens, getApiErrorDetail, getPatientBilling, isAuthError, type PatientBillingInvoice, type PatientBillingPaymentMethod, type PatientBillingResponse } from '@/lib/api'
+import { clearPortalSession, getApiErrorDetail, getPatientBilling, isAuthError, type PatientBillingInvoice, type PatientBillingPaymentMethod, type PatientBillingResponse } from '@/lib/api'
 import { T } from '@/lib/tokens'
 
 const EMPTY_BILLING: PatientBillingResponse = {
@@ -107,7 +107,7 @@ export default function PatientBillingPage() {
         if (mounted) setBilling({ ...EMPTY_BILLING, ...data })
       } catch (error) {
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           window.location.href = '/auth/sign-in'
           return
         }

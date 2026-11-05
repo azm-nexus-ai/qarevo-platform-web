@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { getApiErrorDetail, resendVerificationEmail, storeAuthTokens, verifyEmailCode } from '@/lib/api'
+import { getApiErrorDetail, resendVerificationEmail, verifyEmailCode } from '@/lib/api'
 import { setOnboardingStage } from '@/lib/auth-flow'
 
 const SIGNUP_STORAGE_KEY = 'qarevo.auth.signup.v1'
@@ -186,15 +186,7 @@ function OtpInput({ email, onComplete }: { email: string; onComplete: () => void
     setError('')
     try {
       const response = await verifyEmailCode({ email, code })
-      if (response.access_token && response.refresh_token) {
-        storeAuthTokens({
-          access_token: response.access_token,
-          refresh_token: response.refresh_token,
-          token_type: response.token_type,
-          expires_in: response.expires_in,
-          user_id: response.user_id,
-          role: response.role || 'PATIENT',
-        })
+      if (response.browser_session) {
       }
       setSuccess(true)
       setOnboardingStage('account-created')

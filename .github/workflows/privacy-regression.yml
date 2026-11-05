@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:3100
-      API_BASE_URL: http://127.0.0.1:3100
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:3101
+      API_BASE_URL: http://127.0.0.1:3101
       E2E_BASE_URL: http://127.0.0.1:3100
       E2E_PRODUCTION: "1"
     steps:

@@ -1,4 +1,5 @@
 'use client'
+import { readPortalIdentity } from '@/lib/portal-scope'
 import ProfileImage from '@/components/patient/ProfileImage'
 
 import Link from 'next/link'
@@ -7,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { apiGet, logoutCurrentUser, clearAuthTokens, getPatientDashboard, getPatientHealthInfo, isAuthError, markPatientMedicationTaken, readAccessToken, searchPatientDashboard, searchPatientDoctors } from '@/lib/api'
+import { apiGet, logoutCurrentUser, clearPortalSession, getPatientDashboard, getPatientHealthInfo, isAuthError, markPatientMedicationTaken, readSessionMarker, searchPatientDashboard, searchPatientDoctors } from '@/lib/api'
 import type { PatientDashboardResponse, PatientDashboardSearchResult, PatientDoctor } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
@@ -377,15 +378,15 @@ export default function PatientDashboardPage() {
   const specialtyMenuRef = useRef<HTMLDivElement>(null)
   const displayPatientName = patientName || 'Patient'
 
-  const handleLogout = () => {
-    void logoutCurrentUser().catch(() => console.warn('Server logout could not be confirmed.'))
-    setShowLogoutModal(false)
-    router.push('/auth/sign-in')
+  const handleLogout = async () => {
+    try { await logoutCurrentUser() }
+    catch { console.warn('Server logout could not be confirmed.') }
+    finally { setShowLogoutModal(false); router.replace('/auth/sign-in') }
   }
 
   const handleBookNextAvailable = async () => {
     try {
-      const token = readAccessToken()
+      const token = readSessionMarker()
       if (!token) {
         router.push('/auth/sign-in')
         return
@@ -441,7 +442,7 @@ export default function PatientDashboardPage() {
   }, [])
 
   useEffect(() => {
-    const token = readAccessToken()
+    const token = readSessionMarker()
     if (!token) {
       router.replace('/auth/sign-in')
       return
@@ -453,7 +454,7 @@ export default function PatientDashboardPage() {
     setHealthError(false)
     const fetchDashboardProfile = async () => {
       try {
-        const data = await getPatientDashboard(localStorage.getItem('qarevo_user_id'))
+        const data = await getPatientDashboard(readPortalIdentity('patient')?.user_id)
         if (cancelled) return
         setDashboardData(data)
         setPatientName(data.patient_name || '')
@@ -463,7 +464,7 @@ export default function PatientDashboardPage() {
       } catch (error) {
         if (cancelled) return
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }
@@ -500,7 +501,7 @@ export default function PatientDashboardPage() {
         }
       } catch (error) {
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.push('/auth/sign-in')
         }
         if (!cancelled) setDoctorsError(true)
@@ -511,7 +512,7 @@ export default function PatientDashboardPage() {
 
     const fetchRecentDoctors = async () => {
       try {
-        const token = readAccessToken()
+        const token = readSessionMarker()
         if (!token) return
 
         const data = await apiGet<{ recent_doctors?: PatientDoctor[] }>('/api/v1/patient/doctors/recent')
@@ -551,7 +552,7 @@ export default function PatientDashboardPage() {
         }
       } catch (error) {
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }
@@ -585,7 +586,7 @@ export default function PatientDashboardPage() {
       setDashboardData(data)
     } catch (error) {
       if (isAuthError(error)) {
-        clearAuthTokens()
+        clearPortalSession()
         router.replace('/auth/sign-in')
         return
       }

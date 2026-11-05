@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { apiDelete, apiGet, apiPost, clearAuthTokens, getApiErrorDetail } from '@/lib/api'
+import { apiDelete, apiGet, apiPost, clearPortalSession, getApiErrorDetail } from '@/lib/api'
 import { recoveryPortal } from '@/lib/auth-recovery'
 import ActionLink from '@/components/ui/ActionLink'
 import PasswordField from './PasswordField'
@@ -57,7 +57,7 @@ export default function AccountSecurity() {
   }, [])
   useEffect(() => { void load() }, [load])
   useEffect(() => { if (error) errorTarget.current?.focus() }, [error])
-  const signOut = () => { clearAuthTokens(); router.replace(login) }
+  const signOut = () => { clearPortalSession(); router.replace(login) }
   const update = (key: FieldKey, value: string) => {
     setValues(previous => ({ ...previous, [key]: value }))
     setFieldErrors(previous => ({ ...previous, [key]: undefined }))

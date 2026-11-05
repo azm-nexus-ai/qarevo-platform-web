@@ -4,14 +4,14 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getExceptionStats,
   getAdminExceptions,
   assignException,
   resolveException,
   closeException,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   isAdmin,
   type AdminException,
   type AdminExceptionStats,
@@ -208,8 +208,8 @@ export default function AdminExceptionsPage() {
   const [typeFilter, setTypeFilter] = useState('')
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/admin/login')
       return
     }
@@ -236,7 +236,7 @@ export default function AdminExceptionsPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/admin/login')
           return
         }

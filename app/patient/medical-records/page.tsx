@@ -2,18 +2,22 @@
 
 import Link from 'next/link'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
-import { clearAuthTokens, deleteMedicalRecord, downloadMedicalRecord, getApiErrorDetail, getMedicalRecords, getPatientHealthInfo, isAuthError, uploadMedicalRecord, type PatientHealthInfo } from '@/lib/api'
+import { deleteMedicalRecord, downloadMedicalRecord, getApiErrorDetail, uploadMedicalRecord, type PatientHealthInfo } from '@/lib/api'
+import { usePatientResource } from '@/lib/use-patient-resource'
+import { medicalUploadError } from '@/lib/clinical-upload'
+import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
+import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type RecordType = 'Consultation' | 'Prescription' | 'Lab Result' | 'Diagnosis' | 'Referral' | 'Medical Document'
+type RecordType = 'Consultation' | 'Prescription' | 'Lab Request' | 'Lab Result' | 'Diagnosis' | 'Referral' | 'Medical Document'
 type RecordStatus = 'Available' | 'Pending' | 'Archived'
 
 type MedicalRecord = {
@@ -33,6 +37,9 @@ type MedicalRecord = {
   canPreview: boolean
   canDownload: boolean
   canDelete: boolean // User-uploaded can be deleted, clinical cannot
+  clinicalStatus?: string
+  sourceType?: 'medication' | 'lab-request'
+  sourceHref?: string
 }
 
 type TimelineEvent = {
@@ -51,7 +58,7 @@ type PreviewState = {
   error: string | null
 }
 
-const CATEGORIES: RecordType[] = ['Consultation', 'Prescription', 'Lab Result', 'Diagnosis', 'Referral', 'Medical Document']
+const CATEGORIES: RecordType[] = ['Consultation', 'Prescription', 'Lab Request', 'Lab Result', 'Diagnosis', 'Referral', 'Medical Document']
 
 // ─── Modals ───────────────────────────────────────────────────────────────────
 
@@ -88,6 +95,11 @@ function normalizeRecord(value: Record<string, unknown>): MedicalRecord {
     canPreview: Boolean(value.canPreview),
     canDownload: Boolean(value.canDownload),
     canDelete: Boolean(value.canDelete),
+    clinicalStatus: typeof value.clinicalStatus === 'string' ? value.clinicalStatus : undefined,
+    sourceType: value.sourceType === 'medication' || value.sourceType === 'lab-request' ? value.sourceType : undefined,
+    // Navigation comes from a finite set of clinical destinations, never an arbitrary payload URL.
+    sourceHref: value.sourceType === 'medication' ? '/patient/prescription-care-plan'
+      : value.sourceType === 'lab-request' ? '/patient/lab-requests' : undefined,
   }
 }
 
@@ -115,12 +127,14 @@ function UploadRecordModal({ onClose, onUpload, onError }: { onClose: () => void
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0]
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        onError('Please choose a file that is 5MB or smaller.')
+      const error = medicalUploadError(selectedFile.size)
+      setValidationError(error)
+      if (error) {
         e.target.value = ''
         setFile(null)
         return
@@ -130,7 +144,10 @@ function UploadRecordModal({ onClose, onUpload, onError }: { onClose: () => void
   }
 
   const handleUpload = async () => {
-    if (!docName || !file || !date) return
+    if (isUploading) return
+    const error = !docName.trim() ? 'Enter the document name.' : !date ? 'Enter the date of the record.' : !file ? 'Choose a medical document to upload.' : medicalUploadError(file.size)
+    setValidationError(error)
+    if (error || !file) return
     setIsUploading(true)
 
     try {
@@ -194,7 +211,7 @@ function UploadRecordModal({ onClose, onUpload, onError }: { onClose: () => void
           <div>
             <label style={{ display: 'block', margin: '0 0 6px', fontSize: "13px", fontWeight: 700, textTransform: 'uppercase', color: T.slate2 }}>Record Type</label>
             <select value={docType} onChange={e => setDocType(e.target.value as RecordType)} style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '14px', outline: 'none' }}>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {CATEGORIES.filter(c => c !== 'Lab Request').map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
@@ -221,10 +238,10 @@ function UploadRecordModal({ onClose, onUpload, onError }: { onClose: () => void
                   <Ico p={ICONS.search} size={24} sw={1.5} />
                 </div>
                 <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Click or drag file to this area</p>
-                <p style={{ margin: '0 0 16px', fontSize: "13px", color: T.slate }}>Supported formats: PDF, DOC, DOCX, PNG, JPG (Max 5MB)</p>
+                <p id='medical-upload-help' style={{ margin: '0 0 16px', fontSize: "13px", color: T.slate }}>Supported formats: PDF, DOC, DOCX, PNG, JPG. Maximum 3 MB per file in development.</p>
                 <label style={{ display: 'inline-block', padding: '10px 20px', borderRadius: '10px', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
                   Browse Files
-                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" onChange={handleFileChange} style={{ display: 'none' }} />
+                  <input type="file" aria-label='Choose medical document' aria-describedby='medical-upload-help medical-upload-validation' aria-invalid={Boolean(validationError)} accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" onChange={handleFileChange} style={{ display: 'none' }} />
                 </label>
               </>
             ) : (
@@ -244,6 +261,7 @@ function UploadRecordModal({ onClose, onUpload, onError }: { onClose: () => void
           </div>
         </div>
 
+        <p id='medical-upload-validation' role={validationError ? 'alert' : undefined} className='mt-4 text-sm text-ink'>{validationError}</p>
         {isUploading && (
           <div style={{ marginTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -259,7 +277,7 @@ function UploadRecordModal({ onClose, onUpload, onError }: { onClose: () => void
 
       <div style={{ padding: '20px 28px', borderTop: "1px solid var(--border)", display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
         <HoverBtn onClick={onClose} base={{ padding: '0 20px', minHeight: '44px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)", color: T.navy, fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>Cancel</HoverBtn>
-        <HoverBtn onClick={handleUpload} base={{ padding: '0 24px', minHeight: '44px', borderRadius: '12px', background: (docName && file && date) ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", border: 'none', color: (docName && file && date) ? '#fff' : T.slate2, fontSize: '13.5px', fontWeight: 700, cursor: (docName && file && date) ? 'pointer' : 'not-allowed', boxShadow: (docName && file && date) ? '0 5px 16px rgba(32,181,223,0.3)' : 'none' }} on={(docName && file && date && !isUploading) ? { transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.34)' } : {}}>
+        <HoverBtn onClick={handleUpload} disabled={isUploading} base={{ padding: '0 24px', minHeight: '44px', borderRadius: '12px', background: (docName && file && date) ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", border: 'none', color: (docName && file && date) ? '#fff' : T.slate2, fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', boxShadow: (docName && file && date) ? '0 5px 16px rgba(32,181,223,0.3)' : 'none' }} on={(docName && file && date && !isUploading) ? { transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.34)' } : {}}>
           {isUploading ? 'Uploading...' : 'Upload Record'}
         </HoverBtn>
       </div>
@@ -290,7 +308,7 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
         {record.clinicalNotes && (
           <div>
             <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Clinical Notes</h3>
-            <div style={{ padding: '16px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>{record.clinicalNotes}</div>
+            <div style={{ padding: '16px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", fontSize: '14px', color: T.slate, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{record.clinicalNotes}</div>
           </div>
         )}
 
@@ -334,6 +352,7 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
           )}
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
+          {record.sourceHref && <Link href={record.sourceHref} className='inline-flex min-h-11 items-center rounded-xl border border-theme bg-surface px-4 py-2 text-sm font-semibold text-ink hover:bg-surface-subtle'>{record.sourceType === 'medication' ? 'View medication instructions' : 'View lab request'}</Link>}
           <HoverBtn onClick={onClose} base={{ padding: '0 20px', minHeight: '44px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)", color: T.navy, fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>Close</HoverBtn>
         </div>
       </div>
@@ -450,13 +469,15 @@ function DeleteRecordModal({ record, onClose, onConfirm }: { record: MedicalReco
 
 function MedicalRecordsPageInner() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const recordId = searchParams.get('recordId')
-  const [records, setRecords] = useState<MedicalRecord[]>([])
-  const [timeline, setTimeline] = useState<TimelineEvent[]>([])
+  const resource = usePatientResource<{records?: Record<string, unknown>[]; timeline?: Record<string, unknown>[]}>(
+    '/api/v1/patient/medical-records', false, {refreshOnFocus: true, refreshIntervalMs: 30000},
+  )
+  const records = useMemo(() => (Array.isArray(resource.data?.records) ? resource.data.records : []).map(normalizeRecord), [resource.data])
+  const timeline = useMemo(() => (Array.isArray(resource.data?.timeline) ? resource.data.timeline : []).map(normalizeTimeline), [resource.data])
+  const loadingRecords = resource.loading
   const [activeTab, setActiveTab] = useState<RecordType | 'All Records'>('All Records')
   const [search, setSearch] = useState('')
-  const [loadingRecords, setLoadingRecords] = useState(true)
 
   // Modals
   const [isUploading, setIsUploading] = useState(false)
@@ -464,7 +485,13 @@ function MedicalRecordsPageInner() {
   const [previewState, setPreviewState] = useState<PreviewState | null>(null)
   const [deleteRecord, setDeleteRecord] = useState<MedicalRecord | null>(null)
   const [toast, setToast] = useState<string | null>(null)
-  const [healthInfo, setHealthInfo] = useState<PatientHealthInfo | null>(null)
+  const healthResource = usePatientResource<PatientHealthInfo>('/api/v1/patient/settings/health-info')
+  const healthInfo = healthResource.data
+  // Dialogs are resolved from the current account's current index on every render.
+  // A logout, account change or deleted order cannot leave an old patient's data open.
+  const activeRecord = selectedRecord ? records.find(record => record.id === selectedRecord.id) : null
+  const activePreviewRecord = previewState ? records.find(record => record.id === previewState.record.id) : null
+  const activeDeleteRecord = deleteRecord ? records.find(record => record.id === deleteRecord.id) : null
 
   // Filters
   const filteredRecords = useMemo(() => {
@@ -494,48 +521,14 @@ function MedicalRecordsPageInner() {
     window.setTimeout(() => setToast(null), 4000)
   }, [])
 
-  const loadRecords = useCallback(async () => {
-    try {
-      const payload = await getMedicalRecords()
-      setRecords((payload.records ?? []).map((item) => normalizeRecord(item)))
-      setTimeline((payload.timeline ?? []).map((item) => normalizeTimeline(item)))
-    } catch (error) {
-      console.error('Failed to load medical records:', error)
-      if (isAuthError(error)) {
-        clearAuthTokens()
-        router.replace('/auth/sign-in')
-        return
-      }
-      setRecords([])
-      setTimeline([])
-      setToast(getApiErrorDetail(error) ?? 'Medical records could not be loaded.')
-    } finally {
-      setLoadingRecords(false)
-    }
-  }, [router])
-
-  const loadHealthInfo = useCallback(async () => {
-    try {
-      setHealthInfo(await getPatientHealthInfo())
-    } catch (error) {
-      console.error('Failed to load health info:', error)
-      if (isAuthError(error)) {
-        clearAuthTokens()
-        router.replace('/auth/sign-in')
-      }
-    }
-  }, [router])
-
-  const handleUploadComplete = (newRecord: MedicalRecord) => {
-    setRecords((current) => [newRecord, ...current.filter((item) => item.id !== newRecord.id)])
+  const handleUploadComplete = () => {
     setIsUploading(false)
     showToast('Medical record uploaded successfully.')
-    void loadRecords()
+    resource.retry()
   }
 
-  const handleDeleteRecord = (recordId: string) => {
-    setRecords((current) => current.filter(r => r.id !== recordId))
-    setTimeline((current) => current.filter((item) => item.recordId !== recordId))
+  const handleDeleteRecord = () => {
+    resource.retry()
     showToast('Medical record deleted successfully.')
   }
 
@@ -587,7 +580,7 @@ function MedicalRecordsPageInner() {
     if (!deleteRecord) return
     try {
       await deleteMedicalRecord(deleteRecord.id)
-      handleDeleteRecord(deleteRecord.id)
+      handleDeleteRecord()
       setDeleteRecord(null)
       setSelectedRecord(null)
     } catch (error) {
@@ -595,15 +588,6 @@ function MedicalRecordsPageInner() {
       showToast(getApiErrorDetail(error) ?? 'Delete failed. Please try again.')
     }
   }
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadRecords()
-      void loadHealthInfo()
-    }, 0)
-
-    return () => window.clearTimeout(timer)
-  }, [loadHealthInfo, loadRecords])
 
   useEffect(() => {
     if (!recordId) return
@@ -626,6 +610,7 @@ function MedicalRecordsPageInner() {
       description="Securely access and manage your healthcare records, consultation history, and clinical documents in one place."
       headerActions={
         <>
+          <PortalButton disabled={resource.refreshing} onClick={resource.retry}>{resource.refreshing ? 'Refreshing records…' : 'Refresh records'}</PortalButton>
           <HoverBtn
             onClick={handleDownloadRecords}
             base={{ minHeight: '44px', padding: '0 16px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(4,53,77,0.06)', whiteSpace: 'nowrap' }}
@@ -647,18 +632,19 @@ function MedicalRecordsPageInner() {
           {/* Important Medical Info */}
           <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(20px)', borderRadius: '20px', border: "1px solid var(--border)", padding: '20px', boxShadow: Sh.card }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Important Medical Info</h3>
+            {healthResource.error && <div role='alert'><p>Medical profile could not be loaded.</p><PortalButton onClick={healthResource.retry}>Retry medical profile</PortalButton></div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: "1px solid var(--border)", paddingBottom: '8px' }}>
                 <span style={{ fontSize: '13px', color: T.slate }}>Blood Group</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: healthInfo?.blood_type ? T.red : T.slate2 }}>{healthInfo?.blood_type || 'Not set'}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: healthInfo?.blood_type ? T.red : T.slate2 }}>{healthInfo?.blood_type || (healthResource.loading ? 'Loading…' : healthResource.error ? 'Unavailable' : 'Not set')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: "1px solid var(--border)", paddingBottom: '8px' }}>
                 <span style={{ fontSize: '13px', color: T.slate }}>Known Allergies</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.allergies || 'Not recorded'}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.allergies || (healthResource.loading ? 'Loading…' : healthResource.error ? 'Unavailable' : 'Not recorded')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: "1px solid var(--border)", paddingBottom: '8px' }}>
                 <span style={{ fontSize: '13px', color: T.slate }}>Conditions</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.medical_conditions || 'Not recorded'}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.medical_conditions || (healthResource.loading ? 'Loading…' : healthResource.error ? 'Unavailable' : 'Not recorded')}</span>
               </div>
             </div>
           </div>
@@ -768,12 +754,13 @@ function MedicalRecordsPageInner() {
         </div>
 
         {/* Record List */}
+        {resource.error && <div role='alert' className='mb-4 rounded-xl border border-theme bg-surface-subtle p-4 text-ink'><p>{resource.errorMessage}</p><PortalButton onClick={resource.retry}>Retry medical records</PortalButton></div>}
         <div className="mr-card-grid">
           {loadingRecords ? (
             <div style={{ padding: '48px 24px', textAlign: 'center', background: "var(--surface-hover)", borderRadius: '16px', border: "1px dashed var(--border)" }}>
-              <p style={{ margin: 0, fontSize: '14px', color: T.slate }}>Loading medical records...</p>
+              <p role='status' style={{ margin: 0, fontSize: '14px', color: T.slate }}>Loading medical records...</p>
             </div>
-          ) : filteredRecords.length === 0 ? (
+          ) : resource.error ? null : filteredRecords.length === 0 ? (
             <div style={{ padding: '48px 24px', textAlign: 'center', background: "var(--surface-hover)", borderRadius: '16px', border: "1px dashed var(--border)" }}>
               <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'rgba(32,181,223,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: T.link }}>
                 <Ico p={ICONS.search} size={24} sw={1.5} />
@@ -796,6 +783,7 @@ function MedicalRecordsPageInner() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                       <span style={{ fontSize: "13px", fontWeight: 700, padding: '3px 8px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link }}>{record.type}</span>
                       <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>{record.date}</span>
+                      <ClinicalStatusBadge status={record.clinicalStatus ?? record.status} domain={record.sourceType === 'medication' ? 'medication' : record.sourceType === 'lab-request' ? 'lab-request' : 'record'} />
                     </div>
                     <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 800, color: T.navy }}>{record.title}</h3>
                     <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>{record.provider} <span style={{ color: T.slate2 }}>• {record.specialty}</span></p>
@@ -835,17 +823,17 @@ function MedicalRecordsPageInner() {
       </div>
 
       {isUploading && <UploadRecordModal onClose={() => setIsUploading(false)} onUpload={handleUploadComplete} onError={showToast} />}
-      {selectedRecord && (
+      {activeRecord && (
         <RecordDetailsModal
-          record={selectedRecord}
+          record={activeRecord}
           onClose={() => setSelectedRecord(null)}
-          onPreview={() => { void handlePreviewRecord(selectedRecord); setSelectedRecord(null) }}
-          onDownload={() => void handleDownloadRecord(selectedRecord)}
-          onDeleteRequest={() => setDeleteRecord(selectedRecord)}
+          onPreview={() => { void handlePreviewRecord(activeRecord); setSelectedRecord(null) }}
+          onDownload={() => void handleDownloadRecord(activeRecord)}
+          onDeleteRequest={() => setDeleteRecord(activeRecord)}
         />
       )}
-      {previewState && <PreviewModal preview={previewState} onClose={() => setPreviewState(null)} onDownload={() => void handleDownloadRecord(previewState.record)} />}
-      {deleteRecord && <DeleteRecordModal record={deleteRecord} onClose={() => setDeleteRecord(null)} onConfirm={() => void handleDeleteConfirmed()} />}
+      {previewState && activePreviewRecord && <PreviewModal preview={{...previewState, record: activePreviewRecord}} onClose={() => setPreviewState(null)} onDownload={() => void handleDownloadRecord(activePreviewRecord)} />}
+      {activeDeleteRecord && <DeleteRecordModal record={activeDeleteRecord} onClose={() => setDeleteRecord(null)} onConfirm={() => void handleDeleteConfirmed()} />}
 
       {/* Toast */}
       {toast && (

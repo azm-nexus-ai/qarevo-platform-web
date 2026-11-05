@@ -1,13 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import { T, Sh } from '@/lib/tokens'
 import {
-  clearAuthTokens,
+  apiGet,
+  apiPost,
+  apiDelete,
+  getApiErrorDetail,
   getDoctorPatients,
   isAuthError,
-  readAccessToken,
   type DoctorPatient,
 } from '@/lib/api'
 
@@ -28,15 +31,7 @@ type Medication = {
   created_by: string
 }
 
-export default function DoctorPrescriptionsPage() {
-  const router = useRouter()
-  const [patients, setPatients] = useState<DoctorPatient[]>([])
-  const [selectedPatientId, setSelectedPatientId] = useState('')
-  const [medications, setMedications] = useState<Medication[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newMed, setNewMed] = useState({
+const EMPTY_MEDICATION = {
     name: '',
     brand: '',
     strength: '',
@@ -48,26 +43,31 @@ export default function DoctorPrescriptionsPage() {
     times: [] as string[],
     refill: '',
     episode_id: '',
-  })
+  }
+
+export default function DoctorPrescriptionsPage() {
+  const router = useRouter()
+  const [patients, setPatients] = useState<DoctorPatient[]>([])
+  const [selectedPatientId, setSelectedPatientId] = useState('')
+  const [medications, setMedications] = useState<Medication[]>([])
+  const [loading, setLoading] = useState(false)
+  const operationInFlight = useRef(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newMed, setNewMed] = useState(EMPTY_MEDICATION)
+  const [pendingPatientId, setPendingPatientId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
-      router.replace('/auth/doctor/login')
-      return
-    }
-
     const fetchPatients = async () => {
       try {
         const data = await getDoctorPatients()
         setPatients(data.patients || [])
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
           router.replace('/auth/doctor/login')
           return
         }
-        console.error('Failed to load patients', err)
+        setError(getApiErrorDetail(err) || 'Unable to load assigned patients. Refresh this page to retry.')
       }
     }
 
@@ -77,31 +77,22 @@ export default function DoctorPrescriptionsPage() {
   const fetchMedications = async () => {
     if (!selectedPatientId) return
 
+    if (operationInFlight.current) return
+    operationInFlight.current = true
     setLoading(true)
     setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/prescriptions/${selectedPatientId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch medications')
-      }
-
-      const data = await response.json()
+      const data = await apiGet<{medications: Medication[]}>(`/api/v1/doctor/prescriptions/${selectedPatientId}`)
       setMedications(data.medications || [])
     } catch (err) {
       if (isAuthError(err)) {
-        clearAuthTokens()
         router.replace('/auth/doctor/login')
         return
       }
       console.error('Failed to load medications', err)
-      setError('Unable to load medications')
+      setError(getApiErrorDetail(err) || 'Unable to load medications. Please retry.')
     } finally {
+      operationInFlight.current = false
       setLoading(false)
     }
   }
@@ -109,45 +100,20 @@ export default function DoctorPrescriptionsPage() {
   const handleAddMedication = async () => {
     if (!selectedPatientId || !newMed.name.trim() || !newMed.strength.trim()) { setError('Select a patient and enter the medication name and strength before saving.'); return }
 
+    if (operationInFlight.current) return
+    operationInFlight.current = true
     setLoading(true)
+    setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/prescriptions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          patient_id: selectedPatientId,
-          ...newMed,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to add medication')
-      }
-
-      const data = await response.json()
+      const data = await apiPost<{medications: Medication[]}>(`/api/v1/doctor/prescriptions`, { patient_id: selectedPatientId, ...newMed })
       setMedications(data.medications || [])
-      setNewMed({
-        name: '',
-        brand: '',
-        strength: '',
-        dosage: '',
-        frequency: '',
-        duration: '',
-        instructions: '',
-        food: '',
-        times: [],
-        refill: '',
-        episode_id: '',
-      })
+      setNewMed(EMPTY_MEDICATION)
       setShowAddForm(false)
     } catch (err) {
-      console.error('Failed to add medication', err)
-      setError('Failed to add medication')
+      if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
+      setError(getApiErrorDetail(err) || 'Unable to add medication. Please retry.')
     } finally {
+      operationInFlight.current = false
       setLoading(false)
     }
   }
@@ -155,26 +121,18 @@ export default function DoctorPrescriptionsPage() {
   const handleDeleteMedication = async (medId: string) => {
     if (!selectedPatientId) return
 
+    if (operationInFlight.current) return
+    operationInFlight.current = true
     setLoading(true)
+    setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/prescriptions/${selectedPatientId}/${medId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete medication')
-      }
-
-      const data = await response.json()
+      const data = await apiDelete<{medications: Medication[]}>(`/api/v1/doctor/prescriptions/${selectedPatientId}/${medId}`)
       setMedications(data.medications || [])
     } catch (err) {
-      console.error('Failed to delete medication', err)
-      setError('Failed to delete medication')
+      if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
+      setError(getApiErrorDetail(err) || 'Unable to delete medication. Please retry.')
     } finally {
+      operationInFlight.current = false
       setLoading(false)
     }
   }
@@ -185,6 +143,19 @@ export default function DoctorPrescriptionsPage() {
     } else {
       setNewMed({ ...newMed, times: [...newMed.times, time] })
     }
+  }
+
+  const changePatient = (patientId: string) => {
+    setSelectedPatientId(patientId)
+    setMedications([])
+    setNewMed(EMPTY_MEDICATION)
+    setError(null)
+    setShowAddForm(false)
+    setPendingPatientId(null)
+  }
+  const requestPatientChange = (patientId: string) => {
+    if (JSON.stringify(newMed) !== JSON.stringify(EMPTY_MEDICATION)) setPendingPatientId(patientId)
+    else changePatient(patientId)
   }
 
   return (
@@ -199,10 +170,11 @@ export default function DoctorPrescriptionsPage() {
 
       {/* Patient Selection */}
       <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
-        <select
+        <label htmlFor="clinical-patient-select" style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
+        <select id="clinical-patient-select"
           value={selectedPatientId}
-          onChange={(e) => setSelectedPatientId(e.target.value)}
+          onChange={(e) => requestPatientChange(e.target.value)}
+          disabled={loading}
           style={{
             width: '100%',
             padding: '14px 16px',
@@ -251,7 +223,7 @@ export default function DoctorPrescriptionsPage() {
       </div>
 
       {error && (
-        <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
+        <div role="alert" style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
       )}
 
       {/* Add Medication Button */}
@@ -560,11 +532,14 @@ export default function DoctorPrescriptionsPage() {
         </div>
       )}
 
-      {medications.length === 0 && selectedPatientId && !loading && (
+      {medications.length === 0 && selectedPatientId && !loading && !error && (
         <div style={{ textAlign: 'center', padding: '40px', color: T.slate2 }}>
           <p>No medications found for this patient</p>
         </div>
       )}
+      <UnsavedChangesDialog open={pendingPatientId !== null} busy={loading}
+        onKeepEditing={() => setPendingPatientId(null)}
+        onDiscard={() => { if (pendingPatientId !== null) changePatient(pendingPatientId) }} />
     </div>
   )
 }

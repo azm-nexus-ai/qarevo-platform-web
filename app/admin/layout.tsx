@@ -14,10 +14,10 @@ import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import Link from 'next/link'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   isAdmin,
   logoutCurrentUser,
-  readAccessToken,
+  readSessionMarker,
 } from '@/lib/api'
 
 export default function AdminLayout({
@@ -34,14 +34,14 @@ export default function AdminLayout({
   useEffect(() => {
     const mountedTimer = window.setTimeout(() => setMounted(true), 0)
 
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/admin/login')
       return () => window.clearTimeout(mountedTimer)
     }
 
     if (!isAdmin()) {
-      clearAuthTokens()
+      clearPortalSession()
       router.replace('/auth/admin/login')
       return () => window.clearTimeout(mountedTimer)
     }

@@ -7,7 +7,8 @@ import { useRef, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import { useTheme } from '@/components/ui/ThemeProvider'
-import { THEME_KEY } from '@/lib/theme'
+import { themeKey } from '@/lib/theme'
+import { currentPortal } from '@/lib/portal-scope'
 import { usePortalRole } from '@/lib/portal-navigation'
 import { SIDEBAR_PREFERENCE_CHANGED } from '@/components/layout/SidebarToggle'
 
@@ -34,14 +35,15 @@ export default function Footer() {
   const [message, setMessage] = useState('')
   function resetAppearance() {
     let persisted = true
+    const activePortal = currentPortal()
     setTheme('light')
-    try { localStorage.removeItem(THEME_KEY) } catch { persisted = false }
-    for (const role of ['patient', 'patient-right', 'doctor', 'admin']) {
+    try { localStorage.removeItem(themeKey(activePortal)) } catch { persisted = false }
+    for (const role of activePortal === 'patient' ? ['patient', 'patient-right'] : [activePortal]) {
       document.documentElement.setAttribute(`data-${role}-sidebar`, 'expanded')
       try { localStorage.removeItem(`qarevo.sidebar.${role}`) } catch { persisted = false }
     }
     window.dispatchEvent(new Event(SIDEBAR_PREFERENCE_CHANGED))
-    setMessage(persisted ? 'Saved appearance preferences cleared. Your account and sign-in are unchanged.' : 'Appearance reset for this page. Browser storage could not be updated.')
+    setMessage(persisted ? 'This portal’s appearance preferences were cleared. Your other portals, account and sign-in are unchanged.' : 'Appearance reset for this page. Browser storage could not be updated.')
   }
   return <footer className='corporate-footer' data-portal-footer={portal}>
     <div className='corporate-footer-content'>
@@ -63,7 +65,7 @@ export default function Footer() {
     </div>
     <dialog ref={dialog} aria-labelledby='cookie-preferences-title' className='preferences-dialog' onClose={() => trigger.current?.focus()}>
       <h2 id='cookie-preferences-title'>Cookie & storage preferences</h2>
-      <p>These controls manage appearance preferences stored in this browser: your theme and each portal’s sidebar layout.</p>
+      <p>These controls manage this portal’s theme and sidebar layout in this browser. Other portals keep their own appearance preferences.</p>
       <p>Sign-in, security and account-specific working data are managed separately. Clearing appearance preferences does not sign you out or delete your profile.</p>
       <p>The complete cookie and storage notice remains under review. <Link href='/cookies' onClick={() => dialog.current?.close()}>Read the current status</Link>.</p>
       {message && <p role='status'>{message}</p>}

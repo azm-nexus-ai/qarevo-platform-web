@@ -1,5 +1,7 @@
 'use client'
 
+import { currentPortal, isPortalEvent } from '@/lib/portal-scope'
+import { ACCOUNT_CHANGED } from '@/lib/account-storage'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -11,7 +13,7 @@ import { NAV_LINKS, NAV_ANCHORS } from '@/constants/navigation'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
-import { logoutCurrentUser, readAccessToken } from '@/lib/api'
+import { logoutCurrentUser, readSessionMarker } from '@/lib/api'
 
 export default function NavigationBar() {
   const [activeSection, setActiveSection] = useState<string>('Platform Overview')
@@ -28,20 +30,20 @@ export default function NavigationBar() {
 
   useEffect(() => {
     const checkAuth = () => {
-      const token = readAccessToken()
-      setIsAuthenticated(!!token)
+      try { setIsAuthenticated(!!readSessionMarker()) } catch {setIsAuthenticated(false)}
     }
 
     checkAuth()
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'qarevo_access_token' || e.key === 'qarevo_refresh_token') {
+      if (isPortalEvent(e)) {
         checkAuth()
       }
     }
 
     window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    window.addEventListener(ACCOUNT_CHANGED,checkAuth)
+    return () => {window.removeEventListener('storage', handleStorageChange);window.removeEventListener(ACCOUNT_CHANGED,checkAuth)}
   }, [])
 
   useEffect(() => {
@@ -55,11 +57,16 @@ export default function NavigationBar() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const handleLogout = () => {
-    void logoutCurrentUser().catch(() => console.warn('Server logout could not be confirmed.'))
-    setIsAuthenticated(false)
-    setShowLogoutModal(false)
-    router.push('/auth/sign-in')
+  const handleLogout = async () => {
+    const portal = currentPortal()
+    const destination = portal === 'patient' ? '/auth/sign-in' : `/auth/${portal}/login`
+    try { await logoutCurrentUser() }
+    catch { console.warn('Server logout could not be confirmed.') }
+    finally {
+      setIsAuthenticated(false)
+      setShowLogoutModal(false)
+      router.replace(destination)
+    }
   }
 
   // Sticky shrink + glassmorphism intensify on scroll

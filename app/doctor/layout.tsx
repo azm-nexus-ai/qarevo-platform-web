@@ -12,13 +12,18 @@ import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import Link from 'next/link'
 import DoctorMobileNavigation from '@/components/doctor/DoctorMobileNavigation'
+import ProfileAvatar from '@/components/branding/ProfileAvatar'
+import PortalAccountMenu from '@/components/layout/PortalAccountMenu'
+import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
+import { isPortalEvent } from '@/lib/portal-scope'
+import { subscribeProfileChanges } from '@/lib/profile-events'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorProfile,
   isAuthError,
   isProvider,
   logoutCurrentUser,
-  readAccessToken,
+  readSessionMarker,
   type DoctorProfileResponse,
 } from '@/lib/api'
 
@@ -31,33 +36,36 @@ export default function DoctorLayout({
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const [doctorProfile, setDoctorProfile] = useState<DoctorProfileResponse | null>(null)
+  const [identityRevision, setIdentityRevision] = useState(0)
   const [loggingOut, setLoggingOut] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   useEffect(() => {
     const mountedTimer = window.setTimeout(() => setMounted(true), 0)
 
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return () => window.clearTimeout(mountedTimer)
     }
 
     if (!isProvider()) {
-      clearAuthTokens()
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return () => window.clearTimeout(mountedTimer)
     }
 
     let cancelled = false
+    const scope = readAccountScope('doctor')
 
     async function fetchProfile() {
       try {
         const profile = await getDoctorProfile()
-        if (!cancelled) setDoctorProfile(profile)
+        if (!cancelled && scope === readAccountScope('doctor')) setDoctorProfile(profile)
       } catch (error) {
+        if (cancelled || scope !== readAccountScope('doctor')) return
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/doctor/login')
           return
         }
@@ -65,17 +73,19 @@ export default function DoctorLayout({
       }
     }
 
-    fetchProfile()
+    void fetchProfile()
+    const unsubscribe = subscribeProfileChanges('doctor', () => { void fetchProfile() })
+    const reset = (event: Event) => { if (!isPortalEvent(event, 'doctor')) return; setDoctorProfile(null); setIdentityRevision(value => value + 1) }
+    window.addEventListener(ACCOUNT_CHANGED, reset)
+    window.addEventListener('storage', reset)
 
     return () => {
       cancelled = true
+      unsubscribe()
+      window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset)
       window.clearTimeout(mountedTimer)
     }
-  }, [router])
-
-  const handleProfileClick = () => {
-    router.push('/doctor/profile')
-  }
+  }, [router, identityRevision])
 
   const handleSettingsClick = () => {
     router.push('/doctor/settings')
@@ -95,20 +105,13 @@ export default function DoctorLayout({
       console.error('Doctor logout failed before local cleanup', error)
     } finally {
       setShowLogoutConfirm(false)
-      router.replace('/auth/sign-in')
+      router.replace('/auth/doctor/login')
     }
   }
 
   const fullName = doctorProfile?.full_name?.trim() || 'Doctor'
   const displayName = fullName.toLowerCase().startsWith('dr.') ? fullName : `Dr. ${fullName}`
   const specialty = doctorProfile?.specialty || 'Doctor'
-  const initials = fullName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'DR'
-
   return (
     <div className='doctor-portal-shell portal-shell' style={{ minHeight: '100vh', background: PAGE_BG }}>
       <DoctorMobileNavigation />
@@ -183,19 +186,7 @@ export default function DoctorLayout({
                 >
                   {loggingOut ? 'Signing out...' : 'Sign out'}
                 </button>
-                <button
-                  onClick={handleProfileClick}
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)", cursor: 'pointer', transition: 'all 0.15s' }}
-                  title="View Profile"
-                >
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.25)' }}>
-                    {initials}
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: T.navy, lineHeight: 1.2 }}>{displayName}</p>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1 }}>{specialty}</p>
-                  </div>
-                </button>
+                <PortalAccountMenu portal='doctor' name={displayName} description={specialty} avatar={<ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={36} />} profileHref='/doctor/profile' settingsHref='/doctor/settings' />
               </div>
             </div>
           </header>

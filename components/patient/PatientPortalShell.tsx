@@ -9,7 +9,7 @@ import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
-import { getPatientSettings, isAuthError, clearAuthTokens, logoutCurrentUser, type PatientSettings } from '@/lib/api'
+import { getPatientSettings, isAuthError, clearPortalSession, logoutCurrentUser, type PatientSettings } from '@/lib/api'
 
 type PatientPortalShellProps = {
   eyebrow?: string
@@ -30,10 +30,10 @@ type PatientPortalShellProps = {
 
 function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: string; onNavigate?: () => void; userSettings: PatientSettings | null }) {
   const router = useRouter()
-  const signOut = () => {
-    void logoutCurrentUser().catch(() => console.warn('Server logout could not be confirmed.'))
-    onNavigate?.()
-    router.replace('/auth/sign-in')
+  const signOut = async () => {
+    try { await logoutCurrentUser() }
+    catch { console.warn('Server logout could not be confirmed.') }
+    finally { onNavigate?.(); router.replace('/auth/sign-in') }
   }
   const fullName = userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'
 
@@ -134,7 +134,7 @@ export default function PatientPortalShell({
         setUserSettings(data)
       } catch (error) {
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           window.location.href = '/auth/sign-in'
           return
         }

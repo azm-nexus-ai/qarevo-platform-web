@@ -19,7 +19,7 @@ import DoctorCard from '@/components/cards/DoctorCard'
 import { doctorVerification } from '@/lib/doctor-verification'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
-import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuthError, clearAuthTokens, type PatientSettings, type PatientDoctor } from '@/lib/api'
+import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuthError, clearPortalSession, type PatientSettings, type PatientDoctor } from '@/lib/api'
 
 function getQuickBookServiceType(
   consultationType: string,
@@ -168,7 +168,7 @@ export default function FindDoctorPage() {
         setUserSettings(data)
       } catch (error) {
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           window.location.href = '/auth/sign-in'
           return
         }
@@ -186,7 +186,7 @@ export default function FindDoctorPage() {
         setRecommendedDoctors(response.doctors || [])
       } catch (error) {
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           window.location.href = '/auth/sign-in'
           return
         }
@@ -231,7 +231,7 @@ export default function FindDoctorPage() {
       } catch (error) {
         console.error('Failed to load doctors', error)
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           window.location.href = '/auth/sign-in'
           return
         }

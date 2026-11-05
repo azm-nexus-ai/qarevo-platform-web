@@ -6,7 +6,7 @@ import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getAdminConfigs,
   getAdminConfig,
   createAdminConfig,
@@ -14,7 +14,7 @@ import {
   deleteAdminConfig,
   bulkUpdateAdminConfigs,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   isAdmin,
   type AdminSystemConfig,
   type AdminCreateConfigRequest,
@@ -118,8 +118,8 @@ export default function SystemConfigPage() {
   })
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/admin/login')
       return
     }
@@ -140,7 +140,7 @@ export default function SystemConfigPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/admin/login')
           return
         }

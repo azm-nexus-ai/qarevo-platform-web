@@ -1,7 +1,9 @@
+import {seedPortalSession} from './helpers/portal-session'
 import { test, expect, type BrowserContext } from '@playwright/test'
 
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
 async function providers(context: BrowserContext, enabled = false) {
+  await context.route('**/api/v1/browser-csrf',route=>route.fulfill({json:{csrf_token:'synthetic-csrf'}}))
   await context.route('**/api/v1/auth/social/providers', route => route.fulfill({ headers: cors, json: { google: { enabled, message: null }, apple: { enabled, message: null } } }))
 }
 
@@ -105,17 +107,13 @@ test('provider start shows accessible loading, blocks duplicate starts and expos
 })
 
 test('security password fields have visibility, inline validation, cancel and confirmed session revocation', async ({ page, context }) => {
-  await context.addInitScript(() => {
-    localStorage.setItem('qarevo_access_token', 'synthetic-batch2-access')
-    localStorage.setItem('qarevo_refresh_token', 'synthetic-batch2-refresh')
-    localStorage.setItem('qarevo_user_id', 'synthetic-batch2-owner')
-    localStorage.setItem('qarevo_role', 'ADMIN')
-  })
+  const identity = await seedPortalSession(context, 'admin', {user_id:'synthetic-batch2-owner'})
   let revocations = 0
   await context.route('**/api/v1/**', route => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
     const path = new URL(route.request().url()).pathname
-    if (path.startsWith('/api/v1/session')) return route.fulfill({ headers: cors, json: { server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now() + 900000).toISOString(), absolute_expires_at: new Date(Date.now() + 28800000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
+    if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
+    if (path.startsWith('/api/v1/session')) return route.fulfill({ headers: cors, json:{browser_session:identity,server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now() + 900000).toISOString(), absolute_expires_at: new Date(Date.now() + 28800000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
     if (path === '/api/v1/security') return route.fulfill({ headers: cors, json: { password_change_available: true, mfa: { enabled: false, available: false, method: null, message: 'Administrator MFA enrollment is not implemented yet.' }, sessions: [], sessions_total: 0 } })
     if (path === '/api/v1/security/sessions/revoke-others') { revocations++; return route.fulfill({ headers: cors, json: { message: 'Other devices signed out.', current_session_revoked: false } }) }
     return route.fulfill({ status: 404, headers: cors, json: { detail: 'No synthetic fixture' } })

@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { ApiError, AuthTokenResponse, apiPost, getApiErrorDetail, storeAuthTokens } from '@/lib/api'
+import { ApiError, AuthTokenResponse, apiPost, getApiErrorDetail } from '@/lib/api'
 
 // Page background
 const PAGE_BG = [
@@ -225,7 +225,7 @@ export default function Doctor2FAPage() {
   // Load stored identifier on mount
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const storedIdentifier = localStorage.getItem('doctor_identifier')
+      const storedIdentifier = sessionStorage.getItem('qarevo:doctor:identifier')
       if (storedIdentifier?.includes('@')) {
         setEmail(storedIdentifier)
       }
@@ -265,15 +265,8 @@ export default function Doctor2FAPage() {
     verifyingRef.current = true
 
     try {
-      const tempToken = localStorage.getItem('doctor_temp_token')
-      const headers: Record<string, string> | undefined = tempToken ? { Authorization: `Bearer ${tempToken}` } : undefined
-
-      const response = await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-email', { email: email || undefined, code }, headers)
-
-      // Clear temp tokens
-      localStorage.removeItem('doctor_temp_token')
-      localStorage.removeItem('doctor_identifier')
-      storeAuthTokens({ ...response, role: 'PROVIDER' })
+      const response = await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-email', { email: email || undefined, code })
+      sessionStorage.removeItem('qarevo:doctor:identifier')
 
       // Redirect to doctor dashboard
       router.push(safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PROVIDER') || '/doctor/dashboard')
@@ -286,8 +279,7 @@ export default function Doctor2FAPage() {
   }
 
   const handleBack = () => {
-    localStorage.removeItem('doctor_temp_token')
-    localStorage.removeItem('doctor_identifier')
+    sessionStorage.removeItem('qarevo:doctor:identifier')
     router.push('/auth/doctor/login')
   }
 

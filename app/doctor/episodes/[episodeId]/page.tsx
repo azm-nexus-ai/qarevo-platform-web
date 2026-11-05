@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorEpisodeClinicalContext,
   performAIDraftAction,
   getEpisodeTimeline,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   type DoctorEpisodeClinicalContextResponse,
   type AIDraftActionRequest,
   type EpisodeTimelineResponse,
@@ -111,8 +111,8 @@ export default function DoctorEpisodeDetailPage() {
   }
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -132,7 +132,7 @@ export default function DoctorEpisodeDetailPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }

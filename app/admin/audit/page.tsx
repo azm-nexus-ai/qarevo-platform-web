@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getAdminAuditLogs,
   getActionSummary,
   exportAdminAuditLogs,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   isAdmin,
   type AdminAuditLog,
   type AdminActionSummary,
@@ -84,8 +84,8 @@ export default function AuditLogsPage() {
   const [dateTo, setDateTo] = useState('')
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/admin/login')
       return
     }
@@ -112,7 +112,7 @@ export default function AuditLogsPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/admin/login')
           return
         }

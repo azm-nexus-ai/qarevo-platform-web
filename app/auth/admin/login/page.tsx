@@ -6,7 +6,7 @@ import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import Link from 'next/link'
 import { useLoginCooldown } from '@/lib/use-login-cooldown'
 import { T } from '@/lib/tokens'
-import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginAdmin, storeAuthTokens } from '@/lib/api'
+import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginAdmin } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
@@ -69,7 +69,6 @@ export default function AdminLoginPage() {
 
     try {
       const response = await loginAdmin({ email: email.trim(), password })
-      storeAuthTokens({ ...response, role: 'ADMIN' })
       router.push('/admin/dashboard')
     } catch (error) {
       cooldown.record(error)

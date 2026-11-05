@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { verifyOtp, storeAuthTokens } from '@/lib/api'
+import { verifyOtp } from '@/lib/api'
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const RESEND_SECS   = 60
@@ -446,15 +446,7 @@ function OtpPageContent() {
       const response = await verifyOtp(requestBody)
 
       // Store auth tokens if returned
-      if (response.access_token && response.refresh_token) {
-        storeAuthTokens({
-          access_token: response.access_token,
-          refresh_token: response.refresh_token,
-          token_type: response.token_type,
-          expires_in: response.expires_in,
-          user_id: response.user_id,
-          role: 'PATIENT'
-        })
+      if (response.browser_session) {
       }
 
       // Redirect to account-created or dashboard based on verification status

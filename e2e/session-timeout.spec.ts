@@ -1,24 +1,19 @@
+import {seedPortalSession} from './helpers/portal-session'
 import { test, expect, type BrowserContext } from '@playwright/test'
 
 async function prepare(context: BrowserContext, role: 'PATIENT' | 'PROVIDER' | 'ADMIN', seconds = 90) {
   const state = { activity: 0, reads: 0, logouts: 0, unavailable: false, absolute: false, seconds }
-  await context.addInitScript(role => {
-    if (sessionStorage.getItem('synthetic-session-seeded')) return
-    sessionStorage.setItem('synthetic-session-seeded', '1')
-    localStorage.setItem('qarevo_access_token', 'synthetic-access')
-    localStorage.setItem('qarevo_refresh_token', 'synthetic-refresh')
-    localStorage.setItem('qarevo_user_id', 'synthetic-session-user')
-    localStorage.setItem('qarevo_role', role)
-  }, role)
+  const identity = await seedPortalSession(context, ({PATIENT:'patient',PROVIDER:'doctor',ADMIN:'admin'} as const)[role], {user_id:'synthetic-session-user'})
   await context.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
+    if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
     const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
     if (path === '/api/v1/session' || path === '/api/v1/session/activity') {
       if (path.endsWith('activity')) state.activity++; else state.reads++
       if (state.unavailable) return route.fulfill({ status: 503, headers, json: { detail: 'Synthetic outage' } })
       if (path.endsWith('activity')) state.seconds = 900
-      return route.fulfill({ headers, json: { server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+state.seconds*1000).toISOString(), absolute_expires_at: new Date(Date.now()+(state.absolute ? state.seconds : 28_800)*1000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
+      return route.fulfill({ headers, json:{browser_session:identity,server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+state.seconds*1000).toISOString(), absolute_expires_at: new Date(Date.now()+(state.absolute ? state.seconds : 28_800)*1000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } })
     }
     if (path === '/api/v1/auth/logout') { state.logouts++; return route.fulfill({ headers, json: { message: 'Logged out' } }) }
     if (path.endsWith('/settings')) return route.fulfill({ headers, json: { user_id: 'synthetic-session-user', emergency_contacts: [] } })
@@ -63,7 +58,8 @@ for (const [role, path, login] of [
     await page.goto(path)
     await expect(page.getByRole('dialog', { name: 'Your session is ending soon' })).toBeVisible()
     await expect(page).toHaveURL(new RegExp(login+'$'), { timeout: 10_000 })
-    expect(await page.evaluate(() => localStorage.getItem('qarevo_access_token'))).toBeNull()
+    const portal = ({PATIENT:'patient',PROVIDER:'doctor',ADMIN:'admin'} as const)[role]
+    expect(await page.evaluate(portal => localStorage.getItem(`qarevo:${portal}:identity`), portal)).toBeNull()
     expect(state.logouts).toBe(1)
   })
 }
@@ -95,12 +91,12 @@ test('absolute expiry warning permits saving work but does not offer renewal', a
   expect(state.activity).toBe(0)
 })
 
-test('unavailable authority blocks private content with retry and sign-out', async ({ page, context }) => {
+test('unavailable authority blocks private content with an actionable retry', async ({ page, context }) => {
   const state = await prepare(context, 'PATIENT', 900)
   state.unavailable = true
   await page.goto('/patient/billing')
   await expect(page.getByRole('heading', { name: 'Billing & Payments' })).toHaveCount(0)
-  await expect(page.getByRole('region', { name: 'Session verification' }).getByRole('alert')).toContainText('could not confirm your session')
+  await expect(page.getByRole('alert')).toContainText('Secure access could not be confirmed')
   state.unavailable = false
   await page.getByRole('button', { name: 'Retry connection' }).click()
   await expect(page.getByRole('heading', { name: 'Billing & Payments' })).toBeVisible()
@@ -134,7 +130,8 @@ for (const [role, portal, path] of [
     await preferences.getByRole('button', { name: 'Clear appearance preferences' }).click()
     await expect(preferences.getByRole('status')).toContainText('account and sign-in are unchanged')
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-    expect(await page.evaluate(() => localStorage.getItem('qarevo_access_token'))).toBe('synthetic-access')
+    expect(await page.evaluate(portal => JSON.parse(localStorage.getItem(`qarevo:${portal}:identity`) || 'null')?.session_id, portal)).toBe(`synthetic-${portal}-session`)
+    expect(await page.evaluate(() => localStorage.getItem('qarevo_access_token'))).toBeNull()
     await preferences.getByRole('button', { name: 'Close preferences' }).click()
     await expect(page.getByRole('button', { name: 'Cookie preferences', exact: true })).toBeFocused()
     await expect(page.locator(`#${portal}-primary-sidebar`)).toBeVisible()
