@@ -39,7 +39,7 @@ export default function DoctorAppointments() {
       } catch (err) {
         if (isAuthError(err)) {
           clearPortalSession()
-          router.replace('/auth/sign-in')
+          router.replace('/auth/doctor/login')
           return
         }
         console.error('Failed to load doctor appointments', err)
@@ -105,6 +105,7 @@ export default function DoctorAppointments() {
         </div>
         <div className="flex items-center space-x-4 flex-shrink-0">
           <select
+            aria-label="Appointment status"
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value)
@@ -150,10 +151,11 @@ export default function DoctorAppointments() {
           ) : (
             <div className="space-y-4">
               {appointmentsData.appointments.map((appointment) => (
-                <div
+                <button
+                  type="button"
                   key={appointment.appointment_id}
                   onClick={() => handleViewDetails(appointment.appointment_id)}
-                  className="flex items-center justify-between p-4 bg-canvas rounded-lg hover:bg-surface-subtle cursor-pointer transition-colors flex-col sm:flex-row gap-4"
+                  className="flex w-full items-center justify-between p-4 bg-canvas rounded-lg hover:bg-surface-subtle cursor-pointer transition-colors flex-col sm:flex-row gap-4 text-left"
                 >
                   <div className="flex items-center space-x-4 w-full sm:w-auto">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -177,7 +179,7 @@ export default function DoctorAppointments() {
                     </span>
                     <span className="text-muted">→</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
