@@ -102,7 +102,11 @@ test('legacy OTP resend uses the email API, reports failure honestly, and never 
   })
   await page.clock.install()
   await page.goto('/auth/otp?email=patient%40example.invalid')
+  // SSR displays the countdown before hydration has installed its interval.
+  // The OTP mount effect focuses this field after React commits the page.
+  await expect(page.getByLabel('Digit 1 of 6', {exact: true})).toBeFocused()
   await page.clock.runFor(61000)
+  await expect(page.getByRole('button', {name: 'Resend Code', exact: true})).toBeEnabled()
   await page.getByRole('button', {name: 'Resend Code', exact: true}).click()
   await expect(page.getByRole('alert').filter({hasText: 'Synthetic email delivery unavailable.'})).toBeVisible()
   await expect(page.getByText('Verification email requested. Check your inbox and spam folder.', {exact: true})).toHaveCount(0)
