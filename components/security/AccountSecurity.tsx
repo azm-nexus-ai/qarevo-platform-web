@@ -3,6 +3,8 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { apiDelete, apiGet, apiPost, clearPortalSession, getApiErrorDetail } from '@/lib/api'
 import { recoveryPortal } from '@/lib/auth-recovery'
+import { readAccountScope } from '@/lib/account-storage'
+import { usePortalAction } from '@/lib/portal-action'
 import ActionLink from '@/components/ui/ActionLink'
 import PasswordField from './PasswordField'
 import styles from './AccountSecurity.module.css'
@@ -37,7 +39,7 @@ function lastActive(value: string) {
 export default function AccountSecurity() {
   const router = useRouter()
   const pathname = usePathname()
-  const login = recoveryPortal(pathname.startsWith('/admin') ? '/auth/admin/login' : pathname.startsWith('/doctor') ? '/auth/doctor/login' : '/auth/sign-in').signIn
+  const captureAction = usePortalAction()
   const [data, setData] = useState<Security | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -48,36 +50,66 @@ export default function AccountSecurity() {
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const busyRef = useRef(false)
   const errorTarget = useRef<HTMLParagraphElement>(null)
+  const focusError = useRef<(() => boolean) | null>(null)
   const form = useRef<HTMLFormElement>(null)
-  const load = useCallback(async () => {
-    setLoading(true); setError('')
-    try { setData(await apiGet<Security>('/api/v1/security')) }
-    catch (failure) { setError(getApiErrorDetail(failure) || 'Security settings could not be loaded.') }
-    finally { setLoading(false) }
+  const loadGeneration = useRef(0)
+  const showError = useCallback((message: string, action: ReturnType<typeof captureAction>, focus = false) => {
+    if (!action.isCurrent()) return
+    focusError.current = focus ? action.isCurrent : null
+    setError(message)
+    // The paragraph can already exist on a repeated failed user action.
+    if (focus) errorTarget.current?.focus()
   }, [])
+  const load = useCallback(async (focusOnFailure = false) => {
+    const action = captureAction()
+    if (!action.isCurrent() || action.scope === null) return
+    const generation = ++loadGeneration.current
+    const current = () => action.isCurrent() && generation === loadGeneration.current
+    setLoading(true); setError('')
+    try {
+      const result = await apiGet<Security>('/api/v1/security')
+      if (current()) setData(result)
+    } catch (failure) {
+      if (current()) showError(getApiErrorDetail(failure) || 'Security settings could not be loaded.', action, focusOnFailure)
+    } finally { if (current()) setLoading(false) }
+  }, [captureAction, showError])
   useEffect(() => { void load() }, [load])
-  useEffect(() => { if (error) errorTarget.current?.focus() }, [error])
-  const signOut = () => { clearPortalSession(); router.replace(login) }
+  useEffect(() => {
+    const canFocus = focusError.current
+    focusError.current = null
+    if (error && canFocus?.()) errorTarget.current?.focus()
+  }, [error])
+  const finishRevocation = (action: ReturnType<typeof captureAction>) => {
+    // Password/revoke-all already clear their captured session in the API.
+    // A self-session DELETE still needs cleanup, scoped to its initiating identity.
+    if (action.scope !== null && readAccountScope(action.portal) === action.scope) clearPortalSession(action.portal)
+    if (action.isCurrent({ allowEndedSession: true })) {
+      const login = recoveryPortal(action.portal === 'admin' ? '/auth/admin/login' : action.portal === 'doctor' ? '/auth/doctor/login' : '/auth/sign-in').signIn
+      router.replace(login)
+    }
+  }
   const update = (key: FieldKey, value: string) => {
     setValues(previous => ({ ...previous, [key]: value }))
     setFieldErrors(previous => ({ ...previous, [key]: undefined }))
     setError(''); setNotice('')
   }
   async function mutate(action: Confirmation) {
-    if (busyRef.current) return
+    const context = captureAction()
+    if (busyRef.current || !context.isCurrent() || context.scope === null) return
     busyRef.current = true; setBusy(true); setError(''); setNotice(''); setConfirmation(null)
     try {
       const result = action.method === 'POST'
         ? await apiPost<{ message: string; current_session_revoked: boolean }>(action.path, {})
         : await apiDelete<{ message: string; current_session_revoked: boolean }>(action.path)
-      if (result.current_session_revoked) { signOut(); return }
-      setNotice(result.message); await load()
-    } catch (failure) { setError(getApiErrorDetail(failure) || 'The security action failed. Please retry.'); errorTarget.current?.focus() }
-    finally { busyRef.current = false; setBusy(false) }
+      if (result.current_session_revoked) { finishRevocation(context); return }
+      if (context.isCurrent()) { setNotice(result.message); await load(true) }
+    } catch (failure) { showError(getApiErrorDetail(failure) || 'The security action failed. Please retry.', context, true) }
+    finally { busyRef.current = false; if (context.isCurrent()) setBusy(false) }
   }
   async function changePassword(event: React.FormEvent) {
     event.preventDefault()
-    if (busyRef.current) return
+    const context = captureAction()
+    if (busyRef.current || !context.isCurrent() || context.scope === null) return
     setError(''); setNotice('')
     const next: Partial<Record<FieldKey, string>> = {}
     if (!values.current) next.current = 'Enter your current password.'
@@ -93,16 +125,17 @@ export default function AccountSecurity() {
     busyRef.current = true; setBusy(true)
     try {
       await apiPost('/api/v1/security/password', { current_password: values.current, new_password: values.password })
-      setValues({ current: '', password: '', confirmation: '' }); signOut()
-    } catch (failure) { setError(getApiErrorDetail(failure) || 'Your password could not be changed.'); errorTarget.current?.focus() }
-    finally { busyRef.current = false; setBusy(false) }
+      if (context.isCurrent()) setValues({ current: '', password: '', confirmation: '' })
+      finishRevocation(context)
+    } catch (failure) { showError(getApiErrorDetail(failure) || 'Your password could not be changed.', context, true) }
+    finally { busyRef.current = false; if (context.isCurrent()) setBusy(false) }
   }
   return <section aria-label='Account security' className={styles.root} aria-busy={loading || busy}>
     <header><h2 className='portal-h2'>Account security</h2><p className={styles.intro}>Control how you sign in and which devices can access your account.</p></header>
     {error && <p ref={errorTarget} tabIndex={-1} role='alert' className={styles.error}>{error}</p>}
     {notice && <p role='status' className={styles.notice}>{notice}</p>}
     {busy && <p role='status' className={styles.progress}><span className={styles.spinner} aria-hidden='true'/>Updating account security…</p>}
-    {loading ? <p role='status' className={styles.progress}><span className={styles.spinner} aria-hidden='true'/>Loading security settings…</p> : !data ? <button type='button' onClick={() => void load()} className='q-button q-button-secondary'>Retry security settings</button> : <>
+    {loading ? <p role='status' className={styles.progress}><span className={styles.spinner} aria-hidden='true'/>Loading security settings…</p> : !data ? <button type='button' onClick={() => void load(true)} className='q-button q-button-secondary'>Retry security settings</button> : <>
       <form ref={form} onSubmit={changePassword} noValidate aria-label='Change password' className={`${styles.group} ${styles.form}`}>
         <div className={styles.groupHeader}><div><h3 className='portal-h3'>Change password</h3><p className={styles.intro}>Changing your password signs out all devices. Sign in again with the new password.</p></div></div>
         <div className={styles.fields}>

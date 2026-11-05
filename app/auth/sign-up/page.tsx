@@ -9,6 +9,7 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { clearPortalSession, getApiErrorDetail, registerPatient } from '@/lib/api'
 import { storeSignupEmail } from '@/lib/signup-context'
+import { usePortalAction } from '@/lib/portal-action'
 
 // ─── Page background ──────────────────────────────────────────────────────────
 
@@ -384,6 +385,7 @@ export default function SignUpPage() {
     && strength.score >= 3 && form.confirmPassword === form.password
     && terms && privacy
 
+  const captureAction = usePortalAction()
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
@@ -395,6 +397,7 @@ export default function SignUpPage() {
     }
 
     setLoading(true)
+    const action = captureAction()
     const email = form.email.trim().toLowerCase()
     try {
       await registerPatient({
@@ -407,17 +410,19 @@ export default function SignUpPage() {
         },
       })
 
-      clearPortalSession()
+      if (!action.isCurrent()) return
+      clearPortalSession(action.portal)
       try {
-        storeSignupEmail(email)
+        storeSignupEmail(email, action.portal)
       } catch {
         // Continue to verification even if session storage is unavailable.
       }
       router.push('/auth/verify-email')
     } catch (error) {
+      if (!action.isCurrent()) return
       setSubmitError(getApiErrorDetail(error) || 'We could not create your account right now. Please try again.')
     } finally {
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 

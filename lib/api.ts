@@ -200,7 +200,12 @@ async function request<T>(path:string,init:RequestInit):Promise<T> {
         checkScope(portal,scope);
         const response=await fetchWithAuthRetry(`${getBaseUrl()}${path}`,init,sessionMutation(path),{portal,scope});
         const body=await response.text(); checkScope(portal,scope);
-        if(!response.ok) throw new ApiError(response.status,body);
+        if(!response.ok) {
+            // An old portal's failure must not trigger a mounted caller's
+            // default-current-portal sign-out after navigation elsewhere.
+            if(currentPortal()!==portal) throw new Error('Your page changed. Return to the original portal and retry.');
+            throw new ApiError(response.status,body);
+        }
         const result=body ? JSON.parse(body) : undefined;
         if(sessionMutation(path)) {
             // Publish the verified identity before allowing any other tab's

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useId, useState } from 'react'
+import { Suspense, useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { recoveryPortal } from '@/lib/auth-recovery'
@@ -9,6 +9,7 @@ import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { resetPassword, ApiError, getApiErrorDetail, clearPortalSession, getLoginThrottleMessage } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 type ErrorKind = 'weak' | 'mismatch' | 'expiredToken' | 'invalidToken' | 'server' | 'network' | null
 
@@ -533,16 +534,19 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
 }
 
 function ResetPasswordPageContent() {
+  const captureAction = usePortalAction()
   const portal = recoveryPortal(usePathname())
   const [token, setToken] = useState<string | null>(null)
+  const activeLink = useRef<string | null>(null)
   useEffect(() => {
     const captureLink = () => {
       const url = new URL(window.location.href)
       const fragment = new URLSearchParams(url.hash.slice(1))
       const incoming = fragment.get('token') || url.searchParams.get('token')
       if (!incoming) { setToken(value => value === null ? '' : value); return }
+      activeLink.current = incoming
       setToken(incoming)
-      setUpdated(false); setNewPassword(''); setConfirmPassword(''); setErrorKind(null); setServerError('')
+      setUpdated(false); setLoading(false); setNewPassword(''); setConfirmPassword(''); setErrorKind(null); setServerError('')
       setTouched({ newPassword: false, confirmPassword: false })
       url.searchParams.delete('token')
       fragment.delete('token')
@@ -613,13 +617,17 @@ function ResetPasswordPageContent() {
     setErrorKind(null)
     setServerError('')
     setLoading(true)
+    const action = captureAction()
+    const submittedToken = token
 
     try {
-      await resetPassword(token, newPassword)
-      clearPortalSession(); setToken(''); setNewPassword(''); setConfirmPassword('')
+      await resetPassword(submittedToken, newPassword)
+      if (!action.isCurrent() || activeLink.current !== submittedToken) return
+      clearPortalSession(action.portal); activeLink.current = ''; setToken(''); setNewPassword(''); setConfirmPassword('')
       setUpdated(true)
       setErrorKind(null)
     } catch (error) {
+      if (!action.isCurrent() || activeLink.current !== submittedToken) return
       setLoading(false)
       const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 

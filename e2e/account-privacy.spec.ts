@@ -245,6 +245,56 @@ test('new signup owns its email, clears old drafts and can complete mocked OTP',
   await expect(page.locator('#fullName')).toHaveValue('')
 })
 
+for (const flow of ['signup', 'password-reset', 'administrator-invitation'] as const) {
+  test(`late ${flow} completion preserves another portal after client navigation`, async ({ page, context }) => {
+    const doctor = await seedRole(context, 'doctor', { user_id: 'independent-clinician' })
+    const endpoint = flow === 'signup' ? '/api/v1/patient/register' : flow === 'password-reset'
+      ? '/api/v1/auth/reset-password' : '/api/v1/auth/admin/invitations/accept'
+    let release!: () => void
+    const held = new Promise<void>(resolve => { release = resolve })
+    let started!: () => void
+    const submitted = new Promise<void>(resolve => { started = resolve })
+    await context.route(`**${endpoint}`, async route => {
+      started()
+      await held
+      await route.fulfill({ json: { message: 'Completed synthetic request.' } })
+    })
+    if (flow === 'signup') {
+      await page.goto('/auth/sign-up')
+      await page.getByLabel('Email Address').fill(beta)
+      await page.getByLabel('Password', { exact: true }).fill(password)
+      await page.getByLabel('Confirm Password', { exact: true }).fill(password)
+      await page.getByRole('checkbox').nth(0).click()
+      await page.getByRole('checkbox').nth(1).click()
+    } else if (flow === 'password-reset') {
+      await page.goto('/auth/reset-password#token=synthetic-delayed-reset')
+      await page.getByLabel('New Password (Required)', { exact: true }).fill(password)
+      await page.getByLabel('Confirm New Password (Required)', { exact: true }).fill(password)
+    } else {
+      await context.route('**/api/v1/auth/admin/invitations/validate', route => route.fulfill({ json: { valid: true, expires_at: new Date(Date.now() + 3_600_000).toISOString() } }))
+      await page.goto('/auth/admin/accept-invitation#token=synthetic-delayed-invitation')
+      await page.getByLabel('New password (Required)', { exact: true }).fill(password)
+      await page.getByLabel('Confirm password (Required)', { exact: true }).fill(password)
+    }
+    await page.locator('button[type="submit"]').click()
+    await submitted
+    // Use real client-side links so the old request remains alive after its
+    // form unmounts. A full page.goto would discard the vulnerable continuation.
+    await page.locator('footer').getByRole('link', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('link', { name: 'Return to Home', exact: true }).click()
+    await page.getByRole('link', { name: 'Physician Portal', exact: true }).first().click()
+    await expect(page).toHaveURL(/\/auth\/doctor\/login$/)
+    const completed = page.waitForResponse(response => new URL(response.url()).pathname === endpoint)
+    release()
+    await (await completed).finished()
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+    await expect(page).toHaveURL(/\/auth\/doctor\/login$/)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('qarevo:doctor:identity') || 'null'))).toEqual(doctor)
+    expect(await page.evaluate(() => localStorage.getItem('qarevo:doctor:signed-out'))).toBeNull()
+    expect(await page.evaluate(() => sessionStorage.getItem('qarevo:doctor:signup:v2'))).toBeNull()
+  })
+}
+
 test('verification reload restores only the tab email after a stable anonymous hydration snapshot', async ({ page }) => {
   const hydrationErrors: string[] = []
   const recordHydrationError = (message: string) => {

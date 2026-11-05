@@ -973,3 +973,60 @@ test('concurrent first mutations share one portal CSRF bootstrap request',async(
   await Promise.all([first,second])
   assert.equal(paths.length,3)
 })
+
+test('a refreshed retry failure from an old portal cannot request current-portal sign-out',async()=>{
+  const retry=deferred(),started=deferred();let reads=0,refreshes=0
+  const t=tab(undefined,async url=>{
+    const path=new URL(url).pathname
+    if(path==='/api/v1/auth/refresh'){refreshes++;return Response.json({browser_session:identity('clinician','doctor')})}
+    reads++
+    if(reads===1)return Response.json({detail:'Access expired'},{status:401})
+    started.resolve();return retry.promise
+  })
+  t.location.pathname='/doctor/settings'
+  login(t,'clinician',{portal:'doctor'})
+  const patient=login(t,'patient',{portal:'patient'})
+  const pending=t.api.apiGet('/api/v1/doctor/profile')
+  await started.promise
+  t.location.pathname='/patient/dashboard'
+  retry.resolve(Response.json({detail:'Session rejected'},{status:401}))
+  await assert.rejects(pending,error=>!t.api.isAuthError(error)&&/page changed/.test(error.message))
+  assert.equal(refreshes,1)
+  assert.equal(t.portal.readPortalIdentity('patient').session_id,patient.session_id)
+  assert.equal(t.localStorage.getItem('qarevo:patient:signed-out'),null)
+})
+
+test('portal action continuations require their mounted page and original session generation',()=>{
+  const t=tab()
+  login(t,'patient')
+  const actionModule={exports:{}}
+  vm.runInNewContext(compile('portal-action.ts'),{
+    window:{location:t.location,localStorage:t.localStorage},module:actionModule,exports:actionModule.exports,
+    require(name){
+      if(name==='react')return {}
+      if(name==='./account-storage')return t.core
+      if(name==='./portal-scope')return t.portal
+      throw new Error('Unexpected import: '+name)
+    },
+  })
+  let mounted=true
+  const action=actionModule.exports.capturePortalAction(()=>mounted)
+  assert.equal(action.portal,'patient')
+  assert.equal(action.isCurrent(),true)
+  t.location.pathname='/patient/settings'
+  assert.equal(action.isCurrent(),false)
+  t.location.pathname='/patient/dashboard'
+  mounted=false;assert.equal(action.isCurrent(),false)
+  mounted=true
+  login(t,'patient',{session:'new-family'})
+  assert.equal(action.isCurrent(),false)
+  const next=actionModule.exports.capturePortalAction(()=>mounted)
+  t.api.clearPortalSession('patient')
+  assert.equal(next.isCurrent(),false)
+  assert.equal(next.isCurrent({allowEndedSession:true}),true)
+  login(t,'different-patient')
+  t.api.clearPortalSession('patient')
+  assert.equal(next.isCurrent({allowEndedSession:true}),false)
+  t.location.pathname='/doctor/dashboard'
+  assert.equal(next.isCurrent(),false)
+})

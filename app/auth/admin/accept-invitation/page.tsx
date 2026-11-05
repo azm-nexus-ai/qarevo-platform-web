@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ApiError, acceptAdminInvitation, validateAdminInvitation, clearPortalSession, getApiErrorDetail, getLoginThrottleMessage } from '@/lib/api'
 import { ValidationSummary } from '@/components/ui/ValidationFeedback'
+import { usePortalAction } from '@/lib/portal-action'
 
 type Status = 'checking' | 'valid' | 'unavailable' | 'error' | 'complete'
 
 export default function AcceptAdminInvitation() {
+  const captureAction = usePortalAction()
   const token = useRef<string | null>(null)
   const [status, setStatus] = useState<Status>('checking')
   const [retry, setRetry] = useState(0)
@@ -17,7 +19,7 @@ export default function AcceptAdminInvitation() {
 
   useEffect(() => {
     const recheck = () => {
-      setPassword(''); setConfirmation(''); setErrors({}); setStatus('checking')
+      setPassword(''); setConfirmation(''); setErrors({}); setSaving(false); setStatus('checking')
       setRetry(value => value + 1)
     }
     const receiveLink = () => {
@@ -76,14 +78,18 @@ export default function AcceptAdminInvitation() {
     setErrors(next)
     if (Object.keys(next).length) return
     setSaving(true)
+    const action = captureAction()
+    const submittedToken = token.current
     try {
-      await acceptAdminInvitation(token.current, password)
-      clearPortalSession(); token.current = ''; setPassword(''); setConfirmation(''); setStatus('complete')
+      await acceptAdminInvitation(submittedToken, password)
+      if (!action.isCurrent() || token.current !== submittedToken) return
+      clearPortalSession(action.portal); token.current = ''; setPassword(''); setConfirmation(''); setStatus('complete')
     } catch (error) {
+      if (!action.isCurrent() || token.current !== submittedToken) return
       if (error instanceof ApiError && error.status === 400) {
         token.current = ''; setPassword(''); setConfirmation(''); setStatus('unavailable')
       } else setErrors({ server: getLoginThrottleMessage(error) || getApiErrorDetail(error) || 'We could not activate this invitation. Please try again.' })
-    } finally { setSaving(false) }
+    } finally { if (action.isCurrent() && token.current === submittedToken) setSaving(false) }
   }
 
   return <main className='invitation-page'><section>

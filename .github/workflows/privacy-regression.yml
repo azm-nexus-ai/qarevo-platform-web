@@ -36,6 +36,8 @@ jobs:
         run: npx --yes pnpm@10.28.0 run build
       - name: Install Chromium
         run: npx --yes pnpm@10.28.0 exec playwright install --with-deps chromium
+      - name: Repeat account-menu keyboard regressions without retries
+        run: npx --yes pnpm@10.28.0 exec playwright test e2e/qa-profile-chrome.spec.ts --grep "patient owned image|delayed patient settings" --repeat-each=5 --retries=0 --reporter=line
       - name: Test browser account isolation with synthetic API fixtures
         run: npx --yes pnpm@10.28.0 run test:e2e:privacy --reporter=line
       - name: Show browser failure context

@@ -13,16 +13,16 @@ const modules = new Map()
 function load(relative) {
   const filename = path.resolve(__dirname, '..', relative)
   if (modules.has(filename)) return modules.get(filename).exports
-  const module = { exports: {} }
-  modules.set(filename, module)
+  const loadedModule = { exports: {} }
+  modules.set(filename, loadedModule)
   const source = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText
-  vm.runInNewContext(source, { module, exports: module.exports, URL, process: { env: {} }, require(dependency) {
+  vm.runInNewContext(source, { module: loadedModule, exports: loadedModule.exports, URL, process: { env: {} }, require(dependency) {
     if (dependency.startsWith('.')) return load(path.relative(path.join(__dirname, '..'), path.resolve(path.dirname(filename), dependency + '.ts')))
     return require(dependency)
   } }, { filename })
-  return module.exports
+  return loadedModule.exports
 }
 const { portalHostRedirects } = load('lib/server/portal-host-routing.ts')
 const { portalFromPath, PORTAL_PATH_PREFIXES } = load('lib/portal-scope.ts')

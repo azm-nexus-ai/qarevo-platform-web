@@ -43,15 +43,17 @@ const uploadedPortrait = `data:image/png;base64,${portraitBytes.toString('base64
 async function profileFixtures(context: import('@playwright/test').BrowserContext, portal: 'patient' | 'doctor') {
   const { seedPortalSession, testSessionTiming } = await import('./helpers/portal-session')
   const identity = await seedPortalSession(context, portal)
-  const state = { image: `/synthetic-portraits/${portal}.png` as string | null, mutations: 0, reads: 0, profileReadDelay: null as Promise<void> | null, profileHeaders: [] as Record<string,string>[] }
+  const state = { image: `/synthetic-portraits/${portal}.png` as string | null, mutations: 0, reads: 0, profileReadDelay: null as Promise<void> | null, settingsReadDelay: null as Promise<void> | null, patientImageReadDelay: null as Promise<void> | null, profileHeaders: [] as Record<string,string>[] }
   const doctor = { user_id: identity.user_id, provider_id: 'synthetic-doctor-provider', full_name: 'Synthetic Clinician', email: 'clinician@example.invalid', specialty: 'General practice', avatar_url: state.image, license_verified: false, total_consultations: 0, patient_rating: 0, years_active: 0 }
   await context.route('**/synthetic-portraits/**',route=>route.fulfill({contentType:'image/png',body:portraitBytes}))
   await context.route('**/api/v1/**',async route=>{
     const request=route.request(),path=new URL(request.url()).pathname
     if(path==='/api/v1/browser-csrf')return route.fallback()
     if(path.startsWith('/api/v1/session'))return route.fulfill({json:testSessionTiming(identity)})
+    if(path==='/api/v1/security')return route.fulfill({json:{password_change_available:true,mfa:{available:false,enabled:false,method:null,message:'Not configured in this synthetic fixture.'},sessions:[],sessions_total:0}})
     if(path==='/api/v1/patient/profile-image'){
       state.profileHeaders.push(request.headers())
+      if(request.method()==='GET')await state.patientImageReadDelay
       if(request.method()==='POST'){
         const body=request.postDataJSON()
         expect(body.content_type).toBe('image/png')
@@ -74,7 +76,10 @@ async function profileFixtures(context: import('@playwright/test').BrowserContex
       return route.fulfill({json:{...doctor,avatar_url:image}})
     }
     if(path==='/api/v1/doctor/consultation-services')return route.fulfill({json:[]})
-    if(path==='/api/v1/patient/settings')return route.fulfill({json:{user_id:identity.user_id,first_name:'Synthetic',last_name:'Patient',email:'patient@example.invalid',emergency_contacts:[],insurance:null}})
+    if(path==='/api/v1/patient/settings'){
+      await state.settingsReadDelay
+      return route.fulfill({json:{user_id:identity.user_id,first_name:'Synthetic',last_name:'Patient',email:'patient@example.invalid',emergency_contacts:[],insurance:null}})
+    }
     if(path==='/api/v1/patient/settings/health-info')return route.fulfill({json:{}})
     if(path==='/api/v1/patient/settings/passkeys/status')return route.fulfill({json:{available:false,enabled:false}})
     if(path==='/api/v1/patient/dashboard')return route.fulfill({json:{patient_name:'Synthetic Patient',care_plans:[],medications:[],summary_cards:[],ai_insights:[],notifications:[]}})
@@ -99,7 +104,8 @@ test('patient owned image propagates through account menus, settings, dashboard,
   const trigger=navbar.locator('summary')
   await expect(trigger).toHaveAccessibleName('Patient account menu')
   await expectPortrait(trigger,'Synthetic Patient',state.image!)
-  await trigger.focus();await page.keyboard.press('Enter')
+  await trigger.press('Enter')
+  await expect(trigger).toBeFocused()
   const menu=navbar.locator('details[open]')
   await expect(menu.getByRole('link',{name:'View profile',exact:true})).toBeVisible()
   // A summary and the expanded identity intentionally show the same owned portrait.
@@ -166,7 +172,8 @@ test('doctor owned image persists after save, route re-entry, refresh and mobile
   await page.setViewportSize({width:390,height:844})
   const mobile=page.locator('.dmn-topbar')
   await expectPortrait(mobile.locator('summary'),'Dr. Synthetic Clinician',uploadedPortrait)
-  await mobile.locator('summary').focus();await page.keyboard.press('Enter')
+  await mobile.locator('summary').press('Enter')
+  await expect(mobile.locator('summary')).toBeFocused()
   await expect(mobile.locator('details[open]').getByText('Dr. Synthetic Clinician',{exact:true}).filter({visible:true})).toBeVisible()
   await page.keyboard.press('Escape');await expect(mobile.locator('summary')).toBeFocused()
   state.image=null
@@ -203,4 +210,57 @@ test('a delayed older doctor profile read cannot replace the saved portrait in d
   await page.setViewportSize({width:390,height:844})
   await expectPortrait(page.locator('.dmn-topbar summary'),'Dr. Synthetic Clinician',uploadedPortrait)
   expect(state.reads).toBe(3)
+})
+
+test('delayed patient settings and background security failure preserve account-menu keyboard focus',async({page,context})=>{
+  const state=await profileFixtures(context,'patient')
+  let releaseSettings!:()=>void, releaseImage!:()=>void, releaseSecurity!:()=>void
+  state.settingsReadDelay=new Promise<void>(resolve=>{releaseSettings=resolve})
+  state.patientImageReadDelay=new Promise<void>(resolve=>{releaseImage=resolve})
+  const securityDelay=new Promise<void>(resolve=>{releaseSecurity=resolve})
+  let securityRequests=0
+  await context.route('**/api/v1/security',async route=>{
+    const request=++securityRequests
+    if(request===1)await securityDelay
+    return route.fulfill({status:503,json:{detail:request===1?'Synthetic delayed security failure.':'Synthetic retry security failure.'}})
+  })
+  await page.setViewportSize({width:1440,height:1000})
+  await page.goto('/patient/settings')
+  const navbar=page.getByRole('navigation',{name:'Patient appearance',exact:true})
+  const trigger=navbar.locator('summary')
+  await expect(trigger).toHaveAccessibleName('Patient account menu')
+  const originalSummary=await trigger.elementHandle()
+  await trigger.press('Enter')
+  await expect(trigger).toBeFocused()
+  const menu=navbar.locator('details[open]')
+  await expect(menu.getByRole('link',{name:'View profile',exact:true})).toBeVisible()
+  releaseSettings()
+  await expect(menu.getByText('Synthetic Patient',{exact:true}).filter({visible:true})).toHaveCount(2)
+  releaseImage()
+  await expectPortrait(trigger,'Synthetic Patient',state.image!)
+  expect(await originalSummary!.evaluate(element=>element.isConnected)).toBe(true)
+  await expect(trigger).toBeFocused()
+  await expect.poll(()=>securityRequests).toBe(1)
+  await trigger.press('Escape')
+  await expect(trigger).toBeFocused()
+  await expect(navbar.locator('details')).not.toHaveAttribute('open','')
+  // Resolve a background failure after focus is established. Initial loading
+  // errors must announce in place, not move keyboard input to another section.
+  releaseSecurity()
+  const security=page.getByRole('region',{name:'Account security',exact:true})
+  const error=security.getByRole('alert')
+  await expect(error).toHaveText('Synthetic delayed security failure.')
+  await expect(trigger).toBeFocused()
+  for(const key of ['Enter','Space']){
+    await trigger.press(key)
+    await expect(menu.getByRole('link',{name:'View profile',exact:true})).toBeVisible()
+    await trigger.press('Escape')
+    await expect(trigger).toBeFocused()
+    await expect(navbar.locator('details')).not.toHaveAttribute('open','')
+  }
+  // An explicit user-requested retry still moves focus to its actionable error.
+  await security.getByRole('button',{name:'Retry security settings',exact:true}).click()
+  await expect(error).toHaveText('Synthetic retry security failure.')
+  await expect(error).toBeFocused()
+  expect(securityRequests).toBe(2)
 })
