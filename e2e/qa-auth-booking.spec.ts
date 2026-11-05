@@ -25,7 +25,7 @@ async function signedIn(context:BrowserContext){
 
 for(const [portal,path] of [['patient','/auth/sign-in'],['clinician','/auth/doctor/login']] as const){
   test(`${portal} social controls fail closed without provider configuration`,async({page,context})=>{
-    await context.route('**/api/v1/auth/social/providers',route=>route.fulfill({json:{google:{enabled:false,message:'pending'},apple:{enabled:false,message:'pending'}}}))
+    await context.route(url=>url.pathname==='/api/v1/auth/social/providers',route=>route.fulfill({json:{google:{enabled:false,message:'pending'},apple:{enabled:false,message:'pending'}}}))
     await page.goto(path)
     await expect(page.getByRole('button',{name:'Continue with Google',exact:true})).toBeDisabled()
     await expect(page.getByRole('button',{name:'Continue with Apple',exact:true})).toBeDisabled()

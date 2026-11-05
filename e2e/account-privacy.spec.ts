@@ -245,6 +245,26 @@ test('new signup owns its email, clears old drafts and can complete mocked OTP',
   await expect(page.locator('#fullName')).toHaveValue('')
 })
 
+test('verification reload restores only the tab email after a stable anonymous hydration snapshot', async ({ page }) => {
+  const hydrationErrors: string[] = []
+  const recordHydrationError = (message: string) => {
+    if (/hydrat|Minified React error #(?:418|423|425)/i.test(message)) hydrationErrors.push(message)
+  }
+  page.on('pageerror', error => recordHydrationError(error.message))
+  page.on('console', message => { if (message.type() === 'error') recordHydrationError(message.text()) })
+  await page.goto('/auth/verify-email')
+  await page.evaluate(email => sessionStorage.setItem('qarevo:patient:signup:v2', JSON.stringify({ email, expires_at: Date.now() + 30 * 60 * 1000 })), beta)
+  // Browser-only state is absent from server-rendered HTML.
+  const server = await page.request.get('/auth/verify-email')
+  expect(await server.text()).not.toContain(beta)
+  await page.reload()
+  await expect(page.getByText('be•••@example.invalid', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Enter code manually', exact: true }).click()
+  await expect(page.locator('input[inputmode="numeric"]')).toHaveCount(6)
+  expect(hydrationErrors).toEqual([])
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('qarevo:patient:signup:v2') || '{}').email)).toBe(beta)
+})
+
 test('two tabs recover expired access through one real browser lock without losing drafts', async ({ page, context }) => {
   await signIn(page, alpha)
   await page.locator('#fullName').fill('Preserved through renewal')

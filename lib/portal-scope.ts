@@ -1,13 +1,15 @@
 export type Portal = 'patient' | 'doctor' | 'admin'
 export type PortalIdentity = { user_id: string; role: 'PATIENT' | 'PROVIDER' | 'ADMIN'; session_id: string; provider_id?: string | null }
 export const PORTALS: Portal[] = ['patient', 'doctor', 'admin']
+export const PORTAL_PATH_PREFIXES: Record<Portal, readonly string[]> = {
+  patient: ['/patient', '/auth/sign-in', '/auth/sign-up', '/auth/profile-setup', '/auth/otp', '/auth/verify-email', '/auth/account-created', '/auth/welcome'],
+  doctor: ['/doctor', '/auth/doctor', '/auth/doctor-register', '/auth/doctor-verify-email', '/auth/doctor-verify-phone'],
+  admin: ['/admin', '/auth/admin'],
+}
 const TAB_PORTAL = 'qarevo:active-portal'
 
 export function portalFromPath(path: string): Portal | null {
-  if (/^\/(?:admin|auth\/admin)(?:\/|$)/.test(path)) return 'admin'
-  if (/^\/(?:doctor|auth\/doctor)(?:\/|$)|^\/auth\/doctor-(?:register|verify-email|verify-phone)(?:\/|$)/.test(path)) return 'doctor'
-  if (/^\/(?:patient|auth\/(?:sign-in|sign-up|profile-setup|otp|verify-email|account-created|welcome))(?:\/|$)/.test(path)) return 'patient'
-  return null
+  return PORTALS.find(portal => PORTAL_PATH_PREFIXES[portal].some(prefix => path === prefix || path.startsWith(prefix + '/'))) || null
 }
 export function currentPortal(): Portal {
   if (typeof window === 'undefined') return 'patient'

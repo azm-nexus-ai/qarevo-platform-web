@@ -943,3 +943,33 @@ test('a doctor profile change replaces the old in-flight generation with one sha
   assert.equal(reads, 3)
   stopDesktop(); stopMobile()
 })
+
+test('established portal CSRF cookie avoids a bootstrap round trip on each mutation',async()=>{
+  const requests=[]
+  const csrf='a'.repeat(64)
+  const t=tab(storage(),undefined,{document:{cookie:`qarevo_patient_csrf=${csrf}; qarevo_doctor_csrf=${'b'.repeat(64)}`},fetch:async(url,init)=>{
+    requests.push({path:new URL(url).pathname,headers:new Headers(init.headers)})
+    return Response.json({saved:true})
+  }})
+  login(t,'A')
+  await t.api.apiPut('/api/v1/patient/settings',{language:'English'})
+  await t.api.apiPost('/api/v1/patient/medical-records',{note:'synthetic'})
+  assert.equal(requests.length,2)
+  assert.ok(requests.every(request=>request.path!=='/api/v1/browser-csrf'&&request.headers.get('X-Qarevo-CSRF')===csrf&&request.headers.get('X-Qarevo-Portal')==='patient'))
+})
+
+test('concurrent first mutations share one portal CSRF bootstrap request',async()=>{
+  const bootstrap=deferred(),paths=[]
+  const t=tab(storage(),undefined,{document:{cookie:''},fetch:async(url)=>{
+    const path=new URL(url).pathname;paths.push(path)
+    return path==='/api/v1/browser-csrf'?bootstrap.promise:Response.json({saved:true})
+  }})
+  login(t,'A')
+  const first=t.api.apiPut('/api/v1/patient/settings',{language:'English'})
+  const second=t.api.apiPost('/api/v1/patient/medical-records',{note:'synthetic'})
+  await new Promise(resolve=>setTimeout(resolve,0))
+  assert.equal(paths.filter(path=>path==='/api/v1/browser-csrf').length,1)
+  bootstrap.resolve(Response.json({csrf_token:'a'.repeat(64)}))
+  await Promise.all([first,second])
+  assert.equal(paths.length,3)
+})

@@ -43,6 +43,7 @@ for (const [role, path, login] of [
     const warning = page.getByRole('dialog', { name: 'Your session is ending soon' })
     await expect(warning).toBeVisible()
     await expect(warning.getByRole('button', { name: 'Stay signed in' })).toBeFocused()
+    expect(state.reads).toBe(1) // Bootstrap shares its verified timing; no second authority round trip.
     await page.keyboard.press('Escape')
     await expect(warning).toBeVisible()
     expect(state.activity).toBe(0)

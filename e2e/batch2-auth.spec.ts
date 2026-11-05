@@ -4,7 +4,7 @@ import { test, expect, type BrowserContext } from '@playwright/test'
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
 async function providers(context: BrowserContext, enabled = false) {
   await context.route('**/api/v1/browser-csrf',route=>route.fulfill({json:{csrf_token:'synthetic-csrf'}}))
-  await context.route('**/api/v1/auth/social/providers', route => route.fulfill({ headers: cors, json: { google: { enabled, message: null }, apple: { enabled, message: null } } }))
+  await context.route(url => url.pathname === '/api/v1/auth/social/providers', route => route.fulfill({ headers: cors, json: { google: { enabled, message: null }, apple: { enabled, message: null } } }))
 }
 
 test('sign-in policy never promises extended persistence and unsupported passkeys cannot start authentication', async ({ page, context }) => {

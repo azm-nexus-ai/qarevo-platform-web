@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
@@ -11,6 +11,8 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { readSignupEmail } from '@/lib/signup-context'
 
 const masked = (e: string) => e.replace(/(.{2}).+(@.+)/, '$1•••$2')
+const subscribeSignupEmail = () => () => {}
+const serverSignupEmail = () => ''
 
 // ─── Countdown ─────────────────────────────────────────────────────────────────
 function useCountdown(initial: number) {
@@ -343,7 +345,9 @@ export default function VerifyEmailPage() {
   const [resendError, setResendError] = useState('')
   const [emailModal, setEmailModal] = useState(false)
   const [tab,        setTab]        = useState<'link' | 'code'>('link')
-  const [email] = useState(readSignupEmail)
+  // The server and first hydration render use the same anonymous snapshot.
+  // Only the mounted browser can read this tab's verification destination.
+  const email = useSyncExternalStore(subscribeSignupEmail, readSignupEmail, serverSignupEmail)
 
   const handleResend = async () => {
     if (!canResend) return

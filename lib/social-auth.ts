@@ -1,4 +1,4 @@
-import { rememberPortal, type PortalIdentity } from '@/lib/portal-scope'
+import { currentPortal, rememberPortal, type PortalIdentity } from '@/lib/portal-scope'
 import { safePortalDestination } from '@/lib/portal-handoff'
 import { apiGet, apiPost } from '@/lib/api'
 export type SocialProvider = 'google' | 'apple'
@@ -6,7 +6,11 @@ export type SocialPortal = 'PATIENT' | 'PROVIDER'
 export type SocialAvailability = Record<SocialProvider, { enabled: boolean; message: string | null }>
 const TRANSACTION = 'qarevo.social.transaction'
 function base64url(bytes: Uint8Array) { return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }
-export async function socialProviders() { return apiGet<SocialAvailability>('/api/v1/auth/social/providers') }
+export async function socialProviders() {
+  const portal = currentPortal()
+  if (portal === 'admin') return { google: { enabled: false, message: 'Social sign-in is unavailable for administrators.' }, apple: { enabled: false, message: 'Social sign-in is unavailable for administrators.' } }
+  return apiGet<SocialAvailability>(`/api/v1/auth/social/providers?portal=${portal === 'doctor' ? 'PROVIDER' : 'PATIENT'}`)
+}
 export async function beginSocial(provider: SocialProvider, portal: SocialPortal, currentPassword?: string) {
   const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)))
   const challenge = base64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))))
