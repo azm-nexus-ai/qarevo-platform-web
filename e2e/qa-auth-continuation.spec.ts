@@ -118,3 +118,36 @@ test('legacy OTP resend uses the email API, reports failure honestly, and never 
   await expect(page.getByRole('status').filter({hasText: 'SMS verification delivery is unavailable.'})).toBeVisible()
   expect(requests).toBe(2)
 })
+
+test('late email-code success cannot revive its verification page or alter the physician portal', async ({page, context}) => {
+  await authFixture(context, null)
+  await context.addInitScript(() => sessionStorage.setItem('qarevo:patient:signup:v2', JSON.stringify({email: 'patient@example.invalid', expires_at: Date.now() + 600000})))
+  let release!: () => void, requested = false, completed = false
+  const pending = new Promise<void>(resolve => {release = resolve})
+  await context.route('**/api/v1/auth/verify-email-code', async route => {
+    requested = true
+    await pending
+    await route.fulfill({json: {browser_session: patient, email_verified: true, phone_verified: true, expires_in: 900}})
+    completed = true
+  })
+  await page.goto('/auth/verify-email')
+  await page.evaluate(() => {(window as Window & {syntheticAuthDocument?: boolean}).syntheticAuthDocument = true})
+  await page.getByRole('button', {name: 'Enter code manually', exact: true}).click()
+  for (let digit = 1; digit <= 6; digit++) await page.getByLabel(`Verification code digit ${digit}`, {exact: true}).fill(String(digit))
+  await expect.poll(() => requested).toBe(true)
+  await page.getByRole('link', {name: 'Change Email', exact: true}).click()
+  await expect(page).toHaveURL(/\/auth\/sign-up$/)
+  await page.getByRole('link', {name: 'Sign In', exact: true}).click()
+  await expect(page).toHaveURL(/\/auth\/sign-in$/)
+  await page.getByRole('navigation', {name: 'Other sign-in portal'}).getByRole('link', {name: 'Physician sign-in'}).click()
+  await expect(page).toHaveURL(/\/auth\/doctor\/login$/)
+  expect(await page.evaluate(() => (window as Window & {syntheticAuthDocument?: boolean}).syntheticAuthDocument)).toBe(true)
+  release()
+  await expect.poll(() => completed).toBe(true)
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('qarevo:patient:identity') || 'null'))).toEqual(patient)
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+  await expect(page).toHaveURL(/\/auth\/doctor\/login$/)
+  await expect(page.getByRole('heading', {name: 'Your account is now active', exact: true})).toHaveCount(0)
+  expect(await page.evaluate(() => localStorage.getItem('qarevo:doctor:identity'))).toBeNull()
+  expect(await page.evaluate(() => Object.keys(sessionStorage).filter(key => key.startsWith('qarevo.draft.v3:doctor:')))).toEqual([])
+})

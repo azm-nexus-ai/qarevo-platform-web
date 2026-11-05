@@ -166,7 +166,7 @@ function EnvelopeScene({ verified }: { verified: boolean }) {
 }
 
 // ─── OTP input ─────────────────────────────────────────────────────────────────
-function OtpInput({ email, onComplete }: { email: string; onComplete: () => void }) {
+function OtpInput({ email, onStart, onComplete }: { email: string; onStart: () => void; onComplete: () => void }) {
   const captureAction = usePortalAction()
   const [values, setValues] = useState(['', '', '', '', '', ''])
   const refs = useRef<(HTMLInputElement | null)[]>([])
@@ -175,6 +175,7 @@ function OtpInput({ email, onComplete }: { email: string; onComplete: () => void
   const [loading, setLoading] = useState(false)
 
   const verifyCode = async (code: string) => {
+    onStart()
     const action = captureAction()
     setLoading(true)
     setError('')
@@ -356,7 +357,11 @@ export default function VerifyEmailPage() {
   const [tab,        setTab]        = useState<'link' | 'code'>('link')
   // The server and first hydration render use the same anonymous snapshot.
   // Only the mounted browser can read this tab's verification destination.
-  const email = useSyncExternalStore(subscribeSignupEmail, readSignupEmail, serverSignupEmail)
+  const signupEmail = useSyncExternalStore(subscribeSignupEmail, readSignupEmail, serverSignupEmail)
+  // Session publication retires signup storage. Keep the user-started attempt
+  // mounted through its confirmation; this snapshot ends with this page.
+  const [verificationEmail, setVerificationEmail] = useState('')
+  const email = verificationEmail || signupEmail
 
   const handleResend = async () => {
     if (!canResend || resendInFlight.current) return
@@ -515,7 +520,7 @@ export default function VerifyEmailPage() {
                   Enter the 6-digit code from your verification email.
                 </p>
                 {email ? (
-                  <OtpInput email={email} onComplete={() => setVerified(true)} />
+                  <OtpInput email={email} onStart={() => setVerificationEmail(email)} onComplete={() => setVerified(true)} />
                 ) : (
                   <Link href="/auth/sign-up" style={{
                     width: '100%', padding: '12px 20px', borderRadius: '13px',
