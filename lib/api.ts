@@ -1749,9 +1749,41 @@ export type PatientBillingInsuranceSummary = {
     authorizations?: Array<Record<string, unknown>>;
 };
 
+export type BillingPaymentMethodCode = 'CARD' | 'PAYPAL' | 'APPLE_PAY' | 'GOOGLE_PAY' | 'KLARNA';
+export type BillingPendingCapability = {
+    status: 'not_configured';
+    reason_code: string;
+    message: string;
+};
+export type PatientBillingReadiness = {
+    schema_version: 1;
+    checkout: { enabled: false; reason_code: string; message: string };
+    requested_methods: Array<BillingPendingCapability & { method: BillingPaymentMethodCode; label: string }>;
+    accepted_methods: BillingPaymentMethodCode[];
+    patient_payments: BillingPendingCapability;
+    medical_invoicing: BillingPendingCapability;
+    practice_fee_invoicing: BillingPendingCapability;
+    practice_settlement: BillingPendingCapability;
+    intended_model: {
+        medical_invoice_issuer: 'treating_practice';
+        patient_payment_recipient: 'connected_practice_account';
+        platform_usage_fee_payer: 'treating_practice';
+        configured_practice_id: null;
+    };
+    funding_rules: {
+        requires_case_funding_confirmation: true;
+        covered_gkv_patient_checkout: 'excluded';
+        insurance_declaration_confirms_coverage: false;
+        insurance_declaration_authorizes_self_pay: false;
+        self_pay_requires_explicit_cost_agreement: true;
+        unverified_funding_checkout: 'blocked';
+    };
+};
+
 export type PatientBillingResponse = {
     status?: 'not_configured' | 'ready';
     capabilities?: { payments: string; invoicing: string; insurance_verification: string };
+    readiness?: PatientBillingReadiness;
     current_balance: number | null;
     insurance_coverage: number | null;
     amount_due: number | null;

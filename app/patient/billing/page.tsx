@@ -6,7 +6,7 @@ import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/components/patient/PatientPortalPrimitives'
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
-import { clearPortalSession, getApiErrorDetail, getPatientBilling, isAuthError, type PatientBillingInvoice, type PatientBillingPaymentMethod, type PatientBillingResponse } from '@/lib/api'
+import { clearPortalSession, getApiErrorDetail, getPatientBilling, isAuthError, type PatientBillingInvoice, type PatientBillingPaymentMethod, type PatientBillingReadiness, type PatientBillingResponse } from '@/lib/api'
 import { T } from '@/lib/tokens'
 import { insurancePresentation } from '@/lib/insurance-presentation'
 
@@ -90,6 +90,45 @@ function PaymentMethodCard({ method }: { method: PatientBillingPaymentMethod }) 
   )
 }
 
+function BillingReadinessDetails({ readiness }: { readiness?: PatientBillingReadiness }) {
+  if (!readiness) return null
+  return (
+    <>
+      <PortalCard>
+        <h2 className='mb-2 text-xl font-semibold' style={{ color: T.navy }}>Payment method availability</h2>
+        <p className='mb-4 max-w-2xl text-sm leading-6' style={{ color: T.slate }}>These methods are being evaluated. None is currently available for payment.</p>
+        <ul aria-label='Requested payment methods' className='grid list-none gap-3 p-0 sm:grid-cols-2 xl:grid-cols-3'>
+          {readiness.requested_methods.map(method => (
+            <li key={method.method} className='flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border p-3' style={{ borderColor: 'var(--border)', background: 'var(--surface-subtle)' }}>
+              <span className='text-sm font-semibold' style={{ color: T.navy }}>{method.label}</span>
+              <PortalBadge tone='neutral'>Not available</PortalBadge>
+            </li>
+          ))}
+        </ul>
+      </PortalCard>
+      <PortalCard>
+        <h2 className='mb-3 text-xl font-semibold' style={{ color: T.navy }}>Invoices and funding</h2>
+        <dl className='mb-4 grid gap-3 sm:grid-cols-2'>
+          {[
+            ['Medical invoices', readiness.medical_invoicing.message],
+            ['Online payments', readiness.patient_payments.message],
+          ].map(([label, message]) => (
+            <div key={label} className='rounded-xl border p-3' style={{ borderColor: 'var(--border)' }}>
+              <dt className='mb-2 text-sm font-semibold' style={{ color: T.navy }}>{label}</dt>
+              <dd className='m-0 text-sm leading-6' style={{ color: T.slate }}>{message}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className='space-y-3 text-sm leading-6' style={{ color: T.slate }}>
+          <p>Your treating practice is responsible for any medical invoice. Qarevo’s practice usage fees are handled separately.</p>
+          <p>Covered GKV consultations do not use patient checkout. Coverage must still be confirmed for the individual consultation; entering insurance details does not verify it.</p>
+          <p>Selecting self-pay does not authorize a charge. A separate, explicit cost agreement is required.</p>
+        </div>
+      </PortalCard>
+    </>
+  )
+}
+
 export default function PatientBillingPage() {
   const [loading, setLoading] = useState(true)
   const [billing, setBilling] = useState<PatientBillingResponse>(EMPTY_BILLING)
@@ -126,7 +165,6 @@ export default function PatientBillingPage() {
 
   const currency = billing.currency || 'EUR'
   const paidInvoices = useMemo(() => billing.invoices.filter((invoice) => invoice.status?.toLowerCase() === 'paid'), [billing.invoices])
-  const paymentProviderEnabled = Boolean(billing.payment_provider_enabled)
   const hasPaymentMethods = billing.payment_methods.length > 0
   const hasInvoices = billing.invoices.length > 0
   const insurance = billing.insurance_summary || EMPTY_BILLING.insurance_summary
@@ -145,18 +183,9 @@ export default function PatientBillingPage() {
   }
 
   function handlePayNow() {
-    if (typeof billing.amount_due !== 'number') {
-      showNotice('Balance unavailable', 'Your balance could not be confirmed. Please try again later.')
-      return
-    }
-    if (billing.amount_due <= 0) {
-      showNotice('Nothing to pay', 'This account has no outstanding balance right now, so no payment is required.')
-      return
-    }
-    if (!paymentProviderEnabled) {
-      showNotice('Payment unavailable', 'Online payment processing is not connected yet. Once a payment provider is configured, this button can open the real checkout flow.')
-      return
-    }
+    // Provider flags or legacy authorization records cannot enable an operation
+    // that this build does not implement. Never infer payment from a UI action.
+    showNotice('Online checkout unavailable', 'Online checkout is not available. No payment was attempted.')
   }
 
   const rightRail = (
@@ -177,7 +206,8 @@ export default function PatientBillingPage() {
           ))}
         </div>
         <div className='mt-3 grid gap-2'>
-          <PortalButton tone='primary' fullWidth onClick={handlePayNow}>Pay Now</PortalButton>
+          <PortalButton tone='primary' fullWidth disabled aria-describedby='billing-checkout-unavailable' onClick={handlePayNow}>Pay Now</PortalButton>
+          <p id='billing-checkout-unavailable' className='m-0 text-sm leading-6' style={{ color: T.slate }}>Online checkout is not available. No payment can be attempted.</p>
           <PortalButton tone='secondary' fullWidth onClick={handleReceiptDownload}>Download Receipt</PortalButton>
         </div>
       </PortalCard>
@@ -227,6 +257,7 @@ export default function PatientBillingPage() {
               <p className='mt-3 text-sm leading-6' style={{ color: T.slate }}>A balance and any confirmed insurance contribution will appear when billing becomes available.</p>
             </div>
           </PortalCard>
+          <BillingReadinessDetails readiness={billing.readiness} />
           <PortalCard>
             <h2 className='mb-2 text-xl font-semibold' style={{ color: T.navy }}>Your insurance details</h2>
             <PortalBadge tone={insuranceInfo.tone}>{insuranceStatus}</PortalBadge>
@@ -261,16 +292,13 @@ export default function PatientBillingPage() {
               </div>
               <PortalButton
                 tone='primary'
-                onClick={() => showNotice(
-                  paymentProviderEnabled ? 'Add card unavailable' : 'Payment provider not connected',
-                  paymentProviderEnabled
-                    ? 'The payment provider is available, but the add-card flow has not been enabled for this build yet.'
-                    : 'Saved cards require a real payment provider such as Stripe or Paystack. Until that is connected, Qarevo will not collect or store card details.'
-                )}
+                disabled
+                aria-describedby='billing-saved-methods-unavailable'
               >
                 Add Card
               </PortalButton>
             </div>
+            <p id='billing-saved-methods-unavailable' className='mb-4 text-sm leading-6' style={{ color: T.slate }}>Saving payment methods is not available. No card details are collected on this page.</p>
             {hasPaymentMethods ? (
               <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
                 {billing.payment_methods.map((method, index) => (
