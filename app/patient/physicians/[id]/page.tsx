@@ -12,6 +12,7 @@ import type { Physician, PhysicianProfileContent } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'
 import DoctorCard from '@/components/cards/DoctorCard'
 import DoctorAvatar from '@/components/cards/DoctorAvatar'
+import { doctorVerification } from '@/lib/doctor-verification'
 import dynamic from 'next/dynamic'
 
 // Dynamically import Leaflet to avoid SSR issues
@@ -141,7 +142,7 @@ function toPhysician(doctor: PatientDoctor): Physician {
     consultationTypes: doctor.consultationTypes.filter((type): type is 'video' | 'physical' => type === 'video' || type === 'physical'),
     distanceKm: doctor.distanceKm,
     conditions: doctor.conditions,
-    imageUrl: doctor.imageUrl,
+    imageUrl: doctor.imageUrl ?? '',
     verification: doctor.verification,
     tags: doctor.tags,
   }
@@ -394,9 +395,9 @@ function PhysicianProfilePageContent() {
               </div>
 
               <div>
-	                <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: physician.verification === 'Pending' ? T.amber : T.link, marginBottom: '8px' }}>
-                  <Ico p={ICONS.check} size={12} sw={2.4} color={physician.verification === 'Pending' ? T.amber : T.blue} />
-	                  {physician.verification === 'Pending' ? 'Pending Verification' : 'Verified Physician'}
+	                <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: doctorVerification(physician.verification).verified ? T.link : T.slate, marginBottom: '8px' }}>
+                  {doctorVerification(physician.verification).verified && <Ico p={ICONS.check} size={12} sw={2.4} color={T.link} />}
+	                  {doctorVerification(physician.verification).label}
                 </span>
                 <h1 style={{ margin: '0 0 6px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '30px', fontWeight: 800, letterSpacing: '-0.034em', color: T.navy }}>{physician.name}</h1>
                 <p style={{ margin: '0 0 4px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>

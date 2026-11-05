@@ -1,4 +1,5 @@
 import {test,expect,type BrowserContext} from '@playwright/test'
+import type {PatientDoctor} from '../lib/api'
 const episode='77777777-7777-4777-8777-777777777777'
 async function prepare(context:BrowserContext, now=Date.now()){
  await context.addInitScript(()=>{localStorage.setItem('qarevo_access_token','synthetic-patient');localStorage.setItem('qarevo_refresh_token','synthetic-refresh');localStorage.setItem('qarevo_user_id','synthetic-patient');localStorage.setItem('qarevo_role','PATIENT')})
@@ -79,3 +80,49 @@ for (const width of [320, 820]) test(`intake actions and headings remain usable 
   expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(width)
  }
 })
+
+for (const legacy of [true, false]) for (const width of [390, 1440]) {
+ test(`patient navigation retains nonempty ${legacy ? 'legacy' : 'canonical'} recommendations and recent doctors at ${width}px`, async ({page,context})=>{
+  await prepare(context)
+  await page.setViewportSize({width,height:1000})
+  const errors:string[]=[]
+  page.on('pageerror',error=>errors.push(error.message))
+  // These are the actual optional-field omissions in the previous recommended
+  // and recent endpoints, rather than an idealised search result used for all.
+  const base = {id:'11111111-1111-4111-8111-111111111111',name:'Dr. Synthetic Search',specialty:'General Practice',hospital:'Synthetic Practice',experienceYears:0,rating:0,reviews:0,consultationFee:0,nextAvailable:'Review availability',languages:[],insurance:[],gender:'other',consultationTypes:['video'],services:[],imageUrl:null,distanceKm:null} satisfies Omit<PatientDoctor,'verification'|'tags'|'conditions'>
+  const search = {...base,verification:'Verified',tags:['Verified'],conditions:[]}
+  const sparse = legacy ? {} : {verification:'Verified',tags:['Verified'],conditions:[]}
+  const recent = {...base,...sparse,id:'22222222-2222-4222-8222-222222222222',name:'Dr. Synthetic Recent',lastBookingDate:'2026-11-01T10:00:00Z'}
+  const recommended = {...base,...sparse,id:'33333333-3333-4333-8333-333333333333',name:'Dr. Synthetic Recommended',recommendationScore:60,recommendationReason:'Available clinician'}
+  await context.route('**/api/v1/**',async route=>{
+   const path=new URL(route.request().url()).pathname
+   const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}
+   if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers})
+   if(path==='/api/v1/patient/doctors/recommended')return route.fulfill({headers,json:{doctors:[recommended],recommendations:[recommended],total:1,filters:{}}})
+   if(path==='/api/v1/patient/doctors/recent')return route.fulfill({headers,json:{recent_doctors:[recent],total:1}})
+   if(path==='/api/v1/patient/doctors')return route.fulfill({headers,json:{doctors:[search],total:1,filtered_count:1,page:1,page_size:8,has_next:false,has_previous:false,filters:{}}})
+   if(path==='/api/v1/patient/dashboard')return route.fulfill({headers,json:{patient_name:'Synthetic Patient',upcoming_appointments:[],health_summary:{},notifications:[]}})
+   if(path==='/api/v1/patient/health-info')return route.fulfill({headers,json:{}})
+   return route.fallback()
+  })
+  const recentCard=page.locator('.doctor-card').filter({hasText:'Dr. Synthetic Recent'})
+  const recommendation=page.locator('.doctor-card').filter({hasText:'Dr. Synthetic Recommended'})
+  await page.goto('/patient/dashboard')
+  await expect(recentCard).toBeVisible()
+  if(legacy){await expect(recentCard).toContainText('Verification unavailable');await expect(recentCard.locator('.doctor-card-verified')).toHaveCount(0)}
+  await page.getByRole('button',{name:'Dark mode',exact:true}).click()
+  for(let visit=0;visit<2;visit++){
+   await page.getByRole('link',{name:'Open discovery →',exact:true}).click()
+   await expect(page).toHaveURL(/\/patient\/find-doctor$/)
+   await expect(recommendation).toBeVisible()
+   if(legacy){await expect(recommendation).toContainText('Verification unavailable');await expect(recommendation.locator('.doctor-card-verified')).toHaveCount(0)}
+   await expect(page.getByRole('heading',{name:'This page could not be displayed',exact:true})).toHaveCount(0)
+   await page.getByRole('link',{name:/^Qarevo Health patient dashboard$/i}).filter({visible:true}).click()
+   await expect(recentCard).toBeVisible()
+   await page.reload()
+   await expect(recentCard).toBeVisible()
+   await expect(page.locator('html')).toHaveAttribute('data-theme','dark')
+  }
+  expect(errors).toEqual([])
+ })
+}

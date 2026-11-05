@@ -67,3 +67,21 @@ test('disabled and loading physician cards cannot trigger selection', () => {
   }
   assert.equal(selections, 0)
 })
+
+test('legacy recommendation and recent-doctor payloads render without a verification field', () => {
+  const html = render({ verification: undefined, tags: undefined, imageUrl: null })
+  assert.match(html, /Synthetic Physician/)
+  assert.match(html, /Verification unavailable/)
+  assert.doesNotMatch(html, /aria-label="Verified physician"/)
+})
+
+test('null optional presentation fields never crash or claim verified credentials', () => {
+  const html = render({ verification: null, tags: null, imageUrl: null })
+  assert.match(html, /Verification unavailable/)
+  assert.doesNotMatch(html, /aria-label="Verified physician"/)
+  assert.doesNotMatch(html, /Clinical focus/)
+})
+
+test('account activity is not proof of clinical verification', () => {
+  assert.doesNotMatch(render({ verification: 'Active' }), /aria-label="Verified physician"/)
+})

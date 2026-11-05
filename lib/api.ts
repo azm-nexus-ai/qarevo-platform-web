@@ -679,9 +679,9 @@ export type PatientDoctor = {
     insurance: string[];
     gender: "female" | "male" | "other";
     consultationTypes: string[];
-    distanceKm: number;
+    distanceKm: number | null;
     conditions: string[];
-    imageUrl: string;
+    imageUrl: string | null;
     verification: string;
     tags: string[];
     profile?: Record<string, unknown>;

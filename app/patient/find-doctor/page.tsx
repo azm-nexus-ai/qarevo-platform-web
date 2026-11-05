@@ -16,6 +16,7 @@ import {
 } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'
 import DoctorCard from '@/components/cards/DoctorCard'
+import { doctorVerification } from '@/lib/doctor-verification'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
 import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuthError, clearAuthTokens, type PatientSettings, type PatientDoctor } from '@/lib/api'
@@ -694,7 +695,7 @@ export default function FindDoctorPage() {
                   filteredPhysicians.map((doctor) => (
                     <article key={doctor.id} style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '14px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
-	                        <span style={{ ...Glass.chip, color: doctor.verification === 'Pending' ? T.amber : T.navy, fontSize: "13px", fontWeight: 700, padding: '4px 9px', borderRadius: '999px' }}>{doctor.verification === 'Pending' ? 'Pending Verification' : 'Verified Physician'}</span>
+	                        <span style={{ ...Glass.chip, color: doctorVerification(doctor.verification).verified ? T.link : T.slate, fontSize: "13px", fontWeight: 700, padding: '4px 9px', borderRadius: '999px' }}>{doctorVerification(doctor.verification).label}</span>
                         <button
                           type='button'
                           onClick={() => toggleFavorite(doctor.id)}

@@ -15,7 +15,7 @@ export type BookingPhysicianData = {
 
 export function getBookingPhysician(
   searchParams: URLSearchParams | { get: (key: string) => string | null },
-  fallbackPhysician?: { id?: string; name?: string; specialty?: string; hospital?: string; imageUrl?: string; consultationFee?: number; experienceYears?: number; rating?: number; languages?: string[]; insurance?: string[] } | null,
+  fallbackPhysician?: { id?: string; name?: string; specialty?: string; hospital?: string; imageUrl?: string | null; consultationFee?: number; experienceYears?: number; rating?: number; languages?: string[]; insurance?: string[] } | null,
 ): BookingPhysicianData {
   const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? fallbackPhysician?.id ?? ''
   const fromStore = physicianId ? PHYSICIANS.find((item) => item.id === physicianId) : undefined
@@ -37,7 +37,7 @@ export function getBookingPhysician(
 
 export function buildBookingQueryParams(
   params: URLSearchParams | { toString: () => string },
-  physician: BookingPhysicianData | null | undefined,
+  physician: Pick<BookingPhysicianData, 'id'> | null | undefined,
   service: string | null | undefined,
 ) {
   // Only bounded scheduling identifiers belong in navigation. Physician images,

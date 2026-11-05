@@ -2,7 +2,7 @@
 import { useState } from 'react'
 
 /** Physician imagery must never block discovery or expose a broken image control. */
-export default function DoctorAvatar({ name, imageUrl, size = 52 }: { name: string; imageUrl?: string; size?: number }) {
+export default function DoctorAvatar({ name, imageUrl, size = 52 }: { name: string; imageUrl?: string | null; size?: number }) {
   const [failedUrl, setFailedUrl] = useState('')
   const safeUrl = imageUrl && (/^https:\/\//i.test(imageUrl) || /^\/(?!\/)/.test(imageUrl) || /^data:image\/(png|jpeg|webp);base64,/i.test(imageUrl)) ? imageUrl : ''
   const initials = name.replace(/^Dr\.?\s+/i, '').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'DR'
