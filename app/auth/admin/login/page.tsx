@@ -10,6 +10,7 @@ import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginAdmin } from
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
+import { usePortalAction } from '@/lib/portal-action'
 
 const PAGE_BG = [
   'radial-gradient(ellipse 65% 55% at 12% 8%,   rgba(32,181,223,0.08) 0%, transparent 55%)',
@@ -47,6 +48,7 @@ function getFriendlyAdminError(error: unknown) {
 
 export default function AdminLoginPage() {
   const router = useRouter()
+  const captureAction = usePortalAction()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -66,15 +68,19 @@ export default function AdminLoginPage() {
     if (!EMAIL_RE.test(email.trim()) || !password) return
     setLoading(true)
     setAuthError('')
+    const action = captureAction()
+    let response: Awaited<ReturnType<typeof loginAdmin>> | undefined
+    const current = () => action.isCurrent({ completedSession: response?.browser_session })
 
     try {
-      const response = await loginAdmin({ email: email.trim(), password })
-      router.push('/admin/dashboard')
+      response = await loginAdmin({ email: email.trim(), password })
+      if (current()) router.push('/admin/dashboard')
     } catch (error) {
+      if (!current()) return
       cooldown.record(error)
       setAuthError(getFriendlyAdminError(error))
     } finally {
-      setLoading(false)
+      if (current()) setLoading(false)
     }
   }
 

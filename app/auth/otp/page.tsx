@@ -7,7 +7,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { verifyOtp } from '@/lib/api'
+import { getApiErrorDetail, resendVerificationEmail, verifyOtp } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const RESEND_SECS   = 60
@@ -365,13 +366,13 @@ function ErrorBanner({ kind, onDismiss }: { kind: ErrorKind; onDismiss: () => vo
 }
 
 // ─── Destination chip ──────────────────────────────────────────────────────────
-function DestChip({ mode, onSwitch }: { mode: VerifyMode; onSwitch: () => void }) {
+function DestChip({ mode, destination, onSwitch }: { mode: VerifyMode; destination: string; onSwitch: () => void }) {
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0', borderRadius: '100px', background: T.blueLight, border: `1px solid ${T.blueMid}`, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 13px' }}>
         <Ico p={mode === 'email' ? ICONS.ema : ICONS.activity} size={11} sw={1.75} color={T.blue} />
         <span style={{ fontSize: '13px', fontWeight: 700, color: T.link, letterSpacing: '-0.01em', fontFamily: 'monospace' }}>
-          {mode === 'email' ? 'em•••@gmail.com' : '+44 ••• ••• 4821'}
+          {destination}
         </span>
       </div>
       <button onClick={onSwitch} style={{ padding: '6px 11px 6px 6px', background: 'none', border: 'none', borderLeft: `1px solid ${T.blueMid}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'inherit', fontSize: "13px", fontWeight: 600, color: T.link, letterSpacing: '-0.01em' }}>
@@ -407,6 +408,7 @@ function TimerRing({ secs, total }: { secs: number; total: number }) {
 // ─── Main page ─────────────────────────────────────────────────────────────────
 function OtpPageContent() {
   const router = useRouter()
+  const captureAction = usePortalAction()
   const searchParams = useSearchParams()
   const { secs, expired, restart } = useCountdown(RESEND_SECS)
   const [digits,    setDigits]    = useState(['', '', '', '', '', ''])
@@ -415,6 +417,9 @@ function OtpPageContent() {
   const [attempts,  setAttempts]  = useState(0)
   const [loading,   setLoading]   = useState(false)
   const [resendOk,  setResendOk]  = useState(false)
+  const [resending, setResending] = useState(false)
+  const resendInFlight = useRef(false)
+  const [resendError, setResendError] = useState('')
 
   // Get email/phone from URL params (set by previous registration/login flow)
   const email = searchParams.get('email')
@@ -429,6 +434,7 @@ function OtpPageContent() {
     if (tooMany) { setErrorKind('toomany'); return }
     setLoading(true)
     setErrorKind(null)
+    const action = captureAction()
 
     try {
       // Build request based on mode and available params
@@ -444,10 +450,7 @@ function OtpPageContent() {
       }
 
       const response = await verifyOtp(requestBody)
-
-      // Store auth tokens if returned
-      if (response.browser_session) {
-      }
+      if (!action.isCurrent({ completedSession: response.browser_session })) return
 
       // Redirect to account-created or dashboard based on verification status
       if (response.email_verified || response.phone_verified) {
@@ -455,26 +458,37 @@ function OtpPageContent() {
       } else {
         setErrorKind('invalid')
       }
-    } catch (error) {
+    } catch {
+      if (!action.isCurrent()) return
       setLoading(false)
       setErrorKind('invalid')
       setDigits(['', '', '', '', '', ''])
     }
-  }, [tooMany, mode, router, email, countryCode, phone])
+  }, [tooMany, mode, router, email, countryCode, phone, captureAction])
 
   const handleVerify = () => {
     if (!filled || loading || tooMany) return
     handleComplete(digits.join(''))
   }
 
-  const handleResend = () => {
-    if (!expired || loading) return
-    setAttempts(0)
-    setErrorKind(null)
-    setDigits(['', '', '', '', '', ''])
-    setResendOk(true)
-    restart(RESEND_SECS)
-    setTimeout(() => setResendOk(false), 4000)
+  const handleResend = async () => {
+    if (!expired || loading || resendInFlight.current || mode !== 'email') return
+    if (!email) { setResendError('Return to email verification and enter your email address.'); return }
+    const action = captureAction()
+    resendInFlight.current = true
+    setResending(true); setResendOk(false); setResendError('')
+    try {
+      await resendVerificationEmail({email})
+      if (!action.isCurrent()) return
+      setAttempts(0); setErrorKind(null); setDigits(['', '', '', '', '', ''])
+      setResendOk(true); restart(RESEND_SECS)
+      action.after(4000, () => setResendOk(false))
+    } catch (error) {
+      if (action.isCurrent()) setResendError(getApiErrorDetail(error) || 'Verification email could not be requested. Please retry.')
+    } finally {
+      resendInFlight.current = false
+      if (action.isCurrent()) setResending(false)
+    }
   }
 
   const switchMode = () => {
@@ -545,10 +559,10 @@ function OtpPageContent() {
           </h1>
           <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.7, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
             {mode === 'email'
-              ? "We've sent a 6-digit security code to your email."
-              : "We've sent a 6-digit security code to your phone."}
+              ? "Enter the six-digit code from your verification email."
+              : "SMS delivery is not configured. Switch to email verification to continue."}
           </p>
-          <DestChip mode={mode} onSwitch={switchMode} />
+          <DestChip mode={mode} destination={mode === 'email' ? email?.replace(/(.{2}).+(@.+)/, '$1•••$2') || 'Email address unavailable' : 'SMS not configured'} onSwitch={switchMode} />
         </div>
 
         {/* Error banner */}
@@ -563,7 +577,7 @@ function OtpPageContent() {
           <div style={{ padding: '10px 14px', borderRadius: '11px', background: 'rgba(235,248,245,0.9)', border: '1px solid rgba(9,173,112,0.25)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', animation: 'slideIn 0.28s ease both' }}>
             <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
             <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>
-              New code sent. Check your {mode === 'email' ? 'inbox' : 'messages'}.
+              Verification email requested. Check your inbox and spam folder.
             </span>
           </div>
         )}
@@ -574,7 +588,7 @@ function OtpPageContent() {
             <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '-0.01em' }}>
               Enter 6-digit code
             </span>
-            {!expired
+            {mode !== 'email' ? 'SMS delivery unavailable' : resending ? 'Requesting verification email…' : !expired
               ? <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.01em' }}>Expires in</span>
                   <TimerRing secs={secs} total={RESEND_SECS} />
@@ -634,6 +648,8 @@ function OtpPageContent() {
           Back to Email Verification
         </Link>
 
+        {resendError && <p role='alert' className='field-error'>{resendError}</p>}
+        {mode !== 'email' && <p role='status' className='field-error'>SMS verification delivery is unavailable. Choose email verification.</p>}
         {/* Resend row */}
         <div style={{ marginTop: '22px', paddingTop: '20px', borderTop: "1px solid var(--border)", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
           <p style={{ margin: 0, fontSize: '13px', color: T.slate2, letterSpacing: '-0.01em' }}>
@@ -641,8 +657,9 @@ function OtpPageContent() {
           </p>
           <button
             className="ghost"
-            onClick={handleResend}
-            disabled={!expired || loading}
+            onClick={() => void handleResend()}
+            disabled={!expired || loading || resending || mode !== 'email'}
+            aria-busy={resending}
             style={{
               background: 'transparent', border: 'none', cursor: expired && !loading ? 'pointer' : 'not-allowed',
               fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 700,
@@ -652,7 +669,7 @@ function OtpPageContent() {
               transition: 'all 0.14s ease',
             }}
           >
-            {!expired
+            {mode !== 'email' ? 'SMS delivery unavailable' : resending ? 'Requesting verification email…' : !expired
               ? <><span style={{ width: '12px', height: '12px', border: `1.5px solid ${T.slate2}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block' }} />Resend in {secs}s</>
               : <><Ico p={ICONS.arrowFwd} size={13} sw={2} />Resend Code</>}
           </button>

@@ -1062,3 +1062,34 @@ test('explicit portal draft ownership survives initialization before the canonic
   assert.equal(keys.filter(key=>key.startsWith('qarevo.draft.v3:doctor:')).length,1)
   assert.equal(keys.some(key=>key.startsWith('qarevo.draft.v3:patient:')),false)
 })
+
+test('authentication continuations accept only their exact newly verified session and cancel scheduled work on unmount',()=>{
+  const t=tab();login(t,'old-patient')
+  const actionModule={exports:{}},timers=new Map(),cleanups=[];let nextTimer=0,continued=0
+  vm.runInNewContext(compile('portal-action.ts'),{
+    window:{location:t.location,localStorage:t.localStorage},module:actionModule,exports:actionModule.exports,
+    setTimeout(callback){const id=++nextTimer;timers.set(id,callback);return id},
+    clearTimeout(id){timers.delete(id)},
+    require(name){
+      if(name==='react')return{useRef:value=>({current:value}),useCallback:callback=>callback,useEffect:effect=>cleanups.push(effect())}
+      if(name==='./account-storage')return t.core
+      if(name==='./portal-scope')return t.portal
+      throw new Error('Unexpected import: '+name)
+    },
+  })
+  const capture=actionModule.exports.usePortalAction(),action=capture()
+  const verified=login(t,'new-patient')
+  assert.equal(action.isCurrent(),false)
+  assert.equal(action.isCurrent({completedSession:verified}),true)
+  assert.equal(action.isCurrent({completedSession:{...verified,role:'ADMIN'}}),false)
+  action.after(900,()=>continued++,{completedSession:verified})
+  timers.get(1)();assert.equal(continued,1)
+  action.after(900,()=>continued++,{completedSession:verified})
+  login(t,'newer-patient')
+  timers.get(2)();assert.equal(continued,1)
+  const current=capture()
+  current.after(900,()=>continued++)
+  for(const cleanup of cleanups)cleanup()
+  assert.equal(timers.has(3),false)
+  assert.equal(current.isCurrent(),false)
+})

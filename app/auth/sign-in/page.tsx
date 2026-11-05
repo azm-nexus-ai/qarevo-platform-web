@@ -11,7 +11,8 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
-import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginPatient, loginPatientWithPasskey } from '@/lib/api'
+import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginPatient, loginPatientWithPasskey, type AuthTokenResponse } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import SocialSignInButtons from '@/components/auth/SocialSignInButtons'
@@ -264,6 +265,7 @@ function getFriendlySignInError(error: unknown) {
 
 export default function SignInPage() {
   const router = useRouter()
+  const captureAction = usePortalAction()
 
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
@@ -286,27 +288,32 @@ export default function SignInPage() {
     if (!EMAIL_RE.test(email.trim()) || !password) return
     setLoading(true)
     setAuthError(''); setHandoff(null)
-
+    const action = captureAction()
+    let response: AuthTokenResponse | undefined
+    const current = () => action.isCurrent({ completedSession: response?.browser_session })
     try {
-      const response = await loginPatient({ email: email.trim(), password })
-      await completePatientSignIn()
+      response = await loginPatient({ email: email.trim(), password })
+      if (current()) await completePatientSignIn(current)
     } catch (error) {
+      if (!current()) return
       cooldown.record(error)
       const wrongPortal = authenticatedPortalHandoff(error)
       setHandoff(wrongPortal)
       setAuthError(wrongPortal ? '' : getFriendlySignInError(error))
     } finally {
-      setLoading(false)
+      if (current()) setLoading(false)
     }
   }
 
-  const completePatientSignIn = async () => {
+  const completePatientSignIn = async (current: () => boolean) => {
+    if (!current()) return
     if (new URLSearchParams(window.location.search).get('next') === 'profile-setup') {
       setAuthenticatedOnboardingStage('personal-information')
       router.replace('/auth/profile-setup/personal-information')
       return
     }
     const progress = await getOnboarding()
+    if (!current()) return
     const intended = safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PATIENT')
     router.replace(progress.complete ? intended || '/patient/dashboard' : onboardingPath(progress.next_step))
   }
@@ -318,16 +325,20 @@ export default function SignInPage() {
 
     setPasskeyLoading(true)
     setAuthError(''); setHandoff(null)
+    const action = captureAction()
+    let response: AuthTokenResponse | undefined
+    const current = () => action.isCurrent({ completedSession: response?.browser_session })
     try {
-      const response = await loginPatientWithPasskey(email.trim())
-      await completePatientSignIn()
+      response = await loginPatientWithPasskey(email.trim())
+      if (current()) await completePatientSignIn(current)
     } catch (error) {
+      if (!current()) return
       cooldown.record(error)
       const wrongPortal = authenticatedPortalHandoff(error)
       setHandoff(wrongPortal)
       setAuthError(wrongPortal ? '' : getFriendlySignInError(error))
     } finally {
-      setPasskeyLoading(false)
+      if (current()) setPasskeyLoading(false)
     }
   }
 

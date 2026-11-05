@@ -9,6 +9,7 @@ import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ApiError, AuthTokenResponse, apiPost, getApiErrorDetail } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 // Page background
 const PAGE_BG = [
@@ -208,6 +209,7 @@ function LeftPanel() {
 
 // Main page
 export default function Doctor2FAPage() {
+  const captureAction = usePortalAction()
   const router = useRouter()
   const verifyingRef = useRef(false)
 
@@ -236,6 +238,7 @@ export default function Doctor2FAPage() {
   const codeErr = touched.code && !code ? 'Verification code is required' : ''
 
   const handleSendCode = async () => {
+    const action = captureAction()
     setLoading(true)
     setAuthError('')
 
@@ -243,11 +246,13 @@ export default function Doctor2FAPage() {
       if (email) {
         await apiPost('/api/v1/auth/mfa/resend-email', { email })
       }
+      if (!action.isCurrent()) return
       setSuccess(true)
     } catch (error) {
+      if (!action.isCurrent()) return
       setAuthError(getFriendlyVerificationError(error, 'email'))
     } finally {
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
@@ -263,18 +268,23 @@ export default function Doctor2FAPage() {
     setLoading(true)
     setAuthError('')
     verifyingRef.current = true
+    const action = captureAction()
+    let response: AuthTokenResponse | undefined
+    const current = () => action.isCurrent({ completedSession: response?.browser_session })
 
     try {
-      const response = await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-email', { email: email || undefined, code })
+      response = await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-email', { email: email || undefined, code })
+      if (!current()) return
       sessionStorage.removeItem('qarevo:doctor:identifier')
 
       // Redirect to doctor dashboard
       router.push(safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PROVIDER') || '/doctor/dashboard')
     } catch (error) {
+      if (!current()) return
       setAuthError(getFriendlyVerificationError(error, 'email'))
     } finally {
       verifyingRef.current = false
-      setLoading(false)
+      if (current()) setLoading(false)
     }
   }
 

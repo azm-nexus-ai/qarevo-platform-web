@@ -9,6 +9,7 @@ import Ico from '@/components/ui/Ico'
 import { getApiErrorDetail, resendVerificationEmail, verifyEmailCode } from '@/lib/api'
 import { setOnboardingStage } from '@/lib/auth-flow'
 import { readSignupEmail } from '@/lib/signup-context'
+import { usePortalAction } from '@/lib/portal-action'
 
 const masked = (e: string) => e.replace(/(.{2}).+(@.+)/, '$1•••$2')
 const subscribeSignupEmail = () => () => {}
@@ -166,6 +167,7 @@ function EnvelopeScene({ verified }: { verified: boolean }) {
 
 // ─── OTP input ─────────────────────────────────────────────────────────────────
 function OtpInput({ email, onComplete }: { email: string; onComplete: () => void }) {
+  const captureAction = usePortalAction()
   const [values, setValues] = useState(['', '', '', '', '', ''])
   const refs = useRef<(HTMLInputElement | null)[]>([])
   const [error, setError] = useState('')
@@ -173,19 +175,22 @@ function OtpInput({ email, onComplete }: { email: string; onComplete: () => void
   const [loading, setLoading] = useState(false)
 
   const verifyCode = async (code: string) => {
+    const action = captureAction()
     setLoading(true)
     setError('')
     try {
-      await verifyEmailCode({ email, code })
+      const response = await verifyEmailCode({ email, code })
+      if (!action.isCurrent({ completedSession: response.browser_session })) return
       setSuccess(true)
       setOnboardingStage('account-created')
-      setTimeout(onComplete, 900)
+      action.after(900, onComplete, { completedSession: response.browser_session })
     } catch (error) {
+      if (!action.isCurrent()) return
       setValues(['', '', '', '', '', ''])
       refs.current[0]?.focus()
       setError(getApiErrorDetail(error) || 'Incorrect code. Please check your email and try again.')
     } finally {
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
@@ -231,6 +236,7 @@ function OtpInput({ email, onComplete }: { email: string; onComplete: () => void
             <input
               key={i}
               ref={el => { refs.current[i] = el }}
+              aria-label={`Verification code digit ${i + 1}`}
               maxLength={1}
               inputMode="numeric"
               value={v}
@@ -339,9 +345,12 @@ function TipRow({ icon, title, body }: { icon: string | readonly string[]; title
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function VerifyEmailPage() {
   const router = useRouter()
+  const captureAction = usePortalAction()
   const { secs, done: canResend, restart } = useCountdown(60)
   const [verified,   setVerified]   = useState(false)
   const [resendOk,   setResendOk]   = useState(false)
+  const [resendPending, setResendPending] = useState(false)
+  const resendInFlight = useRef(false)
   const [resendError, setResendError] = useState('')
   const [emailModal, setEmailModal] = useState(false)
   const [tab,        setTab]        = useState<'link' | 'code'>('link')
@@ -350,20 +359,28 @@ export default function VerifyEmailPage() {
   const email = useSyncExternalStore(subscribeSignupEmail, readSignupEmail, serverSignupEmail)
 
   const handleResend = async () => {
-    if (!canResend) return
+    if (!canResend || resendInFlight.current) return
     setResendOk(false)
     setResendError('')
     if (!email) {
       setResendError('Enter your email again to resend the verification code.')
       return
     }
+    const action = captureAction()
+    resendInFlight.current = true
+    setResendPending(true)
     try {
       await resendVerificationEmail({ email })
+      if (!action.isCurrent()) return
       setResendOk(true)
       restart(90)
-      setTimeout(() => setResendOk(false), 4000)
+      action.after(4000, () => setResendOk(false))
     } catch (error) {
+      if (!action.isCurrent()) return
       setResendError(getApiErrorDetail(error) || 'We could not resend the verification email right now.')
+    } finally {
+      resendInFlight.current = false
+      if (action.isCurrent()) setResendPending(false)
     }
   }
 
@@ -518,7 +535,7 @@ export default function VerifyEmailPage() {
             {resendOk && (
               <div style={{ padding: '10px 14px', borderRadius: '10px', background: T.greenLight, border: `1px solid rgba(9,173,112,0.25)`, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', animation: 'slideToast 0.28s ease both', overflow: 'hidden' }}>
                 <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
-                <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>New verification email sent. Check your inbox.</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>Verification email requested. Check your inbox and spam folder.</span>
               </div>
             )}
 
@@ -531,7 +548,7 @@ export default function VerifyEmailPage() {
 
             {/* Resend + Change row */}
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button className="ghost" onClick={handleResend} disabled={!canResend} style={{
+              <button className="ghost" onClick={handleResend} disabled={!canResend || resendPending} aria-busy={resendPending} style={{
                 flex: 1, padding: '10px 14px', borderRadius: '11px',
                 border: `1.5px solid ${canResend ? T.border : "var(--border)"}`,
                 background: 'transparent', fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
@@ -539,7 +556,7 @@ export default function VerifyEmailPage() {
                 letterSpacing: '-0.01em', transition: 'all 0.14s ease',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}>
-                {!canResend
+                {resendPending ? 'Requesting verification email…' : !canResend
                   ? <><span style={{ width: '11px', height: '11px', border: `1.5px solid ${T.slate2}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block', flexShrink: 0 }} />Resend in {secs}s</>
                   : <><Ico p={ICONS.arrowFwd} size={12} sw={2} />Resend Email</>}
               </button>

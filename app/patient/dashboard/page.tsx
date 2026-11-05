@@ -820,8 +820,8 @@ export default function PatientDashboardPage() {
   const hasUpcomingAppointment = currentAppointment ? Number.parseInt(currentAppointment.value, 10) > 0 : false
   const hasCareActivity = hasUpcomingAppointment || displayCarePlans.length > 0 || displayMedications.length > 0 || displayLabData.length > 0 || displayMessageThreads.length > 0
   const heroBody = hasCareActivity
-    ? 'Your dashboard is pulling from your care activity, clinical records, messages, and booking history.'
-    : 'Your dashboard will populate as you book appointments, message your care team, receive prescriptions, and complete clinical intake.'
+    ? 'View your appointments, care records and messages in one place.'
+    : 'Choose a physician to book a consultation and begin your care.'
   const careProgress = displayCarePlans.length
     ? Math.round(displayCarePlans.reduce((total, plan) => total + plan.progress, 0) / displayCarePlans.length)
     : 0
@@ -1129,7 +1129,7 @@ export default function PatientDashboardPage() {
               <div style={{ maxWidth: '620px' }}>
                 <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: "var(--link)" }}>Your Care Journey</p>
                 <h2 className='portal-h2'>
-                  Welcome back, {displayPatientName}. {hasCareActivity ? 'Your health plan is on track.' : 'Let’s start your care journey.'}
+                  Welcome back, {displayPatientName}. {hasCareActivity ? 'Your care overview is ready.' : 'Start by choosing a physician.'}
                 </h2>
                 <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.65, color: T.slate }}>
                   {heroBody}
@@ -1139,11 +1139,8 @@ export default function PatientDashboardPage() {
               <div style={{ minWidth: '250px', flex: 1 }}>
                 <div style={{ borderRadius: '16px', padding: '14px', background: "var(--surface-glass)", border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 24px rgba(4,53,77,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '9px' }}>
-                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: T.slate2 }}>Current Health Status</p>
+                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: T.slate2 }}>Care activity</p>
                     <span style={{ ...Glass.chip, padding: '4px 10px', borderRadius: '999px', fontSize: "13px", color: hasCareActivity ? '#0F9E77' : T.slate, fontWeight: 700 }}>{hasCareActivity ? 'Active' : 'New'}</span>
-                  </div>
-                  <div style={{ height: '9px', borderRadius: '999px', background: "var(--surface-hover)", marginBottom: '8px', overflow: 'hidden' }}>
-                    <div style={{ width: `${hasCareActivity ? Math.max(careProgress, 24) : 8}%`, height: '100%', borderRadius: 'inherit', background: 'linear-gradient(90deg, #20B5DF 0%, var(--primary-end) 100%)', boxShadow: '0 0 12px rgba(32,181,223,0.45)' }} />
                   </div>
                   <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{hasCareActivity ? 'Care activity is being tracked from your appointments and records.' : 'No care activity has been recorded yet.'}</p>
                 </div>

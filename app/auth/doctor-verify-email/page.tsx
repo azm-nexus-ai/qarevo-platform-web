@@ -7,7 +7,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { ApiError, apiPost, getApiErrorDetail } from '@/lib/api'
+import { ApiError, apiPost, getApiErrorDetail, type VerifyEmailCodeResponse } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 // Page background
 const PAGE_BG = [
@@ -204,6 +205,7 @@ function LeftPanel() {
 // Main page
 function DoctorVerifyEmailPageContent() {
   const router = useRouter()
+  const captureAction = usePortalAction()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
 
@@ -222,33 +224,41 @@ function DoctorVerifyEmailPageContent() {
 
     setLoading(true)
     setAuthError('')
+    const action = captureAction()
+    let response: VerifyEmailCodeResponse | undefined
+    const current = () => action.isCurrent({ completedSession: response?.browser_session })
 
     try {
-      await apiPost('/api/v1/auth/verify-email-code', { email, code })
+      response = await apiPost<VerifyEmailCodeResponse>('/api/v1/auth/verify-email-code', { email, code })
+      if (!current()) return
       setSuccess(true)
       // Keep loading state true during redirect to prevent button clicks
-      setTimeout(() => {
+      action.after(1500, () => {
         router.push('/auth/doctor/login?verified=email')
-      }, 1500)
+      }, { completedSession: response.browser_session })
       return // Don't set loading to false yet
     } catch (error) {
+      if (!current()) return
       setAuthError(getFriendlyDoctorEmailVerificationError(error))
     } finally {
-      setLoading(false)
+      if (current()) setLoading(false)
     }
   }
 
   const handleResend = async () => {
+    const action = captureAction()
     setLoading(true)
     setAuthError('')
     try {
       await apiPost('/api/v1/auth/resend-verification-email', { email })
+      if (!action.isCurrent()) return
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      action.after(3000, () => setSuccess(false))
     } catch (error) {
+      if (!action.isCurrent()) return
       setAuthError(getFriendlyDoctorEmailVerificationError(error))
     } finally {
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 

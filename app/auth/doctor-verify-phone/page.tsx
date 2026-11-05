@@ -8,6 +8,7 @@ import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ApiError, apiPost, getApiErrorDetail } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 // Page background
 const PAGE_BG = [
@@ -207,6 +208,7 @@ function LeftPanel() {
 // Main page
 function DoctorVerifyPhonePageContent() {
   const router = useRouter()
+  const captureAction = usePortalAction()
   const searchParams = useSearchParams()
   const country_code = searchParams.get('country_code') || '234'
   const phone = searchParams.get('phone') || ''
@@ -221,18 +223,19 @@ function DoctorVerifyPhonePageContent() {
 
   // Automatically send phone verification OTP when page loads
   useEffect(() => {
+    const action = captureAction()
     const sendPhoneOtp = async () => {
       if (phone && country_code && !otpSent) {
         try {
           await apiPost('/api/v1/auth/doctor/resend-phone-verification', { country_code, phone })
-          setOtpSent(true)
+          if (action.isCurrent()) setOtpSent(true)
         } catch (error) {
           console.error('Failed to send phone verification OTP:', error)
         }
       }
     }
     sendPhoneOtp()
-  }, [country_code, phone, otpSent])
+  }, [country_code, phone, otpSent, captureAction])
 
   const handleVerify = async () => {
     if (!code) {
@@ -242,33 +245,39 @@ function DoctorVerifyPhonePageContent() {
 
     setLoading(true)
     setAuthError('')
+    const action = captureAction()
 
     try {
       await apiPost('/api/v1/auth/doctor/verify-phone-code', { country_code, phone, code })
+      if (!action.isCurrent()) return
       setSuccess(true)
       // Keep loading state true during redirect to prevent button clicks
-      setTimeout(() => {
+      action.after(1500, () => {
         router.push('/auth/doctor/login')
-      }, 1500)
+      })
       return // Don't set loading to false yet
     } catch (error) {
+      if (!action.isCurrent()) return
       setAuthError(getFriendlyDoctorPhoneVerificationError(error))
     } finally {
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
   const handleResend = async () => {
+    const action = captureAction()
     setLoading(true)
     setAuthError('')
     try {
       await apiPost('/api/v1/auth/doctor/resend-phone-verification', { country_code, phone })
+      if (!action.isCurrent()) return
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      action.after(3000, () => setSuccess(false))
     } catch (error) {
+      if (!action.isCurrent()) return
       setAuthError(getFriendlyDoctorPhoneVerificationError(error))
     } finally {
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 

@@ -71,6 +71,7 @@ test('generic booking preserves the intake reference through discovery without c
   await booking.click()
   await expect(page.getByRole('heading', {name: 'Choose Your Appointment', exact: true})).toBeVisible()
   await page.getByRole('button', {name: 'Continue', exact: true}).click()
+  await expect(page).toHaveURL(/\/patient\/consultation-booking\/intake\?/)
   url = new URL(page.url())
   expect(url.pathname).toBe('/patient/consultation-booking/intake')
   expect(url.searchParams.get('episode_id')).toBe(episode)
@@ -99,7 +100,7 @@ test('unavailable clinician details show a real retry and preserve selection con
   control.profileFails = true
   await page.goto(`/patient/consultation-booking/date-time?provider_id=${provider}&episode_id=${episode}&date=2030-07-10`)
   await expect(page.getByRole('heading', {name: 'Doctor details unavailable', exact: true})).toBeVisible()
-  await expect(page.getByRole('alert')).toContainText('Retry loading their details or choose another doctor.')
+  await expect(page.getByRole('main').getByRole('alert')).toContainText('Retry loading their details or choose another doctor.')
   await expect(page.getByRole('link', {name: 'Choose another doctor', exact: true})).toHaveAttribute('href', new RegExp(`episode_id=${episode}`))
   control.profileFails = false
   await page.getByRole('button', {name: 'Retry doctor details', exact: true}).click()

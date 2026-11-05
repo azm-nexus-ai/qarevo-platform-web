@@ -13,6 +13,7 @@ import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ApiError, apiPost, getApiErrorDetail, getLoginThrottleMessage, type DoctorLoginRequest } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 // Page background
 const PAGE_BG = [
@@ -219,6 +220,7 @@ function LeftPanel() {
 
 // Main page
 export default function DoctorLoginPage() {
+  const captureAction = usePortalAction()
   const router = useRouter()
 
   const [identifier, setIdentifier] = useState('')
@@ -249,6 +251,8 @@ export default function DoctorLoginPage() {
 
     setLoading(true)
     setAuthError(''); setHandoff(null)
+    const action = captureAction()
+    const current = () => action.isCurrent({ allowEndedSession: true })
 
     try {
       const loginData: DoctorLoginRequest = {
@@ -257,6 +261,7 @@ export default function DoctorLoginPage() {
       }
 
       const response = await apiPost('/api/v1/auth/doctor/login', loginData) as { mfa_pending: boolean }
+      if (!current()) return
 
       // Store TEMP_AUTH token for 2FA flow
       if (!response.mfa_pending) throw new Error('Secure clinician verification could not be started. Please retry.')
@@ -266,12 +271,13 @@ export default function DoctorLoginPage() {
       const intended = safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PROVIDER')
       router.push('/auth/doctor/2fa' + (intended ? `?${new URLSearchParams({ next: intended })}` : ''))
     } catch (error) {
+      if (!current()) return
       cooldown.record(error)
       const wrongPortal = authenticatedPortalHandoff(error)
       setHandoff(wrongPortal)
       setAuthError(wrongPortal ? '' : getFriendlyDoctorLoginError(error))
     } finally {
-      setLoading(false)
+      if (current()) setLoading(false)
     }
   }
 

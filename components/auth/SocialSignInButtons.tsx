@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { beginSocial, socialProviders, type SocialAvailability, type SocialPortal, type SocialProvider } from '@/lib/social-auth'
 import { getApiErrorDetail } from '@/lib/api'
 import ActionLink from '@/components/ui/ActionLink'
+import { usePortalAction } from '@/lib/portal-action'
 import styles from './SocialSignInButtons.module.css'
 
 /** Provider marks retain their approved provider colors; Qarevo tokens style the surrounding controls. */
@@ -16,6 +17,7 @@ function ProviderMark({ provider }: { provider: SocialProvider }) {
 }
 
 export default function SocialSignInButtons({ portal, currentPassword }: { portal: SocialPortal; currentPassword?: string }) {
+  const captureAction = usePortalAction()
   const [providers, setProviders] = useState<SocialAvailability | null>(null)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
@@ -33,8 +35,9 @@ export default function SocialSignInButtons({ portal, currentPassword }: { porta
     if (pendingRef.current || !providers?.[provider].enabled) return
     pendingRef.current = true
     setPending(provider); setError('')
-    try { await beginSocial(provider, portal, currentPassword) }
-    catch (failure) { setError(getApiErrorDetail(failure) || 'Provider sign-in could not start. Please retry.'); setPending(null); pendingRef.current = false }
+    const action = captureAction()
+    try { await beginSocial(provider, portal, currentPassword, action.isCurrent) }
+    catch (failure) { if (!action.isCurrent()) return; setError(getApiErrorDetail(failure) || 'Provider sign-in could not start. Please retry.'); setPending(null); pendingRef.current = false }
   }
   const status = !providers && !error ? 'Checking secure sign-in options…'
     : providers && !providers.google.enabled && !providers.apple.enabled ? 'Google and Apple sign-in are unavailable while company provider configuration is completed. Use email and password.'

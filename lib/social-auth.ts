@@ -11,11 +11,13 @@ export async function socialProviders() {
   if (portal === 'admin') return { google: { enabled: false, message: 'Social sign-in is unavailable for administrators.' }, apple: { enabled: false, message: 'Social sign-in is unavailable for administrators.' } }
   return apiGet<SocialAvailability>(`/api/v1/auth/social/providers?portal=${portal === 'doctor' ? 'PROVIDER' : 'PATIENT'}`)
 }
-export async function beginSocial(provider: SocialProvider, portal: SocialPortal, currentPassword?: string) {
+export async function beginSocial(provider: SocialProvider, portal: SocialPortal, currentPassword?: string, canContinue: () => boolean = () => true) {
   const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)))
   const challenge = base64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))))
+  if (!canContinue()) return
   const linking = currentPassword !== undefined
   const result = await apiPost<{ authorization_url: string; state: string; expires_in: number }>(`/api/v1/auth/social/${provider}/${linking ? 'link/' : ''}start`, { portal, challenge, ...(linking ? { current_password: currentPassword } : {}) })
+  if (!canContinue()) return
   const destination = new URL(result.authorization_url)
   if (destination.protocol !== 'https:' || destination.hostname !== (provider === 'google' ? 'accounts.google.com' : 'appleid.apple.com')) throw new Error('Unexpected sign-in provider destination.')
   let callback: URL
