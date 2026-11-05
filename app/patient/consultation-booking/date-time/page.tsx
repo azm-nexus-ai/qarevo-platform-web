@@ -3,9 +3,9 @@
 import { Suspense, useMemo, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
+import { bookingService, buildBookingQueryParams, buildDoctorDiscoveryHref, CONSULTATION_PRICING_PENDING, getBookingPhysician, readBookingProviderId } from '@/lib/booking'
 import { declaredDoctorFundingOptions } from '@/lib/insurance-presentation'
-import { PHYSICIANS } from '@/constants/physicians'
+import ActionLink from '@/components/ui/ActionLink'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
@@ -58,9 +58,7 @@ function formatWorkingTime(value?: string | null) {
   return `${displayHour}:${minuteValue.padStart(2, '0')} ${suffix}`
 }
 
-function formatFee(value: number) {
-  return 'Pricing pending setup'
-}
+function formatFee() { return CONSULTATION_PRICING_PENDING }
 
 function groupSlots(slots: string[]) {
   const groups = [
@@ -123,22 +121,23 @@ function DateTimeSelectionPageContent() {
   const searchParams = useSearchParams()
   const { bookingState, updateBookingState } = useBookingContext()
 
-  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? bookingState.physicianId ?? ''
-  const physician = PHYSICIANS.find((item) => item.id === physicianId)
+  const physicianId = readBookingProviderId(searchParams)
+  const matchingDraft = bookingState.physicianId === physicianId
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
   const [doctorLoadError, setDoctorLoadError] = useState('')
-  const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor) ?? physician, [remoteDoctor, physician])
+  const [doctorLoading, setDoctorLoading] = useState(true)
+  const [doctorReload, setDoctorReload] = useState(0)
+  const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor), [remoteDoctor])
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
-  const service = bookingState.service ?? searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
+  const service = bookingService(searchParams)
   const [selectedServiceType, setSelectedServiceType] = useState(service)
   const serviceDetail = useMemo(() => {
     const services = profileServices(remoteDoctor)
     return services.find((item) => item.type === selectedServiceType) ?? services[0]
   }, [remoteDoctor, selectedServiceType])
-  const fee = Number(searchParams.get('fee') ?? serviceDetail?.price ?? physicianData.consultationFee ?? 0)
-  const duration = searchParams.get('duration') ?? serviceDetail?.duration ?? '30 min'
+  const duration = serviceDetail?.duration ?? 'Duration not configured'
   const insurance = declaredDoctorFundingOptions(physicianData.insurance)
-  const initialDateParam = searchParams.get('date') ?? bookingState.date
+  const initialDateParam = searchParams.get('date') ?? (matchingDraft ? bookingState.date : undefined)
   const initialDate = useMemo(() => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(initialDateParam ?? '')) {
       const parsed = new Date(`${initialDateParam}T00:00:00`)
@@ -150,9 +149,8 @@ function DateTimeSelectionPageContent() {
   }, [initialDateParam])
 
   const [selectedDate, setSelectedDate] = useState(initialDate)
-  const [selectedSlot, setSelectedSlot] = useState(bookingState.slot ?? searchParams.get('slot') ?? '')
+  const [selectedSlot, setSelectedSlot] = useState(searchParams.get('slot') ?? (matchingDraft ? bookingState.slot : '') ?? '')
   const [showTimeSheet, setShowTimeSheet] = useState(false)
-  const [mounted, setMounted] = useState(true)
   const [dateValidationError, setDateValidationError] = useState('')
   const [availability, setAvailability] = useState<PatientBookingAvailabilityDay[]>([])
   const [workingHours, setWorkingHours] = useState<PatientBookingWorkingHours | null>(null)
@@ -168,10 +166,11 @@ function DateTimeSelectionPageContent() {
     return next.toString()
   }, [searchParams, physicianData, service])
 
+  const discoveryHref = buildDoctorDiscoveryHref(searchParams, selectedServiceType)
   const summaryHref = physicianData.id
     ? `/patient/physicians/${physicianData.id}${preservedParams ? `?${preservedParams}` : ''}`
-    : '/patient/find-doctor'
-  const backDestination = searchParams.get('from') === 'find-doctor' ? '/patient/find-doctor' : summaryHref
+    : discoveryHref
+  const backDestination = searchParams.get('from') === 'find-doctor' ? discoveryHref : summaryHref
 
   const handleBack = () => {
     router.push(backDestination)
@@ -197,9 +196,14 @@ function DateTimeSelectionPageContent() {
     return `/patient/consultation-booking/intake?${next.toString()}`
   }, [searchParams, physicianData, selectedDate, selectedSlot, selectedServiceType, selectedSlotDetail])
 
+  useEffect(() => {
+    const safe = buildBookingQueryParams(searchParams, null, null).toString()
+    if (safe !== searchParams.toString()) router.replace(`/patient/consultation-booking/date-time${safe ? `?${safe}` : ''}`, {scroll: false})
+  }, [router, searchParams])
+
   // Save booking state to context when selections change
   useEffect(() => {
-    if (physicianData.id) {
+    if (remoteDoctor && physicianData.id) {
       updateBookingState({
         physicianId: physicianData.id,
         physicianName: physicianData.name,
@@ -209,7 +213,7 @@ function DateTimeSelectionPageContent() {
         step: 'datetime',
       })
     }
-  }, [physicianData.id, physicianData.name, selectedServiceType, selectedDate, selectedSlot, updateBookingState])
+  }, [remoteDoctor, physicianData.id, physicianData.name, selectedServiceType, selectedDate, selectedSlot, updateBookingState])
 
   useEffect(() => {
     if (!physicianData.id) return
@@ -307,15 +311,19 @@ function DateTimeSelectionPageContent() {
     ? new Date(selectedSlotDetail.end_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZone: selectedSlotDetail.time_zone })
     : ''
   const displayDuration = selectedSlotDetail ? `${selectedSlotDetail.duration_minutes} min` : 'Select a time'
-  const canContinue = Boolean(!loadingSlots && selectedSlotDetail && availableSlots.includes(selectedSlot))
+  const canContinue = Boolean(remoteDoctor?.id === physicianId && !doctorLoading && !loadingSlots && selectedSlotDetail && availableSlots.includes(selectedSlot))
 
   useEffect(() => {
-    if (!physicianId || physician) return
+    if (!physicianId) return
 
     let cancelled = false
+    setDoctorLoading(true)
+    setRemoteDoctor(null)
+    setDoctorLoadError('')
     getPatientDoctor(physicianId)
       .then((doctor) => {
         if (cancelled) return
+        if (doctor.id !== physicianId) throw new Error('The selected clinician could not be confirmed.')
         setRemoteDoctor(doctor)
         setDoctorLoadError('')
       })
@@ -323,14 +331,29 @@ function DateTimeSelectionPageContent() {
         console.error('Failed to load selected doctor', error)
         if (!cancelled) {
           setRemoteDoctor(null)
-          setDoctorLoadError('We could not load the selected physician details. Please go back and choose the doctor again.')
+          setDoctorLoadError('The selected doctor could not be confirmed. Retry loading their details or choose another doctor.')
         }
       })
+      .finally(() => { if (!cancelled) setDoctorLoading(false) })
 
-    return () => {
-      cancelled = true
-    }
-  }, [physicianId, physician])
+    return () => { cancelled = true }
+  }, [physicianId, doctorReload])
+
+  if (!physicianId || !remoteDoctor || doctorLoading) {
+    const missing = !physicianId
+    const failed = !missing && !doctorLoading && Boolean(doctorLoadError)
+    return <main className='bg-surface-subtle px-4 py-8 sm:px-6'>
+      <section className='mx-auto max-w-xl rounded-2xl border border-theme bg-surface p-6 sm:p-8' aria-labelledby='booking-doctor-title'>
+        <h1 id='booking-doctor-title' className='text-xl font-bold text-ink'>{missing ? 'Choose a doctor to continue' : failed ? 'Doctor details unavailable' : 'Checking your selected doctor'}</h1>
+        <p className='mt-3 text-sm leading-relaxed text-muted' role={failed ? 'alert' : 'status'}>{missing ? 'Choose a doctor before selecting an appointment time. Your saved account information and intake remain available.' : failed ? doctorLoadError : 'Loading the doctor’s current details and appointment calendar…'}</p>
+        <div className='mt-6 flex flex-wrap gap-3'>
+          {failed && <button type='button' className='q-button q-button-primary' onClick={() => setDoctorReload(value => value + 1)}>Retry doctor details</button>}
+          <ActionLink href={discoveryHref} pendingLabel='Opening doctor selection…' tone={missing ? 'primary' : 'secondary'}>{missing ? 'Choose a doctor' : 'Choose another doctor'}</ActionLink>
+          <ActionLink href='/patient/dashboard'>Return to dashboard</ActionLink>
+        </div>
+      </section>
+    </main>
+  }
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG }}>
@@ -395,7 +418,7 @@ function DateTimeSelectionPageContent() {
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Duration</span><strong style={{ color: T.navy }}>{displayDuration}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Working hours</span><strong style={{ color: T.navy }}>{formatWorkingTime(workingHours?.start)} - {formatWorkingTime(workingHours?.end)}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Days</span><strong style={{ color: T.navy }}>{availableDays.length ? availableDays.join(', ') : 'Not configured'}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Fee</span><strong style={{ color: T.navy }}>{formatFee(fee)}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Fee</span><strong style={{ color: T.navy }}>{formatFee()}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Insurance</span><strong style={{ color: T.green }}>{insurance}</strong></div>
               </div>
             </section>
@@ -483,17 +506,18 @@ function DateTimeSelectionPageContent() {
                       }}
                     >
                       <span style={{ textTransform: 'capitalize' }}>{svc.type}</span>
-                      <span style={{ fontSize: "13px", color: T.slate2 }}>{svc.duration} · ${svc.price}</span>
+                      <span style={{ fontSize: "13px", color: T.slate2 }}>{svc.duration} · {CONSULTATION_PRICING_PENDING}</span>
                     </button>
                   ))}
                 </div>
 
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Select Date</p>
+                  <label htmlFor='booking-appointment-date' style={{ display: 'block', margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment date</label>
                   <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose your preferred appointment date</h2>
                 </div>
 
                 <input
+                  id='booking-appointment-date'
                   type='date'
                   value={formatDateKey(selectedDate)}
                   onChange={(event) => {
@@ -579,7 +603,7 @@ function DateTimeSelectionPageContent() {
                   marginBottom: '12px',
                 }}
               >
-	                Select Time Slot: {mounted ? (selectedSlot || 'No slots available') : 'Loading...'}
+	                Select Time Slot: {selectedSlot || 'No slots available'}
 	              </button>
 
 	              <div style={{ display: 'grid', gap: '12px' }}>
@@ -709,17 +733,17 @@ function DateTimeSelectionPageContent() {
                     <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment Details</p>
                     <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Everything needed for a smooth visit</h2>
                   </div>
-                  <div style={{ padding: '8px 12px', borderRadius: '999px', background: 'rgba(32,181,223,0.08)', color: T.link, fontSize: "13px", fontWeight: 700 }}>Automatically detected timezone</div>
+                  <div style={{ padding: '8px 12px', borderRadius: '999px', background: 'rgba(32,181,223,0.08)', color: T.link, fontSize: "13px", fontWeight: 700 }}>Clinician calendar timezone</div>
                 </div>
 
 	                <div className='dt-detail-grid'>
                   {[
-                    ['Consultation Type', readLabel(service)],
+                    ['Consultation Type', readLabel(selectedServiceType)],
                     ['Appointment Duration', duration],
                     ['Estimated End Time', endTime],
-                    ['Consultation Fee', formatFee(fee)],
+                    ['Consultation Fee', formatFee()],
                     ['Doctor’s declared billing options', insurance],
-                    ['Cancellation Policy', 'Free up to 24 hours before appointment'],
+                    ['Cancellation terms', 'Cancellation terms not configured'],
                   ].map(([label, value]) => (
                     <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
@@ -768,11 +792,11 @@ function DateTimeSelectionPageContent() {
                 {[
                   ['Consultation', readLabel(service)],
                   ['Selected Date', formatDateLabel(selectedDate)],
-                  ['Selected Time', mounted ? selectedSlot : 'Loading...'],
+                  ['Selected Time', selectedSlot || 'Not selected'],
                   ['Duration', displayDuration],
-                  ['Fee', formatFee(fee)],
+                  ['Fee', formatFee()],
                   ['Insurance', insurance],
-                  ['Estimated Total', formatFee(fee)],
+                  ['Estimated Total', formatFee()],
                 ].map(([label, value]) => (
                   <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
                     <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
@@ -819,7 +843,7 @@ function DateTimeSelectionPageContent() {
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {['Secure Booking', 'Encrypted Scheduling', 'Instant Confirmation', 'Protected Account Access', 'Verified Physicians'].map((item) => (
+                {['Doctor selection', 'Clinician appointment calendar', 'Review before confirmation', 'Account access required'].map((item) => (
                   <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: T.slate, fontSize: "13px", fontWeight: 600 }}>
                     <Ico p={ICONS.shield} size={12} sw={1.8} color={T.green} />
                     {item}

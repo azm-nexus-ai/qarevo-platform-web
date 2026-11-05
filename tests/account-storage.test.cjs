@@ -1030,3 +1030,35 @@ test('portal action continuations require their mounted page and original sessio
   t.location.pathname='/doctor/dashboard'
   assert.equal(next.isCurrent(),false)
 })
+
+test('canonical SPA navigation selects its portal before window history commits and recovery routes have explicit patient scope',()=>{
+  const t=tab()
+  t.location.pathname='/auth/sign-in'
+  t.sessionStorage.setItem('qarevo:active-portal','patient')
+  assert.equal(t.portal.currentPortal('/auth/doctor/login'),'doctor')
+  assert.equal(t.portal.currentPortal('/auth/admin/login'),'admin')
+  t.sessionStorage.setItem('qarevo:active-portal','doctor')
+  for(const route of ['/auth/forgot-password','/auth/reset-password']) {
+    assert.equal(t.portal.currentPortal(route),'patient')
+    assert.equal(t.portal.portalFromPath(route),'patient')
+  }
+  t.location.hostname='doctor.qarevohealth.com'
+  assert.equal(t.portal.currentPortal('/auth/reset-password'),'doctor')
+  assert.equal(t.portal.currentPortal('/patient/dashboard'),'doctor')
+})
+
+test('explicit portal draft ownership survives initialization before the canonical route commits',()=>{
+  const t=tab()
+  login(t,'patient')
+  login(t,'clinician',{portal:'doctor'})
+  // The boundary selected doctor from Next's new pathname, while the browser
+  // location still represents the previous committed patient page.
+  const draft=t.core.createAccountDraftStorage('doctor')
+  assert.equal(draft.getItem('consultation'),null)
+  t.location.pathname='/doctor/workspace'
+  draft.setItem('consultation','synthetic-clinician-draft')
+  assert.equal(draft.getItem('consultation'),'synthetic-clinician-draft')
+  const keys=Object.keys(t.sessionStorage)
+  assert.equal(keys.filter(key=>key.startsWith('qarevo.draft.v3:doctor:')).length,1)
+  assert.equal(keys.some(key=>key.startsWith('qarevo.draft.v3:patient:')),false)
+})

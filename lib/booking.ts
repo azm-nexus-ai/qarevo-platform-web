@@ -1,5 +1,3 @@
-import { PHYSICIANS } from '@/constants/physicians'
-
 export type BookingPhysicianData = {
   id: string
   name: string
@@ -17,9 +15,10 @@ export function getBookingPhysician(
   searchParams: URLSearchParams | { get: (key: string) => string | null },
   fallbackPhysician?: { id?: string; name?: string; specialty?: string; hospital?: string; imageUrl?: string | null; consultationFee?: number; experienceYears?: number; rating?: number; languages?: string[]; insurance?: string[] } | null,
 ): BookingPhysicianData {
-  const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? fallbackPhysician?.id ?? ''
-  const fromStore = physicianId ? PHYSICIANS.find((item) => item.id === physicianId) : undefined
-  const base = fromStore ?? fallbackPhysician
+  const explicitProvider = searchParams.get('physicianId') !== null || searchParams.get('provider_id') !== null
+  const physicianId = explicitProvider ? readBookingProviderId(searchParams) : fallbackPhysician?.id ?? ''
+  // Clinical identity comes from the authenticated API, never bundled demo profiles.
+  const base = fallbackPhysician?.id === physicianId ? fallbackPhysician : undefined
 
   return {
     id: physicianId || base?.id || '',
@@ -75,3 +74,36 @@ export function buildBookingQueryParams(
   }
   return next
 }
+
+
+/** Both legacy aliases may occur, but a malformed or conflicting identity is not selectable. */
+export function readBookingProviderId(params: { get: (key: string) => string | null }): string {
+  const values = [params.get('physicianId'), params.get('provider_id')].filter((value): value is string => value !== null)
+  if (!values.length || values.some(value => !/^[a-zA-Z0-9_-]{1,80}$/.test(value))) return ''
+  return values.every(value => value === values[0]) ? values[0] : ''
+}
+
+export function bookingService(params: { get: (key: string) => string | null }): string {
+  const service = params.get('service') ?? params.get('service_type')
+  return service && /^(video|physical|follow-up)$/.test(service) ? service : 'video'
+}
+
+/** Keep bounded care references while discarding the previous doctor's times and identity. */
+export function buildDoctorDiscoveryHref(params: { toString: () => string }, service?: string | null): string {
+  const source = new URLSearchParams(params.toString())
+  const next = buildBookingQueryParams(source, null, service ?? bookingService(source))
+  for (const key of ['physicianId', 'provider_id', 'slot', 'start_at', 'end_at']) next.delete(key)
+  return `/patient/find-doctor${next.size ? `?${next.toString()}` : ''}`
+}
+
+export function bookingEntryDestination(params: { toString: () => string }): string {
+  const source = new URLSearchParams(params.toString())
+  const provider = readBookingProviderId(source)
+  if (!provider) return buildDoctorDiscoveryHref(source)
+  const next = buildBookingQueryParams(source, {id: provider}, bookingService(source))
+  if (!next.has('from')) next.set('from', 'redirect')
+  return `/patient/consultation-booking/date-time?${next.toString()}`
+}
+
+/** Legacy service price numbers are not an approved, currency-bound patient quote. */
+export const CONSULTATION_PRICING_PENDING = 'Pricing pending setup'

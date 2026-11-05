@@ -50,6 +50,10 @@ export function portalHostRedirects(env: Environment): PortalHostRedirect[] {
     for (const target of PORTALS) {
       if (target === portal) continue
       for (const prefix of PORTAL_PATH_PREFIXES[target]) {
+        // Generic recovery links predate role-specific paths and may contain a
+        // URL fragment token. Resolve patient scope on a shared development
+        // host, but retain host authority on an isolated portal deployment.
+        if (prefix === '/auth/forgot-password' || prefix === '/auth/reset-password') continue
         // /auth/verify-email/link handles both roles and carries a fragment-only
         // verification token. Keep this shared route on the current host.
         const source = prefix === '/auth/verify-email' ? prefix : `${prefix}/:path*`

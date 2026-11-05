@@ -41,8 +41,7 @@ export function storePortalIdentity(identity: import('./portal-scope').PortalIde
   window.localStorage.setItem(portalKey('identity', portal), JSON.stringify(identity))
   if (before !== readAccountScope(portal)) accountChanged(portal)
 }
-export function createAccountDraftStorage() {
-  const portal = currentPortal()
+export function createAccountDraftStorage(portal = currentPortal()) {
   const owner = readAccountScope(portal)
   const available = () => owner !== null && owner === readAccountScope(portal) && portal === currentPortal()
   const keyFor = (key: string) => `${DRAFT_PREFIX}${portal}:${owner}:${key}`

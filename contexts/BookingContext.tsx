@@ -38,11 +38,11 @@ function returnToSignIn(portal: Portal) {
   window.location.replace(destination)
 }
 
-export function BookingProvider({ children }: { children: ReactNode }) {
+export function BookingProvider({ children, portal: selectedPortal }: { children: ReactNode; portal?: Portal }) {
   // PortalSessionBoundary remounts this provider when the active portal changes.
-  const [portal] = useState(currentPortal)
+  const [portal] = useState(() => selectedPortal ?? currentPortal())
   const [bookingState, setBookingState] = useState<BookingState>(initialState)
-  const [draftStorage, setDraftStorage] = useState(createAccountDraftStorage)
+  const [draftStorage, setDraftStorage] = useState(() => createAccountDraftStorage(portal))
   const [blocked, setBlocked] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [hydrated, setHydrated] = useState(false)
@@ -81,7 +81,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       setBlocked(false)
       setHydrated(false)
       setBookingState(initialState)
-      setDraftStorage(createAccountDraftStorage())
+      setDraftStorage(createAccountDraftStorage(portal))
     }
     const check = (event?: Event) => {
       if (event && !isPortalEvent(event, portal)) return

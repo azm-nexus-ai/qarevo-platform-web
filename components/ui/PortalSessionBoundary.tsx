@@ -9,7 +9,7 @@ import { SessionGuard, type InitialSessionCheck } from '@/components/ui/SessionG
 
 export function PortalSessionBoundary({children}:{children:ReactNode}) {
   const path=usePathname()
-  const portal=typeof window === 'undefined' ? portalFromPath(path) || 'patient' : currentPortal()
+  const portal=typeof window === 'undefined' ? portalFromPath(path) || 'patient' : currentPortal(path)
   return <PortalBoundary key={`${portal}:${/^\/(patient|doctor|admin)(\/|$)|^\/auth\/profile-setup(\/|$)/.test(path)}`} portal={portal} path={path}>{children}</PortalBoundary>
 }
 function PortalBoundary({children,portal,path}:{children:ReactNode;portal:ReturnType<typeof currentPortal>;path:string}) {
@@ -47,5 +47,5 @@ function PortalBoundary({children,portal,path}:{children:ReactNode;portal:Return
     return()=>{alive=false}
   },[portal,protectedPage,attempt,entryPath])
   if(protectedPage&&!ready)return <main className='grid min-h-dvh place-items-center bg-surface-subtle px-6 text-ink'><section className='max-w-md rounded-2xl border border-theme bg-surface p-8'><h1 className='text-xl font-semibold'>Secure access</h1><p className='mt-3 text-sm' role={error?'alert':'status'}>{error||'Checking your portal session…'}</p>{error&&<button className='mt-5 rounded-xl border border-theme px-5 py-3' onClick={()=>{setError('');setAttempt(x=>x+1)}}>Retry connection</button>}</section></main>
-  return <BookingProvider><SessionGuard initialCheck={initialCheck}>{children}</SessionGuard></BookingProvider>
+  return <BookingProvider portal={portal}><SessionGuard initialCheck={initialCheck}>{children}</SessionGuard></BookingProvider>
 }

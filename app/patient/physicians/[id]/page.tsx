@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { buildBookingQueryParams } from '@/lib/booking'
+import { buildBookingQueryParams, CONSULTATION_PRICING_PENDING } from '@/lib/booking'
 import { getPatientDoctor } from '@/lib/api'
 import type { PatientDoctor } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
@@ -550,7 +550,7 @@ function PhysicianProfilePageContent() {
                     style={{ textAlign: 'left', borderRadius: '14px', border: active ? '1px solid rgba(32,181,223,0.4)' : "1px solid var(--border)", background: active ? 'rgba(32,181,223,0.14)' : "var(--surface-glass)", padding: '12px', cursor: 'pointer', textDecoration: 'none', display: 'block' }}
                   >
                     <p style={{ margin: '0 0 4px', fontSize: '13px', color: T.navy, fontWeight: 700 }}>{service.label}</p>
-                    <p style={{ margin: '0 0 2px', fontSize: "13px", color: T.slate }}>Price: ${service.price}</p>
+                    <p style={{ margin: '0 0 2px', fontSize: "13px", color: T.slate }}>{CONSULTATION_PRICING_PENDING}</p>
                     <p style={{ margin: '0 0 2px', fontSize: "13px", color: T.slate }}>Duration: {service.duration}</p>
                     <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Availability: {service.availability}</p>
                   </Link>

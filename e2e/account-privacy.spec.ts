@@ -255,6 +255,7 @@ for (const flow of ['signup', 'password-reset', 'administrator-invitation'] as c
     let started!: () => void
     const submitted = new Promise<void>(resolve => { started = resolve })
     await context.route(`**${endpoint}`, async route => {
+      expect(route.request().headers()['x-qarevo-portal']).toBe(flow === 'administrator-invitation' ? 'admin' : 'patient')
       started()
       await held
       await route.fulfill({ json: { message: 'Completed synthetic request.' } })
@@ -278,17 +279,24 @@ for (const flow of ['signup', 'password-reset', 'administrator-invitation'] as c
     }
     await page.locator('button[type="submit"]').click()
     await submitted
+    await page.evaluate(() => { (window as Window & { syntheticAuthDocument?: boolean }).syntheticAuthDocument = true })
     // Use real client-side links so the old request remains alive after its
     // form unmounts. A full page.goto would discard the vulnerable continuation.
     await page.locator('footer').getByRole('link', { name: 'Privacy', exact: true }).click()
     await page.getByRole('link', { name: 'Return to Home', exact: true }).click()
     await page.getByRole('link', { name: 'Physician Portal', exact: true }).first().click()
-    await expect(page).toHaveURL(/\/auth\/doctor\/login$/)
+    const doctorHome = page.locator('footer').getByRole('link', { name: 'Qarevo Health home', exact: true })
+    await expect(doctorHome).toHaveAttribute('href', '/doctor/dashboard')
+    await doctorHome.click()
+    await expect(page).toHaveURL(/\/doctor\/dashboard$/)
+    await expect(page.getByRole('banner', { name: 'Doctor main navigation', exact: true })).toBeVisible()
+    expect(await page.evaluate(() => (window as Window & { syntheticAuthDocument?: boolean }).syntheticAuthDocument)).toBe(true)
     const completed = page.waitForResponse(response => new URL(response.url()).pathname === endpoint)
     release()
     await (await completed).finished()
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
-    await expect(page).toHaveURL(/\/auth\/doctor\/login$/)
+    await expect(page).toHaveURL(/\/doctor\/dashboard$/)
+    expect(await page.evaluate(() => (window as Window & { syntheticAuthDocument?: boolean }).syntheticAuthDocument)).toBe(true)
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('qarevo:doctor:identity') || 'null'))).toEqual(doctor)
     expect(await page.evaluate(() => localStorage.getItem('qarevo:doctor:signed-out'))).toBeNull()
     expect(await page.evaluate(() => sessionStorage.getItem('qarevo:doctor:signup:v2'))).toBeNull()

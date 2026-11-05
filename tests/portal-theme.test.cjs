@@ -73,6 +73,8 @@ for (const [hostname, pathname, remembered] of [
   ['doctor.qarevo-health.de', '/patient/dashboard', 'patient'],
   ['admin.qarevo-health.de', '/support', 'doctor'],
   ['localhost', '/auth/sign-in', 'doctor'],
+  ['localhost', '/auth/forgot-password', 'doctor'],
+  ['localhost', '/auth/reset-password', 'doctor'],
   ['localhost', '/auth/doctor/login', 'patient'],
   ['localhost', '/auth/doctor-register', 'patient'],
   ['localhost', '/auth/doctor-verify-email', 'patient'],

@@ -1,10 +1,10 @@
 'use client'
 
-import { buildBookingQueryParams } from '@/lib/booking'
+import { buildBookingQueryParams, CONSULTATION_PRICING_PENDING } from '@/lib/booking'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { getOnboardingRedirectPath, readAuthFlowState } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
@@ -37,6 +37,7 @@ function getQuickBookServiceType(
 function buildProfileHref(
   physician: PatientDoctor,
   intent: 'view' | 'book',
+  bookingParams: { toString: () => string },
   state: {
     q: string
     specialty: string
@@ -77,18 +78,22 @@ function buildProfileHref(
     svc: preferredService,
   })
 
+  for (const [key, value] of buildBookingQueryParams(bookingParams, null, preferredService)) params.set(key, value)
+  params.set('from', 'find-doctor')
   return `/patient/physicians/${physician.id}?${params.toString()}`
 }
 
 function buildBookingHref(
   physician: PatientDoctor,
+  bookingParams: { toString: () => string },
   state: {
     consultationType: string
     insurance: string
   },
 ) {
   const serviceType = getQuickBookServiceType(state.consultationType, physician.consultationTypes)
-  const params = buildBookingQueryParams(new URLSearchParams({ from: 'find-doctor' }), physician, serviceType)
+  const params = buildBookingQueryParams(bookingParams, physician, serviceType)
+  params.set('from', 'find-doctor')
 
   return `/patient/consultation-booking/date-time?${params.toString()}`
 }
@@ -97,7 +102,8 @@ function formatDoctorRating(doctor: PatientDoctor) {
   return doctor.reviews > 0 ? `${doctor.rating.toFixed(1)} (${doctor.reviews} reviews)` : 'No ratings yet'
 }
 
-export default function FindDoctorPage() {
+function FindDoctorPageContent() {
+  const bookingParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const [q, setQ] = useState('')
@@ -114,7 +120,10 @@ export default function FindDoctorPage() {
   const [gender, setGender] = useState<'any' | 'female' | 'male'>('any')
   const [language, setLanguage] = useState<(typeof LANGUAGE_OPTIONS)[number]>('Any')
   const [experience, setExperience] = useState<'any' | '0-5' | '6-10' | '11+'>('any')
-  const [consultationType, setConsultationType] = useState<'any' | 'video' | 'physical'>('any')
+  const [consultationType, setConsultationType] = useState<'any' | 'video' | 'physical'>(() => {
+    const service = bookingParams.get('service') ?? bookingParams.get('service_type')
+    return service === 'video' || service === 'physical' ? service : 'any'
+  })
   const [insurance, setInsurance] = useState<(typeof INSURANCE_OPTIONS)[number]>('Any')
   const [rating, setRating] = useState<'any' | '4.0' | '4.5' | '4.8'>('any')
   const [price, setPrice] = useState<'any' | 'under-130' | '130-180' | '180+'>('any')
@@ -721,7 +730,7 @@ export default function FindDoctorPage() {
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {doctor.nextAvailable}</p>
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Distance:</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : 'Not available'}</p>
                         {doctor.services && doctor.services.length > 0 && (
-                          <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Fee:</strong> ${Math.min(...doctor.services.map(s => s.price))} - ${Math.max(...doctor.services.map(s => s.price))}</p>
+                          <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Fee:</strong> {CONSULTATION_PRICING_PENDING}</p>
                         )}
                       </div>
 
@@ -733,10 +742,10 @@ export default function FindDoctorPage() {
                       </p>
 
                       <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <Link href={buildProfileHref(doctor, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>
+                        <Link href={buildProfileHref(doctor, 'view', bookingParams, { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>
                           View Profile
                         </Link>
-                        <Link href={buildBookingHref(doctor, { consultationType, insurance })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', display: 'inline-flex', alignItems: 'center' }}>
+                        <Link href={buildBookingHref(doctor, bookingParams, { consultationType, insurance })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', display: 'inline-flex', alignItems: 'center' }}>
 	                          Book Now
 	                        </Link>
                       </div>
@@ -797,7 +806,7 @@ export default function FindDoctorPage() {
                   <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Tap the heart icon on any doctor card to save favorites.</p>
                 ) : (
                   physicians.filter((p) => favorites[p.id]).map((p) => (
-                    <Link key={p.id} href={buildProfileHref(p, 'view', { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ textDecoration: 'none', border: "1px solid var(--border)", borderRadius: '11px', padding: '9px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: T.navy, fontSize: "13px", fontWeight: 600 }}>
+                    <Link key={p.id} href={buildProfileHref(p, 'view', bookingParams, { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ textDecoration: 'none', border: "1px solid var(--border)", borderRadius: '11px', padding: '9px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: T.navy, fontSize: "13px", fontWeight: 600 }}>
                       {p.name}
                       <Ico p={ICONS.arrowSm} size={13} sw={1.8} color={T.slate2} />
                     </Link>
@@ -810,4 +819,8 @@ export default function FindDoctorPage() {
       </div>
     </main>
   )
+}
+
+export default function FindDoctorPage() {
+  return <Suspense fallback={<p role='status' className='p-6 text-sm text-muted'>Loading doctor selection…</p>}><FindDoctorPageContent /></Suspense>
 }

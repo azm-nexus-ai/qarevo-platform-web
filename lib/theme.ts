@@ -16,7 +16,7 @@ function bootstrapTheme(portal?: Portal, apply = true): Theme {
     if (portals.includes(host)) resolved = host as Portal
     else if (/^\/(?:admin|auth\/admin)(?:\/|$)/.test(path)) resolved = 'admin'
     else if (/^\/(?:doctor|auth\/doctor)(?:\/|$)|^\/auth\/doctor-(?:register|verify-email|verify-phone)(?:\/|$)/.test(path)) resolved = 'doctor'
-    else if (/^\/(?:patient|auth\/(?:sign-in|sign-up|profile-setup|otp|verify-email|account-created|welcome))(?:\/|$)/.test(path)) resolved = 'patient'
+    else if (/^\/(?:patient|auth\/(?:sign-in|sign-up|forgot-password|reset-password|profile-setup|otp|verify-email|account-created|welcome))(?:\/|$)/.test(path)) resolved = 'patient'
     else {
       try {
         const saved = sessionStorage.getItem('qarevo:active-portal')

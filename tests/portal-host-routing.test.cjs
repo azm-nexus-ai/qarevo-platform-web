@@ -88,6 +88,10 @@ for (const portal of ['patient', 'doctor', 'admin']) {
   test(`${portal} host redirects every other canonical portal path to the exact configured authority`, () => {
     for (const target of ['patient', 'doctor', 'admin'].filter(value => value !== portal)) {
       for (const prefix of PORTAL_PATH_PREFIXES[target]) {
+        if (prefix === '/auth/forgot-password' || prefix === '/auth/reset-password') {
+          assert.equal(redirect(`https://${portal}.qarevo.example${prefix}`), null)
+          continue
+        }
         const pathname = prefix === '/auth/verify-email' ? prefix : `${prefix}/nested-record`
         const result = redirect(`https://${portal}.qarevo.example${pathname}?tab=history&tag=one&tag=two&next=https%3A%2F%2Funtrusted.example`)
         assert.equal(result.url.origin, `https://${target}.qarevo.example`)

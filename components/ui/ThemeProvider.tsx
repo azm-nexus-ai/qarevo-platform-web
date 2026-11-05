@@ -28,7 +28,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const theme = useSyncExternalStore(subscribe, readTheme, () => 'light' as Theme)
   const ready = useSyncExternalStore(subscribe, () => true, () => false)
   useLayoutEffect(() => {
-    const portal = currentPortal()
+    const portal = currentPortal(pathname)
     applyPortalTheme(portal)
     window.dispatchEvent(new CustomEvent(THEME_CHANGED, { detail: { portal } }))
   }, [pathname])
