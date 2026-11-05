@@ -12,7 +12,7 @@ export function clearPrivateBrowserState(portal = currentPortal()) {
   if (typeof window === 'undefined') return
   for (const storage of [window.localStorage, window.sessionStorage]) {
     for (const key of Object.keys(storage)) {
-      if (legacyPrivateKey(key) || key.startsWith(`${DRAFT_PREFIX}${portal}:`)) storage.removeItem(key)
+      if (legacyPrivateKey(key) || key.startsWith(`${DRAFT_PREFIX}${portal}:`) || key === portalKey('signup:v2', portal)) storage.removeItem(key)
     }
   }
 }

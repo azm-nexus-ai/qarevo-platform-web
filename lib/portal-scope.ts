@@ -39,6 +39,11 @@ export function isPortalEvent(event: Event, portal = currentPortal()) {
   const target = (event as CustomEvent<{portal?: Portal}>).detail?.portal
   return !target || target === portal
 }
+/** Identity listeners must not reload profiles for theme or renewal preferences. */
+export function isPortalIdentityEvent(event: Event, portal = currentPortal()) {
+  if (typeof StorageEvent !== 'undefined' && event instanceof StorageEvent) return event.key === null || event.key === portalKey('identity', portal)
+  return isPortalEvent(event, portal)
+}
 /** Retire old shared credentials; never migrate them into new JS storage. */
 export function retireLegacyCredentials() {
   if (typeof window === 'undefined') return

@@ -15,7 +15,7 @@ import DoctorMobileNavigation from '@/components/doctor/DoctorMobileNavigation'
 import ProfileAvatar from '@/components/branding/ProfileAvatar'
 import PortalAccountMenu from '@/components/layout/PortalAccountMenu'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
-import { isPortalEvent } from '@/lib/portal-scope'
+import { isPortalIdentityEvent } from '@/lib/portal-scope'
 import { subscribeProfileChanges } from '@/lib/profile-events'
 import {
   clearPortalSession,
@@ -56,14 +56,16 @@ export default function DoctorLayout({
     }
 
     let cancelled = false
+    let generation = 0
     const scope = readAccountScope('doctor')
 
     async function fetchProfile() {
+      const ticket = ++generation
       try {
         const profile = await getDoctorProfile()
-        if (!cancelled && scope === readAccountScope('doctor')) setDoctorProfile(profile)
+        if (!cancelled && ticket === generation && scope === readAccountScope('doctor')) setDoctorProfile(profile)
       } catch (error) {
-        if (cancelled || scope !== readAccountScope('doctor')) return
+        if (cancelled || ticket !== generation || scope !== readAccountScope('doctor')) return
         if (isAuthError(error)) {
           clearPortalSession()
           router.replace('/auth/doctor/login')
@@ -75,7 +77,7 @@ export default function DoctorLayout({
 
     void fetchProfile()
     const unsubscribe = subscribeProfileChanges('doctor', () => { void fetchProfile() })
-    const reset = (event: Event) => { if (!isPortalEvent(event, 'doctor')) return; setDoctorProfile(null); setIdentityRevision(value => value + 1) }
+    const reset = (event: Event) => { if (!isPortalIdentityEvent(event, 'doctor')) return; setDoctorProfile(null); setIdentityRevision(value => value + 1) }
     window.addEventListener(ACCOUNT_CHANGED, reset)
     window.addEventListener('storage', reset)
 

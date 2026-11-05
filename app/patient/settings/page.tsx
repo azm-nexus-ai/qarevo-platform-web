@@ -12,6 +12,8 @@ import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/compone
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { T } from '@/lib/tokens'
+import { insurancePresentation } from '@/lib/insurance-presentation'
+import { medicalUploadError } from '@/lib/clinical-upload'
 import { clearPortalSession, createEmergencyContact, createInsurance, deactivatePatientAccount, deleteEmergencyContact, deletePatientPasskey, downloadPatientDataExport, getApiErrorDetail, getPatientActiveDevices, getPatientHealthInfo, getPatientLoginHistory, getPatientPasskeyStatus, getPatientPasskeys, getPatientSettings, isAuthError, readSessionMarker, registerPatientPasskey, revokeOtherPatientActiveDevices, revokePatientActiveDevice, updateEmergencyContact, updateInsurance, updatePatientSettings, updateProfile, uploadMedicalRecord, type PatientActiveDevice, type PatientLoginHistoryItem, type PatientPasskeyCredential, type PatientPasskeyStatus, type EmergencyContact, type Insurance, type EmergencyContactCreate } from '@/lib/api'
 
 type ToggleKey =
@@ -130,6 +132,7 @@ export default function PatientSettingsPage() {
     phone: '',
   })
   const [uploadingInsuranceCard, setUploadingInsuranceCard] = useState(false)
+  const [insuranceCardError, setInsuranceCardError] = useState<string | null>(null)
   const [sessionStatus, setSessionStatus] = useState<'checking' | 'active' | 'signed-out'>('checking')
   const [insuranceEdit, setInsuranceEdit] = useState({
     insurance_provider_name: '',
@@ -599,6 +602,12 @@ export default function PatientSettingsPage() {
 
   async function handleInsuranceCardSelected(file: File | null) {
     if (!file) return
+    const validationError = medicalUploadError(file.size)
+    setInsuranceCardError(validationError)
+    if (validationError) {
+      if (insuranceCardInputRef.current) insuranceCardInputRef.current.value = ''
+      return
+    }
     setUploadingInsuranceCard(true)
     try {
       const formData = new FormData()
@@ -634,6 +643,7 @@ export default function PatientSettingsPage() {
     toggles.labResultAlerts,
     toggles.marketingEmails,
   ].filter(Boolean).length
+  const insuranceInfo = insurancePresentation(insurance)
 
   const rightRail = (
     <div className='grid gap-3'>
@@ -644,7 +654,7 @@ export default function PatientSettingsPage() {
           {[
             ['Security status', sessionStatus === 'checking' ? 'Checking' : sessionStatus === 'active' ? 'Active session' : 'Signed out'],
             ['Notification setup', `${enabledNotificationCount} of 7 enabled`],
-            ['Insurance coverage', insurance ? 'On file' : 'Not added'],
+            ['Insurance details', loading ? 'Loading…' : loadError ? 'Unavailable' : insuranceInfo.hasDetails ? 'Recorded' : 'Not added'],
           ].map(([label, value]) => (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
               <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
@@ -1062,13 +1072,14 @@ export default function PatientSettingsPage() {
                   <h2 className='portal-h2 settings-card-title'>Coverage and card upload</h2>
                 </div>
                 <div className='flex gap-2'>
-                  {insurance && <PortalBadge tone='success'>Coverage Active</PortalBadge>}
+                  <PortalBadge tone={insuranceInfo.tone}>{insuranceInfo.label}</PortalBadge>
                   <PortalButton tone='secondary' onClick={() => { if (!showInsuranceEdit) openInsuranceEdit(); else setShowInsuranceEdit(false) }}>
                     {showInsuranceEdit ? 'Cancel' : insurance ? 'Edit' : 'Add Insurance'}
                   </PortalButton>
                 </div>
               </div>
 
+              <p className='mb-4 text-sm leading-6 text-muted'>{insuranceInfo.notice}</p>
               {showInsuranceEdit && (
                 <div style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', marginBottom: '16px' }}>
                   <div className='settings-info-grid'>
@@ -1105,7 +1116,7 @@ export default function PatientSettingsPage() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Coverage Status</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Membership category (patient reported)</label>
                       <select
                         value={insuranceEdit.insured_status}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insured_status: e.target.value })}
@@ -1120,7 +1131,7 @@ export default function PatientSettingsPage() {
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Valid From</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Reported card validity from</label>
                       <input
                         type='date'
                         value={insuranceEdit.validity_start}
@@ -1129,7 +1140,7 @@ export default function PatientSettingsPage() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Valid Until</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Reported card validity until</label>
                       <input
                         type='date'
                         value={insuranceEdit.validity_end}
@@ -1150,7 +1161,7 @@ export default function PatientSettingsPage() {
                   <>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Type</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_type || 'Self Pay'}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insuranceInfo.fundingLabel}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Provider</p>
@@ -1161,11 +1172,11 @@ export default function PatientSettingsPage() {
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_number || 'Not set'}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coverage Status</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insured_status || 'Not set'}</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Membership category (patient reported)</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insuranceInfo.membershipLabel}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Valid Until</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Reported card validity until</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>
                         {insurance.validity_end
                           ? new Date(insurance.validity_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -1183,6 +1194,9 @@ export default function PatientSettingsPage() {
                 <input
                   ref={insuranceCardInputRef}
                   type='file'
+                  aria-label='Upload insurance card'
+                  aria-describedby='insurance-card-upload-help insurance-card-upload-error'
+                  aria-invalid={Boolean(insuranceCardError)}
                   accept='.pdf,.png,.jpg,.jpeg,.webp'
                   onChange={(event) => handleInsuranceCardSelected(event.target.files?.[0] || null)}
                   style={{ display: 'none' }}
@@ -1190,6 +1204,8 @@ export default function PatientSettingsPage() {
                 <PortalButton tone='secondary' onClick={() => insuranceCardInputRef.current?.click()} disabled={uploadingInsuranceCard}>
                   {uploadingInsuranceCard ? 'Uploading…' : 'Upload Insurance Card'}
                 </PortalButton>
+                <p id='insurance-card-upload-help' className='mt-2 text-sm text-muted'>Maximum 3 MB per file in development. An uploaded card does not verify coverage.</p>
+                <p id='insurance-card-upload-error' role={insuranceCardError ? 'alert' : undefined} className='mt-2 text-sm text-ink'>{insuranceCardError}</p>
               </div>
             </PortalCard>
           </div>

@@ -396,6 +396,7 @@ export default function PersonalInformationPage() {
         language: form.preferredLanguage as 'German' | 'English',
       })
       setSubmitting(false)
+      draftStorage.removeItem(STORAGE_KEY)
       setOnboardingStage('contact-information')
       router.push('/auth/profile-setup/contact-information')
     } catch (error) {

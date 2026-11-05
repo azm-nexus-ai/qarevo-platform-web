@@ -4,7 +4,7 @@ import { apiDelete, apiGet, apiPost, getApiErrorDetail } from '@/lib/api'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import ProfileAvatar from '@/components/branding/ProfileAvatar'
 import { notifyProfileChanged, subscribeProfileChanges } from '@/lib/profile-events'
-import { isPortalEvent } from '@/lib/portal-scope'
+import { isPortalIdentityEvent } from '@/lib/portal-scope'
 
 const requests = new Map<string, Promise<{image:string|null}>>()
 function loadImage() {
@@ -24,10 +24,10 @@ function useProfileImage() {
     let active = true
     const scope = readAccountScope('patient')
     void loadImage().then(result=>{if(active && scope===readAccountScope('patient')){setImage(result.image);setError('')}}).catch(()=>{if(active && scope===readAccountScope('patient'))setError('Your profile image could not be loaded.')})
-    const reset=(event?:Event)=>{if(event&&!isPortalEvent(event,'patient'))return;const owner=readAccountScope('patient');if(owner)requests.delete(owner);setImage(null);setError('');setAttempt(value=>value+1)}
+    const reset=(event?:Event)=>{if(event&&!isPortalIdentityEvent(event,'patient'))return;const owner=readAccountScope('patient');if(owner)requests.delete(owner);setImage(null);setError('');setAttempt(value=>value+1)}
     const unsubscribe=subscribeProfileChanges('patient',reset)
     window.addEventListener(ACCOUNT_CHANGED,reset)
-    const crossTab=(event:StorageEvent)=>{if(isPortalEvent(event,'patient'))reset()}
+    const crossTab=(event:StorageEvent)=>{if(isPortalIdentityEvent(event,'patient'))reset()}
     window.addEventListener('storage',crossTab)
     return()=>{active=false;unsubscribe();window.removeEventListener(ACCOUNT_CHANGED,reset);window.removeEventListener('storage',crossTab)}
   },[attempt])
@@ -46,7 +46,7 @@ export function ProfileImageEditor({name}:{name:string}) {
   const [busy,setBusy]=useState(false)
   const input=useRef<HTMLInputElement>(null)
   useEffect(()=>{if(!selected){setPreview('');return}const url=URL.createObjectURL(selected);setPreview(url);return()=>URL.revokeObjectURL(url)},[selected])
-  useEffect(()=>{const reset=(event:Event)=>{if(!isPortalEvent(event,'patient'))return;setSelected(null);setError('');setMessage('');setBusy(false)};window.addEventListener(ACCOUNT_CHANGED,reset);return()=>window.removeEventListener(ACCOUNT_CHANGED,reset)},[])
+  useEffect(()=>{const reset=(event:Event)=>{if(!isPortalIdentityEvent(event,'patient'))return;setSelected(null);setError('');setMessage('');setBusy(false)};window.addEventListener(ACCOUNT_CHANGED,reset);return()=>window.removeEventListener(ACCOUNT_CHANGED,reset)},[])
   async function save(remove=false) {
     const owner=readAccountScope('patient')
     setError('');setMessage('');setBusy(true)

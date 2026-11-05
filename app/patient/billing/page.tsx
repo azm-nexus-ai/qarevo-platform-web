@@ -8,6 +8,7 @@ import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { clearPortalSession, getApiErrorDetail, getPatientBilling, isAuthError, type PatientBillingInvoice, type PatientBillingPaymentMethod, type PatientBillingResponse } from '@/lib/api'
 import { T } from '@/lib/tokens'
+import { insurancePresentation } from '@/lib/insurance-presentation'
 
 const EMPTY_BILLING: PatientBillingResponse = {
   status: 'not_configured',
@@ -129,13 +130,8 @@ export default function PatientBillingPage() {
   const hasPaymentMethods = billing.payment_methods.length > 0
   const hasInvoices = billing.invoices.length > 0
   const insurance = billing.insurance_summary || EMPTY_BILLING.insurance_summary
-  const insuranceStatus = insurance.status === 'verified'
-    ? 'Verified'
-    : ['active', 'unverified'].includes(insurance.status)
-      ? 'Not verified'
-    : insurance.status === 'incomplete'
-      ? 'Incomplete'
-      : 'Not added'
+  const insuranceInfo = insurancePresentation({insurance_type:insurance.insurance_type,insurance_provider_name:insurance.provider_name,insurance_number:insurance.member_number})
+  const insuranceStatus = insuranceInfo.verificationLabel
 
   const showNotice = (title: string, body: string) => setNotice({ title, body })
 
@@ -188,16 +184,16 @@ export default function PatientBillingPage() {
 
       <PortalCard>
         <div className='flex items-center gap-2 mb-2'>
-          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'rgba(15,158,119,0.12)', display: 'grid', placeItems: 'center' }}>
-            <Ico p={ICONS.shield} size={15} sw={1.7} color={T.green} />
+          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'var(--primary-soft)', display: 'grid', placeItems: 'center' }}>
+            <Ico p={ICONS.shield} size={15} sw={1.7} color={T.link} />
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>Insurance Summary</p>
-            <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>{insurance.provider_name || 'No insurance provider connected'}</p>
+            <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>{insurance.provider_name || 'No insurer recorded'}</p>
           </div>
         </div>
         <div className='grid gap-2'>
-          <PortalBadge tone={insurance.status === 'verified' ? 'success' : ['incomplete', 'unverified', 'active'].includes(insurance.status) ? 'warning' : 'neutral'}>{insuranceStatus}</PortalBadge>
+          <PortalBadge tone={insuranceInfo.tone}>{insuranceStatus}</PortalBadge>
           {insurance.member_number ? <PortalBadge tone='info'>Member record on file</PortalBadge> : null}
         </div>
       </PortalCard>
@@ -233,9 +229,9 @@ export default function PatientBillingPage() {
           </PortalCard>
           <PortalCard>
             <h2 className='mb-2 text-xl font-semibold' style={{ color: T.navy }}>Your insurance details</h2>
-            <PortalBadge tone={insurance.status === 'not_added' ? 'neutral' : 'warning'}>{insuranceStatus}</PortalBadge>
+            <PortalBadge tone={insuranceInfo.tone}>{insuranceStatus}</PortalBadge>
             <p className='mt-3 text-sm leading-6' style={{ color: T.slate }}>{insurance.provider_name || 'No insurer has been added.'}</p>
-            <p className='mt-2 mb-4 max-w-2xl text-sm leading-6' style={{ color: T.slate }}>Saved insurance details do not confirm coverage or direct billing for a consultation.</p>
+            <p className='mt-2 mb-4 max-w-2xl text-sm leading-6' style={{ color: T.slate }}>{insuranceInfo.notice}</p>
             <Link href='/patient/settings' className='inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold' style={{ color: T.link, border: '1px solid var(--border)', background: 'var(--surface-subtle)' }}>Review insurance details</Link>
           </PortalCard>
         </div>

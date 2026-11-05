@@ -9,7 +9,7 @@ import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import ProfileImage from '@/components/patient/ProfileImage'
 import PatientAccountMenu from '@/components/patient/PatientAccountMenu'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
-import { isPortalEvent } from '@/lib/portal-scope'
+import { isPortalIdentityEvent } from '@/lib/portal-scope'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
@@ -90,7 +90,7 @@ export default function PatientMobileNavigation() {
     }
 
     void fetchPatientChrome()
-    const reset = (event: Event) => { if (!isPortalEvent(event, 'patient')) return; setPatientName('Patient account'); setIdentityRevision(value => value + 1) }
+    const reset = (event: Event) => { if (!isPortalIdentityEvent(event, 'patient')) return; setPatientName('Patient account'); setIdentityRevision(value => value + 1) }
     window.addEventListener(ACCOUNT_CHANGED, reset)
     window.addEventListener('storage', reset)
     return () => { active = false; window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset) }

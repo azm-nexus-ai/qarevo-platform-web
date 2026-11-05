@@ -514,6 +514,7 @@ export default function MedicalHistoryAllergiesPage() {
         medications: form.currentMedicationsMode === 'taking' ? form.medications.map(item => ({ id: item.id, medication_name: item.medicationName, dosage: item.dosage, frequency: item.frequency, purpose: item.purpose })) : [],
         family_history: form.familyHistory,
       })
+      draftStorage.removeItem(STORAGE_KEY)
       setSubmitting(false)
       setOnboardingStage('insurance-consent')
       router.push(NEXT_ROUTE)

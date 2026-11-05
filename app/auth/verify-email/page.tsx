@@ -8,20 +8,9 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { getApiErrorDetail, resendVerificationEmail, verifyEmailCode } from '@/lib/api'
 import { setOnboardingStage } from '@/lib/auth-flow'
+import { readSignupEmail } from '@/lib/signup-context'
 
-const SIGNUP_STORAGE_KEY = 'qarevo.auth.signup.v1'
 const masked = (e: string) => e.replace(/(.{2}).+(@.+)/, '$1•••$2')
-
-function readSignupEmail() {
-  if (typeof window === 'undefined') return ''
-  try {
-    const raw = window.sessionStorage.getItem(SIGNUP_STORAGE_KEY)
-    const stored = raw ? (JSON.parse(raw) as { email?: string }) : null
-    return stored?.email?.trim().toLowerCase() || ''
-  } catch {
-    return ''
-  }
-}
 
 // ─── Countdown ─────────────────────────────────────────────────────────────────
 function useCountdown(initial: number) {
@@ -185,9 +174,7 @@ function OtpInput({ email, onComplete }: { email: string; onComplete: () => void
     setLoading(true)
     setError('')
     try {
-      const response = await verifyEmailCode({ email, code })
-      if (response.browser_session) {
-      }
+      await verifyEmailCode({ email, code })
       setSuccess(true)
       setOnboardingStage('account-created')
       setTimeout(onComplete, 900)

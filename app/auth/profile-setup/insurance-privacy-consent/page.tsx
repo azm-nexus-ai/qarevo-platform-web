@@ -11,6 +11,7 @@ import { getApiErrorDetail } from '@/lib/api'
 import { createAccountDraftStorage } from '@/lib/account-storage'
 import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
 import { getOnboarding, saveCoverageInformation, onboardingPath, type CoverageInformation } from '@/lib/patient-onboarding'
+import { INSURANCE_VERIFICATION_NOTICE, SELF_PAY_NOTICE } from '@/lib/insurance-presentation'
 const LEFT_BG = `radial-gradient(ellipse at top left, rgba(32,181,223,.3), transparent 60%), ${T.brandNavy}`
 const STORAGE_KEY = 'qarevo.onboarding.insurance-privacy-consent.v2'
 type CoverageForm = Omit<CoverageInformation, 'insurance_type'> & { insurance_type: CoverageInformation['insurance_type'] | '' }
@@ -101,7 +102,7 @@ function LeftPanel() {
         {[
           { icon: ICONS.lock, label: 'Saved Preferences', sub: 'Your choices are saved to your account' },
           { icon: ICONS.shield, label: 'Trusted Access', sub: 'Only authorized care teams can review it' },
-          { icon: ICONS.check, label: 'Coverage Flexibility', sub: 'Choose statutory, private or self-pay funding' },
+          { icon: ICONS.check, label: 'Funding preferences', sub: 'Record statutory, private or self-pay details' },
         ].map(({ icon, label, sub }) => (
           <div key={label} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', padding: '13px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
@@ -202,6 +203,7 @@ export default function InsurancePrivacyConsentPage() {
         setMissingStep(saved.next_step)
         return
       }
+      draftStorage.removeItem(STORAGE_KEY)
       setOnboardingStage('profile-completed')
       router.push('/auth/profile-setup/profile-completed')
     } catch (error) { setSubmitError(getApiErrorDetail(error) || 'Could not save your coverage information. Please try again.') }
@@ -216,7 +218,7 @@ export default function InsurancePrivacyConsentPage() {
         <ProfileSetupLogo />
         <p style={{ color: T.slate, margin: '24px 0 8px' }}>Profile setup · Coverage & privacy</p>
         <h1 style={{ color: T.navy, fontSize: 'clamp(26px, 4vw, 36px)', lineHeight: 1.2, letterSpacing: '-0.03em', margin: '0 0 12px' }}>Your coverage, clearly recorded</h1>
-        <p style={{ color: T.slate, lineHeight: 1.7 }}>Choose how you intend to fund care. Saving insurance information does not verify eligibility, arrange payment, or confirm reimbursement.</p>
+        <p style={{ color: T.slate, lineHeight: 1.7 }}>Choose how you intend to fund care. {form.insurance_type === 'SELF_PAY' ? SELF_PAY_NOTICE : INSURANCE_VERIFICATION_NOTICE}</p>
         <form onSubmit={submit} noValidate style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, padding: 'clamp(18px, 4vw, 32px)', boxShadow: 'var(--shadow-card)' }}>
           <p role='status' style={{ color: T.slate2, fontSize: 13 }}>{ready ? saveMessage : 'Loading your saved coverage…'}</p>
           {submitError && <p role='alert' style={{ color: T.red }}>{submitError}</p>}
@@ -230,7 +232,7 @@ export default function InsurancePrivacyConsentPage() {
             {form.insurance_type && form.insurance_type !== 'SELF_PAY' && <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
               <TextField label='Insurance provider' value={form.provider} onChange={value => update('provider', value)} placeholder='Insurer name' hint='Enter the full insurer name (at least 2 characters).' error={submitted ? errors.provider : undefined} />
               <TextField label={form.insurance_type === 'GKV' ? 'Insurance number (KVNR)' : 'Private policy number'} value={form.insurance_number} onChange={value => update('insurance_number', value)} hint={form.insurance_type === 'GKV' ? 'Format: one capital letter followed by exactly 9 digits. Format checking does not verify coverage.' : '3–50 characters: letters, numbers, spaces, slash, full stop or hyphen.'} placeholder={form.insurance_type === 'GKV' ? 'One capital letter and nine digits' : 'As shown on your policy'} error={submitted ? errors.insurance_number : undefined} />
-              <p style={{ color: T.slate, fontSize: 13, lineHeight: 1.6 }}>We check the format of your entry. Coverage, provider participation, and reimbursement still require confirmation before treatment.</p>
+              <p style={{ color: T.slate, fontSize: 13, lineHeight: 1.6 }}>These checks validate the format of your entry only.</p>
             </div>}
             <fieldset style={{ marginTop: 24, minWidth: 0, padding: 18, background: 'var(--surface-subtle)', border: '1px solid var(--border)', borderRadius: 14 }}>
               <legend style={{ fontSize: 18, fontWeight: 700, padding: '0 6px', color: T.navy }}>Development test acknowledgements</legend>

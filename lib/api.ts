@@ -1,6 +1,6 @@
 import { accountChanged, assertCurrentAccount, readAccountScope, storePortalIdentity } from '@/lib/account-storage';
 import { currentPortal, portalKey, readPortalIdentity, retireLegacyCredentials, type Portal, type PortalIdentity } from '@/lib/portal-scope';
-import { notifyProfileChanged } from '@/lib/profile-events';
+import { notifyProfileChanged, profileRevision } from '@/lib/profile-events';
 
 const getBaseUrl = () => typeof window !== 'undefined' ? window.location.origin : (process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000');
 /** Public session marker only; credentials are held exclusively in HttpOnly cookies. */
@@ -1163,18 +1163,18 @@ const doctorProfileRequests = new Map<string, Promise<DoctorProfileResponse>>();
 export async function getDoctorProfile(): Promise<DoctorProfileResponse> {
     const scope = readAccountScope();
     if (!scope) return apiGet<DoctorProfileResponse>("/api/v1/doctor/profile");
-    const existing = doctorProfileRequests.get(scope);
+    const key = JSON.stringify([scope, profileRevision("doctor")]);
+    const existing = doctorProfileRequests.get(key);
     if (existing) return existing;
     const pending = apiGet<DoctorProfileResponse>("/api/v1/doctor/profile").finally(() => {
-        if (doctorProfileRequests.get(scope) === pending) doctorProfileRequests.delete(scope);
+        if (doctorProfileRequests.get(key) === pending) doctorProfileRequests.delete(key);
     });
-    doctorProfileRequests.set(scope, pending);
+    doctorProfileRequests.set(key, pending);
     return pending;
 }
 
 export async function updateDoctorProfile(body: DoctorProfileUpdate): Promise<DoctorProfileResponse> {
     const result = await apiPut<DoctorProfileResponse, DoctorProfileUpdate>("/api/v1/doctor/profile", body);
-    doctorProfileRequests.delete(readAccountScope() || "");
     notifyProfileChanged("doctor");
     return result;
 }
@@ -1740,6 +1740,7 @@ export type PatientBillingHistoryItem = {
 };
 
 export type PatientBillingInsuranceSummary = {
+    insurance_type?: string;
     status: "not_added" | "incomplete" | "active" | string;
     provider_name?: string | null;
     member_number?: string | null;

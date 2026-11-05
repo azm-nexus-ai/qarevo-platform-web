@@ -41,8 +41,26 @@ function trustedUrl(value: string | undefined): URL {
   return url;
 }
 
-function cookies(request: Request, portal: Portal): CookieContext {
-  const url = new URL(request.url);
+/** Next's self-hosted request URL may use its internal localhost hostname.
+ * The HTTP Host identifies the browser origin; browsers cannot override it.
+ * Forwarded host is deliberately ignored. Only Vercel's overwritten HTTPS
+ * protocol metadata is accepted when actually running on that platform.
+ */
+function browserUrl(request: Request, env: Environment): URL {
+  const url=new URL(request.url), host=request.headers.get('host');
+  if(host) {
+    if(/[\s,\/\\@?#]/.test(host))throw new BoundaryError(400,'Invalid application host.');
+    let candidate:URL;
+    try {candidate=new URL(`${url.protocol}//${host}`);} catch {throw new BoundaryError(400,'Invalid application host.');}
+    if(candidate.host.toLowerCase()!==host.toLowerCase() || candidate.username || candidate.password)throw new BoundaryError(400,'Invalid application host.');
+    url.host=candidate.host;
+  }
+  if(env.VERCEL==='1' && request.headers.get('x-forwarded-proto')==='https')url.protocol='https:';
+  return url;
+}
+
+function cookies(request: Request, portal: Portal, env:Environment): CookieContext {
+  const url = browserUrl(request,env);
   const secure = url.protocol === 'https:';
   if (!secure && !(url.protocol === 'http:' && isLoopback(url.hostname))) {
     throw new BoundaryError(400, 'A secure application connection is required.');
@@ -74,8 +92,8 @@ function clearSession(response: Response, context: CookieContext) {
   for (const kind of ['access', 'refresh', 'mfa']) setCookie(response, `${context.prefix}${kind}`, '', context, new Date(0));
 }
 
-function verifyCsrf(request: Request, context: CookieContext) {
-  if (request.headers.get('origin') !== new URL(request.url).origin || request.headers.get('sec-fetch-site') === 'cross-site') {
+function verifyCsrf(request: Request, context: CookieContext, env:Environment) {
+  if (request.headers.get('origin') !== browserUrl(request,env).origin || request.headers.get('sec-fetch-site') === 'cross-site') {
     throw new BoundaryError(403, 'This request must originate from the current application.');
   }
   const supplied = request.headers.get('X-Qarevo-CSRF') ?? '';
@@ -87,7 +105,7 @@ function verifyCsrf(request: Request, context: CookieContext) {
 }
 
 function verifyHost(request: Request, portal: Portal, env: Environment) {
-  const origin = new URL(request.url).origin;
+  const origin = browserUrl(request,env).origin;
   for (const candidate of Object.keys(ROLES) as Portal[]) {
     const configured = env[`PORTAL_${candidate.toUpperCase()}_ORIGIN`];
     if (configured && trustedUrl(configured).origin === origin && candidate !== portal) {
@@ -197,7 +215,7 @@ export async function handlePortalRequest(request: Request, params: { portal: st
     const env = options.env ?? process.env;
     const fetchImpl = options.fetchImpl ?? fetch;
     verifyHost(request, portal, env);
-    context = cookies(request, portal);
+    context = cookies(request, portal, env);
     if (params.path.length === 1 && params.path[0] === 'csrf') {
       if (request.method !== 'GET') throw new BoundaryError(405, 'This operation requires GET.');
       const previous = context.values.get(context.csrf);
@@ -208,7 +226,7 @@ export async function handlePortalRequest(request: Request, params: { portal: st
     }
     upstreamPath = validatePath(params.path);
     if (!['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) throw new BoundaryError(405, 'This HTTP method is unavailable.');
-    if (!SAFE_METHODS.has(request.method)) verifyCsrf(request, context);
+    if (!SAFE_METHODS.has(request.method)) verifyCsrf(request, context, env);
     const mode = routeAccess(params.path, portal);
     const credential = mode === 'mfa' ? cookieValue(context, 'mfa') : cookieValue(context, 'access');
     const refresh = cookieValue(context, 'refresh');

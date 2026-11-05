@@ -10,7 +10,7 @@ import LogoutModal from '@/components/ui/LogoutModal'
 import ProfileAvatar from '@/components/branding/ProfileAvatar'
 import PortalAccountMenu from '@/components/layout/PortalAccountMenu'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
-import { isPortalEvent } from '@/lib/portal-scope'
+import { isPortalIdentityEvent } from '@/lib/portal-scope'
 import { subscribeProfileChanges } from '@/lib/profile-events'
 import { T, Glass } from '@/lib/tokens'
 import { DOCTOR_SIDEBAR_ITEMS, DOCTOR_ROUTES, isDoctorNavActive } from '@/constants/doctor-navigation'
@@ -91,14 +91,16 @@ export default function DoctorMobileNavigation() {
     const token = readSessionMarker()
     if (!token) return
     let active = true
+    let generation = 0
     const scope = readAccountScope('doctor')
 
     const fetchProfile = async () => {
+      const ticket = ++generation
       try {
         const profile = await getDoctorProfile()
-        if (active && scope === readAccountScope('doctor')) setDoctorProfile(profile)
+        if (active && ticket === generation && scope === readAccountScope('doctor')) setDoctorProfile(profile)
       } catch (error) {
-        if (!active || scope !== readAccountScope('doctor')) return
+        if (!active || ticket !== generation || scope !== readAccountScope('doctor')) return
         if (isAuthError(error)) {
           clearPortalSession()
           router.replace('/auth/doctor/login')
@@ -110,7 +112,7 @@ export default function DoctorMobileNavigation() {
 
     void fetchProfile()
     const unsubscribe = subscribeProfileChanges('doctor', () => { void fetchProfile() })
-    const reset = (event: Event) => { if (!isPortalEvent(event, 'doctor')) return; setDoctorProfile(null); setIdentityRevision(value => value + 1) }
+    const reset = (event: Event) => { if (!isPortalIdentityEvent(event, 'doctor')) return; setDoctorProfile(null); setIdentityRevision(value => value + 1) }
     window.addEventListener(ACCOUNT_CHANGED, reset)
     window.addEventListener('storage', reset)
     return () => { active = false; unsubscribe(); window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset) }

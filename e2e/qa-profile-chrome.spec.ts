@@ -43,7 +43,7 @@ const uploadedPortrait = `data:image/png;base64,${portraitBytes.toString('base64
 async function profileFixtures(context: import('@playwright/test').BrowserContext, portal: 'patient' | 'doctor') {
   const { seedPortalSession, testSessionTiming } = await import('./helpers/portal-session')
   const identity = await seedPortalSession(context, portal)
-  const state = { image: `/synthetic-portraits/${portal}.png` as string | null, mutations: 0, reads: 0, profileHeaders: [] as Record<string,string>[] }
+  const state = { image: `/synthetic-portraits/${portal}.png` as string | null, mutations: 0, reads: 0, profileReadDelay: null as Promise<void> | null, profileHeaders: [] as Record<string,string>[] }
   const doctor = { user_id: identity.user_id, provider_id: 'synthetic-doctor-provider', full_name: 'Synthetic Clinician', email: 'clinician@example.invalid', specialty: 'General practice', avatar_url: state.image, license_verified: false, total_consultations: 0, patient_rating: 0, years_active: 0 }
   await context.route('**/synthetic-portraits/**',route=>route.fulfill({contentType:'image/png',body:portraitBytes}))
   await context.route('**/api/v1/**',async route=>{
@@ -62,9 +62,16 @@ async function profileFixtures(context: import('@playwright/test').BrowserContex
     }
     if(path==='/api/v1/doctor/profile'){
       state.profileHeaders.push(request.headers())
+      let image=state.image
       if(request.method()==='PUT'){state.mutations++;state.image=request.postDataJSON().avatar_url}
-      else {state.reads++;await new Promise(resolve=>setTimeout(resolve,40))}
-      return route.fulfill({json:{...doctor,avatar_url:state.image}})
+      else {
+        state.reads++
+        const delay=state.profileReadDelay;state.profileReadDelay=null
+        await delay
+        await new Promise(resolve=>setTimeout(resolve,40))
+      }
+      if(request.method()==='PUT')image=state.image
+      return route.fulfill({json:{...doctor,avatar_url:image}})
     }
     if(path==='/api/v1/doctor/consultation-services')return route.fulfill({json:[]})
     if(path==='/api/v1/patient/settings')return route.fulfill({json:{user_id:identity.user_id,first_name:'Synthetic',last_name:'Patient',email:'patient@example.invalid',emergency_contacts:[],insurance:null}})
@@ -120,7 +127,7 @@ test('patient owned image propagates through account menus, settings, dashboard,
   await page.setViewportSize({width:390,height:844})
   const mobile=page.locator('.pmn-topbar')
   await mobile.locator('summary').click()
-  await expect(mobile.getByText('Synthetic Patient',{exact:true})).toBeVisible()
+  await expect(mobile.locator('details[open]').getByText('Synthetic Patient',{exact:true}).filter({visible:true})).toBeVisible()
   await expectPortrait(mobile.locator('summary'),'Synthetic Patient',uploadedPortrait)
   await page.goto('/patient/settings')
   await page.getByRole('region',{name:'Profile image',exact:true}).getByRole('button',{name:'Remove image',exact:true}).click()
@@ -160,7 +167,7 @@ test('doctor owned image persists after save, route re-entry, refresh and mobile
   const mobile=page.locator('.dmn-topbar')
   await expectPortrait(mobile.locator('summary'),'Dr. Synthetic Clinician',uploadedPortrait)
   await mobile.locator('summary').focus();await page.keyboard.press('Enter')
-  await expect(mobile.getByText('Dr. Synthetic Clinician',{exact:true})).toBeVisible()
+  await expect(mobile.locator('details[open]').getByText('Dr. Synthetic Clinician',{exact:true}).filter({visible:true})).toBeVisible()
   await page.keyboard.press('Escape');await expect(mobile.locator('summary')).toBeFocused()
   state.image=null
   await page.reload()
@@ -169,4 +176,31 @@ test('doctor owned image persists after save, route re-entry, refresh and mobile
   await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true)
   expect(state.profileHeaders.every(headers=>headers['x-qarevo-portal']==='doctor'&&!headers.authorization)).toBe(true)
   expect(errors).toEqual([])
+})
+
+test('a delayed older doctor profile read cannot replace the saved portrait in desktop or mobile navigation',async({page,context})=>{
+  const state=await profileFixtures(context,'doctor')
+  await page.setViewportSize({width:1440,height:1000})
+  await page.goto('/doctor/profile')
+  const header=page.getByRole('banner',{name:'Doctor main navigation',exact:true})
+  await expectPortrait(header.locator('summary'),'Dr. Synthetic Clinician',state.image!)
+  await expect(page.getByRole('heading',{name:'Dr. Synthetic Clinician',exact:true})).toBeVisible()
+  expect(state.reads).toBe(1)
+  let releaseOld!:()=>void
+  state.profileReadDelay=new Promise<void>(resolve=>{releaseOld=resolve})
+  await page.evaluate(()=>window.dispatchEvent(new Event('qarevo:doctor-profile-changed')))
+  await expect.poll(()=>state.reads).toBe(2)
+  await page.locator('#avatar-upload').setInputFiles({name:'portrait.png',mimeType:'image/png',buffer:portraitBytes})
+  await page.getByRole('button',{name:'Save Profile',exact:true}).click()
+  await expect(page.getByText('Professional profile updated.',{exact:true})).toBeVisible()
+  await expectPortrait(header.locator('summary'),'Dr. Synthetic Clinician',uploadedPortrait)
+  expect(state.reads).toBe(3)
+  const olderResponse=page.waitForResponse(async response=>response.url().endsWith('/api/v1/doctor/profile')&&response.request().method()==='GET'&&(await response.json()).avatar_url==='/synthetic-portraits/doctor.png')
+  releaseOld()
+  await olderResponse
+  await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))))
+  await expectPortrait(header.locator('summary'),'Dr. Synthetic Clinician',uploadedPortrait)
+  await page.setViewportSize({width:390,height:844})
+  await expectPortrait(page.locator('.dmn-topbar summary'),'Dr. Synthetic Clinician',uploadedPortrait)
+  expect(state.reads).toBe(3)
 })

@@ -24,6 +24,7 @@ type RenewalScenario = {
   holdSettings?: Promise<void>
   logoutCount?: number
   onboardingComplete?: boolean
+  sessionId?: string
 }
 const scenarios = new WeakMap<BrowserContext, RenewalScenario>()
 const seededIdentities = new WeakMap<BrowserContext, Partial<Record<TestPortal, TestPortalIdentity>>>()
@@ -35,9 +36,9 @@ async function seedRole(context: BrowserContext, portal: TestPortal, details: Pa
   return identity
 }
 
-function authSession(email: string) {
+function authSession(email: string, sessionId = 'test-session:' + email) {
   return {
-    browser_session: { user_id: email, role: 'PATIENT' as const, session_id: 'test-session:' + email },
+    browser_session: { user_id: email, role: 'PATIENT' as const, session_id: sessionId },
     user_id: email, role: 'PATIENT', token_type: 'bearer', expires_in: 900,
     email_verified: true, phone_verified: false,
   }
@@ -48,6 +49,7 @@ async function mockApi(context: BrowserContext) {
   const scenario: RenewalScenario = { expireAccess: false, failure: 'none', refreshes: 0, rejectedAccess: 0 }
   const renewedSessions = new Set<string>()
   let activePatient: TestPortalIdentity | undefined
+  let sessionSequence = 0
   const saved = new Map<string, Record<string, Record<string, unknown>>>()
   scenarios.set(context, scenario)
   await context.route('**/api/**', async route => {
@@ -69,9 +71,10 @@ async function mockApi(context: BrowserContext) {
     if (pathname === '/api/v1/session' || pathname === '/api/v1/session/activity') return current ? route.fulfill({ headers: cors, json: { browser_session: current, server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now()+900_000).toISOString(), absolute_expires_at: new Date(Date.now()+28_800_000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 } }) : route.fulfill({ status: 401, json: { detail: 'Please sign in.' } })
     if (pathname === '/api/v1/auth/login' || pathname === '/api/v1/auth/verify-email-code') {
       const body = request.postDataJSON()
-      activePatient = authSession(body.email).browser_session
+      activePatient = authSession(body.email, `test-session:${body.email}:${++sessionSequence}`).browser_session
+      scenario.sessionId = activePatient.session_id
       renewedSessions.delete(activePatient.session_id)
-      return route.fulfill({ headers: cors, json: authSession(body.email) })
+      return route.fulfill({ headers: cors, json: authSession(body.email, activePatient.session_id) })
     }
     if (pathname === '/api/v1/auth/forgot-password') return route.fulfill({ headers: cors, json: { message: 'If an account exists, instructions have been requested.' } })
     if (pathname === '/api/v1/auth/reset-password') return route.fulfill({ headers: cors, json: { message: 'Password has been reset successfully.' } })
@@ -87,7 +90,7 @@ async function mockApi(context: BrowserContext) {
       if (scenario.failure === 'rejected' || !current || marker !== current.session_id) return route.fulfill({ status: 401, headers: cors, json: { detail: 'Refresh session rejected' } })
       if (activePatient && marker !== activePatient.session_id) return route.fulfill({ status: 409, headers: cors, json: { detail: { error_code: 'SESSION_CHANGED' } } })
       renewedSessions.add(current.session_id)
-      return route.fulfill({ headers: cors, json: authSession(current.user_id) })
+      return route.fulfill({ headers: cors, json: authSession(current.user_id, current.session_id) })
     }
     if (pathname === '/api/v1/patient/settings') {
       await scenario.holdSettings
@@ -229,7 +232,7 @@ test('new signup owns its email, clears old drafts and can complete mocked OTP',
   await page.getByRole('checkbox').nth(1).click()
   await page.locator('button[type="submit"]').click()
   await expect(page).toHaveURL(/\/auth\/verify-email$/)
-  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('qarevo.auth.signup.v1') || '{}').email)).toBe(beta)
+  expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('qarevo:patient:signup:v2') || '{}').email)).toBe(beta)
   expect(await page.evaluate(() => localStorage.getItem('qarevo.auth.signup.v1'))).toBeNull()
   await page.getByRole('button', { name: 'Enter code manually', exact: true }).click()
   const digits = page.locator('input[inputmode="numeric"]')
@@ -280,7 +283,7 @@ for (const failure of ['unavailable', 'network'] as const) {
     await page.reload()
     await expect(page.getByText("We couldn't renew your session right now. Please try again shortly.", { exact: true })).toBeVisible()
     await expect(page.locator('#emergencyName')).toHaveValue('Unsaved contact survives outage')
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('qarevo:patient:identity') || 'null')?.session_id)).toBe('test-session:' + alpha)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('qarevo:patient:identity') || 'null')?.session_id)).toBe(scenario.sessionId)
     expect(await page.evaluate(() => localStorage.getItem('qarevo_refresh_token'))).toBeNull()
     expect(scenario.refreshes).toBe(1)
     scenario.failure = 'none'
@@ -290,7 +293,7 @@ for (const failure of ['unavailable', 'network'] as const) {
     await expect(page.locator('#email')).toHaveValue(alpha)
     await expect(page.getByText("We couldn't renew your session right now. Please try again shortly.", { exact: true })).toHaveCount(0)
     await expect(page.locator('#emergencyName')).toHaveValue('Unsaved contact survives outage')
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('qarevo:patient:identity') || 'null')?.session_id)).toBe('test-session:' + alpha)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('qarevo:patient:identity') || 'null')?.session_id)).toBe(scenario.sessionId)
     expect(await page.evaluate(() => localStorage.getItem('qarevo_refresh_token'))).toBeNull()
   })
 }
@@ -381,7 +384,7 @@ test('sidebar logout clears private browser state and revokes the refresh sessio
   await expect(page).toHaveURL(/\/auth\/sign-in$/)
   await expect.poll(() => scenarios.get(context)!.logoutCount || 0).toBe(1)
   expect(await page.evaluate(() => localStorage.getItem('qarevo:patient:identity'))).toBeNull()
-  expect(await page.evaluate(() => Object.entries(sessionStorage).some(([key, value]) => key.includes(alpha) || value.includes('Private logout draft')))).toBe(false)
+  expect(await page.evaluate(email => Object.entries(sessionStorage).some(([key, value]) => key.includes(email) || value.includes('Private logout draft')), alpha)).toBe(false)
 })
 
 test('queued logout hides private UI until revocation settles and refuses stale cookie-only restoration', async ({ page, context }) => {
@@ -412,7 +415,7 @@ test('queued logout hides private UI until revocation settles and refuses stale 
   } finally { releaseRefresh(); releaseLogout() }
   await expect(page).toHaveURL(/\/auth\/sign-in(?:\?|$)/)
   expect(await page.evaluate(() => localStorage.getItem('qarevo:patient:logout-pending'))).toBeNull()
-  expect(await page.evaluate(() => localStorage.getItem('qarevo:patient:signed-out'))).toBe('test-session:' + alpha)
+  expect(await page.evaluate(() => localStorage.getItem('qarevo:patient:signed-out'))).toBe(scenario.sessionId)
   await page.goto('/patient/prescription-care-plan')
   await expect(page).toHaveURL(/\/auth\/sign-in(?:\?|$)/)
   await expect(page.getByRole('heading', { name: 'No medications recorded', exact: true })).toHaveCount(0)
@@ -456,6 +459,12 @@ test('all profile steps save, survive a fresh sign-in and keep funding distinct'
   await page.locator('button[type="submit"]').click()
   await expect(page).toHaveURL(/insurance-privacy-consent$/)
   expect(savedBodies.health).toMatchObject({ medical_history: ['None'], surgeries_status: 'no', medications_status: 'none' })
+  // Revisit within this same session: a stale autosave must not override the
+  // successful server save, even before a fresh sign-in clears tab drafts.
+  await page.goto('/auth/profile-setup/medical-history-allergies')
+  await expect(page.getByRole('button', { name: 'None', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.locator('button[type="submit"]').click()
+  await expect(page).toHaveURL(/insurance-privacy-consent$/)
   await page.getByLabel('Funding type (Required)').selectOption('GKV')
   await page.getByLabel('Insurance provider (Required)', { exact: true }).fill('Synthetic Insurer')
   await page.getByLabel('Insurance number (KVNR) (Required)', { exact: true }).fill('A123456789')

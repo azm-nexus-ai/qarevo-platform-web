@@ -8,6 +8,7 @@ import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { clearPortalSession, getApiErrorDetail, registerPatient } from '@/lib/api'
+import { storeSignupEmail } from '@/lib/signup-context'
 
 // ─── Page background ──────────────────────────────────────────────────────────
 
@@ -346,7 +347,6 @@ function LeftDecor() {
 
 const PHONE_RE = /^\+?[0-9\s\-().]{6,20}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const SIGNUP_STORAGE_KEY = 'qarevo.auth.signup.v1'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -409,12 +409,7 @@ export default function SignUpPage() {
 
       clearPortalSession()
       try {
-        window.sessionStorage.setItem(
-          SIGNUP_STORAGE_KEY,
-          JSON.stringify({
-            email,
-          }),
-        )
+        storeSignupEmail(email)
       } catch {
         // Continue to verification even if session storage is unavailable.
       }

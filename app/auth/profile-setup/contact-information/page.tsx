@@ -371,6 +371,7 @@ export default function ContactInformationPage() {
         emergency_email: form.emergencyEmail || null,
       })
       setSubmitting(false)
+      draftStorage.removeItem(STORAGE_KEY)
       setOnboardingStage('health-profile')
       router.push('/auth/profile-setup/medical-history-allergies')
     } catch (error) {

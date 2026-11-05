@@ -376,3 +376,17 @@ test('doctor registration phone verification is public only within the physician
     }
   }
 })
+
+ test('browser origin uses HTTP Host when Next constructs an internal localhost URL; forwarded host is ignored',async()=>{
+  let calls=0;
+  const request=req('/api/v1/auth/login',{url:'http://localhost:3000',cookies:`qarevo_patient_csrf=${csrf}`,method:'POST',body:{},headers:{Host:'127.0.0.1:3100',Origin:'http://127.0.0.1:3100','X-Forwarded-Host':'attacker.example'}});
+  const result=await run(request,'patient',async()=>{calls++;return Response.json({detail:'Invalid credentials'},{status:401})});
+  assert.equal(result.status,401);assert.equal(calls,1);
+  const forged=req('/api/v1/auth/login',{url:'http://localhost:3000',cookies:`qarevo_patient_csrf=${csrf}`,method:'POST',body:{},headers:{Host:'127.0.0.1:3100',Origin:'https://attacker.example','X-Forwarded-Host':'attacker.example'}});
+  assert.equal((await run(forged)).status,403);
+});
+ test('malformed HTTP Host is rejected before any upstream request',async()=>{
+  for(const host of ['good.example,evil.example','good.example/evil','evil@example.test','good.example?bad']) {
+    const result=await run(req('/api/v1/session',{headers:{Host:host}}));assert.equal(result.status,400);
+  }
+});

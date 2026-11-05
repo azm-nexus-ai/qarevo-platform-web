@@ -4,6 +4,7 @@ import { Suspense, useMemo, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
+import { declaredDoctorFundingOptions } from '@/lib/insurance-presentation'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -136,7 +137,7 @@ function DateTimeSelectionPageContent() {
   }, [remoteDoctor, selectedServiceType])
   const fee = Number(searchParams.get('fee') ?? serviceDetail?.price ?? physicianData.consultationFee ?? 0)
   const duration = searchParams.get('duration') ?? serviceDetail?.duration ?? '30 min'
-  const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
+  const insurance = declaredDoctorFundingOptions(physicianData.insurance)
   const initialDateParam = searchParams.get('date') ?? bookingState.date
   const initialDate = useMemo(() => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(initialDateParam ?? '')) {
@@ -717,7 +718,7 @@ function DateTimeSelectionPageContent() {
                     ['Appointment Duration', duration],
                     ['Estimated End Time', endTime],
                     ['Consultation Fee', formatFee(fee)],
-                    ['Insurance Coverage', insurance],
+                    ['Doctor’s declared billing options', insurance],
                     ['Cancellation Policy', 'Free up to 24 hours before appointment'],
                   ].map(([label, value]) => (
                     <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>

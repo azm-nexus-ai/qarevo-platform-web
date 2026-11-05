@@ -94,17 +94,19 @@ function tab(localStorage = storage(), fetchImpl = async () => new Response('{}'
     ...shared, module: core, exports: core.exports,
     require(name) { if (name === './portal-scope') return portal.exports; throw new Error('Unexpected import: ' + name) },
   })
+  const profile = { exports: {} }
+  vm.runInNewContext(compile('profile-events.ts'), { ...shared, module: profile, exports: profile.exports })
   const api = { exports: {} }
   vm.runInNewContext(apiCode, {
     ...shared, module: api, exports: api.exports,
     require(name) {
       if (name === '@/lib/account-storage' || name === './account-storage') return core.exports
       if (name === '@/lib/portal-scope' || name === './portal-scope') return portal.exports
-      if (name === '@/lib/profile-events') return { notifyProfileChanged() {} }
+      if (name === '@/lib/profile-events') return profile.exports
       throw new Error('Unexpected import: ' + name)
     },
   })
-  return { ...window, events, core: core.exports, portal: portal.exports, api: api.exports }
+  return { ...window, events, core: core.exports, portal: portal.exports, profile: profile.exports, api: api.exports }
 }
 const roles = { patient: 'PATIENT', doctor: 'PROVIDER', admin: 'ADMIN' }
 function identity(id = 'A', portal = 'patient', session = `session-${id}`) {
@@ -158,6 +160,48 @@ test('legacy personal, health, consent, signup, flow and booking drafts are disc
   for (const key of keys) assert.equal(t.localStorage.getItem(key), null)
   assert.equal(t.localStorage.getItem('qarevo:patient:theme'), 'dark')
   assert.doesNotMatch(JSON.stringify([t.localStorage, t.sessionStorage]), /retired-secret/)
+})
+
+function signupContext(t, clock = Date) {
+  const mod = { exports: {} }
+  vm.runInNewContext(compile('signup-context.ts'), {
+    module: mod, exports: mod.exports, window: t, Date: clock,
+    require(name) { if (name === './portal-scope') return t.portal; throw new Error('Unexpected signup import: ' + name) },
+  })
+  return mod.exports
+}
+
+test('active verification email survives legacy draft cleanup and stays isolated to its portal and tab', () => {
+  const t = tab(), signup = signupContext(t)
+  signup.storeSignupEmail('NEW@example.test')
+  signup.storeSignupEmail('clinician@example.test', 'doctor')
+  t.sessionStorage.setItem('qarevo.auth.signup.v1', '{"email":"previous@example.test"}')
+  t.core.createAccountDraftStorage().getItem('booking')
+  assert.equal(signup.readSignupEmail(), 'new@example.test')
+  assert.equal(t.sessionStorage.getItem('qarevo.auth.signup.v1'), null)
+  assert.equal(t.localStorage.getItem('qarevo:patient:signup:v2'), null)
+  const second = tab(t.localStorage)
+  assert.equal(signupContext(second).readSignupEmail(), '')
+  t.api.clearPortalSession('doctor')
+  assert.equal(signup.readSignupEmail('doctor'), '')
+  assert.equal(signup.readSignupEmail('patient'), 'new@example.test')
+  login(t, 'A')
+  assert.equal(signup.readSignupEmail(), '', 'successful authentication retires the unverified destination')
+})
+
+test('verification email context expires and rejects malformed or overlong storage values', () => {
+  let now = Date.now()
+  class Clock extends Date { static now() { return now } }
+  const t = tab(), signup = signupContext(t, Clock)
+  signup.storeSignupEmail('new@example.test')
+  now += 30 * 60 * 1000 + 1
+  assert.equal(signup.readSignupEmail(), '')
+  assert.equal(t.sessionStorage.getItem('qarevo:patient:signup:v2'), null)
+  for (const value of ['not JSON', '{"email":true}', JSON.stringify({ email: 'a'.repeat(255) + '@example.test', expires_at: now + 60_000 })]) {
+    t.sessionStorage.setItem('qarevo:patient:signup:v2', value)
+    assert.equal(signup.readSignupEmail(), '')
+  }
+  assert.throws(() => signup.storeSignupEmail('not an email'), /valid verification email/)
 })
 
 test('browser stores only role-scoped identity metadata and never API credentials', () => {
@@ -854,4 +898,48 @@ test('administrator guards use scoped nonsecret identity and reject retired shar
   t.api.clearPortalSession('admin')
   assert.equal(t.api.isAdmin(), false)
   assert.equal(t.portal.readPortalIdentity('patient').user_id, 'synthetic-patient')
+})
+
+test('identity events ignore portal appearance and renewal storage writes while retaining identity changes', () => {
+  class IdentityStorageEvent extends Event { constructor(key) { super('storage'); this.key = key } }
+  const t = tab(undefined, undefined, { StorageEvent: IdentityStorageEvent })
+  for (const portal of ['patient', 'doctor', 'admin']) {
+    assert.equal(t.portal.isPortalIdentityEvent(new IdentityStorageEvent(`qarevo:${portal}:identity`), portal), true)
+    assert.equal(t.portal.isPortalIdentityEvent(new IdentityStorageEvent(null), portal), true)
+    for (const name of ['theme', 'renewal', 'refresh-retry', 'logout-pending']) {
+      assert.equal(t.portal.isPortalIdentityEvent(new IdentityStorageEvent(`qarevo:${portal}:${name}`), portal), false)
+    }
+    const other = portal === 'doctor' ? 'patient' : 'doctor'
+    assert.equal(t.portal.isPortalIdentityEvent(new IdentityStorageEvent(`qarevo:${other}:identity`), portal), false)
+    assert.equal(t.portal.isPortalIdentityEvent(new BrowserCustomEvent('qarevo:account-changed', { detail: { portal } }), portal), true)
+    assert.equal(t.portal.isPortalIdentityEvent(new BrowserCustomEvent('qarevo:account-changed', { detail: { portal: other } }), portal), false)
+  }
+})
+
+test('a doctor profile change replaces the old in-flight generation with one shared fresh request', async () => {
+  const old = deferred(), fresh = deferred()
+  let reads = 0
+  const t = tab(undefined, async (url, init) => {
+    assert.equal(new URL(url).pathname, '/api/v1/doctor/profile')
+    if (init.method === 'PUT') return Response.json({ full_name: 'Synthetic Clinician', avatar_url: '/new-owned.png' })
+    reads++
+    return reads === 1 ? old.promise : reads === 2 ? fresh.promise : Response.json({ avatar_url: '/new-owned.png' })
+  })
+  t.location.pathname = '/doctor/profile'
+  login(t, 'synthetic-clinician', { portal: 'doctor' })
+  const initialDesktop = t.api.getDoctorProfile(), initialMobile = t.api.getDoctorProfile()
+  assert.equal(reads, 1)
+  const updates = []
+  const stopDesktop = t.profile.subscribeProfileChanges('doctor', () => updates.push(t.api.getDoctorProfile()))
+  const stopMobile = t.profile.subscribeProfileChanges('doctor', () => updates.push(t.api.getDoctorProfile()))
+  await t.api.updateDoctorProfile({ avatar_url: '/new-owned.png' })
+  assert.equal(t.profile.profileRevision('doctor'), 1)
+  assert.equal(reads, 2)
+  fresh.resolve(Response.json({ avatar_url: '/new-owned.png' }))
+  assert.deepEqual((await Promise.all(updates)).map(value => value.avatar_url), ['/new-owned.png', '/new-owned.png'])
+  old.resolve(Response.json({ avatar_url: '/old-owned.png' }))
+  await Promise.all([initialDesktop, initialMobile])
+  assert.equal((await t.api.getDoctorProfile()).avatar_url, '/new-owned.png')
+  assert.equal(reads, 3)
+  stopDesktop(); stopMobile()
 })

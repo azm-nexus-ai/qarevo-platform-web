@@ -96,7 +96,7 @@ test('unavailable authority blocks private content with an actionable retry', as
   state.unavailable = true
   await page.goto('/patient/billing')
   await expect(page.getByRole('heading', { name: 'Billing & Payments' })).toHaveCount(0)
-  await expect(page.getByRole('alert')).toContainText('Secure access could not be confirmed')
+  await expect(page.getByRole('alert').filter({ hasText: 'Secure access could not be confirmed' })).toBeVisible()
   state.unavailable = false
   await page.getByRole('button', { name: 'Retry connection' }).click()
   await expect(page.getByRole('heading', { name: 'Billing & Payments' })).toBeVisible()
