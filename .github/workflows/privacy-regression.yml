@@ -16,6 +16,9 @@ concurrency:
 jobs:
   privacy:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --init --ipc=host
     timeout-minutes: 15
     env:
       NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:3101
@@ -34,8 +37,18 @@ jobs:
         run: npx --yes pnpm@10.28.0 install --frozen-lockfile
       - name: Run privacy regressions and production build
         run: npx --yes pnpm@10.28.0 run build
-      - name: Install Chromium
-        run: npx --yes pnpm@10.28.0 exec playwright install --with-deps chromium
+      - name: Verify the pinned browser image matches the lockfile
+        run: |
+          node - <<'JS'
+          const assert = require('node:assert/strict')
+          const { chromium } = require('@playwright/test')
+          assert.equal(require('@playwright/test/package.json').version, '1.64.1', 'Update the browser image together with the Playwright lockfile version.')
+          ;(async () => {
+            const browser = await chromium.launch()
+            console.log('PASS: pinned Chromium starts with its packaged system dependencies.')
+            await browser.close()
+          })().catch(error => { console.error(error.message); process.exitCode = 1 })
+          JS
       - name: Repeat account-menu keyboard regressions without retries
         run: npx --yes pnpm@10.28.0 exec playwright test e2e/qa-profile-chrome.spec.ts --grep "patient owned image|delayed patient settings" --repeat-each=5 --retries=0 --reporter=line
       - name: Test browser account isolation with synthetic API fixtures
