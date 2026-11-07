@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useNavigationGuard } from 'nextjs-nav-guard'
 import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import { apiGet, apiPost, apiPut, completeDoctorConsultation } from '@/lib/api'
 import { clinicalFields, contentOf, emptyRecord, recordErrors, type ClinicalRecordState, type PublishedClinicalRecord, type RecordContent } from '@/lib/clinical-record'
+import { publicationHref } from '@/lib/clinical-publications'
 
 type Props = { consultationId: string; consultationStatus: string; onPublished: () => Promise<void> }
 const control = 'mt-2 w-full rounded-xl border border-theme bg-canvas px-4 py-3 text-ink focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -91,7 +93,8 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
       <div><p className='text-xs font-semibold uppercase tracking-widest text-muted'>Clinical documentation</p>
         <h2 id='clinical-record-title' className='mt-2 text-2xl font-semibold text-ink'>{editing ? 'Review and publish the care summary' : 'Published care summary'}</h2>
         <p className='mt-2 max-w-2xl text-sm leading-6 text-secondary'>Every section below is shared with the patient after your approval. Save a draft at any time; all clinical fields are required for publication.</p></div>
-      <span className='rounded-full border border-theme px-3 py-2 text-sm text-secondary'>{state.draft ? `Draft · revision ${state.draft.revision}` : state.published ? `Published · revision ${state.published.revision}` : 'Not yet recorded'}</span>
+      <div className='flex flex-wrap items-center gap-3'><span className='rounded-full border border-theme px-3 py-2 text-sm text-secondary'>{state.draft ? `Draft · revision ${state.draft.revision}` : state.published ? `Published · revision ${state.published.revision}` : 'Not yet recorded'}</span>
+        {state.published && publicationHref('doctor', consultationId, state.published.id) && <Link href={publicationHref('doctor', consultationId, state.published.id)!} prefetch={false} className={secondary}>View published versions</Link>}</div>
     </div>
     {error && <div role='alert' className='mb-5 rounded-xl border border-red-400 bg-surface-subtle p-4 text-ink'><p>{error}</p>
       <button type='button' className={`${secondary} mt-3`} disabled={Boolean(busy)} onClick={() => {

@@ -18,7 +18,7 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
   const scope = useSyncExternalStore(subscribeAccount, readAccountScope, () => null)
   const [attempt, setAttempt] = useState(0)
   const request = useMemo(() => ({ scope, path, missingIsEmpty }), [scope, path, missingIsEmpty])
-  const [state, setState] = useState<{ request: typeof request; data: T | null; error: boolean; errorMessage: string } | null>(null)
+  const [state, setState] = useState<{ request: typeof request; data: T | null; error: boolean; errorMessage: string; errorStatus: number | null } | null>(null)
   const operation = useMemo(() => ({request, attempt}), [request, attempt])
   const [settled, setSettled] = useState<typeof operation | null>(null)
   const inFlight = useRef<object | null>(null)
@@ -32,10 +32,10 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
     let current = true
     inFlight.current = operation
     apiGet<T>(path).then(data => {
-      if (current) setState({ request, data, error: false, errorMessage: '' })
+      if (current) setState({ request, data, error: false, errorMessage: '', errorStatus: null })
     }).catch(error => {
       const empty = missingIsEmpty && error instanceof ApiError && error.status === 404
-      if (current) setState({ request, data: null, error: !empty, errorMessage: empty ? '' : getApiErrorDetail(error) || 'This information could not be loaded. Please retry.' })
+      if (current) setState({ request, data: null, error: !empty, errorMessage: empty ? '' : getApiErrorDetail(error) || 'This information could not be loaded. Please retry.', errorStatus: error instanceof ApiError ? error.status : null })
     }).finally(() => {
       if (inFlight.current === operation) inFlight.current = null
       if (current) {
@@ -70,5 +70,5 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
   }, [path, scope, onFocus, interval, retry])
   const matched = state?.request === request ? state : null
   const refreshing = Boolean(path && scope && settled !== operation)
-  return { data: matched?.data ?? null, loading: Boolean(path && scope && (!matched || (refreshing && matched.error))), refreshing, error: matched?.error ?? false, errorMessage: matched?.errorMessage ?? '', retry }
+  return { data: matched?.data ?? null, loading: Boolean(path && scope && (!matched || (refreshing && matched.error))), refreshing, error: matched?.error ?? false, errorMessage: matched?.errorMessage ?? '', errorStatus: matched?.errorStatus ?? null, retry }
 }
