@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
+import ClinicalAccessAuditPanel from '@/components/admin/ClinicalAccessAuditPanel'
 import {
   clearPortalSession,
   getAdminAuditLogs,
@@ -71,7 +72,7 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
   )
 }
 
-export default function AuditLogsPage() {
+function AdminActionAuditPanel() {
   const router = useRouter()
   const [logs, setLogs] = useState<AdminAuditLog[]>([])
   const [actionSummary, setActionSummary] = useState<AdminActionSummary[]>([])
@@ -301,4 +302,9 @@ export default function AuditLogsPage() {
       </div>
     </div>
   )
+}
+
+
+export default function AuditLogsPage() {
+  return <div className='space-y-8'><AdminActionAuditPanel /><ClinicalAccessAuditPanel /></div>
 }

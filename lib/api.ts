@@ -1727,6 +1727,12 @@ export async function uploadDoctorLabResult(
     return apiUpload<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${patientId}/${testId}/upload-result`, formData);
 }
 
+export type DoctorLabResultAccess = import('./secure-document-access').SecureDocumentMetadata;
+
+export async function getDoctorLabResultAccess(patientId: string, testId: string): Promise<DoctorLabResultAccess> {
+    return apiGet<DoctorLabResultAccess>(`/api/v1/doctor/lab-orders/${encodeURIComponent(patientId)}/${encodeURIComponent(testId)}/result`);
+}
+
 export type PatientBillingPaymentMethod = {
     id?: string;
     brand?: string;

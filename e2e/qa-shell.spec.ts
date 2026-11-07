@@ -10,6 +10,7 @@ async function prepare(context: BrowserContext, role: 'PATIENT' | 'PROVIDER' | '
     const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}
     if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers})
     if(path.startsWith('/api/v1/session'))return route.fulfill({headers,json:{browser_session:identity,server_time:new Date().toISOString(),idle_expires_at:new Date(Date.now()+900000).toISOString(),absolute_expires_at:new Date(Date.now()+28800000).toISOString(),warning_seconds:120,idle_timeout_seconds:900}})
+    if(path.endsWith('/audit-logs/clinical-access'))return route.fulfill({headers,json:{can_view:false,events:[],total_count:0,limit:25,offset:0,has_next:false,has_previous:false}})
     if(path.includes('/exceptions')||path.includes('/audit-logs')) {
       state.requests++
       if(state.fail)return route.fulfill({status:503,headers,json:{detail:'Synthetic service unavailable'}})

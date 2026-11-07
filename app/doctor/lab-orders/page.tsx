@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigationGuard } from 'nextjs-nav-guard'
 import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
+import SecureDocumentAccessDialog from '@/components/ui/SecureDocumentAccessDialog'
 import { usePortalAction } from '@/lib/portal-action'
 import { medicalUploadError } from '@/lib/clinical-upload'
 import { orderDateFromIso, orderDateToIso } from '@/lib/clinical-order-dates'
@@ -14,6 +15,7 @@ import {
   deleteDoctorLabOrder,
   getApiErrorDetail,
   getDoctorLabOrders,
+  getDoctorLabResultAccess,
   getDoctorPatients,
   isAuthError,
   readSessionMarker,
@@ -64,6 +66,12 @@ export default function DoctorLabOrdersPage() {
   const baseline = useRef({ ...emptyForm })
   const originalDates = useRef<{ scheduled_for?: string | null; recommended_date?: string | null }>({})
   const [pendingChange, setPendingChange] = useState<null | { patientId: string } | { edit: PatientLabRequest } | { cancel: true }>(null)
+  const [documentAccess, setDocumentAccess] = useState<{ patientId: string; orderId: string; fileId: string; title: string } | null>(null)
+  const closeDocumentAccess = useCallback(() => setDocumentAccess(null), [])
+  const loadDocument = useCallback(() => {
+    if (!documentAccess || documentAccess.patientId !== patientScope.current) return Promise.reject(new Error('Choose the patient and refresh this result.'))
+    return getDoctorLabResultAccess(documentAccess.patientId, documentAccess.orderId)
+  }, [documentAccess])
   const [patients, setPatients] = useState<DoctorPatient[]>([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const [labTests, setLabTests] = useState<PatientLabRequest[]>([])
@@ -128,6 +136,7 @@ export default function DoctorLabOrdersPage() {
     if (operationInFlight.current) return
     ++readVersion.current
     patientScope.current = patientId
+    setDocumentAccess(null)
     setSelectedPatientId(patientId); setLabTests([]); setShowAddForm(false)
     setEditingId(null); setError(null); setLoading(false)
     baseline.current = { ...emptyForm, patient_id: patientId }
@@ -389,6 +398,9 @@ export default function DoctorLabOrdersPage() {
               </div>
               {test.reason && <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>Reason: {test.reason}</p>}
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {test.result_file_id ? <button className='dl-btn' type='button' aria-haspopup='dialog' aria-label={`Open result for ${test.title}`} disabled={saving}
+                  onClick={() => setDocumentAccess(current => current ?? { patientId: patientScope.current, orderId: test.id, fileId: test.result_file_id!, title: test.title })}>Open result</button>
+                  : <span className='text-sm text-muted'>No result file available.</span>}
                 <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ edit: test }) : beginEdit(test)} disabled={saving}>Edit</button>
                 <input
                   id={`lab-result-${test.id}`}
@@ -407,6 +419,8 @@ export default function DoctorLabOrdersPage() {
           ))}
         </div>
       </section>
+      {documentAccess && <SecureDocumentAccessDialog key={`${documentAccess.patientId}:${documentAccess.orderId}:${documentAccess.fileId}`}
+        documentTitle={documentAccess.title} documentKind='Lab result' expectedFileId={documentAccess.fileId} loadDocument={loadDocument} onClose={closeDocumentAccess} />}
       <UnsavedChangesDialog open={pendingChange !== null || navigation.active} busy={saving}
         onKeepEditing={() => { setPendingChange(null); if (navigation.active) navigation.reject() }}
         onDiscard={() => {
