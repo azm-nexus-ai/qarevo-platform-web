@@ -36,6 +36,9 @@ const domains: Record<ClinicalStatusDomain, Record<string, StatusDescription>> =
     DRAFT: { label: 'Draft', tone: 'neutral' },
   },
   'lab-request': {
+    BOOKED: { label: 'Booked', tone: 'info' },
+    COLLECTED: { label: 'Collected', tone: 'info' },
+    PROCESSING: { label: 'Processing', tone: 'info' },
     REQUESTED: { label: 'Requested', tone: 'info' },
     ORDERED: { label: 'Ordered', tone: 'info' },
     SCHEDULED: { label: 'Scheduled', tone: 'info' },

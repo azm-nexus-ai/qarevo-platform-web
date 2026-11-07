@@ -60,7 +60,7 @@ test('lab drafts require explicit discard for patient changes and navigation', a
   await dialog.getByRole('button', { name: 'Keep editing', exact: true }).click()
   await expect(select).toHaveValue('synthetic-alpha')
   await expect(page.getByLabel('Test title (required)', { exact: true })).toHaveValue('Synthetic unsaved Alpha request')
-  await page.locator('a[href="/doctor/dashboard"]').first().click()
+  await page.locator('header[aria-label="Doctor main navigation"]').getByRole('link', { name: 'Qarevo Health doctor dashboard', exact: true }).click()
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Keep editing', exact: true }).click()
   await expect(page).toHaveURL(/\/doctor\/lab-orders$/)
@@ -107,7 +107,8 @@ test('lab editor remains accessible and within the viewport in mobile dark mode'
   await prepare(context)
   await page.setViewportSize({ width: 320, height: 900 })
   await page.goto('/doctor/lab-orders')
-  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
+  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.getByLabel('Select patient', { exact: true }).selectOption('synthetic-alpha')
   await page.getByRole('button', { name: 'Order Lab Test', exact: true }).click()
   await page.getByLabel('Test title (required)', { exact: true }).fill('Synthetic mobile draft')
@@ -118,4 +119,38 @@ test('lab editor remains accessible and within the viewport in mobile dark mode'
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.getByLabel('Test title (required)', { exact: true })).toHaveValue('Synthetic mobile draft')
+})
+
+test('explicitly cleared lab fields are saved and remain cleared after a fresh load', async ({ page, context }) => {
+  await prepare(context)
+  let saved = { ...order('synthetic-persisted-order', 'Synthetic original order'), category: 'Synthetic blood panel', recommended_date: '2026-11-09T10:00:00.000Z' }
+  const writes: Record<string, unknown>[] = []
+  await context.route('**/api/v1/doctor/lab-orders**', route => {
+    if (route.request().method() === 'PUT') {
+      const patch = route.request().postDataJSON()
+      writes.push(patch)
+      saved = { ...saved, ...patch }
+    }
+    return route.fulfill({ json: { test_requests: [saved] } })
+  })
+  await page.goto('/doctor/lab-orders')
+  await page.getByLabel('Select patient', { exact: true }).selectOption('synthetic-alpha')
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  await expect(page.getByLabel('Category', { exact: true })).toHaveValue('Synthetic blood panel')
+  await expect(page.getByLabel('Recommended by', { exact: true })).toHaveValue('2026-11-09T11:00')
+  await page.getByLabel('Test title (required)', { exact: true }).fill('Synthetic revised order')
+  await page.getByLabel('Category', { exact: true }).fill('')
+  await page.getByLabel('Recommended by', { exact: true }).fill('')
+  await page.getByRole('button', { name: 'Save Changes', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Synthetic revised order', exact: true })).toBeVisible()
+  expect(writes).toHaveLength(1)
+  expect(writes[0]).toMatchObject({ patient_id: 'synthetic-alpha', test_id: 'synthetic-persisted-order', title: 'Synthetic revised order', category: '', recommended_date: '' })
+  expect(writes[0].scheduled_for).toBeUndefined()
+  await page.reload()
+  await page.getByLabel('Select patient', { exact: true }).selectOption('synthetic-alpha')
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  await expect(page.getByLabel('Test title (required)', { exact: true })).toHaveValue('Synthetic revised order')
+  await expect(page.getByLabel('Category', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Recommended by', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Known appointment time', { exact: true })).toHaveValue('2026-11-05T15:30')
 })

@@ -46,6 +46,9 @@ test('medication, care-plan and diagnostic lifecycles are domain-specific', () =
   assert.equal(statuses.clinicalStatus('Completed', 'care-plan').tone, 'success')
   assert.equal(statuses.clinicalStatus('on-hold', 'medication').tone, 'warning')
   assert.equal(statuses.clinicalStatus('Results Available', 'lab-request').label, 'Results available')
+  assert.equal(statuses.clinicalStatus('Booked', 'lab-request').tone, 'info')
+  assert.equal(statuses.clinicalStatus('Collected', 'lab-request').label, 'Collected')
+  assert.equal(statuses.clinicalStatus('Processing', 'lab-request').tone, 'info')
   assert.equal(statuses.clinicalStatus('STARTED', 'episode').tone, 'neutral')
 })
 

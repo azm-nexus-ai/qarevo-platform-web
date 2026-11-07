@@ -281,8 +281,8 @@ export default function DoctorLabOrdersPage() {
 
       <section className='dl-card'>
         <label className='dl-field'>
-          <span>Select patient</span>
-          <select style={inputStyle} value={selectedPatientId} onChange={(event) => handlePatientChange(event.target.value)} disabled={saving}>
+          <span id='doctor-lab-patient-label'>Select patient</span>
+          <select aria-labelledby='doctor-lab-patient-label' style={inputStyle} value={selectedPatientId} onChange={(event) => handlePatientChange(event.target.value)} disabled={saving}>
             <option value=''>Choose a patient</option>
             {patients.map((patient) => (
               <option key={patient.patient_id} value={patient.patient_id}>
@@ -312,8 +312,8 @@ export default function DoctorLabOrdersPage() {
             <label className='dl-field'><span>Test title (required)</span><input style={inputStyle} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder='Complete Blood Count' /></label>
             <label className='dl-field'><span>Category</span><input style={inputStyle} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder='Blood Test' /></label>
             <label className='dl-field'><span>Specific test</span><input style={inputStyle} value={form.test} onChange={(event) => setForm({ ...form, test: event.target.value })} placeholder='CBC' /></label>
-            <label className='dl-field'><span>Priority</span><select style={inputStyle} value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })}><option>Routine</option><option>Urgent</option><option>High</option></select></label>
-            <label className='dl-field'><span>Status</span><select style={inputStyle} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option>Pending</option><option>Booked</option><option>Collected</option><option>Processing</option><option>Results Available</option><option>Completed</option></select></label>
+            <label className='dl-field'><span id='doctor-lab-priority-label'>Priority</span><select aria-labelledby='doctor-lab-priority-label' style={inputStyle} value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })}><option>Routine</option><option>Urgent</option><option>High</option></select></label>
+            <label className='dl-field'><span id='doctor-lab-status-label'>Status</span><select aria-labelledby='doctor-lab-status-label' style={inputStyle} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option>Pending</option><option>Booked</option><option>Collected</option><option>Processing</option><option>Results Available</option><option>Completed</option></select></label>
             <label className='dl-field'><span>Recommended by</span><input style={inputStyle} type='datetime-local' value={form.recommended_date} onChange={(event) => setForm({ ...form, recommended_date: event.target.value })} /></label>
             <label className='dl-field'><span>Known appointment time</span><input style={inputStyle} type='datetime-local' value={form.scheduled_for} onChange={(event) => setForm({ ...form, scheduled_for: event.target.value })} /></label>
             <label className='dl-field'><span>Processing time</span><input style={inputStyle} value={form.processing_time} onChange={(event) => setForm({ ...form, processing_time: event.target.value })} placeholder='24 hrs' /></label>

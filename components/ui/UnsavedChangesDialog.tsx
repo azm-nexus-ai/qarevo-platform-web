@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef } from 'react'
+import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 
 type Props = { open: boolean; busy: boolean; onKeepEditing: () => void; onDiscard: () => void }
 
@@ -25,12 +26,10 @@ export default function UnsavedChangesDialog({ open, busy, onKeepEditing, onDisc
         : 'You have unsaved changes. Keep editing to save your draft, or discard these changes and leave. Previously saved versions will remain available.'}
     </p>
     <div className='mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end'>
-      <button autoFocus type='button' onClick={onKeepEditing}
-        className='rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'>
+      <PortalButton autoFocus type='button' tone='primary' onClick={onKeepEditing}>
         {busy ? 'Stay on this page' : 'Keep editing'}
-      </button>
-      {!busy && <button type='button' onClick={onDiscard}
-        className='rounded-xl border border-theme bg-surface px-5 py-3 font-semibold text-ink hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'>Discard and leave</button>}
+      </PortalButton>
+      {!busy && <PortalButton type='button' onClick={onDiscard}>Discard and leave</PortalButton>}
     </div>
   </dialog>
 }
