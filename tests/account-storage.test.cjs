@@ -1124,3 +1124,39 @@ test('authentication continuations accept only their exact newly verified sessio
   assert.equal(timers.has(3),false)
   assert.equal(current.isCurrent(),false)
 })
+
+test('optional cancellation signals preserve the authenticated notification read and CSRF-protected patch pipeline', async () => {
+  const calls = [], deadlines = []
+  const t = tab(undefined, async (url, init) => {
+    calls.push({ url, init })
+    if (init.signal?.aborted) throw new DOMException('Notification request cancelled', 'AbortError')
+    return Response.json({ accepted: true })
+  }, { AbortSignal: { any: AbortSignal.any.bind(AbortSignal), timeout(milliseconds) {
+    const deadline = new AbortController()
+    if (milliseconds === 35_000) deadlines.push(deadline)
+    return deadline.signal
+  } } })
+  login(t, 'notification-owner')
+  const controller = new AbortController()
+  await t.api.apiGet('/api/v1/patient/activity/notifications', undefined, controller.signal)
+  await t.api.apiPatch('/api/v1/patient/activity/notifications/44444444-4444-4444-8444-444444444444/read', undefined, undefined, controller.signal)
+  assert.equal(calls.length, 2)
+  for (const { init } of calls) {
+    assert.equal(init.signal.aborted, false)
+    assert.equal(init.credentials, 'same-origin')
+    assert.equal(init.cache, 'no-store')
+    assert.equal(init.headers.get('X-Qarevo-Portal'), 'patient')
+    assert.equal(init.headers.get('X-Qarevo-Session'), 'session-notification-owner')
+    assert.equal(init.headers.get('Authorization'), null)
+  }
+  assert.equal(calls[1].init.headers.get('X-Qarevo-CSRF'), 'synthetic-csrf-check')
+  controller.abort()
+  assert.equal(calls[0].init.signal.aborted, true)
+  assert.equal(calls[1].init.signal.aborted, true)
+  const stillMounted = new AbortController()
+  await t.api.apiGet('/api/v1/patient/activity/notifications', undefined, stillMounted.signal)
+  deadlines.at(-1).abort()
+  assert.equal(calls.at(-1).init.signal.aborted, true)
+  assert.equal(stillMounted.signal.aborted, false)
+  await assert.rejects(t.api.apiGet('/api/v1/patient/activity/notifications', undefined, controller.signal), /cancelled/)
+})

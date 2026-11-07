@@ -141,7 +141,9 @@ async function withSessionLock<T>(portal: Portal, operation: () => Promise<T>): 
 async function send(input: string, init: RequestInit, portal: Portal, marker: string | null): Promise<Response> {
     const headers = requestHeaders(portal,marker,init.headers);
     if (!['GET','HEAD','OPTIONS'].includes((init.method || 'GET').toUpperCase())) headers.set('X-Qarevo-CSRF',await csrfToken(portal));
-    const response = await fetch(input,{...init,headers,cache:'no-store',credentials:'same-origin',signal:init.signal ?? AbortSignal.timeout(35_000)});
+    const deadline = AbortSignal.timeout(35_000);
+    const signal = init.signal ? AbortSignal.any([init.signal,deadline]) : deadline;
+    const response = await fetch(input,{...init,headers,cache:'no-store',credentials:'same-origin',signal});
     const returned = response.headers.get('X-Qarevo-Session-Id');
     const entry = sessionMutation(new URL(input).pathname);
     if (returned && marker && returned !== marker && !entry) throw new Error('Your session changed. Reload this page.');
@@ -227,11 +229,11 @@ async function request<T>(path:string,init:RequestInit):Promise<T> {
     };
     return sessionMutation(path) ? withSessionLock(portal,perform) : perform();
 }
-export function apiGet<T>(path:string,headers?:Record<string,string>):Promise<T> { return request<T>(path,{headers}); }
-function jsonRequest<T,B>(method:string,path:string,body?:B,headers?:Record<string,string>):Promise<T> {return request<T>(path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});}
+export function apiGet<T>(path:string,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> { return request<T>(path,{headers,signal}); }
+function jsonRequest<T,B>(method:string,path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body),signal});}
 export function apiPost<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>):Promise<T> {return jsonRequest<T,B>('POST',path,body,headers);}
 export function apiPut<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>):Promise<T> {return jsonRequest<T,B>('PUT',path,body,headers);}
-export function apiPatch<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>):Promise<T> {return jsonRequest<T,B>('PATCH',path,body,headers);}
+export function apiPatch<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('PATCH',path,body,headers,signal);}
 export function apiDelete<T>(path:string,headers?:Record<string,string>):Promise<T> {return request<T>(path,{method:'DELETE',headers});}
 export function apiUpload<T>(path:string,body:FormData,headers?:Record<string,string>):Promise<T> {return request<T>(path,{method:'POST',body,headers});}
 

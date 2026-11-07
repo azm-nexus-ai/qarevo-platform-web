@@ -9,7 +9,7 @@ const subscribeAccount = (changed: () => void) => {
   return () => { window.removeEventListener(ACCOUNT_CHANGED, changed); window.removeEventListener('storage', changed) }
 }
 
-type RefreshOptions = { refreshOnFocus?: boolean; refreshIntervalMs?: number }
+type RefreshOptions = { refreshOnFocus?: boolean; refreshIntervalMs?: number; abortOnCleanup?: boolean }
 
 // Account/path/policy changes hide prior data during render. Refreshes retain the
 // same account's read-only data until the new response arrives; nothing is cached
@@ -23,6 +23,7 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
   const [settled, setSettled] = useState<typeof operation | null>(null)
   const inFlight = useRef<object | null>(null)
   const refreshQueued = useRef(false)
+  const abortOnCleanup = options.abortOnCleanup ?? false
   const retry = useCallback(() => {
     if (inFlight.current) refreshQueued.current = true
     else setAttempt(value => value + 1)
@@ -30,8 +31,9 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
   useEffect(() => {
     if (!path || !scope) return
     let current = true
+    const controller = abortOnCleanup ? new AbortController() : null
     inFlight.current = operation
-    apiGet<T>(path).then(data => {
+    apiGet<T>(path, undefined, controller?.signal).then(data => {
       if (current) setState({ request, data, error: false, errorMessage: '', errorStatus: null })
     }).catch(error => {
       const empty = missingIsEmpty && error instanceof ApiError && error.status === 404
@@ -48,10 +50,11 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
     })
     return () => {
       current = false
+      controller?.abort()
       if (inFlight.current === operation) inFlight.current = null
       refreshQueued.current = false
     }
-  }, [operation, request, path, scope, missingIsEmpty])
+  }, [operation, request, path, scope, missingIsEmpty, abortOnCleanup])
   const interval = options.refreshIntervalMs ?? 0
   const onFocus = options.refreshOnFocus ?? false
   useEffect(() => {

@@ -6,6 +6,7 @@ import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import WorkflowDeliveryCard from '@/components/admin/WorkflowDeliveryCard'
+import ClinicalNotificationDeliveryCard from '@/components/admin/ClinicalNotificationDeliveryCard'
 import {
   clearPortalSession,
   getAdminDashboardOverview,
@@ -286,6 +287,7 @@ export default function AdminDashboard() {
       </div>
 
       <WorkflowDeliveryCard />
+      <ClinicalNotificationDeliveryCard />
 
       {/* Doctors Summary */}
       {doctorsSummary?.by_specialty && (

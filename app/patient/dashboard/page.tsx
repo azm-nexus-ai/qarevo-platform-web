@@ -1,6 +1,7 @@
 'use client'
 import { readPortalIdentity } from '@/lib/portal-scope'
 import ProfileImage from '@/components/patient/ProfileImage'
+import PatientNotifications from '@/components/notifications/PatientNotifications'
 
 import Link from 'next/link'
 import Image from 'next/image'
@@ -101,12 +102,6 @@ type MetricCard = {
 type TimelineCard = {
   title: string
   sub: string
-  time: string
-}
-
-type NotificationCard = {
-  title: string
-  body: string
   time: string
 }
 
@@ -253,16 +248,6 @@ function EmptyState({ children, action }: { children: React.ReactNode; action?: 
     <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-glass)", padding: '18px', color: T.slate, fontSize: '13px', lineHeight: 1.55, display: 'flex', justifyContent: 'space-between', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
       <span>{children}</span>
       {action}
-    </div>
-  )
-}
-
-function SkeletonRow() {
-  return (
-    <div style={{ display: 'grid', gap: '10px' }}>
-      {[1, 2, 3].map((k) => (
-        <div key={k} style={{ height: '42px', borderRadius: '12px', background: 'linear-gradient(90deg, rgba(4,53,77,0.06) 0%, rgba(32,181,223,0.12) 50%, rgba(4,53,77,0.06) 100%)', backgroundSize: '220% 100%', animation: 'qarevo-shimmer 1.35s infinite linear' }} />
-      ))}
     </div>
   )
 }
@@ -764,19 +749,6 @@ export default function PatientDashboardPage() {
         title: text(item.title ?? item.event, 'Care update'),
         sub: text(item.sub ?? item.body ?? item.provider, fallback.sub),
         time: text(item.time ?? item.date, fallback.time),
-      }
-    })
-  }, [dashboardData])
-
-  const displayNotifications = useMemo<NotificationCard[]>(() => {
-    const source = dashboardArray(dashboardData, 'notifications')
-    if (!source.length && !dashboardHasKey(dashboardData, 'notifications')) return []
-    return source.map((item) => {
-      const fallback = { body: '', time: '' }
-      return {
-        title: text(item.title, 'Notification'),
-        body: text(item.body ?? item.preview, fallback.body),
-        time: text(item.time, fallback.time),
       }
     })
   }, [dashboardData])
@@ -1663,20 +1635,8 @@ export default function PatientDashboardPage() {
               )}
             </SectionCard>
 
-            <SectionCard title='Notifications' sub='Recent updates from your care team.'>
-              {dashboardLoading ? (
-                <SkeletonRow />
-              ) : (
-                <div style={{ display: 'grid', gap: '8px' }}>
-                  {displayNotifications.map((item, index) => (
-                    <button key={`${item.title}-${item.body}-${item.time}-${index}`} type='button' style={{ width: '100%', textAlign: 'left', border: "1px solid var(--border)", background: "var(--surface-glass)", borderRadius: '12px', padding: '10px 11px', cursor: 'pointer' }}>
-                      <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy }}>{item.title}</p>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate, lineHeight: 1.45 }}>{item.body}</p>
-                      <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{item.time}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
+            <SectionCard title='Notifications' sub='Recent account and care updates.'>
+              <PatientNotifications compact />
             </SectionCard>
 
             <SectionCard title='Care Progress' sub='How your current plan is tracking.'>
@@ -1690,12 +1650,6 @@ export default function PatientDashboardPage() {
               ) : (
                 <EmptyState>No care plan progress yet.</EmptyState>
               )}
-            </SectionCard>
-
-            <SectionCard title='Quick Notes' sub='Personal reminders for your care routine.'>
-              <div style={{ borderRadius: '14px', padding: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
-                <p style={{ margin: 0, fontSize: '13px', color: T.navy, fontWeight: 700 }}>{displayNotifications[0]?.body || 'No quick notes yet.'}</p>
-              </div>
             </SectionCard>
 
             <SectionCard title='Contact your care team' sub='Use your messages to contact your care team.'>
