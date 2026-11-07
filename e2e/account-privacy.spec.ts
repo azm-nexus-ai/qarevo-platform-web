@@ -1160,7 +1160,7 @@ test('patient sees no unsigned summary and reads the approved version after refr
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Clinician-approved consultation summary' })).toBeVisible()
   await expect(page.getByText(approvedRecord.safety_net, { exact: true })).toBeVisible()
-  await expect(page.getByText('Revision 1', { exact: false })).toBeVisible()
+  await expect(page.getByRole('article').getByText('Revision 1', { exact: true })).toBeVisible()
 })
 
 for (const width of [320, 820, 1440]) {
