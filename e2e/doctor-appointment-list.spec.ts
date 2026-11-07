@@ -8,6 +8,7 @@ async function prepare(context: BrowserContext) {
     const request = route.request(), url = new URL(request.url()), path = url.pathname
     if (path === '/api/v1/browser-csrf') return route.fallback()
     if (path.startsWith('/api/v1/session')) return route.fulfill({ json: testSessionTiming(identity) })
+    if (path === '/api/v1/security') return route.fulfill({ json: { password_change_available: true, mfa: { available: false, enabled: false, method: null, message: 'Not configured for this synthetic test.' }, sessions: [], sessions_total: 0 } })
     if (path === '/api/v1/doctor/profile') return route.fulfill({ json: { full_name: 'Synthetic Clinician', specialty: 'General practice' } })
     if (path === '/api/v1/doctor/appointments') {
       state.reads++
@@ -58,7 +59,7 @@ for (const width of [320, 1440]) {
 test('doctor appointment failure exposes a real retry without losing filters', async ({ page, context }) => {
   const state = await prepare(context); state.failed = true
   await page.goto('/doctor/appointments')
-  await expect(page.getByRole('alert')).toContainText('Synthetic scheduling outage')
+  await expect(page.getByRole('region', { name: 'Appointment list', exact: true }).getByRole('alert')).toContainText('Synthetic scheduling outage')
   await expect(page.getByLabel('Appointment status', { exact: true })).toBeVisible()
   state.failed = false
   await page.getByRole('button', { name: 'Try again', exact: true }).click()
