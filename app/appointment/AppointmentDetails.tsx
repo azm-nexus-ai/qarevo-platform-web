@@ -31,7 +31,7 @@ export default function AppointmentDetails({
   onBack,
 }: AppointmentDetailsProps) {
   return (
-    <div className="flex flex-col md:w-175 mt-16 lg:my-5 md:ml-4 border bg-white border-[#E6EEF2] rounded-lg">
+    <div className="flex flex-col md:w-175 mt-16 lg:my-5 md:ml-4 border bg-surface border-[#E6EEF2] rounded-lg">
       <div className="bg-[#074360] flex justify-between px-5 py-3 rounded-t-lg items-center">
         <div className="flex gap-2">
           <button

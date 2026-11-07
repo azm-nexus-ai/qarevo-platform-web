@@ -6,14 +6,14 @@ import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getAdminPatients,
   getAdminPatient,
   getAdminPatientEpisodes,
   exportAdminPatientData,
   updateAdminPatient,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   isAdmin,
   type AdminPatient,
   type AdminPatientEpisode,
@@ -31,7 +31,7 @@ function StatusBadge({ status }: { status: string }) {
       case 'pending':
         return { bg: 'rgba(217,119,6,0.12)', color: T.amber }
       default:
-        return { bg: 'rgba(32,181,223,0.12)', color: T.blue }
+        return { bg: 'rgba(32,181,223,0.12)', color: T.link }
     }
   }
 
@@ -41,7 +41,7 @@ function StatusBadge({ status }: { status: string }) {
     <span style={{
       padding: '4px 10px',
       borderRadius: '999px',
-      fontSize: '11px',
+      fontSize: "13px",
       fontWeight: 700,
       background: style.bg,
       color: style.color
@@ -51,18 +51,18 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function PatientCard({ patient, onView, onExport }: { 
+function PatientCard({ patient, onView, onExport }: {
   patient: AdminPatient
   onView: (id: string) => void
   onExport: (id: string) => void
 }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '20px',
       display: 'flex',
@@ -71,15 +71,15 @@ function PatientCard({ patient, onView, onExport }: {
       gap: '16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-        <div style={{ 
-          width: '48px', 
-          height: '48px', 
-          borderRadius: '12px', 
-          background: 'rgba(32,181,223,0.1)', 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '12px',
+          background: 'rgba(32,181,223,0.1)',
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
-          color: T.blue,
+          color: T.link,
           fontSize: '16px',
           fontWeight: 700
         }}>
@@ -89,11 +89,11 @@ function PatientCard({ patient, onView, onExport }: {
           <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{patient.full_name}</p>
           <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.slate2 }}>{patient.email}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <span style={{ fontSize: '12px', color: T.slate }}>{patient.phone}</span>
+            <span style={{ fontSize: "13px", color: T.slate }}>{patient.phone}</span>
             {patient.date_of_birth && (
               <>
-                <span style={{ fontSize: '12px', color: T.slate2 }}>•</span>
-                <span style={{ fontSize: '12px', color: T.slate }}>
+                <span style={{ fontSize: "13px", color: T.slate2 }}>•</span>
+                <span style={{ fontSize: "13px", color: T.slate }}>
                   {new Date(patient.date_of_birth).toLocaleDateString()}
                 </span>
               </>
@@ -109,8 +109,8 @@ function PatientCard({ patient, onView, onExport }: {
           style={{
             padding: '8px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: '#fff',
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
             color: T.navy,
             fontSize: '13px',
             fontWeight: 600,
@@ -151,14 +151,14 @@ export default function AdminPatientsPage() {
   const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
-      router.replace('/auth/sign-in')
+    if (!readSessionMarker()) {
+      clearPortalSession()
+      router.replace('/auth/admin/login')
       return
     }
 
     if (!isAdmin()) {
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
       return
     }
 
@@ -173,8 +173,8 @@ export default function AdminPatientsPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
+          clearPortalSession()
+          router.replace('/auth/admin/login')
           return
         }
         console.error('Failed to load patients', err)
@@ -215,7 +215,7 @@ export default function AdminPatientsPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+      <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         {error}
       </div>
     )
@@ -246,8 +246,8 @@ export default function AdminPatientsPage() {
               width: '100%',
               padding: '10px 12px 10px 40px',
               borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              background: 'rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-glass)",
               fontSize: '14px',
               color: T.navy,
               outline: 'none',
@@ -260,8 +260,8 @@ export default function AdminPatientsPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',

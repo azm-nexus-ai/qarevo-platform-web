@@ -4,13 +4,15 @@ import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { buildBookingQueryParams } from '@/lib/booking'
+import { buildBookingQueryParams, CONSULTATION_PRICING_PENDING } from '@/lib/booking'
 import { getPatientDoctor } from '@/lib/api'
 import type { PatientDoctor } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import type { Physician, PhysicianProfileContent } from '@/constants/physicians'
 import Ico from '@/components/ui/Ico'
 import DoctorCard from '@/components/cards/DoctorCard'
+import DoctorAvatar from '@/components/cards/DoctorAvatar'
+import { doctorVerification } from '@/lib/doctor-verification'
 import dynamic from 'next/dynamic'
 
 // Dynamically import Leaflet to avoid SSR issues
@@ -140,7 +142,7 @@ function toPhysician(doctor: PatientDoctor): Physician {
     consultationTypes: doctor.consultationTypes.filter((type): type is 'video' | 'physical' => type === 'video' || type === 'physical'),
     distanceKm: doctor.distanceKm,
     conditions: doctor.conditions,
-    imageUrl: doctor.imageUrl,
+    imageUrl: doctor.imageUrl ?? '',
     verification: doctor.verification,
     tags: doctor.tags,
   }
@@ -315,7 +317,7 @@ function PhysicianProfilePageContent() {
     return (
       <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center', padding: '24px' }}>
         <section style={{ ...Glass.nav, maxWidth: '460px', borderRadius: '18px', padding: '22px', textAlign: 'center' }}>
-          <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>Loading physician profile</h1>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>Loading physician profile</h1>
           <p style={{ margin: '8px 0 0', fontSize: '13px', color: T.slate }}>Fetching the latest doctor details.</p>
         </section>
       </main>
@@ -326,10 +328,10 @@ function PhysicianProfilePageContent() {
     return (
       <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center', padding: '24px' }}>
         <section style={{ ...Glass.nav, maxWidth: '460px', borderRadius: '18px', padding: '22px', textAlign: 'center' }}>
-          <h1 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>Physician unavailable</h1>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>Physician unavailable</h1>
           <p style={{ margin: '8px 0 14px', fontSize: '13px', color: T.slate }}>{remoteDoctorError}</p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <Link href="/patient/dashboard" style={{ minHeight: '40px', borderRadius: '11px', background: 'rgba(52,140,234,0.1)', color: '#348CEA', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', fontSize: '13px', fontWeight: 700 }}>
+            <Link href="/patient/dashboard" style={{ minHeight: '40px', borderRadius: '11px', background: 'rgba(52,140,234,0.1)', color: "var(--link)", textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', fontSize: '13px', fontWeight: 700 }}>
               Back to Dashboard
             </Link>
             <Link href={backToDiscovery} style={{ minHeight: '40px', borderRadius: '11px', background: '#20B5DF', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', fontSize: '13px', fontWeight: 700 }}>
@@ -375,29 +377,29 @@ function PhysicianProfilePageContent() {
 
       <div className='pp-shell'>
         <section className='pp-main'>
-          <header style={{ ...Glass.nav, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.84)', padding: '14px', position: 'sticky', top: '16px', zIndex: 10, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+          <header style={{ ...Glass.nav, borderRadius: '20px', border: "1px solid var(--border)", padding: '14px', position: 'sticky', top: '16px', zIndex: 10, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
-              <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: '#348CEA', fontSize: '13px', fontWeight: 700 }}>
+              <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: "var(--link)", fontSize: '13px', fontWeight: 700 }}>
                 <Ico p={ICONS.arrowBack} size={14} sw={1.8} color='#348CEA' />
                 Back to Dashboard
               </Link>
               <span style={{ color: 'rgba(52,140,234,0.4)' }}>|</span>
-              <Link href={backToDiscovery} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: '#348CEA', fontSize: '13px', fontWeight: 700 }}>
+              <Link href={backToDiscovery} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: "var(--link)", fontSize: '13px', fontWeight: 700 }}>
                 <Ico p={ICONS.arrowBack} size={14} sw={1.8} color='#348CEA' />
                 Back to Find a Doctor
               </Link>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '108px minmax(0, 1fr) auto', gap: '14px', alignItems: 'center' }}>
-              <div style={{ width: '108px', height: '108px', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(4,53,77,0.12)', background: 'linear-gradient(135deg, rgba(32,181,223,0.24), rgba(52,140,234,0.3))', display: 'grid', placeItems: 'center', color: T.navy, fontSize: '30px', fontWeight: 700, transition: 'transform 0.2s ease' }}>
-                {physician.name.split(' ').slice(0, 2).map((chunk) => chunk[0]).join('')}
+              <div style={{ width: '108px', height: '108px', borderRadius: '20px', overflow: 'hidden', border: "1px solid var(--border)", background: 'linear-gradient(135deg, rgba(32,181,223,0.24), rgba(52,140,234,0.3))', display: 'grid', placeItems: 'center', color: T.navy, fontSize: '30px', fontWeight: 700, transition: 'transform 0.2s ease' }}>
+                <DoctorAvatar name={physician.name} imageUrl={physician.imageUrl} size={108} />
               </div>
 
               <div>
-	                <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, color: physician.verification === 'Pending' ? T.amber : T.blue, marginBottom: '8px' }}>
-                  <Ico p={ICONS.check} size={12} sw={2.4} color={physician.verification === 'Pending' ? T.amber : T.blue} />
-	                  {physician.verification === 'Pending' ? 'Pending Verification' : 'Verified Physician'}
+	                <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: doctorVerification(physician.verification).verified ? T.link : T.slate, marginBottom: '8px' }}>
+                  {doctorVerification(physician.verification).verified && <Ico p={ICONS.check} size={12} sw={2.4} color={T.link} />}
+	                  {doctorVerification(physician.verification).label}
                 </span>
-                <h1 style={{ margin: '0 0 6px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '30px', fontWeight: 800, letterSpacing: '-0.034em', color: T.navy }}>{physician.name}</h1>
+                <h1 style={{ margin: '0 0 6px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '30px', fontWeight: 800, letterSpacing: '-0.034em', color: T.navy }}>{physician.name}</h1>
                 <p style={{ margin: '0 0 4px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>
                   {profileSpecialtyLine || 'Specialty not configured'}
                 </p>
@@ -406,17 +408,17 @@ function PhysicianProfilePageContent() {
                 </p>
                 {profile.availabilitySlots.length > 0 && profile.availabilitySlots[0].slots.length > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                    <span style={{ fontSize: '11px', color: T.slate2 }}>Next Available:</span>
+                    <span style={{ fontSize: "13px", color: T.slate2 }}>Next Available:</span>
                     {profile.availabilitySlots.slice(0, 1).map((day) => (
                       <div key={day.day} style={{ display: 'flex', gap: '4px' }}>
                         {day.slots.slice(0, 3).map((slot) => (
-                          <span key={slot} style={{ ...Glass.chip, fontSize: '11px', color: T.blue, fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
+                          <span key={slot} style={{ ...Glass.chip, fontSize: "13px", color: T.link, fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
                             {day.day} {slot}
                           </span>
                         ))}
                       </div>
                     ))}
-                    <Link href="#availability" style={{ fontSize: '11px', color: '#348CEA', fontWeight: 700, textDecoration: 'none' }}>
+                    <Link href="#availability" style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>
                       View All
                     </Link>
                   </div>
@@ -427,7 +429,7 @@ function PhysicianProfilePageContent() {
                 <Link href={toBookingHref(physician, effectiveSelectedService, preservedQuery)} style={{ minHeight: '44px', borderRadius: '12px', background: '#20B5DF', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 5px 14px rgba(32,181,223,0.32)' }}>
                   Book Now
                 </Link>
-                <span style={{ fontSize: '11px', color: T.slate2, textAlign: 'center' }}>Response Time: {profile.responseTime}</span>
+                <span style={{ fontSize: "13px", color: T.slate2, textAlign: 'center' }}>Response Time: {profile.responseTime}</span>
               </div>
             </div>
           </header>
@@ -443,15 +445,15 @@ function PhysicianProfilePageContent() {
               { label: 'Consultations', value: profile.consultationsDone },
               { label: 'Languages', value: `${physician.languages.length}` },
             ].map((item) => (
-              <article key={item.label} style={{ background: 'rgba(255,255,255,0.84)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '12px' }}>
-                <p style={{ margin: 0, fontSize: '11px', color: T.slate2, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{item.label}</p>
+              <article key={item.label} style={{ background: "var(--surface-glass)", borderRadius: '14px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '12px' }}>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate2, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{item.label}</p>
                 <p style={{ margin: '7px 0 0', fontSize: '19px', color: T.navy, fontWeight: 800, letterSpacing: '-0.02em' }}>{item.value}</p>
               </article>
             ))}
           </section>
 
-          <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-            <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>About Dr. {physician.name.replace('Dr. ', '')}</h2>
+          <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+            <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>About Dr. {physician.name.replace('Dr. ', '')}</h2>
             <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>
               {expandedBiography ? profile.biography : `${profile.biography.slice(0, 150)}${profile.biography.length > 150 ? '...' : ''}`}
             </p>
@@ -459,7 +461,7 @@ function PhysicianProfilePageContent() {
               <button
                 type='button'
                 onClick={() => setExpandedBiography(!expandedBiography)}
-                style={{ border: 'none', background: 'transparent', color: '#348CEA', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px', padding: 0 }}
+                style={{ border: 'none', background: 'transparent', color: "var(--link)", fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px', padding: 0 }}
               >
                 {expandedBiography ? 'Read Less' : 'Read More'}
               </button>
@@ -467,34 +469,34 @@ function PhysicianProfilePageContent() {
           </section>
 
           <section className='pp-two-col'>
-            <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Specializations</h3>
+            <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Specializations</h3>
               <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {profile.specializations.map((item) => (
-                  <span key={item} style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: T.blue, fontWeight: 600 }}>{item}</span>
+                  <span key={item} style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: "13px", color: T.link, fontWeight: 600 }}>{item}</span>
                 ))}
               </div>
             </article>
 
-            <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Insurance Accepted</h3>
+            <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Insurance Accepted</h3>
               <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {physician.insurance.map((item) => (
-                  <span key={item} style={{ borderRadius: '999px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.84)', padding: '6px 10px', fontSize: '12px', color: T.navy, fontWeight: 600 }}>{item}</span>
+                  <span key={item} style={{ borderRadius: '999px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '6px 10px', fontSize: "13px", color: T.navy, fontWeight: 600 }}>{item}</span>
                 ))}
               </div>
             </article>
           </section>
 
           <section className='pp-two-col'>
-            <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Education</h3>
+            <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Education</h3>
               <div className='pp-timeline'>
                 {(expandedEducation ? profile.education : profile.education.slice(0, 1)).map((item) => (
-                  <div key={`${item.title}-${item.period}`} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '10px 11px' }}>
+                  <div key={`${item.title}-${item.period}`} style={{ borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '10px 11px' }}>
                     <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{item.title}</p>
-                    <p style={{ margin: '0 0 2px', fontSize: '12px', color: T.slate }}>{item.org}</p>
-                    <p style={{ margin: 0, fontSize: '11px', color: T.slate2 }}>{item.period}</p>
+                    <p style={{ margin: '0 0 2px', fontSize: "13px", color: T.slate }}>{item.org}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{item.period}</p>
                   </div>
                 ))}
               </div>
@@ -502,21 +504,21 @@ function PhysicianProfilePageContent() {
                 <button
                   type='button'
                   onClick={() => setExpandedEducation(!expandedEducation)}
-                  style={{ border: 'none', background: 'transparent', color: '#348CEA', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px', padding: 0 }}
+                  style={{ border: 'none', background: 'transparent', color: "var(--link)", fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px', padding: 0 }}
                 >
                   {expandedEducation ? 'Show Less' : `View All (${profile.education.length})`}
                 </button>
               )}
             </article>
 
-            <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Professional Experience</h3>
+            <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Professional Experience</h3>
               <div className='pp-timeline'>
                 {(expandedExperience ? profile.experienceTimeline : profile.experienceTimeline.slice(0, 1)).map((item) => (
-                  <div key={`${item.title}-${item.period}`} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '10px 11px' }}>
+                  <div key={`${item.title}-${item.period}`} style={{ borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '10px 11px' }}>
                     <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{item.title}</p>
-                    <p style={{ margin: '0 0 2px', fontSize: '12px', color: T.slate }}>{item.org}</p>
-                    <p style={{ margin: 0, fontSize: '11px', color: T.slate2 }}>{item.period}</p>
+                    <p style={{ margin: '0 0 2px', fontSize: "13px", color: T.slate }}>{item.org}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{item.period}</p>
                   </div>
                 ))}
               </div>
@@ -524,7 +526,7 @@ function PhysicianProfilePageContent() {
                 <button
                   type='button'
                   onClick={() => setExpandedExperience(!expandedExperience)}
-                  style={{ border: 'none', background: 'transparent', color: '#348CEA', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px', padding: 0 }}
+                  style={{ border: 'none', background: 'transparent', color: "var(--link)", fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px', padding: 0 }}
                 >
                   {expandedExperience ? 'Show Less' : `View All (${profile.experienceTimeline.length})`}
                 </button>
@@ -532,11 +534,11 @@ function PhysicianProfilePageContent() {
             </article>
           </section>
 
-          <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-            <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Consultation Services</h3>
+          <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Consultation Services</h3>
             <div className='pp-service-grid'>
 	              {profile.services.length === 0 ? (
-	                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '12px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
+	                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '12px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
 	                  This physician has not published consultation services yet.
 	                </div>
 	              ) : profile.services.map((service) => {
@@ -545,12 +547,12 @@ function PhysicianProfilePageContent() {
                   <Link
                     key={service.type}
                     href={toBookingHref(physician, service.type, preservedQuery)}
-                    style={{ textAlign: 'left', borderRadius: '14px', border: active ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: active ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.84)', padding: '12px', cursor: 'pointer', textDecoration: 'none', display: 'block' }}
+                    style={{ textAlign: 'left', borderRadius: '14px', border: active ? '1px solid rgba(32,181,223,0.4)' : "1px solid var(--border)", background: active ? 'rgba(32,181,223,0.14)' : "var(--surface-glass)", padding: '12px', cursor: 'pointer', textDecoration: 'none', display: 'block' }}
                   >
                     <p style={{ margin: '0 0 4px', fontSize: '13px', color: T.navy, fontWeight: 700 }}>{service.label}</p>
-                    <p style={{ margin: '0 0 2px', fontSize: '12px', color: T.slate }}>Price: ${service.price}</p>
-                    <p style={{ margin: '0 0 2px', fontSize: '12px', color: T.slate }}>Duration: {service.duration}</p>
-                    <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>Availability: {service.availability}</p>
+                    <p style={{ margin: '0 0 2px', fontSize: "13px", color: T.slate }}>{CONSULTATION_PRICING_PENDING}</p>
+                    <p style={{ margin: '0 0 2px', fontSize: "13px", color: T.slate }}>Duration: {service.duration}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Availability: {service.availability}</p>
                   </Link>
                 )
               })}
@@ -558,11 +560,11 @@ function PhysicianProfilePageContent() {
           </section>
 
           <section className='pp-two-col'>
-            <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Availability</h3>
-	              <p style={{ margin: '0 0 8px', fontSize: '12px', color: T.slate2 }}>Timezone: {profile.availabilitySlots[0]?.timezone ?? 'Not configured'}</p>
+            <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Availability</h3>
+	              <p style={{ margin: '0 0 8px', fontSize: "13px", color: T.slate2 }}>Timezone: {profile.availabilitySlots[0]?.timezone ?? 'Not configured'}</p>
 	              {profile.availabilitySlots.length === 0 ? (
-	                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '12px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
+	                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '12px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
 	                  This physician has not opened appointment slots yet.
 	                </div>
 	              ) : (
@@ -576,7 +578,7 @@ function PhysicianProfilePageContent() {
 	                          setSelectedDay(item.day)
 	                          setSelectedSlot(item.slots[0] ?? '')
 	                        }}
-	                        style={{ borderRadius: '9px', border: effectiveSelectedDay === item.day ? '1px solid rgba(32,181,223,0.4)' : '1px solid rgba(4,53,77,0.1)', background: effectiveSelectedDay === item.day ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.86)', color: effectiveSelectedDay === item.day ? T.blue : T.slate, fontSize: '12px', fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
+	                        style={{ borderRadius: '9px', border: effectiveSelectedDay === item.day ? '1px solid rgba(32,181,223,0.4)' : "1px solid var(--border)", background: effectiveSelectedDay === item.day ? 'rgba(32,181,223,0.14)' : "var(--surface-glass)", color: effectiveSelectedDay === item.day ? T.link : T.slate, fontSize: "13px", fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
 	                      >
 	                        {item.day}
 	                      </button>
@@ -589,7 +591,7 @@ function PhysicianProfilePageContent() {
 	                        key={slot}
 	                        type='button'
 	                        onClick={() => setSelectedSlot(slot)}
-	                        style={{ borderRadius: '10px', border: effectiveSelectedSlot === slot ? '1px solid rgba(32,181,223,0.45)' : '1px solid rgba(4,53,77,0.1)', background: effectiveSelectedSlot === slot ? 'rgba(32,181,223,0.15)' : 'rgba(255,255,255,0.84)', color: effectiveSelectedSlot === slot ? T.blue : T.navy, fontSize: '12px', fontWeight: 700, padding: '7px 8px', cursor: 'pointer' }}
+	                        style={{ borderRadius: '10px', border: effectiveSelectedSlot === slot ? '1px solid rgba(32,181,223,0.45)' : "1px solid var(--border)", background: effectiveSelectedSlot === slot ? 'rgba(32,181,223,0.15)' : "var(--surface-glass)", color: effectiveSelectedSlot === slot ? T.link : T.navy, fontSize: "13px", fontWeight: 700, padding: '7px 8px', cursor: 'pointer' }}
 	                      >
 	                        {slot}
 	                      </button>
@@ -597,17 +599,17 @@ function PhysicianProfilePageContent() {
 	                  </div>
 	                </>
 	              )}
-              <p style={{ margin: '9px 0 0', fontSize: '12px', color: T.slate2 }}>Next available appointment: {physician.nextAvailable}</p>
+              <p style={{ margin: '9px 0 0', fontSize: "13px", color: T.slate2 }}>Next available appointment: {physician.nextAvailable}</p>
             </article>
 
-            <article style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Location</h3>
+            <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Location</h3>
               {mapLoading ? (
-                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: '12px', marginBottom: '10px' }}>
+                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: "13px", marginBottom: '10px' }}>
                   Loading map...
                 </div>
               ) : mapCoordinates ? (
-                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', overflow: 'hidden', marginBottom: '10px', height: '200px' }}>
+                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", overflow: 'hidden', marginBottom: '10px', height: '200px' }}>
                   <MapContainer
                     center={mapCoordinates as [number, number]}
                     zoom={15}
@@ -619,7 +621,7 @@ function PhysicianProfilePageContent() {
                     />
                     <Marker position={mapCoordinates as [number, number]}>
                       <Popup>
-                        <div style={{ fontSize: '12px', fontWeight: 600 }}>
+                        <div style={{ fontSize: "13px", fontWeight: 600 }}>
                           {physician.name}<br />
                           {profile.location.address}
                         </div>
@@ -628,17 +630,17 @@ function PhysicianProfilePageContent() {
                   </MapContainer>
                 </div>
               ) : (
-                <div style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.1)', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: '12px', marginBottom: '10px' }}>
+                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: "13px", marginBottom: '10px' }}>
                   Map unavailable
                 </div>
               )}
-              <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Address:</strong> {profile.location.address}</p>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Address:</strong> {profile.location.address}</p>
             </article>
           </section>
 
-          <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
+          <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <h3 style={{ margin: 0, fontFamily: '"Plus Jakarta Sans", sans-serif', fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Patient Reviews</h3>
+              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Patient Reviews</h3>
               <div style={{ display: 'flex', gap: '6px' }}>
                 {[
                   { id: 'recent', label: 'Most Recent' },
@@ -652,7 +654,7 @@ function PhysicianProfilePageContent() {
                       setReviewSort(item.id as ReviewSort)
                       setReviewsLoaded(true)
                     }}
-                    style={{ borderRadius: '999px', border: reviewSort === item.id ? '1px solid rgba(32,181,223,0.45)' : '1px solid rgba(4,53,77,0.1)', background: reviewSort === item.id ? 'rgba(32,181,223,0.14)' : 'rgba(255,255,255,0.84)', color: reviewSort === item.id ? T.blue : T.slate, fontSize: '11px', fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
+                    style={{ borderRadius: '999px', border: reviewSort === item.id ? '1px solid rgba(32,181,223,0.45)' : "1px solid var(--border)", background: reviewSort === item.id ? 'rgba(32,181,223,0.14)' : "var(--surface-glass)", color: reviewSort === item.id ? T.link : T.slate, fontSize: "13px", fontWeight: 700, padding: '6px 10px', cursor: 'pointer' }}
                   >
                     {item.label}
                   </button>
@@ -660,14 +662,14 @@ function PhysicianProfilePageContent() {
               </div>
             </div>
 	            {profile.reviews.length === 0 ? (
-	              <div style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.84)', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
+	              <div style={{ width: '100%', padding: '16px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
 	                No patient reviews yet.
 	              </div>
 	            ) : !reviewsLoaded ? (
               <button
                 type='button'
                 onClick={() => setReviewsLoaded(true)}
-                style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.84)', color: T.blue, fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ width: '100%', padding: '16px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.link, fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Load {profile.reviews.length} Reviews
               </button>
@@ -676,7 +678,7 @@ function PhysicianProfilePageContent() {
                 {sortedReviews.map((review) => {
                   const expanded = expandedReviewId === review.id
                   return (
-                    <article key={review.id} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: 'rgba(255,255,255,0.84)', padding: '10px' }}>
+                    <article key={review.id} style={{ borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '10px' }}>
                       <button
                         type='button'
                         onClick={() => setExpandedReviewId(expanded ? '' : review.id)}
@@ -684,10 +686,10 @@ function PhysicianProfilePageContent() {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                           <p style={{ margin: 0, fontSize: '13px', color: T.navy, fontWeight: 700 }}>{review.patient} · {review.rating.toFixed(1)} ★</p>
-                          <span style={{ ...Glass.chip, fontSize: '10.5px', color: T.blue, fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>Verified Patient</span>
+                          <span style={{ ...Glass.chip, fontSize: "13px", color: T.link, fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>Verified Patient</span>
                         </div>
-                        <p style={{ margin: '4px 0 0', fontSize: '11px', color: T.slate2 }}>{review.date} · Helpful {review.helpful}</p>
-                        <p style={{ margin: '7px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.55 }}>
+                        <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate2 }}>{review.date} · Helpful {review.helpful}</p>
+                        <p style={{ margin: '7px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.55 }}>
                           {expanded ? review.body : `${review.body.slice(0, 90)}${review.body.length > 90 ? '...' : ''}`}
                         </p>
                       </button>
@@ -698,13 +700,13 @@ function PhysicianProfilePageContent() {
             )}
           </section>
 
-          <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-            <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Frequently Asked Questions</h3>
+          <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Frequently Asked Questions</h3>
             {!faqLoaded ? (
               <button
                 type='button'
                 onClick={() => setFaqLoaded(true)}
-                style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', background: 'rgba(255,255,255,0.84)', color: T.blue, fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ width: '100%', padding: '16px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.link, fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Load {profile.faq.length} FAQs
               </button>
@@ -713,7 +715,7 @@ function PhysicianProfilePageContent() {
                 {profile.faq.map((item) => {
                   const open = openFaq === item.q
                   return (
-                    <article key={item.q} style={{ borderRadius: '12px', border: '1px solid rgba(4,53,77,0.09)', background: open ? 'rgba(32,181,223,0.08)' : 'rgba(255,255,255,0.84)', overflow: 'hidden' }}>
+                    <article key={item.q} style={{ borderRadius: '12px', border: "1px solid var(--border)", background: open ? 'rgba(32,181,223,0.08)' : "var(--surface-glass)", overflow: 'hidden' }}>
                       <button
                         type='button'
                         onClick={() => setOpenFaq(open ? '' : item.q)}
@@ -724,7 +726,7 @@ function PhysicianProfilePageContent() {
                           <span style={{ fontSize: '16px', color: T.slate }}>{open ? '−' : '+'}</span>
                         </div>
                         {open && (
-                          <p style={{ margin: '8px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.55 }}>
+                          <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.55 }}>
                             {item.a}
                           </p>
                         )}
@@ -736,15 +738,15 @@ function PhysicianProfilePageContent() {
             )}
           </section>
 
-          <section style={{ background: 'rgba(255,255,255,0.86)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.86)', boxShadow: Sh.card, padding: '16px' }}>
-            <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Related Physicians</h3>
+          <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
+            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Related Physicians</h3>
             <div style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(320px, 1fr)', gap: '10px', overflowX: 'auto', paddingBottom: '2px' }}>
               {relatedPhysicians.map((item) => (
                 <div key={item.id} style={{ display: 'grid', gap: '8px' }}>
                   <DoctorCard name={item.name} specialty={item.specialty} verification={item.verification} tags={item.tags} imageUrl={item.imageUrl} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-	                    <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>{formatPhysicianRating(item)} · {item.experienceYears} yrs</p>
-                    <Link href={`/patient/physicians/${item.id}${preservedQuery.toString() ? `?${preservedQuery.toString()}` : ''}`} style={{ fontSize: '12px', color: '#348CEA', fontWeight: 700, textDecoration: 'none' }}>
+	                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{formatPhysicianRating(item)} · {item.experienceYears} yrs</p>
+                    <Link href={`/patient/physicians/${item.id}${preservedQuery.toString() ? `?${preservedQuery.toString()}` : ''}`} style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>
                       View Profile
                     </Link>
                   </div>
@@ -755,14 +757,14 @@ function PhysicianProfilePageContent() {
         </section>
 
         <aside className='pp-side'>
-          <section style={{ background: 'rgba(255,255,255,0.9)', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.float, padding: '14px' }}>
-            <h3 style={{ margin: '0 0 10px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>About This Physician</h3>
-            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Doctor:</strong> {physician.name}</p>
-            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Specialty:</strong> {physician.specialty}</p>
-            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {physician.experienceYears} years</p>
-	            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatPhysicianRating(physician)}</p>
-            <p style={{ margin: '0 0 4px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Languages:</strong> {physician.languages.join(', ')}</p>
-            <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {physician.hospital}</p>
+          <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '14px' }}>
+            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>About This Physician</h3>
+            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Doctor:</strong> {physician.name}</p>
+            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Specialty:</strong> {physician.specialty}</p>
+            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {physician.experienceYears} years</p>
+	            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatPhysicianRating(physician)}</p>
+            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Languages:</strong> {physician.languages.join(', ')}</p>
+            <p style={{ margin: '0 0 12px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {physician.hospital}</p>
           </section>
         </aside>
       </div>

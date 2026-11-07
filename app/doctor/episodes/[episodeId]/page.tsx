@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorEpisodeClinicalContext,
   performAIDraftAction,
   getEpisodeTimeline,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   type DoctorEpisodeClinicalContextResponse,
   type AIDraftActionRequest,
   type EpisodeTimelineResponse,
@@ -36,9 +36,9 @@ function displayValue(value: unknown): string {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+    <section className="bg-surface rounded-lg shadow-sm border border-theme">
+      <div className="p-6 border-b border-theme">
+        <h2 className="text-lg font-semibold text-ink">{title}</h2>
       </div>
       <div className="p-6">{children}</div>
     </section>
@@ -111,8 +111,8 @@ export default function DoctorEpisodeDetailPage() {
   }
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -132,7 +132,7 @@ export default function DoctorEpisodeDetailPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }
@@ -153,7 +153,7 @@ export default function DoctorEpisodeDetailPage() {
   }, [episodeId, router])
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-500">Loading clinical context...</div>
+    return <div className="flex items-center justify-center h-64 text-muted">Loading clinical context...</div>
   }
 
   if (error) {
@@ -190,14 +190,14 @@ export default function DoctorEpisodeDetailPage() {
           >
             ← Back to Workspace
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Clinical Episode Review</h1>
-          <p className="text-gray-500 mt-1">Episode ID: {episode.episode_id}</p>
+          <h1 className="text-2xl font-bold text-ink">Clinical Episode Review</h1>
+          <p className="text-muted mt-1">Episode ID: {episode.episode_id}</p>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
             {episode.status.replaceAll('_', ' ').toUpperCase()}
           </span>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${episode.ai_draft_ready ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${episode.ai_draft_ready ? 'bg-green-100 text-green-800' : 'bg-surface-subtle text-secondary'}`}>
             {episode.ai_draft_ready ? 'AI DRAFT READY' : episode.latest_ai_job_status?.toUpperCase() || 'NO AI DRAFT'}
           </span>
         </div>
@@ -206,20 +206,20 @@ export default function DoctorEpisodeDetailPage() {
       <Section title="Patient">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-500">Name</p>
-            <p className="mt-1 font-semibold text-gray-900">{episode.patient.name}</p>
+            <p className="text-sm font-medium text-muted">Name</p>
+            <p className="mt-1 font-semibold text-ink">{episode.patient.name}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Email</p>
-            <p className="mt-1 text-gray-900">{episode.patient.email || 'Not available'}</p>
+            <p className="text-sm font-medium text-muted">Email</p>
+            <p className="mt-1 text-ink">{episode.patient.email || 'Not available'}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Phone</p>
-            <p className="mt-1 text-gray-900">{episode.patient.phone || 'Not available'}</p>
+            <p className="text-sm font-medium text-muted">Phone</p>
+            <p className="mt-1 text-ink">{episode.patient.phone || 'Not available'}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Consultation</p>
-            <p className="mt-1 text-gray-900">{episode.consultation_id || 'Not linked yet'}</p>
+            <p className="text-sm font-medium text-muted">Consultation</p>
+            <p className="mt-1 text-ink">{episode.consultation_id || 'Not linked yet'}</p>
           </div>
         </div>
       </Section>
@@ -227,16 +227,16 @@ export default function DoctorEpisodeDetailPage() {
       <Section title="Workflow Status">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-500">Created</p>
-            <p className="mt-1 text-gray-900">{formatDate(episode.created_at)}</p>
+            <p className="text-sm font-medium text-muted">Created</p>
+            <p className="mt-1 text-ink">{formatDate(episode.created_at)}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Intake Submitted</p>
-            <p className="mt-1 text-gray-900">{formatDate(episode.intake_submitted_at)}</p>
+            <p className="text-sm font-medium text-muted">Intake Submitted</p>
+            <p className="mt-1 text-ink">{formatDate(episode.intake_submitted_at)}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Field Verification</p>
-            <p className="mt-1 text-gray-900">
+            <p className="text-sm font-medium text-muted">Field Verification</p>
+            <p className="mt-1 text-ink">
               {episode.verification_verified_count} of {episode.verification_total_count}
             </p>
           </div>
@@ -245,13 +245,13 @@ export default function DoctorEpisodeDetailPage() {
 
       <Section title="Intake Response">
         {Object.keys(intakeResponses).length === 0 ? (
-          <p className="text-gray-500">No intake response has been submitted yet.</p>
+          <p className="text-muted">No intake response has been submitted yet.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(intakeResponses).map(([key, value]) => (
-              <div key={key} className="rounded-lg border border-gray-200 p-4 bg-gray-50">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{key.replaceAll('_', ' ')}</p>
-                <p className="mt-2 text-sm text-gray-900">{displayValue(value)}</p>
+              <div key={key} className="rounded-lg border border-theme p-4 bg-canvas">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">{key.replaceAll('_', ' ')}</p>
+                <p className="mt-2 text-sm text-ink">{displayValue(value)}</p>
               </div>
             ))}
           </div>
@@ -266,7 +266,7 @@ export default function DoctorEpisodeDetailPage() {
           </div>
         )}
         {ai_drafts.length === 0 ? (
-          <p className="text-gray-500">No AI draft job exists for this episode yet.</p>
+          <p className="text-muted">No AI draft job exists for this episode yet.</p>
         ) : (
           <div className="space-y-4">
             {ai_drafts.map((job) => {
@@ -275,16 +275,16 @@ export default function DoctorEpisodeDetailPage() {
               const draftId = String(job.draft_id || jobId)
               const isReady = draft && job.status === 'completed'
               return (
-                <div key={jobId} className="rounded-lg border border-gray-200 p-4 bg-gray-50">
+                <div key={jobId} className="rounded-lg border border-theme p-4 bg-canvas">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-gray-900">Job {jobId}</p>
+                    <p className="font-semibold text-ink">Job {jobId}</p>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                       {String(job.status || 'unknown').toUpperCase()}
                     </span>
                   </div>
                   {draft ? (
-                    <div className="mt-3 text-sm text-gray-700">
-                      <p className="font-medium text-gray-900">Physician review required</p>
+                    <div className="mt-3 text-sm text-secondary">
+                      <p className="font-medium text-ink">Physician review required</p>
                       <p className="mt-1">{displayValue(draft.summary_text)}</p>
                       {isReady && (
                         <div className="mt-4 flex gap-2">
@@ -308,16 +308,16 @@ export default function DoctorEpisodeDetailPage() {
                       )}
                     </div>
                   ) : (
-                    <p className="mt-3 text-sm text-gray-500">Draft output is not ready yet.</p>
+                    <p className="mt-3 text-sm text-muted">Draft output is not ready yet.</p>
                   )}
                   {showRejectDialog === draftId && (
-                    <div className="mt-4 p-4 bg-white border border-gray-200 rounded-lg">
-                      <p className="text-sm font-medium text-gray-900 mb-2">Reason for rejection</p>
+                    <div className="mt-4 p-4 bg-surface border border-theme rounded-lg">
+                      <p className="text-sm font-medium text-ink mb-2">Reason for rejection</p>
                       <textarea
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
                         placeholder="Please explain why you are rejecting this AI draft..."
-                        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full p-2 border border-theme rounded-lg text-sm"
                         rows={3}
                       />
                       <div className="mt-3 flex gap-2">
@@ -335,7 +335,7 @@ export default function DoctorEpisodeDetailPage() {
                             setShowRejectDialog(null)
                             setRejectReason('')
                           }}
-                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
+                          className="px-4 py-2 bg-surface-subtle text-secondary rounded-lg hover:bg-gray-300 text-sm font-medium"
                         >
                           Cancel
                         </button>
@@ -351,18 +351,18 @@ export default function DoctorEpisodeDetailPage() {
 
       <Section title="CWS Field Values">
         {field_values.length === 0 ? (
-          <p className="text-gray-500">No structured field values have been created for this episode yet.</p>
+          <p className="text-muted">No structured field values have been created for this episode yet.</p>
         ) : (
           <div className="space-y-3">
             {field_values.map((field) => (
-              <div key={String(field.id || field.field_id)} className="rounded-lg border border-gray-200 p-4">
+              <div key={String(field.id || field.field_id)} className="rounded-lg border border-theme p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-gray-900">{String(field.field_id || 'Field')}</p>
-                  <span className="text-xs font-semibold text-gray-500">
+                  <p className="font-semibold text-ink">{String(field.field_id || 'Field')}</p>
+                  <span className="text-xs font-semibold text-muted">
                     {String(field.verification_status || 'unverified').toUpperCase()}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-gray-700">{displayValue(field.verified_value ?? field.original_value)}</p>
+                <p className="mt-2 text-sm text-secondary">{displayValue(field.verified_value ?? field.original_value)}</p>
               </div>
             ))}
           </div>
@@ -371,22 +371,22 @@ export default function DoctorEpisodeDetailPage() {
 
       <Section title="Episode Timeline">
         {timelineLoading ? (
-          <p className="text-gray-500">Loading timeline...</p>
+          <p className="text-muted">Loading timeline...</p>
         ) : !timeline || timeline.events.length === 0 ? (
-          <p className="text-gray-500">No timeline events available for this episode.</p>
+          <p className="text-muted">No timeline events available for this episode.</p>
         ) : (
           <div className="space-y-4">
             {timeline.events.map((event) => (
-              <div key={event.event_id} className="relative pl-8 pb-4 border-l-2 border-gray-200 last:border-l-0 last:pb-0">
+              <div key={event.event_id} className="relative pl-8 pb-4 border-l-2 border-theme last:border-l-0 last:pb-0">
                 <div className="absolute left-0 top-0 w-6 h-6 -ml-3 bg-blue-100 rounded-full border-2 border-white flex items-center justify-center">
                   <div className="w-2 h-2 bg-blue-600 rounded-full" />
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-canvas rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-gray-900">{event.description}</p>
-                    <span className="text-xs text-gray-500">{formatDate(event.timestamp)}</span>
+                    <p className="text-sm font-semibold text-ink">{event.description}</p>
+                    <span className="text-xs text-muted">{formatDate(event.timestamp)}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="flex items-center gap-2 text-xs text-secondary">
                     <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700">
                       {event.event_type.replace(/_/g, ' ').toUpperCase()}
                     </span>

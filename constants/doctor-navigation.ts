@@ -20,7 +20,7 @@ export const DOCTOR_ROUTES = {
   profile: '/doctor/profile',
   settings: '/doctor/settings',
   support: '/support',
-  logout: '/auth/sign-in',
+  logout: '/auth/doctor/login',
 } as const
 
 export const DOCTOR_SIDEBAR_ITEMS: DoctorNavItem[] = [
@@ -42,7 +42,7 @@ export const DOCTOR_SIDEBAR_ITEMS: DoctorNavItem[] = [
 
 export function isDoctorNavActive(pathname: string, href: string) {
   if (href === DOCTOR_ROUTES.dashboard) return pathname === DOCTOR_ROUTES.dashboard
-  if (href === DOCTOR_ROUTES.workspace) return pathname.startsWith('/doctor/workspace')
+  if (href === DOCTOR_ROUTES.workspace) return pathname.startsWith('/doctor/workspace') || pathname.startsWith('/doctor/clinical-records')
   if (href === DOCTOR_ROUTES.appointments) {
     return (
       pathname.startsWith('/doctor/appointments') ||

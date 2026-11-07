@@ -7,9 +7,10 @@ interface LogoutModalProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
+  description?: string
 }
 
-export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalProps) {
+export default function LogoutModal({ isOpen, onClose, onConfirm, description = 'Are you sure you want to log out?' }: LogoutModalProps) {
   if (!isOpen) return null
 
   return (
@@ -21,7 +22,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(4,53,77,0.5)',
+        background: "var(--surface-hover)",
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
       }}
@@ -30,11 +31,11 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'rgba(255,255,255,0.96)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(24px) saturate(180%)',
           WebkitBackdropFilter: 'blur(24px) saturate(180%)',
           borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.9)',
+          border: "1px solid var(--border)",
           boxShadow: '0 20px 60px rgba(4,53,77,0.2)',
           padding: '32px',
           maxWidth: '400px',
@@ -44,7 +45,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
         <h2
           style={{
             margin: '0 0 12px',
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
             fontSize: '20px',
             fontWeight: 700,
             letterSpacing: '-0.02em',
@@ -61,7 +62,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
             color: T.slate,
           }}
         >
-          Are you sure you want to log out?
+          {description}
         </p>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
           <HoverBtn
@@ -70,8 +71,8 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
               minHeight: '42px',
               padding: '0 20px',
               borderRadius: '11px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              background: 'rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-glass)",
               color: T.slate,
               fontSize: '14px',
               fontWeight: 600,
@@ -79,7 +80,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
               cursor: 'pointer',
             }}
             on={{
-              background: 'rgba(255,255,255,0.98)',
+              background: "var(--surface-glass)",
               transform: 'translateY(-1px)',
               boxShadow: '0 4px 12px rgba(4,53,77,0.1)',
             }}

@@ -1,12 +1,16 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import localFont from 'next/font/local'
 import './globals.css'
-import { BookingProvider } from '@/contexts/BookingContext'
+import Footer from '@/components/layout/Footer'
+import { THEME_BOOTSTRAP } from '@/lib/theme'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
+import { PortalSessionBoundary } from '@/components/ui/PortalSessionBoundary'
+import { NavigationGuards } from '@/components/ui/NavigationGuards'
 
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+const publicSans = localFont({
+  src: '../public/fonts/PublicSans-Variable.ttf',
+  variable: '--font-public-sans',
+  weight: '100 900',
   display: 'swap',
 })
 
@@ -15,25 +19,27 @@ export const metadata: Metadata = {
     default: 'Qarevo Health',
     template: '%s | Qarevo Health',
   },
-  description: 'Discover verified physicians, orchestrate continuous care, and experience the highest standard of clinical intelligence and data governance.',
-  keywords: ['healthcare', 'telemedicine', 'physician', 'GDPR', 'HIPAA', 'clinical intelligence'],
+  description: 'Qarevo Health connects patients and independent practices through a clinician-led digital care journey. Development preview.',
+  keywords: ['healthcare', 'telemedicine', 'physician', 'clinical intelligence'],
   icons: {
     icon: '/brand/qarevo-mark.png',
     shortcut: '/brand/qarevo-mark.png',
     apple: '/brand/qarevo-mark.png',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html suppressHydrationWarning lang="en" className={publicSans.variable}>
+      <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body>
-        <BookingProvider>{children}</BookingProvider>
+        <NavigationGuards><ThemeProvider><PortalSessionBoundary>{children}<Footer /></PortalSessionBoundary></ThemeProvider></NavigationGuards>
       </body>
     </html>
   )

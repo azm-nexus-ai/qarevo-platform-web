@@ -1,14 +1,21 @@
 'use client'
+import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
+import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
+import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
 
-import { useState, useId } from 'react'
+import { useState, useId, useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import { useLoginCooldown } from '@/lib/use-login-cooldown'
+import { getOnboarding, onboardingPath } from '@/lib/patient-onboarding'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { T, Sh } from '@/lib/tokens'
-import { getOnboardingRedirectPath, readAuthFlowState } from '@/lib/auth-flow'
-import { ApiError, getApiErrorDetail, loginPatient, loginPatientWithPasskey, storeAuthTokens } from '@/lib/api'
+import { T } from '@/lib/tokens'
+import { setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
+import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginPatient, loginPatientWithPasskey, type AuthTokenResponse } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import SocialSignInButtons from '@/components/auth/SocialSignInButtons'
 
 // ─── Page bg ──────────────────────────────────────────────────────────────────
 
@@ -16,7 +23,7 @@ const PAGE_BG = [
   'radial-gradient(ellipse 65% 55% at 12% 8%,   rgba(32,181,223,0.08) 0%, transparent 55%)',
   'radial-gradient(ellipse 55% 50% at 90% 18%,  rgba(32,181,223,0.06) 0%, transparent 52%)',
   'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(52,140,234,0.06) 0%, transparent 58%)',
-  '#EDF2FA',
+  'var(--canvas)',
 ].join(', ')
 
 // ─── Left panel ────────────────────────────────────────────────────────────────
@@ -26,14 +33,14 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 const TRUST_FEATURES = [
-  { icon: ICONS.lock,     label: 'Secure Medical Records',     sub: 'AES-256 encrypted at rest and in transit' },
-  { icon: ICONS.brain,    label: 'AI-Assisted Healthcare',     sub: 'Personalised clinical intelligence' },
-  { icon: ICONS.video,    label: 'Virtual Consultations',      sub: 'HD video with verified physicians' },
-  { icon: ICONS.shield,   label: 'End-to-End Encryption',      sub: 'HIPAA & GDPR compliant infrastructure' },
+  { icon: ICONS.lock,     label: 'Medical Records',            sub: 'View the records saved to your account' },
+  { icon: ICONS.steth,    label: 'Clinician-Led Care',         sub: 'Your clinician reviews consultation information' },
+  { icon: ICONS.video,    label: 'Consultation Appointments',   sub: 'View and manage your appointments' },
+  { icon: ICONS.shield,   label: 'Account-Based Access',      sub: 'Access your saved account information' },
 ]
 
 function WellnessVisual() {
@@ -95,16 +102,18 @@ function LeftPanel() {
     <div style={{
       width: '380px', flexShrink: 0,
       background: LEFT_BG,
-      position: 'sticky', top: 0, height: '100vh',
+      position: 'relative', flex: 1, minHeight: '100%',
       display: 'flex', flexDirection: 'column',
       justifyContent: 'space-between',
+      gap: '32px',
       padding: '44px 44px 44px',
-      overflow: 'hidden',
     }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
       {/* Dot grid */}
       <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1.2px)', backgroundSize: '22px 22px', pointerEvents: 'none' }} />
       <div aria-hidden style={{ position: 'absolute', top: '-80px', left: '-60px', width: '380px', height: '380px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(32,181,223,0.2) 0%, transparent 65%)', pointerEvents: 'none' }} />
       <div aria-hidden style={{ position: 'absolute', bottom: '-80px', right: '-60px', width: '340px', height: '340px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(52,140,234,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
+      </div>
 
       {/* Logo */}
       <div style={{ position: 'relative', zIndex: 1 }}>
@@ -125,12 +134,12 @@ function LeftPanel() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <WellnessVisual />
         <div style={{ marginTop: '32px', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
+          <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
             Welcome back.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your care awaits.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Continue managing your health with trusted physicians and AI-powered clinical intelligence.
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+            Access your appointments, saved medical records and clinician-approved care information.
           </p>
         </div>
       </div>
@@ -144,7 +153,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -155,16 +164,18 @@ function LeftPanel() {
 
 // ─── Primitives ────────────────────────────────────────────────────────────────
 
-function Field({ label, placeholder, type = 'text', value, onChange, onBlur, error, success, icon, rightSlot, autoComplete }: {
+function Field({ label, placeholder, type = 'text', value, onChange, onBlur, error, success, icon, rightSlot, autoComplete, inputId }: {
   label: string; placeholder: string; type?: string
   value: string; onChange: (v: string) => void; onBlur?: () => void
   error?: string; success?: boolean
   icon?: string | readonly string[]
   rightSlot?: React.ReactNode
   autoComplete?: string
+  inputId?: string
 }) {
   const [focused, setFocused] = useState(false)
-  const id = useId()
+  const generatedId = useId()
+  const id = inputId || generatedId
 
   const bdr   = error ? 'rgba(220,38,38,0.55)' : success ? 'rgba(9,173,112,0.5)' : focused ? 'rgba(32,181,223,0.45)' : 'rgba(4,53,77,0.1)'
   const glow  = focused ? (error ? '0 0 0 3px rgba(220,38,38,0.08)' : '0 0 0 3px rgba(32,181,223,0.09)') : 'none'
@@ -172,10 +183,10 @@ function Field({ label, placeholder, type = 'text', value, onChange, onBlur, err
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{label}</label>
+      {label && <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{label}</label>}
       <div style={{ position: 'relative' }}>
         {icon && (
-          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.blue : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
+          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.link : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
             <Ico p={icon} size={14} sw={1.75} />
           </span>
         )}
@@ -185,6 +196,9 @@ function Field({ label, placeholder, type = 'text', value, onChange, onBlur, err
           value={value}
           placeholder={placeholder}
           autoComplete={autoComplete}
+          required
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => { setFocused(false); onBlur?.() }}
@@ -206,93 +220,25 @@ function Field({ label, placeholder, type = 'text', value, onChange, onBlur, err
           </span>
         )}
       </div>
-      {error && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{error}</p>}
+      {error && <p id={`${id}-error`} role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
     </div>
-  )
-}
-
-function Checkbox({ checked, onChange, children }: { checked: boolean; onChange: () => void; children: React.ReactNode }) {
-  return (
-    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', cursor: 'pointer', userSelect: 'none' }}>
-      <div
-        role="checkbox"
-        aria-checked={checked}
-        tabIndex={0}
-        onClick={onChange}
-        onKeyDown={e => e.key === ' ' && onChange()}
-        style={{
-          width: '17px', height: '17px', borderRadius: '5px', flexShrink: 0,
-          border: `1.5px solid ${checked ? T.blue : 'rgba(4,53,77,0.18)'}`,
-          background: checked ? T.blue : '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.14s', boxShadow: checked ? '0 1px 4px rgba(32,181,223,0.25)' : 'none',
-          outline: 'none',
-        }}
-      >
-        {checked && <Ico p={ICONS.check} size={9} sw={3} color="#fff" />}
-      </div>
-      <span style={{ fontSize: '13px', color: T.slate, letterSpacing: '-0.005em' }}>{children}</span>
-    </label>
-  )
-}
-
-function SocialBtn({ provider, onClick }: { provider: 'google' | 'apple'; onClick?: () => void }) {
-  const [h, setH] = useState(false)
-  const isApple = provider === 'apple'
-  const label = isApple ? 'Continue with Apple' : 'Continue with Google'
-
-  const googleIcon = (
-    <svg width="17" height="17" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
-      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908C16.658 14.075 17.64 11.767 17.64 9.2z" fill="#4285F4"/>
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-      <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-    </svg>
-  )
-  const appleIcon = (
-    <svg width="16" height="16" viewBox="0 0 814 1000" fill="white" style={{ flexShrink: 0 }}>
-      <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-47.4-148.2-87.5c-50.2-45.2-91.2-116.4-91.2-183.9 0-191.3 133.4-293.3 264.4-293.3 64 0 117.4 42.2 158.1 42.2 39 0 99.5-44.4 168.1-44.4 27.4 0 109.8 2.6 168.1 71.2zm-56.7-194.4c26.1-30.8 44.9-73.8 44.9-116.8 0-5.8-.6-11.6-1.9-16.8-42.2 1.9-91.9 28.1-122 62.8-23.8 26.7-45.8 70.6-45.8 114.2 0 6.4.6 12.9 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 37.4 0 82.8-23.2 109.3-62.8z"/>
-    </svg>
-  )
-
-  return (
-    <button
-      type="button"
-      className="signin-social-btn"
-      onClick={onClick}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
-      style={{
-        flex: 1, padding: '11px 14px', borderRadius: '11px', cursor: 'pointer',
-        border: isApple ? 'none' : `1.5px solid ${h ? 'rgba(4,53,77,0.13)' : T.border}`,
-        background: isApple
-          ? h ? T.navy2 : T.navy
-          : h ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.75)',
-        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px',
-        fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 600,
-        color: isApple ? '#fff' : T.navy,
-        letterSpacing: '-0.01em', transition: 'all 0.14s ease',
-        boxShadow: isApple
-          ? h ? '0 4px 14px rgba(4,53,77,0.3)' : Sh.inner
-          : h ? '0 2px 8px rgba(4,53,77,0.09)' : 'inset 0 1px 0 rgba(255,255,255,0.85)',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {isApple ? appleIcon : googleIcon}
-      {label}
-    </button>
   )
 }
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const subscribeToPasskeySupport = () => () => {}
+const passkeySupported = () => window.isSecureContext && !!window.PublicKeyCredential && !!navigator.credentials?.get
+const serverPasskeySupport = () => false
 
 function getFriendlySignInError(error: unknown) {
+  const throttle = getLoginThrottleMessage(error)
+  if (throttle) return throttle
+
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
-  if (detail.includes('valid email') || detail.includes('email address')) {
+  if (error instanceof ApiError && error.status === 422 && (detail.includes('email') || detail.includes('e-mail'))) {
     return 'Enter a valid email address. Doctor accounts should use the doctor sign-in page.'
   }
   if (detail.includes('incorrect') || detail.includes('invalid') || detail.includes('password')) {
@@ -319,74 +265,80 @@ function getFriendlySignInError(error: unknown) {
 
 export default function SignInPage() {
   const router = useRouter()
+  const captureAction = usePortalAction()
 
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [remember, setRemember] = useState(false)
   const [showPw,   setShowPw]   = useState(false)
   const [loading,  setLoading]  = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [touched,  setTouched]  = useState({ email: false, password: false })
   const [authError, setAuthError] = useState('')
+  const [handoff, setHandoff] = useState<PortalHandoff | null>(null)
+  const cooldown = useLoginCooldown()
+  const supportsPasskeys = useSyncExternalStore(subscribeToPasskeySupport, passkeySupported, serverPasskeySupport)
 
-  const emailErr = touched.email && !EMAIL_RE.test(email) ? 'Enter a valid email address' : ''
+  const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : ''
   const passErr  = touched.password && password.length < 1 ? 'Password is required' : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading || cooldown.seconds > 0) return
     setTouched({ email: true, password: true })
-    if (!EMAIL_RE.test(email) || !password) return
+    if (!EMAIL_RE.test(email.trim()) || !password) return
     setLoading(true)
-    setAuthError('')
-
+    setAuthError(''); setHandoff(null)
+    const action = captureAction()
+    let response: AuthTokenResponse | undefined
+    const current = () => action.isCurrent({ completedSession: response?.browser_session })
     try {
-      const response = await loginPatient({ email, password })
-      storeAuthTokens({ ...response, role: 'PATIENT' })
-      const authFlowState = readAuthFlowState()
-      if (authFlowState?.isAuthenticated) {
-        const nextRoute = authFlowState.onboardingCompleted
-          ? '/patient/dashboard'
-          : getOnboardingRedirectPath(authFlowState)
-        router.push(nextRoute)
-        return
-      }
-
-      const onboardingIncomplete = /new|incomplete|onboard/i.test(email)
-      router.push(onboardingIncomplete ? '/auth/profile-setup' : '/patient/dashboard')
+      response = await loginPatient({ email: email.trim(), password })
+      if (current()) await completePatientSignIn(current)
     } catch (error) {
-      setAuthError(getFriendlySignInError(error))
+      if (!current()) return
+      cooldown.record(error)
+      const wrongPortal = authenticatedPortalHandoff(error)
+      setHandoff(wrongPortal)
+      setAuthError(wrongPortal ? '' : getFriendlySignInError(error))
     } finally {
-      setLoading(false)
+      if (current()) setLoading(false)
     }
   }
 
-  const completePatientSignIn = () => {
-    const authFlowState = readAuthFlowState()
-    if (authFlowState?.isAuthenticated) {
-      const nextRoute = authFlowState.onboardingCompleted
-        ? '/patient/dashboard'
-        : getOnboardingRedirectPath(authFlowState)
-      router.push(nextRoute)
+  const completePatientSignIn = async (current: () => boolean) => {
+    if (!current()) return
+    if (new URLSearchParams(window.location.search).get('next') === 'profile-setup') {
+      setAuthenticatedOnboardingStage('personal-information')
+      router.replace('/auth/profile-setup/personal-information')
       return
     }
-
-    router.push('/patient/dashboard')
+    const progress = await getOnboarding()
+    if (!current()) return
+    const intended = safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PATIENT')
+    router.replace(progress.complete ? intended || '/patient/dashboard' : onboardingPath(progress.next_step))
   }
 
   const handlePasskeySignIn = async () => {
+    if (!supportsPasskeys || loading || passkeyLoading || cooldown.seconds > 0) return
     setTouched((current) => ({ ...current, email: true }))
-    if (!EMAIL_RE.test(email)) return
+    if (!EMAIL_RE.test(email.trim())) return
 
     setPasskeyLoading(true)
-    setAuthError('')
+    setAuthError(''); setHandoff(null)
+    const action = captureAction()
+    let response: AuthTokenResponse | undefined
+    const current = () => action.isCurrent({ completedSession: response?.browser_session })
     try {
-      const response = await loginPatientWithPasskey(email)
-      storeAuthTokens({ ...response, role: 'PATIENT' })
-      completePatientSignIn()
+      response = await loginPatientWithPasskey(email.trim())
+      if (current()) await completePatientSignIn(current)
     } catch (error) {
-      setAuthError(getFriendlySignInError(error))
+      if (!current()) return
+      cooldown.record(error)
+      const wrongPortal = authenticatedPortalHandoff(error)
+      setHandoff(wrongPortal)
+      setAuthError(wrongPortal ? '' : getFriendlySignInError(error))
     } finally {
-      setPasskeyLoading(false)
+      if (current()) setPasskeyLoading(false)
     }
   }
 
@@ -403,10 +355,10 @@ export default function SignInPage() {
   )
 
   return (
-    <div className="signin-page" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', width: '100%', overflowX: 'hidden' }}>
+    <div className="signin-page" style={{ minHeight: '100dvh', background: PAGE_BG, display: 'flex', alignItems: 'stretch', width: '100%' }}>
       <style>{`
         * { box-sizing: border-box; }
-        input::placeholder { color: rgba(4,53,77,0.3); }
+        input::placeholder { color: var(--text-muted); }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shake { 0%,100% { transform:translateX(0); } 20%,60% { transform:translateX(-5px); } 40%,80% { transform:translateX(5px); } }
         @media (max-width: 860px) {
@@ -430,6 +382,7 @@ export default function SignInPage() {
           }
         }
         .signin-page { min-width: 0; }
+        .signin-left { display: flex; align-self: stretch; min-height: 100dvh; }
         .signin-form-area,
         .signin-form-wrap,
         .signin-card { min-width: 0; }
@@ -497,11 +450,11 @@ export default function SignInPage() {
 
           {/* Card */}
           <div className="signin-card" style={{
-            background: 'rgba(255,255,255,0.88)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(28px) saturate(200%)',
             WebkitBackdropFilter: 'blur(28px) saturate(200%)',
             borderRadius: '22px',
-            border: '1px solid rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
             padding: '40px 40px 36px',
             animation: authError ? 'shake 0.35s ease' : 'none',
@@ -510,23 +463,24 @@ export default function SignInPage() {
             {/* Logo mark */}
             <div className="signin-logo-row" style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
-                <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
+                <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
                   Sign in to Qarevo
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
                   Welcome back - your care ecosystem is ready.
                 </p>
               </div>
-              <div className="signin-card-mark" style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="signin-card-mark" style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.heart} size={20} sw={1.25} color="#fff" />
               </div>
             </div>
 
+            {handoff && <WrongPortalNotice handoff={handoff}/>}
             {/* Auth error banner */}
-            {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: '#FFF5F5', border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+            {(cooldown.message || authError) && (
+              <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} style={{ marginTop: '1px', flexShrink: 0 }} />
-                <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.5, letterSpacing: '-0.005em' }}>{authError}</span>
+                <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.5, letterSpacing: '-0.005em' }}>{cooldown.message || authError}</span>
               </div>
             )}
 
@@ -535,14 +489,14 @@ export default function SignInPage() {
 
                 {/* Email */}
                 <Field
-                  label="Email Address"
+                  label="Email Address (Required)"
                   placeholder="emma@example.com"
                   type="email"
                   value={email}
-                  onChange={v => { setEmail(v); setAuthError('') }}
+                  onChange={v => { setEmail(v); setAuthError(''); setHandoff(null) }}
                   onBlur={() => setTouched(t => ({ ...t, email: true }))}
                   error={emailErr}
-                  success={EMAIL_RE.test(email)}
+                  success={EMAIL_RE.test(email.trim())}
                   icon={ICONS.ema}
                   autoComplete="email"
                 />
@@ -550,17 +504,18 @@ export default function SignInPage() {
                 {/* Password */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Password</label>
-                    <Link href="/auth/forgot-password" style={{ fontSize: '12.5px', fontWeight: 600, color: T.blue, textDecoration: 'none', letterSpacing: '-0.01em' }}>
+                    <label htmlFor="patient-password" style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Password (Required)</label>
+                    <Link href="/auth/forgot-password" style={{ fontSize: "13px", fontWeight: 600, color: T.link, textDecoration: 'none', letterSpacing: '-0.01em' }}>
                       Forgot password?
                     </Link>
                   </div>
                   <Field
                     label=""
+                    inputId="patient-password"
                     placeholder="Your password"
                     type={showPw ? 'text' : 'password'}
                     value={password}
-                    onChange={v => { setPassword(v); setAuthError('') }}
+                    onChange={v => { setPassword(v); setAuthError(''); setHandoff(null) }}
                     onBlur={() => setTouched(t => ({ ...t, password: true }))}
                     error={passErr}
                     icon={ICONS.lock}
@@ -569,18 +524,15 @@ export default function SignInPage() {
                   />
                 </div>
 
-                {/* Remember me */}
-                <Checkbox checked={remember} onChange={() => setRemember(r => !r)}>
-                  Remember me for 30 days
-                </Checkbox>
+                <SessionPolicyHint />
 
                 {/* Submit */}
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || cooldown.seconds > 0}
                   style={{
                     width: '100%', padding: '14px 20px', borderRadius: '13px', border: 'none',
-                    background: loading ? 'rgba(32,181,223,0.5)' : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                    background: loading ? 'rgba(32,181,223,0.5)' : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                     color: '#fff', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700,
                     letterSpacing: '-0.02em', cursor: loading ? 'not-allowed' : 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -597,19 +549,20 @@ export default function SignInPage() {
                 <button
                   type="button"
                   onClick={handlePasskeySignIn}
-                  disabled={passkeyLoading || loading}
+                  disabled={!supportsPasskeys || passkeyLoading || loading || cooldown.seconds > 0}
+                  aria-describedby='patient-passkey-help'
                   style={{
                     width: '100%',
                     padding: '12px 18px',
                     borderRadius: '13px',
-                    border: '1.5px solid rgba(4,53,77,0.1)',
-                    background: passkeyLoading ? 'rgba(247,250,252,0.72)' : 'rgba(255,255,255,0.78)',
+                    border: "1.5px solid var(--border)",
+                    background: passkeyLoading ? "var(--surface-subtle)" : "var(--surface-glass)",
                     color: T.navy,
                     fontFamily: 'inherit',
                     fontSize: '14px',
                     fontWeight: 700,
                     letterSpacing: '-0.01em',
-                    cursor: passkeyLoading || loading ? 'not-allowed' : 'pointer',
+                    cursor: !supportsPasskeys || passkeyLoading || loading || cooldown.seconds > 0 ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -619,14 +572,19 @@ export default function SignInPage() {
                   }}
                 >
                   {passkeyLoading
-                    ? <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(4,53,77,0.18)', borderTopColor: T.blue, borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Checking passkey…</>
+                    ? <><span style={{ width: '14px', height: '14px', border: "2px solid var(--border)", borderTopColor: T.blue, borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Checking passkey…</>
                     : <><Ico p={ICONS.shield} size={15} sw={1.8} /> Sign in with passkey</>}
                 </button>
+                <p id='patient-passkey-help' style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+                  {supportsPasskeys
+                    ? 'Use a passkey previously registered in patient Settings. The same session limits apply.'
+                    : 'Passkeys require a supported browser on HTTPS or localhost. Use your password to sign in.'}
+                </p>
 
                 {/* Create account */}
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '2px 0 0', letterSpacing: '-0.01em' }}>
                   {"Don't have an account? "}
-                  <Link href="/auth/sign-up" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>Create Account</Link>
+                  <Link href="/auth/sign-up" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>Create Account</Link>
                 </p>
               </div>
             </form>
@@ -634,40 +592,26 @@ export default function SignInPage() {
             {/* Social */}
             <div style={{ marginTop: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(4,53,77,0.08)' }} />
-                <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(4,53,77,0.08)' }} />
+                <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
+                <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
+                <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
               </div>
-              <div className="signin-social-row" style={{ display: 'flex', gap: '10px' }}>
-                <SocialBtn provider="google" onClick={() => {
-                  const authFlowState = readAuthFlowState()
-                  const nextRoute = authFlowState?.isAuthenticated && !authFlowState.onboardingCompleted
-                    ? getOnboardingRedirectPath(authFlowState)
-                    : '/patient/dashboard'
-                  router.push(nextRoute)
-                }} />
-                <SocialBtn provider="apple" onClick={() => {
-                  const authFlowState = readAuthFlowState()
-                  const nextRoute = authFlowState?.isAuthenticated && !authFlowState.onboardingCompleted
-                    ? getOnboardingRedirectPath(authFlowState)
-                    : '/patient/dashboard'
-                  router.push(nextRoute)
-                }} />
-              </div>
+              <PortalSignInReference portal='PATIENT'/>
+              <SocialSignInButtons portal='PATIENT' />
             </div>
 
             {/* Trust indicators */}
-            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
               <div className="signin-trust-grid" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
                 {[
-                  { icon: ICONS.lock,     label: 'Secure Login'    },
-                  { icon: ICONS.shield,   label: 'Encrypted Data'  },
-                  { icon: ICONS.check,    label: 'HIPAA · GDPR'    },
-                  { icon: ICONS.activity, label: 'MFA Support'     },
+                  { icon: ICONS.lock,     label: 'Account Sign-In' },
+                  { icon: ICONS.shield,   label: 'Session Expiry'  },
+                  { icon: ICONS.check,    label: 'Development Preview'    },
+                  { icon: ICONS.activity, label: 'Password Recovery' },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
-                    <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -675,11 +619,11 @@ export default function SignInPage() {
           </div>
 
           {/* Footer */}
-          <p style={{ textAlign: 'center', fontSize: '12px', color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
+          <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
             By signing in you agree to our{' '}
-            <Link href="/terms" style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
+            <Link href="/terms" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
             {' '}and{' '}
-            <Link href="/privacy" style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
+            <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
           </p>
         </div>
       </div>

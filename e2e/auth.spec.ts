@@ -1,69 +1,41 @@
-import { test, expect } from '@playwright/test'
+import {test,expect,type BrowserContext} from '@playwright/test'
+import {seedPortalSession,testSessionTiming} from './helpers/portal-session'
 
-test.describe('Authentication & RBAC', () => {
-  test('patient sign in and role verification', async ({ page }) => {
-    await page.goto('/auth/sign-in')
-    
-    // Fill in credentials
-    await page.fill('input[type="email"]', 'patient@example.com')
-    await page.fill('input[type="password"]', 'password123')
-    await page.click('button[type="submit"]')
-    
-    // Should redirect to patient dashboard
-    await page.waitForURL('/patient/dashboard')
-    await expect(page).toHaveURL('/patient/dashboard')
-    
-    // Verify role is stored in localStorage
-    const role = await page.evaluate(() => localStorage.getItem('qarevo_role'))
-    expect(role).toBe('PATIENT')
+async function portal(context:BrowserContext,role:'patient'|'doctor') {
+  const identity=await seedPortalSession(context,role)
+  await context.route('**/api/v1/**',route=>{
+    const request=route.request(),path=new URL(request.url()).pathname
+    expect(request.headers()['authorization']).toBeUndefined()
+    if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
+    if(path.startsWith('/api/v1/session'))return route.fulfill(request.headers()['x-qarevo-portal']===role?{json:testSessionTiming(identity)}:{status:401,json:{detail:'This portal has no synthetic session'}})
+    if(path.endsWith('/patient/billing'))return route.fulfill({json:{status:'not_configured',payment_provider_enabled:false,invoices:[],payment_methods:[],payment_history:[],upcoming_charges:[],insurance_summary:{status:'unverified'}}})
+    if(path.endsWith('/doctor/profile'))return route.fulfill({json:{full_name:'Synthetic Clinician'}})
+    if(path.endsWith('/doctor/workspace'))return route.fulfill({json:{consultations:[],total_count:0,filtered_count:0,page:1,has_next:false,has_previous:false}})
+    if(path.endsWith('/doctor/episodes'))return route.fulfill({json:{episodes:[],total_count:0,filtered_count:0,page:1,has_next:false,has_previous:false}})
+    if(path.endsWith('/auth/social/providers'))return route.fulfill({json:{google:{enabled:false},apple:{enabled:false}}})
+    return route.fulfill({status:404,json:{detail:'No synthetic fixture'}})
   })
+  return identity
+}
 
-  test('patient cannot access doctor routes', async ({ page }) => {
-    // Sign in as patient
-    await page.goto('/auth/sign-in')
-    await page.fill('input[type="email"]', 'patient@example.com')
-    await page.fill('input[type="password"]', 'password123')
-    await page.click('button[type="submit"]')
-    await page.waitForURL('/patient/dashboard')
-    
-    // Try to access doctor route
-    await page.goto('/doctor/dashboard')
-    
-    // Should redirect to sign-in
-    await page.waitForURL('/auth/sign-in')
-    await expect(page).toHaveURL('/auth/sign-in')
+for(const [role,path,title]of[['patient','/patient/billing','Billing & Payments'],['doctor','/doctor/workspace','Physician Workspace']]as const){
+  test(`${role} portal retains only public identity metadata, never bearer credentials`,async({page,context})=>{
+    const identity=await portal(context,role)
+    await page.goto(path)
+    await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible()
+    const stored=await page.evaluate(portal=>JSON.parse(localStorage.getItem(`qarevo:${portal}:identity`)||'null'),role)
+    expect(stored).toEqual(identity)
+    expect(await page.evaluate(()=>localStorage.getItem('qarevo_access_token'))).toBeNull()
+    expect(await page.evaluate(()=>localStorage.getItem('qarevo_refresh_token'))).toBeNull()
   })
+}
 
-  test('doctor sign in and role verification', async ({ page }) => {
-    await page.goto('/auth/doctor/login')
-    
-    // Fill in credentials
-    await page.fill('input[type="email"]', 'doctor@example.com')
-    await page.fill('input[type="password"]', 'password123')
-    await page.click('button[type="submit"]')
-    
-    // Should redirect to doctor dashboard
-    await page.waitForURL('/doctor/dashboard')
-    await expect(page).toHaveURL('/doctor/dashboard')
-    
-    // Verify role is stored in localStorage
-    const role = await page.evaluate(() => localStorage.getItem('qarevo_role'))
-    expect(role).toBe('PROVIDER')
+for(const [role,target,signIn]of[['patient','/doctor/workspace','/auth/doctor/login'],['doctor','/patient/billing','/auth/sign-in']]as const){
+  test(`${role} identity does not grant entry to an independently authenticated portal`,async({page,context})=>{
+    const identity=await portal(context,role)
+    await page.goto(target)
+    await expect(page).toHaveURL(new RegExp(signIn+'\\?next='))
+    const retained=await page.evaluate(portal=>JSON.parse(localStorage.getItem(`qarevo:${portal}:identity`)||'null'),role)
+    expect(retained).toEqual(identity)
   })
-
-  test('doctor cannot access patient routes', async ({ page }) => {
-    // Sign in as doctor
-    await page.goto('/auth/doctor/login')
-    await page.fill('input[type="email"]', 'doctor@example.com')
-    await page.fill('input[type="password"]', 'password123')
-    await page.click('button[type="submit"]')
-    await page.waitForURL('/doctor/dashboard')
-    
-    // Try to access patient route
-    await page.goto('/patient/dashboard')
-    
-    // Should redirect to sign-in
-    await page.waitForURL('/auth/sign-in')
-    await expect(page).toHaveURL('/auth/sign-in')
-  })
-})
+}

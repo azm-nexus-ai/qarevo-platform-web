@@ -5,19 +5,16 @@ import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import DoctorReviewDialog from '@/components/admin/DoctorReviewDialog'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getAdminDoctors,
   getPendingDoctors,
-  verifyDoctor,
-  updateDoctorStatus,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   isAdmin,
   type AdminDoctor,
   type AdminDoctorVerification,
-  type AdminVerifyDoctorRequest,
-  type AdminUpdateDoctorStatusRequest,
 } from '@/lib/api'
 
 type Tab = 'all' | 'pending'
@@ -35,7 +32,7 @@ function StatusBadge({ status }: { status: string }) {
       case 'rejected':
         return { bg: 'rgba(220,38,38,0.12)', color: T.red }
       default:
-        return { bg: 'rgba(32,181,223,0.12)', color: T.blue }
+        return { bg: 'rgba(32,181,223,0.12)', color: T.link }
     }
   }
 
@@ -45,7 +42,7 @@ function StatusBadge({ status }: { status: string }) {
     <span style={{
       padding: '4px 10px',
       borderRadius: '999px',
-      fontSize: '11px',
+      fontSize: "13px",
       fontWeight: 700,
       background: style.bg,
       color: style.color
@@ -55,22 +52,22 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function DoctorCard({ doctor, onView, onVerify }: { 
+function DoctorCard({ doctor, onView, onVerify }: {
   doctor: AdminDoctor | AdminDoctorVerification
   onView: (id: string) => void
   onVerify?: (id: string) => void
 }) {
-  const isVerification = 'submission_date' in doctor
-  const providerId = isVerification ? (doctor as AdminDoctorVerification).provider_id : (doctor as AdminDoctor).provider_id
-  const status = isVerification ? 'pending_verification' : (doctor as AdminDoctor).status
+  const isVerification = Boolean(onVerify)
+  const providerId = doctor.provider_id
+  const access = doctor.clinical_access
 
   return (
-    <div style={{
-      background: 'rgba(255,255,255,0.88)',
+    <article className="admin-doctor-card" aria-label={doctor.full_name || 'Clinician'} style={{
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '20px',
       display: 'flex',
@@ -78,41 +75,46 @@ function DoctorCard({ doctor, onView, onVerify }: {
       justifyContent: 'space-between',
       gap: '16px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-        <div style={{ 
-          width: '48px', 
-          height: '48px', 
-          borderRadius: '12px', 
-          background: 'rgba(32,181,223,0.1)', 
-          display: 'flex', 
-          alignItems: 'center', 
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flex: 1, minWidth: 0 }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          flexShrink: 0,
+          borderRadius: '12px',
+          background: 'rgba(32,181,223,0.1)',
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
-          color: T.blue,
+          color: T.link,
           fontSize: '16px',
           fontWeight: 700
         }}>
           {doctor.full_name.split(' ').map((n: string) => n[0]).join('')}
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
           <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{doctor.full_name}</p>
           <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.slate2 }}>{doctor.email}</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <span style={{ fontSize: '12px', color: T.slate }}>{doctor.specialty}</span>
-            <span style={{ fontSize: '12px', color: T.slate2 }}>•</span>
-            <span style={{ fontSize: '12px', color: T.slate }}>{doctor.phone}</span>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+            <span style={{ fontSize: "13px", color: T.slate }}>{doctor.specialty}</span>
+            <span style={{ fontSize: "13px", color: T.slate2 }}>•</span>
+            <span style={{ fontSize: "13px", color: T.slate }}>{doctor.phone}</span>
           </div>
+          <dl style={{ margin: '14px 0 0', display: 'grid', gap: 10, fontSize: 13 }}>
+            <div><dt style={{ color: T.slate2, marginBottom: 5 }}>Account status</dt><dd style={{ margin: 0 }}><StatusBadge status={doctor.status} /></dd></div>
+            <div><dt style={{ color: T.slate2, marginBottom: 5 }}>Clinical access</dt><dd style={{ margin: 0, fontWeight: 650, color: access?.status === 'enabled' ? T.green : T.amber }}>{access?.status === 'enabled' ? 'Enabled' : access?.status === 'blocked' ? 'Blocked' : 'Not assessed'}</dd></div>
+          </dl>
+          <p style={{ margin: '8px 0 0', color: T.slate, lineHeight: 1.6, fontSize: 13 }}>{access?.message || 'Open the review to check clinical eligibility.'}</p>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <StatusBadge status={status} />
+      <div className="admin-doctor-actions" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
         <button
           type="button"
           onClick={() => onView(providerId)}
           style={{
             padding: '8px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: '#fff',
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
             color: T.navy,
             fontSize: '13px',
             fontWeight: 600,
@@ -142,12 +144,14 @@ function DoctorCard({ doctor, onView, onVerify }: {
           </button>
         )}
       </div>
-    </div>
+    </article>
   )
 }
 
 export default function AdminDoctorsPage() {
   const router = useRouter()
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
+  const [revision, setRevision] = useState(0)
   const [activeTab, setActiveTab] = useState<Tab>('all')
   const [doctors, setDoctors] = useState<AdminDoctor[]>([])
   const [pendingDoctors, setPendingDoctors] = useState<AdminDoctorVerification[]>([])
@@ -157,14 +161,14 @@ export default function AdminDoctorsPage() {
   const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
-      router.replace('/auth/sign-in')
+    if (!readSessionMarker()) {
+      clearPortalSession()
+      router.replace('/auth/admin/login')
       return
     }
 
     if (!isAdmin()) {
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
       return
     }
 
@@ -183,8 +187,8 @@ export default function AdminDoctorsPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
+          clearPortalSession()
+          router.replace('/auth/admin/login')
           return
         }
         console.error('Failed to load doctors', err)
@@ -199,14 +203,14 @@ export default function AdminDoctorsPage() {
     return () => {
       cancelled = true
     }
-  }, [router, statusFilter, searchQuery])
+  }, [router, statusFilter, searchQuery, revision])
 
   const handleViewDoctor = (providerId: string) => {
-    router.push(`/admin/doctors/${providerId}`)
+    setSelectedProvider(providerId)
   }
 
   const handleVerifyDoctor = (providerId: string) => {
-    router.push(`/admin/doctors/${providerId}/verify`)
+    setSelectedProvider(providerId)
   }
 
   if (loading) {
@@ -219,26 +223,27 @@ export default function AdminDoctorsPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
-        {error}
+      <div role="alert" aria-label="Clinician list error" style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+        <p>{error}</p><button type="button" onClick={() => { setLoading(true); setRevision(value => value + 1) }}>Retry clinician list</button>
       </div>
     )
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <style>{`@media(max-width:700px){.admin-doctor-card{flex-direction:column;align-items:stretch!important}.admin-doctor-actions{padding-left:0}.admin-doctor-filters{flex-direction:column;align-items:stretch!important}.admin-doctor-filters>*{min-width:0;width:100%}}`}</style>
       {/* Page Header */}
       <div>
         <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
           Doctors Management
         </h1>
         <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate2 }}>
-          Manage doctor verifications, licenses, and account status
+          Review clinician credentials and account status. An active account still needs clinical approval before it can provide care.
         </p>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(4,53,77,0.08)', paddingBottom: '16px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', borderBottom: "1px solid var(--border)", paddingBottom: '16px' }}>
         <button
           type="button"
           onClick={() => setActiveTab('all')}
@@ -247,7 +252,7 @@ export default function AdminDoctorsPage() {
             borderRadius: '10px',
             border: 'none',
             background: activeTab === 'all' ? 'rgba(32,181,223,0.12)' : 'transparent',
-            color: activeTab === 'all' ? T.blue : T.slate,
+            color: activeTab === 'all' ? T.link : T.slate,
             fontSize: '14px',
             fontWeight: 600,
             cursor: 'pointer',
@@ -264,7 +269,7 @@ export default function AdminDoctorsPage() {
             borderRadius: '10px',
             border: 'none',
             background: activeTab === 'pending' ? 'rgba(32,181,223,0.12)' : 'transparent',
-            color: activeTab === 'pending' ? T.blue : T.slate,
+            color: activeTab === 'pending' ? T.link : T.slate,
             fontSize: '14px',
             fontWeight: 600,
             cursor: 'pointer',
@@ -277,20 +282,21 @@ export default function AdminDoctorsPage() {
 
       {/* Filters */}
       {activeTab === 'all' && (
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div className="admin-doctor-filters" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <Ico p={ICONS.search} size={16} sw={1.6} color={T.slate2} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
               placeholder="Search doctors..."
+              aria-label="Search clinicians"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: '100%',
                 padding: '10px 12px 10px 40px',
                 borderRadius: '10px',
-                border: '1px solid rgba(4,53,77,0.12)',
-                background: 'rgba(255,255,255,0.9)',
+                border: "1px solid var(--border)",
+                background: "var(--surface-glass)",
                 fontSize: '14px',
                 color: T.navy,
                 outline: 'none',
@@ -298,22 +304,24 @@ export default function AdminDoctorsPage() {
             />
           </div>
           <select
+            aria-label="Filter clinicians by status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             style={{
               padding: '10px 16px',
               borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              background: 'rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-glass)",
               fontSize: '14px',
               color: T.navy,
               cursor: 'pointer',
             }}
           >
             <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="suspended">Suspended</option>
+            <option value="ACTIVE">Active</option>
+            <option value="VERIFIED">Clinical access enabled</option>
+            <option value="PENDING_VERIFICATION">Pending</option>
+            <option value="SUSPENDED">Suspended</option>
           </select>
         </div>
       )}
@@ -351,6 +359,8 @@ export default function AdminDoctorsPage() {
           )
         )}
       </div>
+      {selectedProvider && <DoctorReviewDialog key={selectedProvider} providerId={selectedProvider}
+        onClose={() => setSelectedProvider(null)} onSaved={() => { setSelectedProvider(null); setRevision(value => value + 1) }} />}
     </div>
   )
 }

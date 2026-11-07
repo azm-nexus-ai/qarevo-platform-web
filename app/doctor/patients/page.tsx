@@ -6,10 +6,10 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { useRouter } from 'next/navigation'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorPatients,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   type DoctorPatient,
   type DoctorPatientsResponse,
 } from '@/lib/api'
@@ -24,8 +24,8 @@ export default function PatientsPage() {
   const pageSize = 10
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -45,7 +45,7 @@ export default function PatientsPage() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }
@@ -71,7 +71,7 @@ export default function PatientsPage() {
   }
 
   if (error) {
-    return <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>{error}</div>
+    return <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>{error}</div>
   }
 
   if (!patientsData) return null
@@ -91,15 +91,15 @@ export default function PatientsPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Patients</h1>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Patients</h1>
           <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage your patient directory</p>
         </div>
         <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
           <div style={{
             padding: '10px 16px',
             borderRadius: '12px',
-            background: 'rgba(255,255,255,0.9)',
-            border: '1px solid rgba(4,53,77,0.08)',
+            background: "var(--surface-glass)",
+            border: "1px solid var(--border)",
             display: 'flex',
             alignItems: 'center',
             gap: '8px'
@@ -129,55 +129,55 @@ export default function PatientsPage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
         <div style={{
-          background: 'rgba(255,255,255,0.88)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
           borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.88)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Total Patients</p>
-          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{patientsData.total_count}</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Total Patients</p>
+          <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{patientsData.total_count}</p>
         </div>
         <div style={{
-          background: 'rgba(255,255,255,0.88)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
           borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.88)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Active</p>
-          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.green }}>{patientsData.patients.filter((p: DoctorPatient) => p.status === 'active').length}</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Active</p>
+          <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.green }}>{patientsData.patients.filter((p: DoctorPatient) => p.status === 'active').length}</p>
         </div>
         <div style={{
-          background: 'rgba(255,255,255,0.88)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
           borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.88)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Visible Patients</p>
-          <p style={{ margin: '8px 0 0', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.blue }}>{visiblePatients.length}</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Visible Patients</p>
+          <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.link }}>{visiblePatients.length}</p>
         </div>
       </div>
 
       {/* Patients List */}
       <div style={{
-        background: 'rgba(255,255,255,0.88)',
+        background: "var(--surface-glass)",
         backdropFilter: 'blur(22px) saturate(175%)',
         WebkitBackdropFilter: 'blur(22px) saturate(175%)',
         borderRadius: '20px',
-        border: '1px solid rgba(255,255,255,0.88)',
+        border: "1px solid var(--border)",
         boxShadow: Sh.card,
         overflow: 'hidden',
       }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
-          <h3 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Patient Directory</h3>
+        <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)" }}>
+          <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Patient Directory</h3>
         </div>
         <div style={{ padding: '16px 24px 24px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -190,34 +190,34 @@ export default function PatientsPage() {
                 justifyContent: 'space-between',
                 padding: '16px',
                 borderRadius: '14px',
-                background: 'rgba(247,250,252,0.6)',
-                border: '1px solid rgba(4,53,77,0.04)',
+                background: "var(--surface-subtle)",
+                border: "1px solid var(--border)",
                 transition: 'all 0.15s ease',
                 cursor: 'default',
                 flexDirection: 'row',
                 gap: '16px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, minWidth: 0 }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(32,181,223,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.blue, fontSize: '14px', fontWeight: 700 }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(32,181,223,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.link, fontSize: '14px', fontWeight: 700 }}>
                     {patient.name.split(' ').map((n: string) => n[0]).join('')}
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{patient.name}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{patient.email || 'No email'} · {patient.phone || 'No phone'}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '11px', color: T.slate }}>
+                    <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{patient.email || 'No email'} · {patient.phone || 'No phone'}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>
                       {patient.gender || 'Unknown gender'}, {patient.age ?? 'Unknown'} years · Last visit: {patient.last_visit ? formatDate(patient.last_visit) : 'No visits yet'}
                     </p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ margin: 0, fontSize: '12px', color: T.slate2 }}>Consultations</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Consultations</p>
                     <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: T.navy }}>{patient.total_consultations}</p>
                   </div>
                   <span style={{
                     padding: '4px 10px',
                     borderRadius: '999px',
-                    fontSize: '11px',
+                    fontSize: "13px",
                     fontWeight: 700,
                     background: patient.status === 'active' ? 'rgba(15,158,119,0.12)' : 'rgba(109,135,151,0.12)',
                     color: patient.status === 'active' ? T.green : T.slate2
@@ -230,14 +230,14 @@ export default function PatientsPage() {
           </div>
 
           {/* Pagination */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px', paddingTop: '20px', borderTop: "1px solid var(--border)", flexWrap: 'wrap', gap: '12px' }}>
             <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Page {patientsData.page} · Showing {visiblePatients.length} of {patientsData.filtered_count} patients</p>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 type="button"
                 disabled={!patientsData.has_previous || loading}
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.9)', color: T.slate2, fontSize: '12px', fontWeight: 600, cursor: patientsData.has_previous && !loading ? 'pointer' : 'not-allowed', opacity: patientsData.has_previous && !loading ? 1 : 0.5 }}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate2, fontSize: "13px", fontWeight: 600, cursor: patientsData.has_previous && !loading ? 'pointer' : 'not-allowed', opacity: patientsData.has_previous && !loading ? 1 : 0.5 }}
               >
                 Previous
               </button>
@@ -245,7 +245,7 @@ export default function PatientsPage() {
                 type="button"
                 disabled={!patientsData.has_next || loading}
                 onClick={() => setPage((current) => current + 1)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.9)', color: T.slate2, fontSize: '12px', fontWeight: 600, cursor: patientsData.has_next && !loading ? 'pointer' : 'not-allowed', opacity: patientsData.has_next && !loading ? 1 : 0.5 }}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate2, fontSize: "13px", fontWeight: 600, cursor: patientsData.has_next && !loading ? 'pointer' : 'not-allowed', opacity: patientsData.has_next && !loading ? 1 : 0.5 }}
               >
                 Next
               </button>

@@ -1,13 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import { T, Sh } from '@/lib/tokens'
 import {
-  clearAuthTokens,
+  apiGet,
+  apiPost,
+  apiDelete,
+  getApiErrorDetail,
   getDoctorPatients,
   isAuthError,
-  readAccessToken,
   type DoctorPatient,
 } from '@/lib/api'
 
@@ -21,34 +24,31 @@ type CarePlan = {
   created_by: string
 }
 
+const EMPTY_CARE_PLAN = { title: '', status: 'Active', progress: 0, description: '', episode_id: '' }
+
 export default function DoctorCarePlansPage() {
   const router = useRouter()
   const [patients, setPatients] = useState<DoctorPatient[]>([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const [carePlans, setCarePlans] = useState<CarePlan[]>([])
   const [loading, setLoading] = useState(false)
+  const operationInFlight = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newPlan, setNewPlan] = useState({ title: '', status: 'Active', progress: 0, description: '', episode_id: '' })
+  const [newPlan, setNewPlan] = useState(EMPTY_CARE_PLAN)
+  const [pendingPatientId, setPendingPatientId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
-      router.replace('/auth/doctor/login')
-      return
-    }
-
     const fetchPatients = async () => {
       try {
         const data = await getDoctorPatients()
         setPatients(data.patients || [])
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
           router.replace('/auth/doctor/login')
           return
         }
-        console.error('Failed to load patients', err)
+        setError(getApiErrorDetail(err) || 'Unable to load assigned patients. Refresh this page to retry.')
       }
     }
 
@@ -57,95 +57,78 @@ export default function DoctorCarePlansPage() {
 
   const fetchCarePlans = async () => {
     if (!selectedPatientId) return
-    
+
+    if (operationInFlight.current) return
+    operationInFlight.current = true
     setLoading(true)
     setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/care-plans/${selectedPatientId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch care plans')
-      }
-      
-      const data = await response.json()
+      const data = await apiGet<{care_plans: CarePlan[]}>(`/api/v1/doctor/care-plans/${selectedPatientId}`)
       setCarePlans(data.care_plans || [])
     } catch (err) {
       if (isAuthError(err)) {
-        clearAuthTokens()
         router.replace('/auth/doctor/login')
         return
       }
       console.error('Failed to load care plans', err)
-      setError('Unable to load care plans')
+      setError(getApiErrorDetail(err) || 'Unable to load care plans. Please retry.')
     } finally {
+      operationInFlight.current = false
       setLoading(false)
     }
   }
 
   const handleAddCarePlan = async () => {
-    if (!selectedPatientId || !newPlan.title) return
-    
+    if (!selectedPatientId || !newPlan.title) { setError('Select a patient and enter a care plan title.'); return }
+
+    if (operationInFlight.current) return
+    operationInFlight.current = true
     setLoading(true)
+    setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/care-plans`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          patient_id: selectedPatientId,
-          ...newPlan,
-        }),
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to create care plan')
-      }
-      
-      const data = await response.json()
+      const data = await apiPost<{care_plans: CarePlan[]}>(`/api/v1/doctor/care-plans`, { patient_id: selectedPatientId, ...newPlan })
       setCarePlans(data.care_plans || [])
-      setNewPlan({ title: '', status: 'Active', progress: 0, description: '', episode_id: '' })
+      setNewPlan(EMPTY_CARE_PLAN)
       setShowAddForm(false)
     } catch (err) {
-      console.error('Failed to create care plan', err)
-      setError('Failed to create care plan')
+      if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
+      setError(getApiErrorDetail(err) || 'Unable to create care plan. Please retry.')
     } finally {
+      operationInFlight.current = false
       setLoading(false)
     }
   }
 
   const handleDeleteCarePlan = async (planId: string) => {
     if (!selectedPatientId) return
-    
+
+    if (operationInFlight.current) return
+    operationInFlight.current = true
     setLoading(true)
+    setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/care-plans/${selectedPatientId}/${planId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete care plan')
-      }
-      
-      const data = await response.json()
+      const data = await apiDelete<{care_plans: CarePlan[]}>(`/api/v1/doctor/care-plans/${selectedPatientId}/${planId}`)
       setCarePlans(data.care_plans || [])
     } catch (err) {
-      console.error('Failed to delete care plan', err)
-      setError('Failed to delete care plan')
+      if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
+      setError(getApiErrorDetail(err) || 'Unable to delete care plan. Please retry.')
     } finally {
+      operationInFlight.current = false
       setLoading(false)
     }
+  }
+
+  const changePatient = (patientId: string) => {
+    setSelectedPatientId(patientId)
+    setCarePlans([])
+    setNewPlan(EMPTY_CARE_PLAN)
+    setError(null)
+    setShowAddForm(false)
+    setPendingPatientId(null)
+  }
+  const requestPatientChange = (patientId: string) => {
+    if (JSON.stringify(newPlan) !== JSON.stringify(EMPTY_CARE_PLAN)) setPendingPatientId(patientId)
+    else changePatient(patientId)
   }
 
   return (
@@ -153,17 +136,18 @@ export default function DoctorCarePlansPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Care Plans</h1>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Care Plans</h1>
           <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage patient care plans</p>
         </div>
       </div>
 
       {/* Patient Selection */}
-      <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
-        <select
+      <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
+        <label htmlFor="clinical-patient-select" style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
+        <select id="clinical-patient-select"
           value={selectedPatientId}
-          onChange={(e) => setSelectedPatientId(e.target.value)}
+          onChange={(e) => requestPatientChange(e.target.value)}
+          disabled={loading}
           style={{
             width: '100%',
             padding: '14px 16px',
@@ -171,7 +155,7 @@ export default function DoctorCarePlansPage() {
             border: '1px solid rgba(0,0,0,0.1)',
             fontSize: '15px',
             outline: 'none',
-            background: 'white',
+            background: "var(--surface)",
             color: T.navy,
             fontWeight: 500,
             cursor: 'pointer',
@@ -212,7 +196,7 @@ export default function DoctorCarePlansPage() {
       </div>
 
       {error && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
+        <div role="alert" style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
       )}
 
       {/* Add Care Plan Button */}
@@ -236,9 +220,9 @@ export default function DoctorCarePlansPage() {
 
       {/* Add Care Plan Form */}
       {showAddForm && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
+        <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
           <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 700, color: T.navy }}>New Care Plan</h3>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Episode ID (Optional)</label>
@@ -257,7 +241,7 @@ export default function DoctorCarePlansPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Title</label>
               <input
@@ -275,7 +259,7 @@ export default function DoctorCarePlansPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Status</label>
               <select
@@ -296,7 +280,7 @@ export default function DoctorCarePlansPage() {
                 <option value="On Hold">On Hold</option>
               </select>
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Progress ({newPlan.progress}%)</label>
               <input
@@ -308,7 +292,7 @@ export default function DoctorCarePlansPage() {
                 style={{ width: '100%' }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Description</label>
               <textarea
@@ -327,10 +311,10 @@ export default function DoctorCarePlansPage() {
                 }}
               />
             </div>
-            
+
             <button
               onClick={handleAddCarePlan}
-              disabled={loading || !newPlan.title}
+              disabled={loading}
               style={{
                 padding: '12px 24px',
                 borderRadius: '12px',
@@ -356,11 +340,11 @@ export default function DoctorCarePlansPage() {
             <div
               key={plan.id}
               style={{
-                background: 'rgba(255,255,255,0.88)',
+                background: "var(--surface-glass)",
                 backdropFilter: 'blur(22px) saturate(175%)',
                 WebkitBackdropFilter: 'blur(22px) saturate(175%)',
                 borderRadius: '16px',
-                border: '1px solid rgba(255,255,255,0.88)',
+                border: "1px solid var(--border)",
                 boxShadow: Sh.card,
                 padding: '20px',
               }}
@@ -370,8 +354,8 @@ export default function DoctorCarePlansPage() {
                   <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700, color: T.navy }}>{plan.title}</h3>
                   <p style={{ margin: '0 0 12px', fontSize: '14px', color: T.slate2 }}>{plan.description}</p>
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Status: {plan.status}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Progress: {plan.progress}%</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Status: {plan.status}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Progress: {plan.progress}%</span>
                   </div>
                   <div style={{ marginTop: '12px', height: '6px', background: 'rgba(0,0,0,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', background: 'rgba(32,181,223,1)', borderRadius: '3px', width: `${plan.progress}%` }} />
@@ -385,7 +369,7 @@ export default function DoctorCarePlansPage() {
                     border: 'none',
                     background: 'rgba(220,38,38,0.1)',
                     color: T.red,
-                    fontSize: '12px',
+                    fontSize: "13px",
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}
@@ -398,11 +382,14 @@ export default function DoctorCarePlansPage() {
         </div>
       )}
 
-      {carePlans.length === 0 && selectedPatientId && !loading && (
+      {carePlans.length === 0 && selectedPatientId && !loading && !error && (
         <div style={{ textAlign: 'center', padding: '40px', color: T.slate2 }}>
           <p>No care plans found for this patient</p>
         </div>
       )}
+      <UnsavedChangesDialog open={pendingPatientId !== null} busy={loading}
+        onKeepEditing={() => setPendingPatientId(null)}
+        onDiscard={() => { if (pendingPatientId !== null) changePatient(pendingPatientId) }} />
     </div>
   )
 }

@@ -2,12 +2,18 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node --test tests/*.test.cjs && next build",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:privacy": "node --test tests/*.test.cjs",
+    "test:e2e:privacy": "playwright test"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",
@@ -15,6 +21,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
+    "nextjs-nav-guard": "1.1.3",
     "phosphor-react": "^1.4.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",

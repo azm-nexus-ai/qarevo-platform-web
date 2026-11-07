@@ -2,20 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import ProfileImage from '@/components/patient/ProfileImage'
+import PatientAccountMenu from '@/components/patient/PatientAccountMenu'
+import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
+import { isPortalIdentityEvent } from '@/lib/portal-scope'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
-import { clearAuthTokens, getPatientDashboard, getPatientSettings, isAuthError, readAccessToken } from '@/lib/api'
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return 'P'
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('')
-}
+import { logoutCurrentUser, clearPortalSession, getPatientSettings, isAuthError, readSessionMarker } from '@/lib/api'
 
 export default function PatientMobileNavigation() {
   const pathname = usePathname()
@@ -23,11 +22,9 @@ export default function PatientMobileNavigation() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [patientName, setPatientName] = useState('Loading...')
-  const [carePlanStatus, setCarePlanStatus] = useState('Loading')
-  const [darkMode, setDarkMode] = useState(false)
+  const [identityRevision, setIdentityRevision] = useState(0)
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
-  const patientInitials = getInitials(patientName)
 
   // Body scroll lock
   useEffect(() => {
@@ -60,64 +57,47 @@ export default function PatientMobileNavigation() {
     hamburgerRef.current?.focus()
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('qarevo_access_token')
-    localStorage.removeItem('qarevo_refresh_token')
-    localStorage.removeItem('qarevo_token_type')
-    localStorage.removeItem('qarevo_expires_in')
-    localStorage.removeItem('qarevo_user_id')
-    localStorage.removeItem('qarevo_provider_id')
-    localStorage.removeItem('qarevo_role')
-    setShowLogoutModal(false)
-    closeDrawer()
-    router.push('/auth/sign-in')
+  const handleLogout = async () => {
+    try { await logoutCurrentUser() }
+    catch { console.warn('Server logout could not be confirmed.') }
+    finally {
+      setShowLogoutModal(false)
+      closeDrawer()
+      router.replace('/auth/sign-in')
+    }
   }
 
   useEffect(() => {
-    const token = readAccessToken()
+    const token = readSessionMarker()
     if (!token) return
+    let active = true
+    const scope = readAccountScope('patient')
 
     const fetchPatientChrome = async () => {
       try {
-        const userId = localStorage.getItem('qarevo_user_id')
-        const [data, settings] = await Promise.all([
-          getPatientDashboard(userId),
-          getPatientSettings(),
-        ])
-        if (data.patient_name) {
-          setPatientName(data.patient_name)
-        }
-        const plans = data.care_plans ?? data.carePlans ?? []
-        const activePlan = plans.find((plan) => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
-        setCarePlanStatus(activePlan?.status || (plans.length ? 'Active' : 'Not started'))
-        setDarkMode(Boolean(settings.dark_mode))
+        const settings = await getPatientSettings()
+        if (active && scope === readAccountScope('patient')) setPatientName([settings.first_name, settings.last_name].filter(Boolean).join(' ') || 'Patient account')
       } catch (error) {
+        if (!active || scope !== readAccountScope('patient')) return
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }
         console.error('Failed to fetch dashboard profile:', error)
-        setCarePlanStatus('Unavailable')
+        if (active && scope === readAccountScope('patient')) setPatientName('Patient account')
       }
     }
 
-    fetchPatientChrome()
-  }, [router])
-
-  useEffect(() => {
-    const handleAppearanceChange = (event: Event) => {
-      const detail = (event as CustomEvent<{ darkMode?: boolean; dark_mode?: boolean }>).detail
-      if (!detail) return
-      setDarkMode(Boolean(detail.darkMode ?? detail.dark_mode))
-    }
-
-    window.addEventListener('qarevo:patient-appearance-changed', handleAppearanceChange)
-    return () => window.removeEventListener('qarevo:patient-appearance-changed', handleAppearanceChange)
-  }, [])
+    void fetchPatientChrome()
+    const reset = (event: Event) => { if (!isPortalIdentityEvent(event, 'patient')) return; setPatientName('Patient account'); setIdentityRevision(value => value + 1) }
+    window.addEventListener(ACCOUNT_CHANGED, reset)
+    window.addEventListener('storage', reset)
+    return () => { active = false; window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset) }
+  }, [router, identityRevision])
 
   return (
-    <div className={darkMode ? 'pmn-theme-dark' : undefined}>
+    <div>
       <style>{`
         .pmn-topbar {
           display: none;
@@ -129,17 +109,23 @@ export default function PatientMobileNavigation() {
           gap: 12px;
           padding: 0 16px;
           height: 56px;
-          background: rgba(247,250,252,0.97);
+          background: var(--surface-subtle);
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border-bottom: 1px solid rgba(4,53,77,0.08);
+          border-bottom: 1px solid var(--border);
           box-shadow: 0 2px 12px rgba(4,53,77,0.06);
+        }
+        @media(max-width:460px) {
+          .pmn-topbar button[aria-label="Open messages"], .pmn-topbar button[aria-label="Profile"] { display: none !important; }
+        }
+        @media(max-width:360px) {
+          .pmn-topbar { padding-inline: 10px; gap: 8px; }
         }
         .pmn-hamburger {
           width: 40px;
           height: 40px;
           border-radius: 10px;
-          border: 1px solid rgba(4,53,77,0.12);
+          border: 1px solid var(--border);
           background: transparent;
           cursor: pointer;
           display: flex;
@@ -175,8 +161,8 @@ export default function PatientMobileNavigation() {
           width: 320px;
           max-width: min(88vw, 360px);
           z-index: 1001;
-          background: #f8fbfd;
-          border-right: 1px solid rgba(255,255,255,0.8);
+          background: var(--surface);
+          border-right: 1px solid var(--border);
           box-shadow: 14px 0 44px rgba(4,53,77,0.2);
           padding: 20px 16px;
           display: flex;
@@ -196,7 +182,7 @@ export default function PatientMobileNavigation() {
           width: 34px;
           height: 34px;
           border-radius: 8px;
-          border: 1px solid rgba(4,53,77,0.12);
+          border: 1px solid var(--border);
           background: transparent;
           color: ${T.slate};
           cursor: pointer;
@@ -206,34 +192,6 @@ export default function PatientMobileNavigation() {
           font-size: 18px;
           line-height: 1;
         }
-        .pmn-theme-dark .pmn-topbar,
-        .pmn-theme-dark .pmn-drawer {
-          background: rgba(7, 23, 35, 0.97);
-          border-color: rgba(125, 211, 252, 0.18);
-          color: #E6F6FF;
-          box-shadow: 0 14px 44px rgba(0,0,0,0.34);
-        }
-        .pmn-theme-dark .pmn-hamburger,
-        .pmn-theme-dark .pmn-drawer-close,
-        .pmn-theme-dark button[aria-label="Open messages"] {
-          border-color: rgba(125, 211, 252, 0.22) !important;
-          background: rgba(15, 47, 70, 0.72) !important;
-          color: #E6F6FF !important;
-        }
-        .pmn-theme-dark .pmn-hamburger span {
-          background: #E6F6FF;
-        }
-        .pmn-theme-dark .pmn-drawer section {
-          background: rgba(15, 47, 70, 0.88) !important;
-          border-color: rgba(125, 211, 252, 0.22) !important;
-          color: #E6F6FF !important;
-        }
-        .pmn-theme-dark .pmn-drawer p,
-        .pmn-theme-dark .pmn-drawer span,
-        .pmn-theme-dark .pmn-drawer a {
-          color: #E6F6FF !important;
-        }
-
         @media (max-width: 920px) {
           .pmn-topbar { display: flex; }
           .pmn-drawer-backdrop { display: block; }
@@ -241,8 +199,15 @@ export default function PatientMobileNavigation() {
       `}</style>
 
       {/* Mobile Top Bar */}
-      <div className="pmn-topbar" role="banner">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+      <div className="pmn-topbar portal-mobile-navbar" role="banner">
+          <Link
+            href="/patient/dashboard"
+            aria-label="Qarevo Health Patient Dashboard"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', minWidth: 0, width: '100px', flexShrink: 0 }}
+          >
+            <AuthenticatedLogo width={100} />
+          </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
           <button
             ref={hamburgerRef}
             className="pmn-hamburger"
@@ -255,15 +220,10 @@ export default function PatientMobileNavigation() {
             <span />
             <span />
           </button>
-          <Link
-            href="/patient/dashboard"
-            aria-label="Qarevo Health Patient Dashboard"
-            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
-          >
-            <AuthenticatedLogo width={120} />
-          </Link>
+
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+          <ThemeToggle />
           <button
             type="button"
             aria-label="Open messages"
@@ -272,7 +232,7 @@ export default function PatientMobileNavigation() {
               width: '40px',
               height: '40px',
               borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.12)',
+              border: "1px solid var(--border)",
               background: 'transparent',
               cursor: 'pointer',
               display: 'flex',
@@ -283,37 +243,10 @@ export default function PatientMobileNavigation() {
             }}
           >
             <Ico p={ICONS.message} size={18} sw={1.8} />
-            <span
-              style={{
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: T.blue,
-                border: '1.5px solid #fff',
-              }}
-            />
+
           </button>
-          <button
-            type="button"
-            aria-label="Profile"
-            onClick={() => router.push('/patient/settings')}
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              border: '1px solid rgba(4,53,77,0.11)',
-              background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))',
-              color: T.navy,
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontSize: '15px',
-            }}
-          >
-            {patientInitials}
-          </button>
+          <PatientAccountMenu name={patientName} />
+
         </div>
       </div>
 
@@ -330,7 +263,9 @@ export default function PatientMobileNavigation() {
         id="pmn-drawer"
         ref={drawerRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal={mobileOpen ? true : undefined}
+        aria-hidden={!mobileOpen}
+        inert={!mobileOpen}
         aria-label="Navigation menu"
         className={`pmn-drawer${mobileOpen ? ' pmn-drawer--open' : ''}`}
       >
@@ -339,7 +274,7 @@ export default function PatientMobileNavigation() {
         </button>
 
         <div style={{ marginBottom: '18px', paddingTop: '8px' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+          <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
             <AuthenticatedLogo />
           </Link>
         </div>
@@ -349,25 +284,10 @@ export default function PatientMobileNavigation() {
           style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))',
-                border: '1px solid rgba(4,53,77,0.11)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: T.navy,
-                fontWeight: 700,
-              }}
-            >
-              {patientInitials}
-            </div>
+            <ProfileImage name={patientName} size={42} />
             <div>
               <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{patientName}</p>
-              <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>Care Plan: {carePlanStatus}</p>
+              <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Patient account</p>
             </div>
           </div>
         </section>
@@ -389,7 +309,7 @@ export default function PatientMobileNavigation() {
                     padding: '10px 12px',
                     borderRadius: '12px',
                     background: isActive ? 'rgba(32,181,223,0.14)' : 'transparent',
-                    color: isActive ? T.blue : T.slate,
+                    color: isActive ? T.link : T.slate,
                     fontSize: '13.5px',
                     fontWeight: isActive ? 700 : 500,
                     transition: 'all 0.15s',
@@ -418,7 +338,7 @@ export default function PatientMobileNavigation() {
               borderRadius: '12px',
               border: 'none',
               background: 'transparent',
-              color: '#348CEA',
+              color: "var(--link)",
               fontSize: '13.5px',
               fontWeight: 600,
               cursor: 'pointer',

@@ -1,31 +1,24 @@
 'use client'
 
+import { bookingEntryDestination } from '@/lib/booking'
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 function ConsultationBookingPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const physicianId = searchParams.get('physicianId') ?? ''
-  const serviceType = searchParams.get('service') || 'video'
+  const destination = bookingEntryDestination(searchParams)
 
-  useEffect(() => {
-    // Redirect to date-time selection with default service type
-    const params = new URLSearchParams()
-    params.set('provider_id', physicianId)
-    params.set('service_type', serviceType)
-    params.set('from', 'redirect')
-    router.replace(`/patient/consultation-booking/date-time?${params.toString()}`)
-  }, [router, physicianId, serviceType])
+  useEffect(() => { router.replace(destination) }, [router, destination])
 
-  return null
+  return <p role='status' className='p-6 text-sm text-muted'>Opening appointment options…</p>
 }
 
 function ConsultationBookingPageFallback() {
   return (
-    <main style={{ minHeight: '100vh', background: '#f8fafc', display: 'grid', placeItems: 'center' }}>
+    <main style={{ minHeight: '100vh', background: "var(--canvas)", display: 'grid', placeItems: 'center' }}>
       <div style={{ textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>Redirecting to scheduling...</p>
+        <p style={{ margin: 0, fontSize: '14px', color: "var(--text-muted)" }}>Redirecting to scheduling...</p>
       </div>
     </main>
   )

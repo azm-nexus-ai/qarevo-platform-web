@@ -20,7 +20,7 @@ export default function AppointmentList({
 }: AppointmentListProps) {
   return (
     <div
-      className={`md:bg-white md:w-90 mt-16.5 md:my-5 md:p-3 rounded-lg transition-all duration-200 ${
+      className={`md:bg-surface md:w-90 mt-16.5 md:my-5 md:p-3 rounded-lg transition-all duration-200 ${
         collapsed ? "lg:ml-[72px]" : "lg:ml-64"
       }`}
     >

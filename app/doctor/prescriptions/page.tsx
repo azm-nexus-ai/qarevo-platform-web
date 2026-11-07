@@ -1,13 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useNavigationGuard } from 'nextjs-nav-guard'
+import { usePortalAction } from '@/lib/portal-action'
+import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import { T, Sh } from '@/lib/tokens'
 import {
-  clearAuthTokens,
+  apiGet,
+  apiPost,
+  apiDelete,
+  getApiErrorDetail,
   getDoctorPatients,
   isAuthError,
-  readAccessToken,
   type DoctorPatient,
 } from '@/lib/api'
 
@@ -28,15 +33,7 @@ type Medication = {
   created_by: string
 }
 
-export default function DoctorPrescriptionsPage() {
-  const router = useRouter()
-  const [patients, setPatients] = useState<DoctorPatient[]>([])
-  const [selectedPatientId, setSelectedPatientId] = useState('')
-  const [medications, setMedications] = useState<Medication[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newMed, setNewMed] = useState({
+const EMPTY_MEDICATION = {
     name: '',
     brand: '',
     strength: '',
@@ -48,134 +45,112 @@ export default function DoctorPrescriptionsPage() {
     times: [] as string[],
     refill: '',
     episode_id: '',
-  })
+  }
+
+export default function DoctorPrescriptionsPage() {
+  const router = useRouter()
+  const captureAction = usePortalAction()
+  const [patients, setPatients] = useState<DoctorPatient[]>([])
+  const [selectedPatientId, setSelectedPatientId] = useState('')
+  const [medications, setMedications] = useState<Medication[]>([])
+  const [loading, setLoading] = useState(false)
+  const operationInFlight = useRef(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newMed, setNewMed] = useState(EMPTY_MEDICATION)
+  const [pendingPatientId, setPendingPatientId] = useState<string | null>(null)
+
+  const dirty = JSON.stringify(newMed) !== JSON.stringify(EMPTY_MEDICATION)
+  const navigation = useNavigationGuard({ enabled: ({ to }) => (dirty || loading) && !to.startsWith('/auth/') })
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
-      router.replace('/auth/doctor/login')
-      return
-    }
-
+    const action = captureAction()
     const fetchPatients = async () => {
       try {
         const data = await getDoctorPatients()
-        setPatients(data.patients || [])
+        if (action.isCurrent()) setPatients(data.patients || [])
       } catch (err) {
+        if (!action.isCurrent()) return
         if (isAuthError(err)) {
-          clearAuthTokens()
           router.replace('/auth/doctor/login')
           return
         }
-        console.error('Failed to load patients', err)
+        setError(getApiErrorDetail(err) || 'Unable to load assigned patients. Refresh this page to retry.')
       }
     }
 
     fetchPatients()
-  }, [router])
+  }, [router, captureAction])
 
   const fetchMedications = async () => {
     if (!selectedPatientId) return
-    
+
+    if (operationInFlight.current) return
+    operationInFlight.current = true
+    const action = captureAction()
     setLoading(true)
     setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/prescriptions/${selectedPatientId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch medications')
-      }
-      
-      const data = await response.json()
+      const data = await apiGet<{medications: Medication[]}>(`/api/v1/doctor/prescriptions/${selectedPatientId}`)
+      if (!action.isCurrent()) return
       setMedications(data.medications || [])
     } catch (err) {
+      if (!action.isCurrent()) return
       if (isAuthError(err)) {
-        clearAuthTokens()
         router.replace('/auth/doctor/login')
         return
       }
       console.error('Failed to load medications', err)
-      setError('Unable to load medications')
+      setError(getApiErrorDetail(err) || 'Unable to load medications. Please retry.')
     } finally {
-      setLoading(false)
+      operationInFlight.current = false
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
   const handleAddMedication = async () => {
-    if (!selectedPatientId || !newMed.name || !newMed.strength) return
-    
+    if (!selectedPatientId || !newMed.name.trim() || !newMed.strength.trim()) { setError('Select a patient and enter the medication name and strength before saving.'); return }
+
+    if (operationInFlight.current) return
+    operationInFlight.current = true
+    const action = captureAction()
     setLoading(true)
+    setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/prescriptions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          patient_id: selectedPatientId,
-          ...newMed,
-        }),
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to add medication')
-      }
-      
-      const data = await response.json()
+      const data = await apiPost<{medications: Medication[]}>(`/api/v1/doctor/prescriptions`, { patient_id: selectedPatientId, ...newMed })
+      if (!action.isCurrent()) return
       setMedications(data.medications || [])
-      setNewMed({
-        name: '',
-        brand: '',
-        strength: '',
-        dosage: '',
-        frequency: '',
-        duration: '',
-        instructions: '',
-        food: '',
-        times: [],
-        refill: '',
-        episode_id: '',
-      })
+      setNewMed(EMPTY_MEDICATION)
       setShowAddForm(false)
     } catch (err) {
-      console.error('Failed to add medication', err)
-      setError('Failed to add medication')
+      if (!action.isCurrent()) return
+      if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
+      setError(getApiErrorDetail(err) || 'Unable to add medication. Please retry.')
     } finally {
-      setLoading(false)
+      operationInFlight.current = false
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
   const handleDeleteMedication = async (medId: string) => {
     if (!selectedPatientId) return
-    
+
+    if (operationInFlight.current) return
+    operationInFlight.current = true
+    const action = captureAction()
     setLoading(true)
+    setError(null)
     try {
-      const token = readAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/doctor/prescriptions/${selectedPatientId}/${medId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete medication')
-      }
-      
-      const data = await response.json()
+      const data = await apiDelete<{medications: Medication[]}>(`/api/v1/doctor/prescriptions/${selectedPatientId}/${medId}`)
+      if (!action.isCurrent()) return
       setMedications(data.medications || [])
     } catch (err) {
-      console.error('Failed to delete medication', err)
-      setError('Failed to delete medication')
+      if (!action.isCurrent()) return
+      if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
+      setError(getApiErrorDetail(err) || 'Unable to delete medication. Please retry.')
     } finally {
-      setLoading(false)
+      operationInFlight.current = false
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
@@ -187,22 +162,37 @@ export default function DoctorPrescriptionsPage() {
     }
   }
 
+  const changePatient = (patientId: string) => {
+    setSelectedPatientId(patientId)
+    setMedications([])
+    setNewMed(EMPTY_MEDICATION)
+    setError(null)
+    setShowAddForm(false)
+    setPendingPatientId(null)
+  }
+  const requestPatientChange = (patientId: string) => {
+    if (operationInFlight.current) return
+    if (dirty) setPendingPatientId(patientId)
+    else changePatient(patientId)
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Prescriptions</h1>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Prescriptions</h1>
           <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage patient medications</p>
         </div>
       </div>
 
       {/* Patient Selection */}
-      <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
-        <select
+      <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
+        <label htmlFor="clinical-patient-select" style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: T.navy, marginBottom: '12px' }}>Select Patient</label>
+        <select id="clinical-patient-select"
           value={selectedPatientId}
-          onChange={(e) => setSelectedPatientId(e.target.value)}
+          onChange={(e) => requestPatientChange(e.target.value)}
+          disabled={loading}
           style={{
             width: '100%',
             padding: '14px 16px',
@@ -210,7 +200,7 @@ export default function DoctorPrescriptionsPage() {
             border: '1px solid rgba(0,0,0,0.1)',
             fontSize: '15px',
             outline: 'none',
-            background: 'white',
+            background: "var(--surface)",
             color: T.navy,
             fontWeight: 500,
             cursor: 'pointer',
@@ -251,12 +241,13 @@ export default function DoctorPrescriptionsPage() {
       </div>
 
       {error && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
+        <div role="alert" style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '16px', color: T.red }}>{error}</div>
       )}
 
       {/* Add Medication Button */}
       {selectedPatientId && (
         <button
+          disabled={loading}
           onClick={() => setShowAddForm(!showAddForm)}
           style={{
             padding: '12px 24px',
@@ -269,16 +260,16 @@ export default function DoctorPrescriptionsPage() {
             cursor: 'pointer',
           }}
         >
-          {showAddForm ? 'Cancel' : 'Add Medication'}
+          {showAddForm ? (dirty ? 'Hide unsaved form' : 'Close form') : 'Add Medication'}
         </button>
       )}
 
       {/* Add Medication Form */}
       {showAddForm && (
-        <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.88)', boxShadow: Sh.card, padding: '24px' }}>
+        <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
           <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 700, color: T.navy }}>New Medication</h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          <fieldset disabled={loading} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Episode ID (Optional)</label>
               <input
@@ -296,9 +287,9 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Medication Name *</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Medication Name (Required)</label>
               <input
                 type="text"
                 value={newMed.name}
@@ -314,7 +305,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Brand</label>
               <input
@@ -332,9 +323,9 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Strength *</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Strength (Required)</label>
               <input
                 type="text"
                 value={newMed.strength}
@@ -350,7 +341,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Dosage</label>
               <input
@@ -368,7 +359,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Frequency</label>
               <input
@@ -386,7 +377,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Duration</label>
               <input
@@ -404,7 +395,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Instructions</label>
               <textarea
@@ -423,7 +414,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Food</label>
               <input
@@ -441,7 +432,7 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Times of Day</label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -453,9 +444,9 @@ export default function DoctorPrescriptionsPage() {
                       padding: '8px 16px',
                       borderRadius: '8px',
                       border: '1px solid rgba(0,0,0,0.08)',
-                      background: newMed.times.includes(time) ? 'rgba(32,181,223,0.1)' : 'rgba(255,255,255,0.88)',
+                      background: newMed.times.includes(time) ? 'rgba(32,181,223,0.1)' : "var(--surface-glass)",
                       color: newMed.times.includes(time) ? 'rgba(32,181,223,1)' : T.slate2,
-                      fontSize: '12px',
+                      fontSize: "13px",
                       fontWeight: 600,
                       cursor: 'pointer',
                     }}
@@ -465,7 +456,7 @@ export default function DoctorPrescriptionsPage() {
                 ))}
               </div>
             </div>
-            
+
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Refill Status</label>
               <input
@@ -483,24 +474,24 @@ export default function DoctorPrescriptionsPage() {
                 }}
               />
             </div>
-            
+
             <button
               onClick={handleAddMedication}
-              disabled={loading || !newMed.name || !newMed.strength}
+              disabled={loading}
               style={{
                 padding: '12px 24px',
                 borderRadius: '12px',
                 border: 'none',
-                background: loading || !newMed.name || !newMed.strength ? 'rgba(32,181,223,0.5)' : 'rgba(32,181,223,1)',
+                background: loading ? 'rgba(32,181,223,0.5)' : 'rgba(32,181,223,1)',
                 color: 'white',
                 fontSize: '14px',
                 fontWeight: 600,
-                cursor: loading || !newMed.name || !newMed.strength ? 'not-allowed' : 'pointer',
+                cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
               {loading ? 'Adding...' : 'Add Medication'}
             </button>
-          </div>
+          </fieldset>
         </div>
       )}
 
@@ -512,11 +503,11 @@ export default function DoctorPrescriptionsPage() {
             <div
               key={med.id}
               style={{
-                background: 'rgba(255,255,255,0.88)',
+                background: "var(--surface-glass)",
                 backdropFilter: 'blur(22px) saturate(175%)',
                 WebkitBackdropFilter: 'blur(22px) saturate(175%)',
                 borderRadius: '16px',
-                border: '1px solid rgba(255,255,255,0.88)',
+                border: "1px solid var(--border)",
                 boxShadow: Sh.card,
                 padding: '20px',
               }}
@@ -526,13 +517,13 @@ export default function DoctorPrescriptionsPage() {
                   <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700, color: T.navy }}>{med.name} {med.brand && `(${med.brand})`}</h3>
                   <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{med.strength} · {med.dosage} · {med.frequency}</p>
                   <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Duration: {med.duration}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Status: {med.status}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Duration: {med.duration}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Status: {med.status}</span>
                     {med.times.length > 0 && (
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2 }}>Times: {med.times.join(', ')}</span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>Times: {med.times.join(', ')}</span>
                     )}
                     {med.refill && (
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: T.green }}>{med.refill}</span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: T.green }}>{med.refill}</span>
                     )}
                   </div>
                   {med.instructions && (
@@ -540,6 +531,7 @@ export default function DoctorPrescriptionsPage() {
                   )}
                 </div>
                 <button
+                  disabled={loading}
                   onClick={() => handleDeleteMedication(med.id)}
                   style={{
                     padding: '8px 16px',
@@ -547,7 +539,7 @@ export default function DoctorPrescriptionsPage() {
                     border: 'none',
                     background: 'rgba(220,38,38,0.1)',
                     color: T.red,
-                    fontSize: '12px',
+                    fontSize: "13px",
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}
@@ -560,11 +552,14 @@ export default function DoctorPrescriptionsPage() {
         </div>
       )}
 
-      {medications.length === 0 && selectedPatientId && !loading && (
+      {medications.length === 0 && selectedPatientId && !loading && !error && (
         <div style={{ textAlign: 'center', padding: '40px', color: T.slate2 }}>
           <p>No medications found for this patient</p>
         </div>
       )}
+      <UnsavedChangesDialog open={pendingPatientId !== null || navigation.active} busy={loading}
+        onKeepEditing={() => { setPendingPatientId(null); if (navigation.active) navigation.reject() }}
+        onDiscard={() => { if (pendingPatientId !== null) changePatient(pendingPatientId); else navigation.accept() }} />
     </div>
   )
 }

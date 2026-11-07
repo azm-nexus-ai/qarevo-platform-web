@@ -38,7 +38,7 @@ export default function AppointmentSelector({ slots }: AppointmentSelectorProps)
                     outlineOffset: '-1px',
                   }
                 : {
-                    background: hov ? 'rgba(32,181,223,0.04)' : 'rgba(4,53,77,0.015)',
+                    background: hov ? 'rgba(32,181,223,0.04)' : "var(--surface-hover)",
                     border: `1px solid ${T.border}`,
                   }),
               display: 'flex',
@@ -53,13 +53,13 @@ export default function AppointmentSelector({ slots }: AppointmentSelectorProps)
                   fontSize: '14px',
                   fontWeight: 600,
                   letterSpacing: '-0.02em',
-                  color: sel ? T.blue : T.navy,
+                  color: sel ? T.link : T.navy,
                   marginBottom: '3px',
                 }}
               >
                 {slot.time}
               </div>
-              <div style={{ fontSize: '12px', color: sel ? '#6B96E8' : T.slate2 }}>
+              <div style={{ fontSize: "13px", color: sel ? '#6B96E8' : T.slate2 }}>
                 {slot.label}
               </div>
             </div>
