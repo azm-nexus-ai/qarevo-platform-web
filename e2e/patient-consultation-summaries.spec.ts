@@ -1,4 +1,4 @@
-import { test, expect, type BrowserContext } from '@playwright/test'
+import { test, expect, type BrowserContext, type Request } from '@playwright/test'
 import { seedPortalSession, testSessionTiming } from './helpers/portal-session'
 
 const first = '66666666-6666-4666-8666-666666666666'
@@ -13,7 +13,7 @@ function catalog(id = first, overrides: Record<string, unknown> = {}) {
 }
 async function prepare(context: BrowserContext) {
   const identity = await seedPortalSession(context, 'patient')
-  const control = { identity, records: [catalog()] as Record<string, unknown>[], summaries: new Map<string, unknown>([[first, published()], [second, published(second)]]), status: 200, reads: 0, holdNext: false, started: false, release: () => {} }
+  const control = { identity, records: [catalog()] as Record<string, unknown>[], summaries: new Map<string, unknown>([[first, published()], [second, published(second)]]), status: 200, reads: 0, holdNext: false, started: false, heldRequest: null as Request | null, release: () => {} }
   await context.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url()), path = url.pathname
     if (path.endsWith('/browser-csrf')) return route.fulfill({ json: { csrf_token: 'synthetic-csrf' } })
@@ -23,7 +23,7 @@ async function prepare(context: BrowserContext) {
       control.reads++
       const status = control.status, body = status === 200 ? control.summaries.get(url.searchParams.get('consultation_id') || '') : { detail: status === 404 ? 'Not published' : 'Synthetic clinical service temporarily unavailable' }
       if (control.holdNext) {
-        control.holdNext = false; control.started = true
+        control.holdNext = false; control.started = true; control.heldRequest = route.request()
         await new Promise<void>(resolve => { control.release = resolve })
       }
       return route.fulfill({ status, json: body ?? { detail: 'No synthetic summary' } })
@@ -113,21 +113,31 @@ test('a late summary response cannot cross a consultation route change', async (
   await expect(page.getByRole('article')).toContainText('Synthetic plan 1')
 })
 
-test('an account change hides the previous summary and rejects its late response', async ({ page, context }) => {
+test('an account change returns to patient sign-in and cannot revive its late summary', async ({ page, context }) => {
   const state = await prepare(context); state.holdNext = true
   state.summaries.set(first, { ...published(), summary: 'Synthetic prior account clinical text' })
   await page.goto(summaryPath())
   await expect.poll(() => state.started).toBe(true)
-  state.identity = { user_id: 'synthetic-new-patient', role: 'PATIENT', session_id: 'synthetic-new-session' }; state.status = 404
-  await page.evaluate(identity => {
-    const key = 'qarevo:patient:identity', value = JSON.stringify(identity)
-    localStorage.setItem(key, value); window.dispatchEvent(new StorageEvent('storage', { key, newValue: value }))
-  }, state.identity)
-  await expect(page.getByRole('heading', { name: 'No consultation summary available', exact: true })).toBeVisible()
-  const lateResponse = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/patient/consultation-summary') && response.status() === 200)
-  state.release(); await lateResponse
+  const heldRequest = state.heldRequest!
+  // Bind to this exact old request before navigation. Request.response() settles
+  // to null if the sign-in navigation cancels it, otherwise wait for its body.
+  const lateRequestSettled = heldRequest.response().then(async response => {
+    if (response) { expect(response.status()).toBe(200); await response.finished() }
+    else expect(heldRequest.failure()).not.toBeNull()
+  })
+  state.identity = { user_id: 'synthetic-new-patient', role: 'PATIENT', session_id: 'synthetic-new-session' }
+  try {
+    await page.evaluate(identity => {
+      const key = 'qarevo:patient:identity', value = JSON.stringify(identity)
+      localStorage.setItem(key, value); window.dispatchEvent(new StorageEvent('storage', { key, newValue: value }))
+    }, state.identity)
+    await expect(page).toHaveURL(/\/auth\/sign-in$/)
+  } finally { state.release() }
+  await lateRequestSettled
+  await expect(page).toHaveURL(/\/auth\/sign-in$/)
   await expect(page.getByText('Synthetic prior account clinical text', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('article')).toHaveCount(0)
+  expect(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))).not.toContain('Synthetic prior account clinical text')
 })
 
 test('malformed or duplicate consultation ids are not fetched or reflected as navigation', async ({ page, context }) => {
