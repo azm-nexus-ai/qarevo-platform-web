@@ -1,4 +1,4 @@
-export type ClinicalStatusDomain = 'consultation' | 'medication' | 'care-plan' | 'lab-request' | 'record' | 'episode'
+export type ClinicalStatusDomain = 'appointment' | 'consultation' | 'medication' | 'care-plan' | 'lab-request' | 'record' | 'episode'
 export type ClinicalStatusTone = 'info' | 'success' | 'warning' | 'neutral' | 'danger'
 type StatusDescription = { label: string; tone: ClinicalStatusTone }
 
@@ -9,6 +9,12 @@ const common: Record<string, StatusDescription> = {
   FAILED: { label: 'Failed', tone: 'danger' },
 }
 const domains: Record<ClinicalStatusDomain, Record<string, StatusDescription>> = {
+  appointment: {
+    BOOKED: { label: 'Booked', tone: 'info' },
+    SCHEDULED: { label: 'Scheduled', tone: 'info' },
+    COMPLETED: { label: 'Completed', tone: 'success' },
+    NO_SHOW: { label: 'Not attended', tone: 'warning' },
+  },
   consultation: {
     SCHEDULED: { label: 'Scheduled', tone: 'info' },
     STARTED: { label: 'In progress', tone: 'info' },

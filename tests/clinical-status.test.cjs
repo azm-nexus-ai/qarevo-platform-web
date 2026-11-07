@@ -62,3 +62,10 @@ test('medical attachment limit fits the current multipart BFF ceiling and reject
   assert.match(medicalUploadError(MAX_MEDICAL_UPLOAD_BYTES+1),/3 MB or smaller/)
   assert.match(medicalUploadError(0),/non-empty/)
 })
+
+test('appointment badges distinguish bookings, completion, nonattendance and cancellation', () => {
+  for (const [state,label,tone] of [['booked','Booked','info'],['SCHEDULED','Scheduled','info'],['completed','Completed','success'],['NO_SHOW','Not attended','warning'],['cancelled','Cancelled','neutral']]) {
+    assert.equal(statuses.clinicalStatus(state,'appointment').label,label)
+    assert.equal(statuses.clinicalStatus(state,'appointment').tone,tone)
+  }
+})

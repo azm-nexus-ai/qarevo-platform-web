@@ -10,6 +10,16 @@ Workspace reads use one conditional aggregate and one bounded page read: nonempt
 
 Status: identity/clinical-data hardening and independent payment/domain foundations have progressed across the original phases. Complete hosted patient/doctor/admin acceptance, controlled notification delivery and the approved bounded two-person video check remain open. Provider sandbox access, practice/insurance arrangements, approved fees/invoicing rules, legal approval and production operational readiness are still launch gates. No phase or production MVP is declared complete solely from automated tests. Frontend releases must pass the complete browser suite and its no-flaky gate before promotion; exact results are recorded in GitHub CI and release reports.
 
+## Clinical operations increment — 7 November 2026
+
+Stage 2 foundations continue without activating video, AI, payment providers or new infrastructure. Doctor appointment summaries now receive a canonical `upcoming_count`: provider-owned BOOKED/SCHEDULED rows starting at or after the current UTC instant, independent of filters or pagination. The same aggregate supplies the total count; the unfiltered list still needs two SQL reads. The UI uses shared semantic badges and exposes loading, empty, retry and refresh states without removing its filters.
+
+Doctor prescription/care-plan reads share the patient-owned read projection. Reading an empty list no longer takes a patient write lock, creates a pending row or repairs saved payloads. Existing mutation locking and doctor–patient authorization remain enforced.
+
+Lab reads and writes are bound to their patient, portal and session. Late reads cannot replace another patient's list; synchronous mutation guards prevent duplicate submissions. Unsaved lab/medication drafts use the existing navigation confirmation. Editing a lab request sends changed fields only, and competing order controls stay disabled while its editor is open. Result uploads use the existing 3 MB browser limit and can retry the same file.
+
+Lab datetime fields display the browser's local timezone and preserve the original instant, seconds and DST occurrence when unchanged. Invalid/nonexistent times and newly ambiguous repeated hours require correction; choosing an explicit offset for a new repeated hour remains future work. These safeguards do not verify a laboratory appointment or publish clinical/legal approval. Source commits must pass the complete API/PostgreSQL and frontend/browser gates before development promotion; hosted role acceptance remains a separate manual check. The owner deferred the video rehearsal and comprehensive end-to-end acceptance.
+
 ## Release 1: explicit clinician approval
 
 - Login never grants licence approval, activates a pending clinician or invents phone verification.

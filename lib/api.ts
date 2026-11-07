@@ -993,6 +993,7 @@ export type DoctorAppointmentSummary = {
 export type DoctorAppointmentsResponse = {
     appointments: DoctorAppointmentSummary[];
     total_count: number;
+    upcoming_count: number;
     filtered_count: number;
     page: number;
     page_size: number;

@@ -1,6 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigationGuard } from 'nextjs-nav-guard'
+import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
+import { usePortalAction } from '@/lib/portal-action'
+import { medicalUploadError } from '@/lib/clinical-upload'
+import { orderDateFromIso, orderDateToIso } from '@/lib/clinical-order-dates'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import {
@@ -50,20 +55,15 @@ const inputStyle = {
   outline: 'none',
 } as const
 
-function toIso(value?: string) {
-  if (!value) return ''
-  return new Date(value).toISOString()
-}
-
-function fromIso(value?: string | null) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString().slice(0, 16)
-}
-
 export default function DoctorLabOrdersPage() {
   const router = useRouter()
+  const captureAction = usePortalAction()
+  const operationInFlight = useRef(false)
+  const readVersion = useRef(0)
+  const patientScope = useRef('')
+  const baseline = useRef({ ...emptyForm })
+  const originalDates = useRef<{ scheduled_for?: string | null; recommended_date?: string | null }>({})
+  const [pendingChange, setPendingChange] = useState<null | { patientId: string } | { edit: PatientLabRequest } | { cancel: true }>(null)
   const [patients, setPatients] = useState<DoctorPatient[]>([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const [labTests, setLabTests] = useState<PatientLabRequest[]>([])
@@ -73,6 +73,9 @@ export default function DoctorLabOrdersPage() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<DoctorLabOrderPayload>(emptyForm)
+
+  const dirty = showAddForm && JSON.stringify(form) !== JSON.stringify(baseline.current)
+  const navigation = useNavigationGuard({ enabled: ({ to }) => (dirty || saving) && !to.startsWith('/auth/') })
 
   const selectedPatient = useMemo(
     () => patients.find((patient) => patient.patient_id === selectedPatientId),
@@ -86,11 +89,13 @@ export default function DoctorLabOrdersPage() {
       return
     }
 
+    const action = captureAction()
     const fetchPatients = async () => {
       try {
         const data = await getDoctorPatients()
-        setPatients(data.patients || [])
+        if (action.isCurrent()) setPatients(data.patients || [])
       } catch (err) {
+        if (!action.isCurrent()) return
         if (isAuthError(err)) {
           clearPortalSession()
           router.replace('/auth/doctor/login')
@@ -101,48 +106,53 @@ export default function DoctorLabOrdersPage() {
     }
 
     fetchPatients()
-  }, [router])
+  }, [router, captureAction])
 
-  const fetchLabTests = async (patientId = selectedPatientId) => {
-    if (!patientId) return
-    setLoading(true)
-    setError(null)
+  const fetchLabTests = async (patientId = patientScope.current) => {
+    if (!patientId || operationInFlight.current) return
+    const action = captureAction()
+    const version = ++readVersion.current
+    const isCurrent = () => action.isCurrent() && version === readVersion.current && patientId === patientScope.current
+    setLoading(true); setError(null)
     try {
       const data = await getDoctorLabOrders(patientId)
-      setLabTests(data.test_requests || [])
+      if (isCurrent()) setLabTests(data.test_requests || [])
     } catch (err) {
-      if (isAuthError(err)) {
-        clearPortalSession()
-        router.replace('/auth/doctor/login')
-        return
-      }
-      setError(getApiErrorDetail(err) ?? 'Unable to load lab orders.')
-    } finally {
-      setLoading(false)
-    }
+      if (!isCurrent()) return
+      if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
+      setError(getApiErrorDetail(err) ?? 'Unable to load lab orders. Use Refresh to retry.')
+    } finally { if (isCurrent()) setLoading(false) }
   }
 
+  const changePatient = (patientId: string) => {
+    if (operationInFlight.current) return
+    ++readVersion.current
+    patientScope.current = patientId
+    setSelectedPatientId(patientId); setLabTests([]); setShowAddForm(false)
+    setEditingId(null); setError(null); setLoading(false)
+    baseline.current = { ...emptyForm, patient_id: patientId }
+    originalDates.current = {}
+    setForm(baseline.current); setPendingChange(null)
+    if (patientId) void fetchLabTests(patientId)
+  }
   const handlePatientChange = (patientId: string) => {
-    setSelectedPatientId(patientId)
-    setLabTests([])
-    setShowAddForm(false)
-    setEditingId(null)
-    setForm({ ...emptyForm, patient_id: patientId })
-    if (patientId) fetchLabTests(patientId)
+    if (operationInFlight.current) return
+    if (dirty) setPendingChange({ patientId })
+    else changePatient(patientId)
   }
 
   const beginEdit = (test: PatientLabRequest) => {
     setEditingId(test.id)
     setShowAddForm(true)
-    setForm({
+    const nextForm = {
       patient_id: selectedPatientId,
       episode_id: test.episode_id ?? '',
       title: test.title,
       category: test.category ?? '',
       test: test.test ?? '',
       status: test.status || 'Pending',
-      scheduled_for: fromIso(test.scheduled_for),
-      recommended_date: fromIso(test.recommended_date),
+      scheduled_for: orderDateFromIso(test.scheduled_for),
+      recommended_date: orderDateFromIso(test.recommended_date),
       recommended_lab_name: test.recommended_lab_name ?? '',
       recommended_lab_address: test.recommended_lab_address ?? '',
       description: test.description ?? '',
@@ -150,87 +160,92 @@ export default function DoctorLabOrdersPage() {
       priority: test.priority ?? 'Routine',
       processing_time: test.processing_time ?? '',
       preparation_instructions: test.preparation_instructions ?? '',
-    })
+    }
+    baseline.current = nextForm
+    originalDates.current = { scheduled_for: test.scheduled_for, recommended_date: test.recommended_date }
+    setForm(nextForm); setPendingChange(null)
   }
 
   const resetForm = () => {
     setEditingId(null)
     setShowAddForm(false)
-    setForm({ ...emptyForm, patient_id: selectedPatientId })
+    baseline.current = { ...emptyForm, patient_id: patientScope.current }
+    originalDates.current = {}
+    setForm(baseline.current); setPendingChange(null)
+  }
+
+  // Serialize writes synchronously and bind their continuations to the patient,
+  // portal, session and page that started the request.
+  const beginMutation = () => {
+    if (!patientScope.current || operationInFlight.current) return null
+    operationInFlight.current = true
+    ++readVersion.current
+    const action = captureAction()
+    const patientId = patientScope.current
+    setSaving(true); setLoading(false); setError(null)
+    return { patientId, isCurrent: () => action.isCurrent() && patientScope.current === patientId,
+      finish: () => { operationInFlight.current = false; if (action.isCurrent() && patientScope.current === patientId) setSaving(false) } }
   }
 
   const handleSave = async () => {
     if (!selectedPatientId || !form.title.trim()) { setError('Select a patient and enter a lab test title.'); return }
-    setSaving(true)
-    setError(null)
-    const payload = {
-      ...form,
-      patient_id: selectedPatientId,
-      title: form.title.trim(),
-      scheduled_for: toIso(form.scheduled_for),
-      recommended_date: toIso(form.recommended_date),
-    }
+    let dates: { scheduled_for: string; recommended_date: string }
     try {
-      const response = editingId
-        ? await updateDoctorLabOrder({ ...payload, test_id: editingId })
-        : await createDoctorLabOrder(payload)
-      setLabTests(response.test_requests || [])
-      resetForm()
-    } catch (err) {
-      setError(getApiErrorDetail(err) ?? 'Unable to save this lab order.')
-    } finally {
-      setSaving(false)
-    }
+      dates = { scheduled_for: orderDateToIso(form.scheduled_for, originalDates.current.scheduled_for),
+        recommended_date: orderDateToIso(form.recommended_date, originalDates.current.recommended_date) }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Check the lab order dates.'); return }
+    const operation = beginMutation()
+    if (!operation) return
+    try {
+      const payload = { ...form, ...dates, patient_id: operation.patientId, title: form.title.trim() }
+      const savedBaseline = { ...baseline.current,
+        scheduled_for: orderDateToIso(baseline.current.scheduled_for, originalDates.current.scheduled_for),
+        recommended_date: orderDateToIso(baseline.current.recommended_date, originalDates.current.recommended_date) }
+      // Send only deliberate edits: unrelated changes made in another view must
+      // not be replaced by this editor's older snapshot.
+      const changes = Object.fromEntries(Object.entries(payload).filter(([key, value]) => key === 'patient_id' || value !== savedBaseline[key as keyof DoctorLabOrderPayload]))
+      const response = editingId ? await updateDoctorLabOrder({ ...changes, patient_id: operation.patientId, test_id: editingId }) : await createDoctorLabOrder(payload)
+      if (!operation.isCurrent()) return
+      setLabTests(response.test_requests || []); resetForm()
+    } catch (err) { if (operation.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to save this lab order. Your changes are still here.') }
+    finally { operation.finish() }
   }
 
   const handleStatusChange = async (test: PatientLabRequest, status: string) => {
-    if (!selectedPatientId) return
-    setSaving(true)
-    setError(null)
+    const operation = beginMutation()
+    if (!operation) return
     try {
-      const response = await updateDoctorLabOrder({
-        patient_id: selectedPatientId,
-        test_id: test.id,
-        status,
-      })
-      setLabTests(response.test_requests || [])
-    } catch (err) {
-      setError(getApiErrorDetail(err) ?? 'Unable to update lab order status.')
-    } finally {
-      setSaving(false)
-    }
+      const response = await updateDoctorLabOrder({ patient_id: operation.patientId, test_id: test.id, status })
+      if (operation.isCurrent()) setLabTests(response.test_requests || [])
+    } catch (err) { if (operation.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to update lab order status.') }
+    finally { operation.finish() }
   }
 
   const handleDelete = async (testId: string) => {
-    if (!selectedPatientId) return
-    setSaving(true)
-    setError(null)
+    const operation = beginMutation()
+    if (!operation) return
     try {
-      const response = await deleteDoctorLabOrder(selectedPatientId, testId)
+      const response = await deleteDoctorLabOrder(operation.patientId, testId)
+      if (!operation.isCurrent()) return
       setLabTests(response.test_requests || [])
       if (editingId === testId) resetForm()
-    } catch (err) {
-      setError(getApiErrorDetail(err) ?? 'Unable to delete this lab order.')
-    } finally {
-      setSaving(false)
-    }
+    } catch (err) { if (operation.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to delete this lab order.') }
+    finally { operation.finish() }
   }
 
   const handleUploadResult = async (test: PatientLabRequest, file?: File) => {
-    if (!selectedPatientId || !file) return
-    setSaving(true)
-    setError(null)
+    if (!file) return
+    const uploadError = medicalUploadError(file.size) || (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? 'Choose a PDF, PNG, JPEG or WebP file.' : null)
+    if (uploadError) { setError(uploadError); return }
+    const operation = beginMutation()
+    if (!operation) return
     const formData = new FormData()
-    formData.set('file', file)
-    formData.set('note', `${test.title} result uploaded by doctor`)
+    formData.set('file', file); formData.set('note', 'Lab result uploaded by clinician')
     try {
-      const response = await uploadDoctorLabResult(selectedPatientId, test.id, formData)
-      setLabTests(response.test_requests || [])
-    } catch (err) {
-      setError(getApiErrorDetail(err) ?? 'Unable to upload this lab result.')
-    } finally {
-      setSaving(false)
-    }
+      const response = await uploadDoctorLabResult(operation.patientId, test.id, formData)
+      if (operation.isCurrent()) setLabTests(response.test_requests || [])
+    } catch (err) { if (operation.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to upload this lab result.') }
+    finally { operation.finish() }
   }
 
   return (
@@ -239,12 +254,12 @@ export default function DoctorLabOrdersPage() {
         .doctor-lab-page { display: grid; gap: 18px; }
         .dl-card { background: var(--surface); backdrop-filter: blur(22px) saturate(175%); -webkit-backdrop-filter: blur(22px) saturate(175%); border: 1px solid var(--border); border-radius: 20px; box-shadow: ${Sh.card}; padding: 22px; }
         .dl-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
-        .dl-btn { min-height: 42px; border-radius: 12px; border: 1px solid var(--border); background: white; color: ${T.navy}; padding: 0 14px; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .dl-btn { min-height: 42px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; padding: 0 14px; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .dl-btn:hover, .dl-btn:focus-visible { transform: translateY(-1px); box-shadow: ${Sh.glow}; outline: none; }
         .dl-btn.primary { border: none; background: linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%); color: white; }
         .dl-btn.danger { color: ${T.red}; border-color: rgba(220,38,38,0.18); background: rgba(220,38,38,0.06); }
         .dl-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
-        .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
         .dl-field { display: grid; gap: 6px; }
         .dl-field span, .dl-eyebrow { font-size: 11px; font-weight: 800; color: ${T.slate2}; letter-spacing: 0.06em; text-transform: uppercase; }
         .dl-order { border-radius: 18px; border: 1px solid var(--border); background: var(--surface-subtle); padding: 16px; display: grid; gap: 12px; }
@@ -259,15 +274,15 @@ export default function DoctorLabOrdersPage() {
           <h1 style={{ margin: '6px 0 4px', fontSize: '28px', fontWeight: 800, color: T.navy }}>Lab Orders</h1>
           <p style={{ margin: 0, fontSize: '14px', color: T.slate }}>Create, update, and track patient lab requests that appear in the patient portal.</p>
         </div>
-        <button className='dl-btn primary' type='button' onClick={() => setShowAddForm(true)} disabled={!selectedPatientId}>Order Lab Test</button>
+        <button className='dl-btn primary' type='button' onClick={() => setShowAddForm(true)} disabled={!selectedPatientId || saving} aria-expanded={showAddForm}>Order Lab Test</button>
       </div>
 
-      {error && <div className='dl-card' style={{ color: T.red, border: '1px solid rgba(220,38,38,0.2)' }}>{error}</div>}
+      {error && <div role='alert' className='dl-card' style={{ color: T.red, border: '1px solid rgba(220,38,38,0.2)' }}>{error}</div>}
 
       <section className='dl-card'>
         <label className='dl-field'>
           <span>Select patient</span>
-          <select style={inputStyle} value={selectedPatientId} onChange={(event) => handlePatientChange(event.target.value)}>
+          <select style={inputStyle} value={selectedPatientId} onChange={(event) => handlePatientChange(event.target.value)} disabled={saving}>
             <option value=''>Choose a patient</option>
             {patients.map((patient) => (
               <option key={patient.patient_id} value={patient.patient_id}>
@@ -290,10 +305,11 @@ export default function DoctorLabOrdersPage() {
               <p className='dl-eyebrow' style={{ margin: 0 }}>{editingId ? 'Edit request' : 'New request'}</p>
               <h2 style={{ margin: '5px 0 0', color: T.navy }}>{editingId ? 'Update lab order' : 'Order a lab test'}</h2>
             </div>
-            <button className='dl-btn' type='button' onClick={resetForm}>Cancel</button>
+            <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ cancel: true }) : resetForm()} disabled={saving}>Cancel</button>
           </div>
+          <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div className='dl-grid'>
-            <label className='dl-field'><span>Test title</span><input style={inputStyle} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder='Complete Blood Count' /></label>
+            <label className='dl-field'><span>Test title (required)</span><input style={inputStyle} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder='Complete Blood Count' /></label>
             <label className='dl-field'><span>Category</span><input style={inputStyle} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder='Blood Test' /></label>
             <label className='dl-field'><span>Specific test</span><input style={inputStyle} value={form.test} onChange={(event) => setForm({ ...form, test: event.target.value })} placeholder='CBC' /></label>
             <label className='dl-field'><span>Priority</span><select style={inputStyle} value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })}><option>Routine</option><option>Urgent</option><option>High</option></select></label>
@@ -312,6 +328,8 @@ export default function DoctorLabOrdersPage() {
           <button className='dl-btn primary' type='button' onClick={handleSave} disabled={saving} style={{ marginTop: '14px' }}>
             {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Lab Request'}
           </button>
+          </fieldset>
+          <p style={{ margin: '12px 0 0', color: T.slate2, fontSize: '13px' }}>Dates and times use your device’s local timezone. Changes remain unsaved until you save this request.</p>
         </section>
       )}
 
@@ -321,10 +339,11 @@ export default function DoctorLabOrdersPage() {
             <p className='dl-eyebrow' style={{ margin: 0 }}>Patient requests</p>
             <h2 style={{ margin: '5px 0 0', color: T.navy }}>Lab test orders</h2>
           </div>
-          <button className='dl-btn' type='button' onClick={() => fetchLabTests()} disabled={!selectedPatientId || loading}>{loading ? 'Loading...' : 'Refresh'}</button>
+          <button className='dl-btn' type='button' onClick={() => fetchLabTests()} disabled={!selectedPatientId || loading || saving}>{loading ? 'Loading...' : 'Refresh'}</button>
         </div>
         {!selectedPatientId && <div className='dl-empty'>Choose a patient to view or create lab requests.</div>}
-        {selectedPatientId && !loading && labTests.length === 0 && <div className='dl-empty'>No lab requests yet for this patient.</div>}
+        {loading && <p role='status'>Loading lab requests…</p>}
+        {selectedPatientId && !loading && !error && labTests.length === 0 && <div className='dl-empty'>No lab requests yet for this patient.</div>}
         <div style={{ display: 'grid', gap: '12px' }}>
           {labTests.map((test) => (
             <article className='dl-order' key={test.id}>
@@ -334,10 +353,11 @@ export default function DoctorLabOrdersPage() {
                   <p style={{ margin: 0, color: T.slate }}>{test.description || test.test || 'No description added.'}</p>
                 </div>
                 <select
+                  aria-label={`Status for ${test.title}`}
                   style={{ ...inputStyle, width: '190px' }}
                   value={test.status}
                   onChange={(event) => handleStatusChange(test, event.target.value)}
-                  disabled={saving}
+                  disabled={saving || showAddForm}
                 >
                   <option>Pending</option>
                   <option>Booked</option>
@@ -354,7 +374,7 @@ export default function DoctorLabOrdersPage() {
                 <span>Recommended lab: {test.recommended_lab_name || 'Any accredited lab'}</span>
                 {test.result_filename && <span>Result: {test.result_filename}</span>}
               </div>
-              <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
                 <div style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
                   <div className='dl-eyebrow'>Doctor lab guidance</div>
                   <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.recommended_lab_name || 'Any accredited laboratory'}</div>
@@ -369,23 +389,32 @@ export default function DoctorLabOrdersPage() {
               </div>
               {test.reason && <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>Reason: {test.reason}</p>}
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button className='dl-btn' type='button' onClick={() => beginEdit(test)}>Edit</button>
+                <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ edit: test }) : beginEdit(test)} disabled={saving}>Edit</button>
                 <input
                   id={`lab-result-${test.id}`}
                   type='file'
                   accept='.pdf,image/png,image/jpeg,image/webp'
+                  disabled={saving || showAddForm}
                   style={{ display: 'none' }}
-                  onChange={(event) => handleUploadResult(test, event.target.files?.[0])}
+                  onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleUploadResult(test, file) }}
                 />
-                <label className='dl-btn primary' htmlFor={`lab-result-${test.id}`} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <button className='dl-btn primary' type='button' disabled={saving || showAddForm} onClick={() => document.getElementById(`lab-result-${test.id}`)?.click()}>
                   Upload Result
-                </label>
-                <button className='dl-btn danger' type='button' onClick={() => handleDelete(test.id)} disabled={saving}>Delete</button>
+                </button>
+                <button className='dl-btn danger' type='button' onClick={() => handleDelete(test.id)} disabled={saving || showAddForm}>Delete</button>
               </div>
             </article>
           ))}
         </div>
       </section>
+      <UnsavedChangesDialog open={pendingChange !== null || navigation.active} busy={saving}
+        onKeepEditing={() => { setPendingChange(null); if (navigation.active) navigation.reject() }}
+        onDiscard={() => {
+          if (pendingChange && 'patientId' in pendingChange) changePatient(pendingChange.patientId)
+          else if (pendingChange && 'edit' in pendingChange) beginEdit(pendingChange.edit)
+          else if (pendingChange) resetForm()
+          else navigation.accept()
+        }} />
     </div>
   )
 }

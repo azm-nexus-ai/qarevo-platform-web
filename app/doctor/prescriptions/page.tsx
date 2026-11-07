@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useNavigationGuard } from 'nextjs-nav-guard'
+import { usePortalAction } from '@/lib/portal-action'
 import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import { T, Sh } from '@/lib/tokens'
 import {
@@ -47,6 +49,7 @@ const EMPTY_MEDICATION = {
 
 export default function DoctorPrescriptionsPage() {
   const router = useRouter()
+  const captureAction = usePortalAction()
   const [patients, setPatients] = useState<DoctorPatient[]>([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const [medications, setMedications] = useState<Medication[]>([])
@@ -57,12 +60,17 @@ export default function DoctorPrescriptionsPage() {
   const [newMed, setNewMed] = useState(EMPTY_MEDICATION)
   const [pendingPatientId, setPendingPatientId] = useState<string | null>(null)
 
+  const dirty = JSON.stringify(newMed) !== JSON.stringify(EMPTY_MEDICATION)
+  const navigation = useNavigationGuard({ enabled: ({ to }) => (dirty || loading) && !to.startsWith('/auth/') })
+
   useEffect(() => {
+    const action = captureAction()
     const fetchPatients = async () => {
       try {
         const data = await getDoctorPatients()
-        setPatients(data.patients || [])
+        if (action.isCurrent()) setPatients(data.patients || [])
       } catch (err) {
+        if (!action.isCurrent()) return
         if (isAuthError(err)) {
           router.replace('/auth/doctor/login')
           return
@@ -72,19 +80,22 @@ export default function DoctorPrescriptionsPage() {
     }
 
     fetchPatients()
-  }, [router])
+  }, [router, captureAction])
 
   const fetchMedications = async () => {
     if (!selectedPatientId) return
 
     if (operationInFlight.current) return
     operationInFlight.current = true
+    const action = captureAction()
     setLoading(true)
     setError(null)
     try {
       const data = await apiGet<{medications: Medication[]}>(`/api/v1/doctor/prescriptions/${selectedPatientId}`)
+      if (!action.isCurrent()) return
       setMedications(data.medications || [])
     } catch (err) {
+      if (!action.isCurrent()) return
       if (isAuthError(err)) {
         router.replace('/auth/doctor/login')
         return
@@ -93,7 +104,7 @@ export default function DoctorPrescriptionsPage() {
       setError(getApiErrorDetail(err) || 'Unable to load medications. Please retry.')
     } finally {
       operationInFlight.current = false
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
@@ -102,19 +113,22 @@ export default function DoctorPrescriptionsPage() {
 
     if (operationInFlight.current) return
     operationInFlight.current = true
+    const action = captureAction()
     setLoading(true)
     setError(null)
     try {
       const data = await apiPost<{medications: Medication[]}>(`/api/v1/doctor/prescriptions`, { patient_id: selectedPatientId, ...newMed })
+      if (!action.isCurrent()) return
       setMedications(data.medications || [])
       setNewMed(EMPTY_MEDICATION)
       setShowAddForm(false)
     } catch (err) {
+      if (!action.isCurrent()) return
       if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
       setError(getApiErrorDetail(err) || 'Unable to add medication. Please retry.')
     } finally {
       operationInFlight.current = false
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
@@ -123,17 +137,20 @@ export default function DoctorPrescriptionsPage() {
 
     if (operationInFlight.current) return
     operationInFlight.current = true
+    const action = captureAction()
     setLoading(true)
     setError(null)
     try {
       const data = await apiDelete<{medications: Medication[]}>(`/api/v1/doctor/prescriptions/${selectedPatientId}/${medId}`)
+      if (!action.isCurrent()) return
       setMedications(data.medications || [])
     } catch (err) {
+      if (!action.isCurrent()) return
       if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
       setError(getApiErrorDetail(err) || 'Unable to delete medication. Please retry.')
     } finally {
       operationInFlight.current = false
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
@@ -154,7 +171,8 @@ export default function DoctorPrescriptionsPage() {
     setPendingPatientId(null)
   }
   const requestPatientChange = (patientId: string) => {
-    if (JSON.stringify(newMed) !== JSON.stringify(EMPTY_MEDICATION)) setPendingPatientId(patientId)
+    if (operationInFlight.current) return
+    if (dirty) setPendingPatientId(patientId)
     else changePatient(patientId)
   }
 
@@ -229,6 +247,7 @@ export default function DoctorPrescriptionsPage() {
       {/* Add Medication Button */}
       {selectedPatientId && (
         <button
+          disabled={loading}
           onClick={() => setShowAddForm(!showAddForm)}
           style={{
             padding: '12px 24px',
@@ -241,7 +260,7 @@ export default function DoctorPrescriptionsPage() {
             cursor: 'pointer',
           }}
         >
-          {showAddForm ? 'Cancel' : 'Add Medication'}
+          {showAddForm ? (dirty ? 'Hide unsaved form' : 'Close form') : 'Add Medication'}
         </button>
       )}
 
@@ -250,7 +269,7 @@ export default function DoctorPrescriptionsPage() {
         <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(175%)', WebkitBackdropFilter: 'blur(22px) saturate(175%)', borderRadius: '16px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '24px' }}>
           <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 700, color: T.navy }}>New Medication</h3>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <fieldset disabled={loading} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '8px' }}>Episode ID (Optional)</label>
               <input
@@ -472,7 +491,7 @@ export default function DoctorPrescriptionsPage() {
             >
               {loading ? 'Adding...' : 'Add Medication'}
             </button>
-          </div>
+          </fieldset>
         </div>
       )}
 
@@ -512,6 +531,7 @@ export default function DoctorPrescriptionsPage() {
                   )}
                 </div>
                 <button
+                  disabled={loading}
                   onClick={() => handleDeleteMedication(med.id)}
                   style={{
                     padding: '8px 16px',
@@ -537,9 +557,9 @@ export default function DoctorPrescriptionsPage() {
           <p>No medications found for this patient</p>
         </div>
       )}
-      <UnsavedChangesDialog open={pendingPatientId !== null} busy={loading}
-        onKeepEditing={() => setPendingPatientId(null)}
-        onDiscard={() => { if (pendingPatientId !== null) changePatient(pendingPatientId) }} />
+      <UnsavedChangesDialog open={pendingPatientId !== null || navigation.active} busy={loading}
+        onKeepEditing={() => { setPendingPatientId(null); if (navigation.active) navigation.reject() }}
+        onDiscard={() => { if (pendingPatientId !== null) changePatient(pendingPatientId); else navigation.accept() }} />
     </div>
   )
 }
