@@ -39,6 +39,9 @@ test('intake sends fields once, reuses the episode after failure, and blocks dup
  await page.getByRole('button',{name:'Continue to Review',exact:true}).click()
  await expect(page.getByRole('status').filter({hasText:'Saving and submitting your intake'})).toBeVisible()
  await expect(page.locator('#clinical-intake-form')).toHaveAttribute('aria-busy','true')
+ // aria-busy becomes visible before CSRF/request scheduling reaches the API.
+ // Hold the actual retry in-flight before injecting another submit event.
+ await expect.poll(()=>state.saved).toBe(2)
  await page.locator('#clinical-intake-form').evaluate(form=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})))
  expect(state.created).toBe(1);expect(state.saved).toBe(2)
  state.finish()
