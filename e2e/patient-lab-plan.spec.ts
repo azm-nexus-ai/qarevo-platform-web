@@ -5,7 +5,7 @@ test.use({ timezoneId: 'Europe/Berlin' })
 async function prepare(context: BrowserContext) {
   const identity = await seedPortalSession(context, 'patient')
   const control = { record: { id: 'synthetic-lab-request', title: 'Synthetic laboratory request', status: 'Pending', scheduled_for: '', selected_lab_name: '', selected_lab_address: '', home_collection: false } as Record<string, unknown>,
-    extraRecords: [] as Record<string, unknown>[], writes: [] as string[], failNext: false, hold: false, release: () => {} }
+    extraRecords: [] as Record<string, unknown>[], writes: [] as string[], failNext: false, conflictNext: false, hold: false, release: () => {} }
   const payload = () => ({ test_requests: [control.record, ...control.extraRecords], partner_labs: [], preparation: [], recent_uploads: [], summary: { requested_tests: 1, pending_tests: 1, completed_tests: 0, upcoming_lab_appointment: control.record.scheduled_for || null, estimated_completion: null } })
   await context.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
@@ -17,6 +17,10 @@ async function prepare(context: BrowserContext) {
     if (path.endsWith('/patient/lab-requests/synthetic-lab-request/book')) {
       const body = route.request().postData() || ''
       control.writes.push(body)
+      if (control.conflictNext) {
+        control.conflictNext = false; control.record.status = 'Results Available'
+        return route.fulfill({ status: 409, json: { detail: 'This lab request can no longer be planned or rescheduled here. Contact your care team; existing results and clinical progress are preserved.' } })
+      }
       if (control.failNext) { control.failNext = false; return route.fulfill({ status: 503, json: { detail: 'Synthetic plan unavailable; retry saving.' } }) }
       if (control.hold) await new Promise<void>(resolve => { control.release = resolve })
       const field = (name: string) => body.match(new RegExp(`name="${name}"\\r\\n\\r\\n([^\\r]*)`))?.[1] || ''
@@ -76,8 +80,7 @@ test('mobile dark-mode lab planning is keyboard accessible and rejects nonexiste
   const control = await prepare(context)
   await page.setViewportSize({ width: 320, height: 900 })
   await page.goto('/patient/lab-requests')
-  const theme = page.getByRole('navigation', { name: 'Account appearance', exact: true })
-  if (await page.locator('html').getAttribute('data-theme') !== 'dark') await theme.getByRole('button', { name: 'Dark mode', exact: true }).click()
+  await page.getByRole('button', { name: 'Dark mode', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.getByLabel('Date (required)', { exact: true }).fill('2026-03-29')
   await page.getByLabel('Time (required)', { exact: true }).fill('02:30')
@@ -87,6 +90,12 @@ test('mobile dark-mode lab planning is keyboard accessible and rejects nonexiste
   await expect(page.locator('#lab-plan-date-error')).toContainText('valid local date and time')
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   expect(control.writes).toHaveLength(0)
+  await page.getByLabel('Date (required)', { exact: true }).fill('2026-11-10')
+  await page.getByLabel('Time (required)', { exact: true }).fill('10:15')
+  await save.click()
+  await expect(page.getByRole('status').filter({ hasText: 'Your patient-reported visit is saved.' })).toBeVisible()
+  await expect(page.getByText('Patient-reported appointment', { exact: true }).first()).toBeVisible()
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
 })
 
 
@@ -110,4 +119,21 @@ test('reloading lab requests keeps visit details associated with the selected re
   await expect(page.getByLabel('Lab or centre name (required)', { exact: true })).toHaveValue('Synthetic Alpha laboratory')
   await expect(page.getByLabel('Date (required)', { exact: true })).toHaveValue('2026-11-10')
   expect(control.writes).toHaveLength(0)
+})
+
+
+test('a clinical-state conflict explains recovery without treating it as a session change', async ({ page, context }) => {
+  const control = await prepare(context); control.conflictNext = true
+  await page.goto('/patient/lab-requests')
+  await page.getByLabel('Date (required)', { exact: true }).fill('2026-11-10')
+  await page.getByLabel('Time (required)', { exact: true }).fill('10:15')
+  await page.getByLabel('Lab or centre name (required)', { exact: true }).fill('Synthetic arranged laboratory')
+  await page.getByRole('button', { name: 'Save patient-reported visit', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'This lab request can no longer be planned' })).toBeVisible()
+  await expect(page.getByText('Your session changed', { exact: false })).toHaveCount(0)
+  await expect(page.getByLabel('Lab or centre name (required)', { exact: true })).toHaveValue('Synthetic arranged laboratory')
+  await page.getByRole('button', { name: 'Reload saved requests', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Save patient-reported visit', exact: true })).toBeDisabled()
+  await expect(page).toHaveURL(/\/patient\/lab-requests$/)
+  expect(control.writes).toHaveLength(1)
 })

@@ -142,10 +142,20 @@ async function send(input: string, init: RequestInit, portal: Portal, marker: st
     const headers = requestHeaders(portal,marker,init.headers);
     if (!['GET','HEAD','OPTIONS'].includes((init.method || 'GET').toUpperCase())) headers.set('X-Qarevo-CSRF',await csrfToken(portal));
     const response = await fetch(input,{...init,headers,cache:'no-store',credentials:'same-origin',signal:init.signal ?? AbortSignal.timeout(35_000)});
-    if (response.status === 409 && marker) throw new Error('Your session changed in another tab. Reload this page.');
     const returned = response.headers.get('X-Qarevo-Session-Id');
     const entry = sessionMutation(new URL(input).pathname);
     if (returned && marker && returned !== marker && !entry) throw new Error('Your session changed. Reload this page.');
+    if (response.status === 409 && marker) {
+        // Clinical/version conflicts also use 409. Only the BFF's explicit
+        // machine code identifies a cookie-session mismatch; preserve all
+        // other bodies for the normal ApiError/recovery path.
+        let sessionChanged = false;
+        try {
+            const conflict = await response.clone().json() as { detail?: { error_code?: unknown } } | null;
+            sessionChanged = conflict?.detail?.error_code === 'SESSION_CHANGED';
+        } catch { /* A non-JSON conflict remains an ordinary API response. */ }
+        if (sessionChanged) throw new Error('Your session changed in another tab. Reload this page.');
+    }
     return response;
 }
 async function refreshAuthToken(portal: Portal, scope: string, revision: string | null, alreadyLocked = false): Promise<boolean> {

@@ -704,6 +704,37 @@ test('stale-tab 409 never refreshes or clears the newer cookie-bound identity', 
   assert.equal(calls, 1); assert.equal(t.api.readSessionMarker(), 'session-A')
 })
 
+
+test('clinical conflict details survive HTTP 409 without renewing or clearing a valid session', async () => {
+  let calls = 0
+  const detail = 'This lab request can no longer be planned or rescheduled here. Contact your care team; existing results and clinical progress are preserved.'
+  const t = tab(undefined, async () => { calls++; return Response.json({ detail }, { status: 409 }) }); login(t, 'A')
+  await assert.rejects(t.api.apiPost('/api/v1/patient/lab-requests/synthetic/book', {}), error => {
+    assert.ok(error instanceof t.api.ApiError)
+    assert.equal(error.status, 409)
+    assert.equal(t.api.getApiErrorDetail(error), detail)
+    assert.doesNotMatch(error.message, /session changed/i)
+    return true
+  })
+  assert.equal(calls, 1); assert.equal(t.api.readSessionMarker(), 'session-A')
+})
+
+test('malformed and non-JSON conflicts retain their original body and session', async () => {
+  for (const body of ['{"detail":', 'The requested appointment slot is no longer available.']) {
+    let calls = 0
+    const t = tab(undefined, async () => { calls++; return new Response(body, { status: 409 }) }); login(t, 'A')
+    await assert.rejects(t.api.apiGet('/private'), error => {
+      assert.ok(error instanceof t.api.ApiError)
+      assert.equal(error.status, 409)
+      assert.equal(error.body, body)
+      assert.equal(t.api.getApiErrorDetail(error), body)
+      assert.doesNotMatch(error.message, /session changed/i)
+      return true
+    })
+    assert.equal(calls, 1); assert.equal(t.api.readSessionMarker(), 'session-A')
+  }
+})
+
 function hydration() {
   const mod = { exports: {} }
   vm.runInNewContext(compile('hydrate-account-draft.ts'), { module: mod, exports: mod.exports })

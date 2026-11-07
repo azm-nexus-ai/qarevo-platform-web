@@ -291,7 +291,7 @@ function LabRequestsPageContent() {
         .action-btn.primary { background: linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%); color: #fff; border: none; box-shadow: 0 8px 22px rgba(32,181,223,0.24); }
         .request-card, .download-row { border-radius: 18px; padding: 16px; border: 1px solid var(--border); background: var(--surface-subtle); }
         .badge { display: inline-flex; align-items: center; justify-content: center; width: fit-content; max-width: 100%; padding: 7px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
-        .status-badge { align-self: flex-start; flex: 0 0 auto; min-height: 28px; }
+        .status-badge { align-self: flex-start; flex: 0 0 auto; max-width: 100%; min-height: 28px; }
         .meta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 10px; }
         .select-input, .text-input { width: 100%; min-height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; padding: 0 12px; font-size: 13px; font-weight: 700; }

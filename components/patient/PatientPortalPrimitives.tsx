@@ -92,6 +92,9 @@ export function PortalBadge({ children, tone = 'neutral' }: PortalBadgeProps) {
       className={`portal-badge portal-badge-${tone}`}
       style={{
         display: 'inline-flex',
+        maxWidth: '100%',
+        whiteSpace: 'normal',
+        overflowWrap: 'anywhere',
         alignItems: 'center',
         gap: '6px',
         padding: '6px 10px',

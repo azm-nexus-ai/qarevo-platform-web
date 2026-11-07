@@ -98,7 +98,7 @@ test('lab result uploads reject oversized files before sending them', async ({ p
   await page.getByLabel('Select patient', { exact: true }).selectOption('synthetic-alpha')
   await expect(page.getByRole('heading', { name: 'Synthetic Alpha order', exact: true })).toBeVisible()
   await page.locator('input[type=file]').setInputFiles({ name: 'synthetic-oversized.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(3 * 1024 * 1024 + 1) })
-  await expect(page.getByRole('alert')).toContainText('3 MB or smaller')
+  await expect(page.getByRole('alert').filter({ hasText: '3 MB or smaller' })).toBeVisible()
   expect(control.uploads).toBe(0)
 })
 
