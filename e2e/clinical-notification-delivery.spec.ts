@@ -7,13 +7,18 @@ const base = '/api/v1/admin/clinical-notification-delivery'
 async function prepare(context: BrowserContext, canRetry = true) {
   const identity = await seedPortalSession(context, 'admin')
   const state = { pending: true, failRead: false, failRetry: true, disabled: false, paused: false,
+    holdRead: false, readStarted: false, releaseRead: () => {},
     paginated: false, pages: [] as string[], retries: [] as string[] }
-  await context.route('**/api/v1/**', route => {
+  await context.route('**/api/v1/**', async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname
     if (path.endsWith('/browser-csrf')) return route.fulfill({ json: { csrf_token: 'synthetic-csrf' } })
     if (path.startsWith('/api/v1/session')) return route.fulfill({ json: testSessionTiming(identity) })
     if (path === base) {
       state.pages.push(url.search)
+      if (state.holdRead) {
+        state.readStarted = true
+        await new Promise<void>(resolve => { state.releaseRead = resolve })
+      }
       if (state.failRead) return route.fulfill({ status: 503, json: { detail: 'Synthetic publication notice service unavailable.' } })
       const offset = Number(url.searchParams.get('offset') || 0)
       return route.fulfill({ json: { status: state.disabled ? 'disabled' : state.pending ? 'warning' : 'healthy',
@@ -52,9 +57,13 @@ test('operations recovers only the selected saved publication notice and refresh
   await retry.click()
   await expect(card.getByRole('alert')).toContainText('Synthetic notice delivery could not be confirmed')
   await expect(retry).toBeEnabled()
-  state.failRetry = false
-  await retry.focus(); await page.keyboard.press('Enter')
-  await expect(card.getByRole('status')).toContainText('in-app notice is confirmed')
+  state.failRetry = false; state.holdRead = true
+  try {
+    await retry.focus(); await page.keyboard.press('Enter')
+    await expect.poll(() => state.readStarted).toBe(true)
+    await expect(card.getByRole('status').filter({ hasText: 'in-app notice is confirmed' })).toBeVisible()
+    await expect(card.getByText('Loading notice delivery…', { exact: true })).toBeVisible()
+  } finally { state.holdRead = false; state.releaseRead() }
   await expect(card.getByText('All notices acknowledged', { exact: true })).toBeVisible()
   expect(state.retries).toEqual(Array(2).fill(`${base}/${eventId}/retry`))
   await page.reload()
