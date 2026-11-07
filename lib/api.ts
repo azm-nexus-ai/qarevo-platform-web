@@ -631,6 +631,8 @@ export type MedicalRecordDownloadResponse = {
     content_type: string;
     download_url: string;
     expires_in: number;
+    file_size_bytes?: number | null;
+    uploaded_by?: "patient" | "care_team" | "unknown";
 };
 
 // Approval Workflow Types

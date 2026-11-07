@@ -1,3 +1,5 @@
+export type DocumentAccessLifetime = 300 | 3600
+
 export type SecureDocumentMetadata = {
   id: string
   filename: string
@@ -21,13 +23,13 @@ export type SecureDocumentAccess = {
 const invalidMetadata = 'Document access could not be verified. Close this dialog, refresh the requests and try again.'
 
 /** A signed link is kept only in component memory and is never embedded or prefetched. */
-export function validateDocumentAccess(value: unknown, expectedFileId: string, requestedAt: number, now = Date.now()): SecureDocumentAccess {
-  if (!value || typeof value !== 'object') throw new Error(invalidMetadata)
+export function validateDocumentAccess(value: unknown, expectedFileId: string, requestedAt: number, now = Date.now(), maxLifetimeSeconds: DocumentAccessLifetime = 300): SecureDocumentAccess {
+  if ((maxLifetimeSeconds !== 300 && maxLifetimeSeconds !== 3600) || !value || typeof value !== 'object') throw new Error(invalidMetadata)
   const metadata = value as Partial<SecureDocumentMetadata>
   if (metadata.id !== expectedFileId || !expectedFileId || typeof metadata.filename !== 'string' ||
       !metadata.filename.trim() || metadata.filename.length > 300 || /[\u0000-\u001f\u007f]/.test(metadata.filename) ||
       typeof metadata.content_type !== 'string' || !/^[\w!#$&^.+-]+\/[\w!#$&^.+-]+$/.test(metadata.content_type) ||
-      typeof metadata.expires_in !== 'number' || !Number.isInteger(metadata.expires_in) || metadata.expires_in <= 0 || metadata.expires_in > 300 ||
+      typeof metadata.expires_in !== 'number' || !Number.isInteger(metadata.expires_in) || metadata.expires_in <= 0 || metadata.expires_in > maxLifetimeSeconds ||
       !Number.isFinite(requestedAt) || !Number.isFinite(now) || requestedAt > now ||
       typeof metadata.download_url !== 'string' || metadata.download_url.length > 8192 || /[\u0000-\u0020\u007f]/.test(metadata.download_url)) {
     throw new Error(invalidMetadata)

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -14,6 +14,9 @@ import { usePatientResource } from '@/lib/use-patient-resource'
 import { medicalUploadError } from '@/lib/clinical-upload'
 import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
+import SecureDocumentAccessDialog from '@/components/ui/SecureDocumentAccessDialog'
+import { usePortalAction } from '@/lib/portal-action'
+import { readAccountScope } from '@/lib/account-storage'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,9 +116,20 @@ function normalizeTimeline(value: Record<string, unknown>): TimelineEvent {
   }
 }
 
-async function openRecordDownload(record: MedicalRecord) {
-  const response = await downloadMedicalRecord(record.id, { disposition: 'attachment' })
-  window.open(response.download_url, '_blank', 'noopener,noreferrer')
+function DownloadRecordPicker({ records, onChoose, onClose }: { records: MedicalRecord[]; onChoose: (record: MedicalRecord) => void; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    dialog.showModal()
+    return () => { if (dialog.open) dialog.close() }
+  }, [])
+  const close = () => { if (dialogRef.current?.open) dialogRef.current.close(); onClose() }
+  return <dialog ref={dialogRef} aria-label='Choose a record to download' onCancel={event => { event.preventDefault(); close() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
+    <h2 className='portal-h2'>Choose a record to download</h2><p className='mb-5 text-sm leading-6 text-muted'>Request access to one attachment at a time. Files are downloaded individually.</p>
+    <div className='grid gap-3'>{records.map(record => <PortalButton key={record.id} type='button' style={{ flexDirection: 'column', alignItems: 'flex-start', whiteSpace: 'normal', overflowWrap: 'anywhere', textAlign: 'left' }} onClick={() => { if (dialogRef.current?.open) dialogRef.current.close(); onChoose(record) }}><span className='font-semibold'>{record.title}</span><span className='mt-1 text-xs font-normal text-secondary'>{record.date} · {record.provider} · {record.fileType || 'Attachment'}{record.fileSize ? ` · ${record.fileSize}` : ''}</span></PortalButton>)}</div>
+    <div className='mt-5 flex justify-end'><PortalButton autoFocus type='button' onClick={close}>Close record selection</PortalButton></div>
+  </dialog>
 }
 
 function UploadRecordModal({ onClose, onUpload, onError }: { onClose: () => void; onUpload: (r: MedicalRecord) => void; onError: (message: string) => void }) {
@@ -468,6 +482,24 @@ function DeleteRecordModal({ record, onClose, onConfirm }: { record: MedicalReco
 // ─── Main Page Inner ───────────────────────────────────────────────────────────
 
 function MedicalRecordsPageInner() {
+  const captureAction = usePortalAction()
+  const accountScope = readAccountScope('patient')
+  const previewVersion = useRef(0)
+  const downloadNonce = useRef(0)
+  const handledRecordLink = useRef<string | null>(null)
+  const downloadRestoreTarget = useRef<HTMLButtonElement | null>(null)
+  const downloadScopeRef = useRef<string | null>(null)
+  const [downloadSelection, setDownloadSelection] = useState<{ recordId: string; scope: string | null; nonce: number } | null>(null)
+  const [downloadPickerScope, setDownloadPickerScope] = useState<string | null>(null)
+  const closeDownload = useCallback(() => {
+    setDownloadSelection(null)
+    const target = downloadRestoreTarget.current
+    if (target?.isConnected && readAccountScope('patient') === downloadScopeRef.current) target.focus()
+  }, [])
+  const loadDownload = useCallback(() => {
+    if (!downloadSelection || downloadSelection.scope !== readAccountScope('patient')) return Promise.reject(new Error('Your account changed. Reload the records before requesting access.'))
+    return downloadMedicalRecord(downloadSelection.recordId, { disposition: 'attachment' })
+  }, [downloadSelection])
   const searchParams = useSearchParams()
   const recordId = searchParams.get('recordId')
   const resource = usePatientResource<{records?: Record<string, unknown>[]; timeline?: Record<string, unknown>[]}>(
@@ -483,6 +515,7 @@ function MedicalRecordsPageInner() {
   const [isUploading, setIsUploading] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null)
   const [previewState, setPreviewState] = useState<PreviewState | null>(null)
+  const closePreview = useCallback(() => { ++previewVersion.current; setPreviewState(null) }, [])
   const [deleteRecord, setDeleteRecord] = useState<MedicalRecord | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const healthResource = usePatientResource<PatientHealthInfo>('/api/v1/patient/settings/health-info')
@@ -492,6 +525,7 @@ function MedicalRecordsPageInner() {
   const activeRecord = selectedRecord ? records.find(record => record.id === selectedRecord.id) : null
   const activePreviewRecord = previewState ? records.find(record => record.id === previewState.record.id) : null
   const activeDeleteRecord = deleteRecord ? records.find(record => record.id === deleteRecord.id) : null
+  const activeDownloadRecord = downloadSelection?.scope === accountScope ? records.find(record => record.id === downloadSelection.recordId && record.canDownload) : null
 
   // Filters
   const filteredRecords = useMemo(() => {
@@ -516,6 +550,9 @@ function MedicalRecordsPageInner() {
     [records],
   )
 
+  const pickerOpen = Boolean(downloadPickerScope && downloadPickerScope === accountScope && downloadableRecords.length > 0)
+  const documentAccessOpen = Boolean(activeDownloadRecord) || pickerOpen
+
   const showToast = useCallback((message: string) => {
     setToast(message)
     window.setTimeout(() => setToast(null), 4000)
@@ -532,40 +569,44 @@ function MedicalRecordsPageInner() {
     showToast('Medical record deleted successfully.')
   }
 
-  const handleDownloadRecords = async () => {
-    if (downloadableRecords.length === 0) {
-      showToast('No downloadable file attachments are available yet.')
-      return
-    }
-
-    try {
-      for (const record of downloadableRecords) {
-        await openRecordDownload(record)
-      }
-    } catch (error) {
-      console.error('Download failed:', error)
-      showToast(getApiErrorDetail(error) ?? 'One or more downloads failed. Please try downloading the record individually.')
-    }
+  const handleDownloadRecord = (record: MedicalRecord) => {
+    if (isUploading || activeDeleteRecord) { showToast('Close the upload or delete dialog before downloading a record.'); return }
+    if (!record.canDownload || !accountScope || accountScope !== readAccountScope('patient') || !records.some(item => item.id === record.id && item.canDownload)) return
+    if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`
+    closePreview(); setSelectedRecord(null); setDownloadPickerScope(null)
+    const card = Array.from(document.querySelectorAll<HTMLElement>('[data-medical-record-id]')).find(element => element.dataset.medicalRecordId === record.id)
+    const target = card?.querySelector<HTMLButtonElement>('button.medical-record-download') ?? document.querySelector<HTMLButtonElement>('button.record-download-selector')
+    downloadRestoreTarget.current = target
+    downloadScopeRef.current = accountScope
+    target?.focus()
+    const next = { recordId: record.id, scope: accountScope, nonce: ++downloadNonce.current }
+    setDownloadSelection(current => current?.scope === accountScope && records.some(item => item.id === current.recordId && item.canDownload) ? current : next)
   }
 
-  const handleDownloadRecord = async (record: MedicalRecord) => {
-    try {
-      await openRecordDownload(record)
-    } catch (error) {
-      console.error('Download failed:', error)
-      showToast(getApiErrorDetail(error) ?? 'Download failed. Please try again.')
+  const handleDownloadRecords = () => {
+    if (isUploading || activeDeleteRecord) { showToast('Close the upload or delete dialog before downloading a record.'); return }
+    if (downloadableRecords.length === 0) { showToast('No downloadable file attachments are available yet.'); return }
+    if (downloadableRecords.length === 1) { handleDownloadRecord(downloadableRecords[0]); return }
+    if (accountScope && accountScope === readAccountScope('patient')) {
+      if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`
+      closePreview(); setSelectedRecord(null); setDownloadPickerScope(accountScope)
     }
   }
 
   const handlePreviewRecord = async (record: MedicalRecord) => {
+    if (!accountScope || accountScope !== readAccountScope('patient')) return
+    const version = ++previewVersion.current
+    if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`
+    const action = captureAction()
     setPreviewState({ record, url: null, contentType: null, loading: Boolean(record.canDownload && record.fileType), error: null })
     if (!record.canDownload || !record.fileType) return
 
     try {
       const response = await downloadMedicalRecord(record.id, { disposition: 'inline' })
+      if (version !== previewVersion.current || !action.isCurrent()) return
       setPreviewState({ record, url: response.download_url, contentType: response.content_type, loading: false, error: null })
     } catch (error) {
-      console.error('Preview failed:', error)
+      if (version !== previewVersion.current || !action.isCurrent()) return
       setPreviewState({
         record,
         url: null,
@@ -590,18 +631,22 @@ function MedicalRecordsPageInner() {
   }
 
   useEffect(() => {
-    if (!recordId) return
+    const linkKey = `${accountScope}:${recordId}`
+    if (!recordId || handledRecordLink.current === linkKey || activeDownloadRecord || downloadPickerScope === accountScope) return
 
+    const intent = previewVersion.current
     const timer = window.setTimeout(() => {
+      if (intent !== previewVersion.current || handledRecordLink.current === linkKey) return
       const record = records.find((item) => item.id === recordId)
       if (record) {
+        handledRecordLink.current = linkKey
         setActiveTab('All Records')
         setSelectedRecord(record)
       }
     }, 0)
 
     return () => window.clearTimeout(timer)
-  }, [recordId, records])
+  }, [recordId, records, accountScope, activeDownloadRecord, downloadPickerScope])
 
   return (
     <PatientPortalShell
@@ -613,10 +658,11 @@ function MedicalRecordsPageInner() {
           <PortalButton disabled={resource.refreshing} onClick={resource.retry}>{resource.refreshing ? 'Refreshing records…' : 'Refresh records'}</PortalButton>
           <HoverBtn
             onClick={handleDownloadRecords}
+            className='record-download-selector'
             base={{ minHeight: '44px', padding: '0 16px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(4,53,77,0.06)', whiteSpace: 'nowrap' }}
             on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
           >
-            Download Records
+            Choose a record to download
           </HoverBtn>
           <HoverBtn
             onClick={() => setIsUploading(true)}
@@ -777,10 +823,10 @@ function MedicalRecordsPageInner() {
             </div>
           ) : (
             filteredRecords.map(record => (
-              <div key={record.id} style={{ display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface)", boxShadow: '0 2px 8px rgba(4,53,77,0.03)', transition: 'all 0.15s ease' }}>
+              <div key={record.id} data-medical-record-id={record.id} style={{ display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface)", boxShadow: '0 2px 8px rgba(4,53,77,0.03)', transition: 'all 0.15s ease' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '4px' }}>
                       <span style={{ fontSize: "13px", fontWeight: 700, padding: '3px 8px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link }}>{record.type}</span>
                       <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>{record.date}</span>
                       <ClinicalStatusBadge status={record.clinicalStatus ?? record.status} domain={record.sourceType === 'medication' ? 'medication' : record.sourceType === 'lab-request' ? 'lab-request' : 'record'} />
@@ -791,7 +837,7 @@ function MedicalRecordsPageInner() {
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 'auto' }}>
                   <HoverBtn
-                    onClick={() => setSelectedRecord(record)}
+                    onClick={() => { if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`; closePreview(); setSelectedRecord(record) }}
                     base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 4px rgba(4,53,77,0.02)' }}
                     on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
                   >
@@ -808,7 +854,9 @@ function MedicalRecordsPageInner() {
                   )}
                   {record.canDownload && (
                     <HoverBtn
-                      onClick={() => void handleDownloadRecord(record)}
+                      onClick={() => handleDownloadRecord(record)}
+                      className='medical-record-download'
+                      ariaLabel={`Download ${record.title}`}
                       base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: 'transparent', color: T.slate, fontSize: "13px", fontWeight: 600, cursor: 'pointer' }}
                       on={{ background: "var(--surface-hover)", color: T.navy, transform: 'translateY(-1px)' }}
                     >
@@ -822,8 +870,10 @@ function MedicalRecordsPageInner() {
         </div>
       </div>
 
+      {downloadPickerScope && downloadPickerScope === accountScope && downloadableRecords.length > 0 && <DownloadRecordPicker records={downloadableRecords} onChoose={handleDownloadRecord} onClose={() => setDownloadPickerScope(null)} />}
+      {activeDownloadRecord && downloadSelection && <SecureDocumentAccessDialog key={`${downloadSelection.scope}:${downloadSelection.recordId}:${downloadSelection.nonce}`} documentTitle={activeDownloadRecord.title} documentKind='Medical record' expectedFileId={activeDownloadRecord.id} maxLifetimeSeconds={3600} loadDocument={loadDownload} onClose={closeDownload} />}
       {isUploading && <UploadRecordModal onClose={() => setIsUploading(false)} onUpload={handleUploadComplete} onError={showToast} />}
-      {activeRecord && (
+      {!documentAccessOpen && activeRecord && (
         <RecordDetailsModal
           record={activeRecord}
           onClose={() => setSelectedRecord(null)}
@@ -832,7 +882,7 @@ function MedicalRecordsPageInner() {
           onDeleteRequest={() => setDeleteRecord(activeRecord)}
         />
       )}
-      {previewState && activePreviewRecord && <PreviewModal preview={{...previewState, record: activePreviewRecord}} onClose={() => setPreviewState(null)} onDownload={() => void handleDownloadRecord(activePreviewRecord)} />}
+      {!documentAccessOpen && previewState && activePreviewRecord && <PreviewModal preview={{...previewState, record: activePreviewRecord}} onClose={closePreview} onDownload={() => void handleDownloadRecord(activePreviewRecord)} />}
       {activeDeleteRecord && <DeleteRecordModal record={activeDeleteRecord} onClose={() => setDeleteRecord(null)} onConfirm={() => void handleDeleteConfirmed()} />}
 
       {/* Toast */}

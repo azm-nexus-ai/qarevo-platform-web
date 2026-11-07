@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { ACCOUNT_CHANGED } from '@/lib/account-storage'
 import { getApiErrorDetail } from '@/lib/api'
 import { usePortalAction } from '@/lib/portal-action'
-import { documentFileSize, validateDocumentAccess, type SecureDocumentAccess, type SecureDocumentMetadata } from '@/lib/secure-document-access'
+import { documentFileSize, validateDocumentAccess, type DocumentAccessLifetime, type SecureDocumentAccess, type SecureDocumentMetadata } from '@/lib/secure-document-access'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 
 type State = { status: 'loading' | 'expired' | 'closed' } | { status: 'error'; message: string } | { status: 'ready'; access: SecureDocumentAccess }
@@ -12,6 +12,7 @@ type Props = {
   documentTitle: string
   documentKind?: string
   expectedFileId: string
+  maxLifetimeSeconds?: DocumentAccessLifetime
   loadDocument: () => Promise<SecureDocumentMetadata>
   onClose: () => void
 }
@@ -19,10 +20,10 @@ type Props = {
 /** Authorized attachment access; this does not verify or clinically approve a result. */
 export default function SecureDocumentAccessDialog(props: Props) {
   // A new file must never inherit a previous file's ready bearer capability.
-  return <DocumentAccessDialogContent key={props.expectedFileId} {...props} />
+  return <DocumentAccessDialogContent key={`${props.expectedFileId}:${props.maxLifetimeSeconds ?? 300}`} {...props} />
 }
 
-function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document', expectedFileId, loadDocument, onClose }: Props) {
+function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document', expectedFileId, maxLifetimeSeconds = 300, loadDocument, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   const descriptionId = useId()
@@ -79,14 +80,14 @@ function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document',
       try {
         const metadata = await promise
         if (!current || closed.current || !action.isCurrent()) return
-        setState({ status: 'ready', access: validateDocumentAccess(metadata, expectedFileId, requestedAt) })
+        setState({ status: 'ready', access: validateDocumentAccess(metadata, expectedFileId, requestedAt, Date.now(), maxLifetimeSeconds) })
       } catch (failure) {
         if (current && !closed.current && action.isCurrent()) setState({ status: 'error', message: getApiErrorDetail(failure) || 'This document is unavailable. Retry access or close this dialog and refresh the records.' })
       } finally { if (current) pending.current = false }
     }
     void run()
     return () => { current = false }
-  }, [captureAction, close, expectedFileId, loadDocument, revision])
+  }, [captureAction, close, expectedFileId, loadDocument, maxLifetimeSeconds, revision])
 
   useEffect(() => {
     const check = (event?: Event) => {
@@ -136,7 +137,7 @@ function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document',
           <div><dt className='font-semibold text-secondary'>Format and size</dt><dd className='mt-1 break-words text-ink'>{state.access.contentType} · {documentFileSize(state.access.fileSizeBytes)}</dd></div>
           <div><dt className='font-semibold text-secondary'>Upload source</dt><dd className='mt-1 text-ink'>{state.access.uploadedBy === 'patient' ? 'Uploaded by patient' : state.access.uploadedBy === 'care_team' ? 'Uploaded by care team' : 'Upload source unavailable'}</dd></div>
         </dl>
-        <p className='my-4 text-sm leading-6 text-muted'>This download link expires within five minutes. Files download with a generic name for privacy. Request a new link after it expires.</p>
+        <p className='my-4 text-sm leading-6 text-muted'>This download link expires at <time dateTime={new Date(state.access.expiresAt).toISOString()}>{new Date(state.access.expiresAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>. Files download with a generic name for privacy. Request a new link after it expires.</p>
         <a className='portal-button portal-button-primary q-button q-button-primary inline-flex min-h-11 max-w-full items-center justify-center rounded-xl px-4 py-2 text-center text-sm font-semibold' href={state.access.downloadUrl} target='_blank' rel='noopener noreferrer' referrerPolicy='no-referrer'
           onClick={event => {
             const action = originAction.current

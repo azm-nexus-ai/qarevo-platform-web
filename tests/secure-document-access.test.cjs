@@ -49,3 +49,13 @@ test('upload provenance stays factual and absent size is not invented', () => {
   assert.equal(documentFileSize(1024), '1.0 KB')
   assert.equal(documentFileSize(1048576), '1.0 MB')
 })
+
+
+test('trusted patient caller preserves one-hour access while the default doctor policy remains five minutes', () => {
+  const patient = { ...valid, expires_in: 3600 }
+  const result = validateDocumentAccess(patient, fileId, started, started + 1000, 3600)
+  assert.equal(result.expiresAt, started + 3600000)
+  assert.throws(() => validateDocumentAccess(patient, fileId, started, started + 1000), /could not be verified/)
+  assert.throws(() => validateDocumentAccess({ ...valid, expires_in: 3601 }, fileId, started, started, 3600), /could not be verified/)
+  assert.throws(() => validateDocumentAccess(valid, fileId, started, started, 7200), /could not be verified/)
+})
