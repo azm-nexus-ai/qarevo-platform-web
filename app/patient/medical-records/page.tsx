@@ -17,6 +17,7 @@ import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 import SecureDocumentAccessDialog from '@/components/ui/SecureDocumentAccessDialog'
 import { usePortalAction } from '@/lib/portal-action'
 import { readAccountScope } from '@/lib/account-storage'
+import { consultationSummaryHref, summaryPublicationTime } from '@/lib/patient-consultation-summary'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,7 +42,10 @@ type MedicalRecord = {
   canDownload: boolean
   canDelete: boolean // User-uploaded can be deleted, clinical cannot
   clinicalStatus?: string
-  sourceType?: 'medication' | 'lab-request'
+  sourceType?: 'medication' | 'lab-request' | 'consultation-summary'
+  sourceId?: string
+  revision?: number
+  publishedAt?: string
   sourceHref?: string
 }
 
@@ -81,6 +85,7 @@ function ModalOverlay({ onClose, children, width = '520px' }: { onClose: () => v
 }
 
 function normalizeRecord(value: Record<string, unknown>): MedicalRecord {
+  const publishedSummary = value.sourceType === 'consultation-summary'
   return {
     id: String(value.id ?? ''),
     type: (value.type as RecordType) ?? 'Medical Document',
@@ -90,18 +95,21 @@ function normalizeRecord(value: Record<string, unknown>): MedicalRecord {
     date: String(value.date ?? ''),
     status: (value.status as RecordStatus) ?? 'Available',
     lastUpdated: String(value.lastUpdated ?? value.last_updated ?? ''),
-    fileType: value.fileType ? String(value.fileType) : undefined,
-    fileSize: value.fileSize ? String(value.fileSize) : undefined,
-    summary: value.summary ? String(value.summary) : undefined,
-    clinicalNotes: value.clinicalNotes ? String(value.clinicalNotes) : undefined,
-    recommendations: value.recommendations ? String(value.recommendations) : undefined,
-    canPreview: Boolean(value.canPreview),
-    canDownload: Boolean(value.canDownload),
-    canDelete: Boolean(value.canDelete),
+    fileType: !publishedSummary && value.fileType ? String(value.fileType) : undefined,
+    fileSize: !publishedSummary && value.fileSize ? String(value.fileSize) : undefined,
+    summary: !publishedSummary && value.summary ? String(value.summary) : undefined,
+    clinicalNotes: !publishedSummary && value.clinicalNotes ? String(value.clinicalNotes) : undefined,
+    recommendations: !publishedSummary && value.recommendations ? String(value.recommendations) : undefined,
+    canPreview: !publishedSummary && Boolean(value.canPreview),
+    canDownload: !publishedSummary && Boolean(value.canDownload),
+    canDelete: !publishedSummary && Boolean(value.canDelete),
     clinicalStatus: typeof value.clinicalStatus === 'string' ? value.clinicalStatus : undefined,
-    sourceType: value.sourceType === 'medication' || value.sourceType === 'lab-request' ? value.sourceType : undefined,
+    sourceType: publishedSummary ? 'consultation-summary' : value.sourceType === 'medication' || value.sourceType === 'lab-request' ? value.sourceType : undefined,
+    sourceId: publishedSummary && typeof value.sourceId === 'string' ? value.sourceId : undefined,
+    revision: publishedSummary && Number.isSafeInteger(value.revision) && Number(value.revision) > 0 ? Number(value.revision) : undefined,
+    publishedAt: publishedSummary && typeof value.publishedAt === 'string' ? value.publishedAt : undefined,
     // Navigation comes from a finite set of clinical destinations, never an arbitrary payload URL.
-    sourceHref: value.sourceType === 'medication' ? '/patient/prescription-care-plan'
+    sourceHref: publishedSummary ? consultationSummaryHref(value.sourceId) : value.sourceType === 'medication' ? '/patient/prescription-care-plan'
       : value.sourceType === 'lab-request' ? '/patient/lab-requests' : undefined,
   }
 }
@@ -312,6 +320,7 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
       </div>
 
       <div style={{ padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {record.sourceType === 'consultation-summary' && <div><h3 className='portal-h3'>Published consultation record</h3><p className='text-sm leading-7 text-secondary'>{record.revision ? `Last recorded revision ${record.revision}. ` : ''}{summaryPublicationTime(record.publishedAt) ? `Published ${summaryPublicationTime(record.publishedAt)}. ` : 'Publication time is available in the summary. '}Open the summary for the latest clinician-published version.</p>{!record.sourceHref && <p className='mt-3 text-sm text-secondary'>This summary link is unavailable. Refresh records or open the consultation in your appointments.</p>}</div>}
         {record.summary && (
           <div>
             <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Summary</h3>
@@ -366,7 +375,7 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
           )}
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          {record.sourceHref && <Link href={record.sourceHref} className='inline-flex min-h-11 items-center rounded-xl border border-theme bg-surface px-4 py-2 text-sm font-semibold text-ink hover:bg-surface-subtle'>{record.sourceType === 'medication' ? 'View medication instructions' : 'View lab request'}</Link>}
+          {record.sourceHref && <Link href={record.sourceHref} className='inline-flex min-h-11 items-center rounded-xl border border-theme bg-surface px-4 py-2 text-sm font-semibold text-ink hover:bg-surface-subtle'>{record.sourceType === 'consultation-summary' ? 'View consultation summary' : record.sourceType === 'medication' ? 'View medication instructions' : 'View lab request'}</Link>}
           <HoverBtn onClick={onClose} base={{ padding: '0 20px', minHeight: '44px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)", color: T.navy, fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>Close</HoverBtn>
         </div>
       </div>
@@ -505,7 +514,7 @@ function MedicalRecordsPageInner() {
   const resource = usePatientResource<{records?: Record<string, unknown>[]; timeline?: Record<string, unknown>[]}>(
     '/api/v1/patient/medical-records', false, {refreshOnFocus: true, refreshIntervalMs: 30000},
   )
-  const records = useMemo(() => (Array.isArray(resource.data?.records) ? resource.data.records : []).map(normalizeRecord), [resource.data])
+  const records = useMemo(() => (Array.isArray(resource.data?.records) ? resource.data.records : []).filter(value => value && typeof value === 'object' && !Array.isArray(value) && (value.sourceType !== 'consultation-summary' || String(value.clinicalStatus).toLowerCase() === 'published')).map(normalizeRecord), [resource.data])
   const timeline = useMemo(() => (Array.isArray(resource.data?.timeline) ? resource.data.timeline : []).map(normalizeTimeline), [resource.data])
   const loadingRecords = resource.loading
   const [activeTab, setActiveTab] = useState<RecordType | 'All Records'>('All Records')
@@ -835,7 +844,10 @@ function MedicalRecordsPageInner() {
                     <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>{record.provider} <span style={{ color: T.slate2 }}>• {record.specialty}</span></p>
                   </div>
                 </div>
+                {record.sourceType === 'consultation-summary' && <p className='mb-3 text-sm leading-6 text-secondary'>{record.revision ? `Last recorded revision ${record.revision}. ` : ''}{summaryPublicationTime(record.publishedAt) ? `Published ${summaryPublicationTime(record.publishedAt)}.` : 'Open the summary for its publication details.'}</p>}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 'auto' }}>
+                  {record.sourceType === 'consultation-summary' && record.sourceHref && <Link href={record.sourceHref} className='portal-button portal-button-primary q-button q-button-primary'>View consultation summary</Link>}
+                  {record.sourceType === 'consultation-summary' && !record.sourceHref && <p className='text-sm leading-6 text-secondary'>This summary link is unavailable. Refresh records or open your appointments.</p>}
                   <HoverBtn
                     onClick={() => { if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`; closePreview(); setSelectedRecord(record) }}
                     base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 4px rgba(4,53,77,0.02)' }}

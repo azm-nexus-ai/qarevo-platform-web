@@ -4,13 +4,20 @@ import { seedPortalSession, testSessionTiming } from './helpers/portal-session'
 const fileId = (number: number) => `10000000-0000-4000-8000-${String(number).padStart(12, '0')}`
 async function prepare(context: BrowserContext) {
   const identity = await seedPortalSession(context, 'admin')
-  const control = { fail: false, canView: true, reads: [] as URL[] }
+  const control = { fail: false, publicationFail: false, canView: true, reads: [] as URL[], publicationReads: [] as URL[] }
   const events = Array.from({ length: 26 }, (_, index) => ({ id: fileId(index + 100), file_id: fileId(index), created_at: '2030-01-01T10:00:00+00:00', actor_user_id: fileId(50), patient_user_id: fileId(51), lab_request_id: fileId(52), provider_id: fileId(53), uploaded_by: 'patient', expires_in: 300,
     download_url: 'https://synthetic-storage.invalid/?secret=never-render', filename: 'Never-render-synthetic-medical-filename.pdf' }))
   await context.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url()), path = url.pathname
     if (path.endsWith('/browser-csrf')) return route.fallback()
     if (path.startsWith('/api/v1/session')) return route.fulfill({ json: testSessionTiming(identity) })
+    if (path.endsWith('/audit-logs/clinical-publications')) {
+      control.publicationReads.push(url)
+      if (control.publicationFail) return route.fulfill({ status: 503, json: { detail: 'Synthetic publication receipts unavailable.' } })
+      const filter = url.searchParams.get('consultation_id'), offset = Number(url.searchParams.get('offset') || 0)
+      const matching = control.canView ? events.map((entry, index) => ({ ...entry, record_id: fileId(index + 200), consultation_id: fileId(index + 300), revision: index + 1, version: 2, published_at: '2030-01-01T10:00:00+00:00', summary: 'Never-render-synthetic-summary', amendment_reason: 'Never-render-synthetic-amendment' })).filter(entry => !filter || entry.consultation_id === filter) : []
+      return route.fulfill({ json: { can_view: control.canView, events: matching.slice(offset, offset + 25), total_count: matching.length, limit: 25, offset, has_previous: offset > 0, has_next: offset + 25 < matching.length } })
+    }
     if (path.endsWith('/audit-logs/clinical-access')) {
       control.reads.push(url)
       if (control.fail) return route.fulfill({ status: 503, json: { detail: 'Synthetic clinical access service unavailable.' } })
@@ -81,4 +88,74 @@ test('clinical access history supports mobile dark mode and keyboard filtering',
   await filter.fill(fileId(0)); await filter.focus(); await expect(filter).toBeFocused(); await filter.press('Enter')
   await expect(panel.getByText('Showing 1 of 1 events', { exact: true })).toBeVisible()
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+})
+
+test('publication history reuses filters and pagination without disclosing clinical content', async ({ page, context }) => {
+  const state = await prepare(context)
+  await page.goto('/admin/audit')
+  await expect(page.getByRole('article', { name: 'Lab result access event', exact: true })).toHaveCount(25)
+  await page.getByLabel('File ID (optional)', { exact: true }).fill(fileId(0))
+  await page.getByRole('button', { name: 'Apply file filter', exact: true }).click()
+  await expect(page.getByText('Showing 1 of 1 events', { exact: true })).toBeVisible()
+  await page.getByLabel('Clinical history type', { exact: true }).selectOption('publication')
+  const panel = page.getByRole('region', { name: 'Clinical publication history', exact: true })
+  await expect(panel.getByRole('article', { name: 'Clinical publication event', exact: true })).toHaveCount(25)
+  await expect(panel.getByLabel('Consultation ID (optional)', { exact: true })).toHaveValue('')
+  expect(state.publicationReads.at(-1)?.searchParams.has('file_id')).toBe(false)
+  await expect(panel).not.toContainText('Never-render')
+  await expect(panel).not.toContainText('never-render')
+  await expect(panel.getByRole('link')).toHaveCount(0)
+  await expect(panel.getByText('Amendment published', { exact: true }).first()).toBeVisible()
+  await panel.getByRole('button', { name: 'Next publication events', exact: true }).click()
+  await expect(panel.getByRole('article')).toHaveCount(1)
+  expect(state.publicationReads.at(-1)?.searchParams.get('offset')).toBe('25')
+  const before = state.publicationReads.length
+  await panel.getByLabel('Consultation ID (optional)', { exact: true }).fill('invalid')
+  await panel.getByRole('button', { name: 'Apply consultation filter', exact: true }).click()
+  await expect(panel.getByRole('alert')).toContainText('UUID format')
+  expect(state.publicationReads.length).toBe(before)
+  await panel.getByLabel('Consultation ID (optional)', { exact: true }).fill(fileId(300))
+  await panel.getByRole('button', { name: 'Apply consultation filter', exact: true }).click()
+  await expect(panel.getByText('Showing 1 of 1 events', { exact: true })).toBeVisible()
+  expect(state.publicationReads.at(-1)?.searchParams.get('offset')).toBe('0')
+  await expect(panel.getByText(fileId(200), { exact: true })).toBeVisible()
+})
+
+test('publication history failure retries the actual request and retains navigation to access history', async ({ page, context }) => {
+  const state = await prepare(context); state.publicationFail = true
+  await page.goto('/admin/audit')
+  await page.getByLabel('Clinical history type', { exact: true }).selectOption('publication')
+  const panel = page.getByRole('region', { name: 'Clinical publication history', exact: true })
+  await expect(panel.getByRole('alert')).toContainText('Synthetic publication receipts unavailable')
+  state.publicationFail = false
+  await panel.getByRole('button', { name: 'Retry clinical publications', exact: true }).click()
+  await expect(panel.getByRole('article')).toHaveCount(25)
+  expect(state.publicationReads.length).toBe(2)
+  await panel.getByLabel('Clinical history type', { exact: true }).selectOption('access')
+  await expect(page.getByRole('article', { name: 'Lab result access event', exact: true })).toHaveCount(25)
+})
+
+test('publication history is responsive, theme-compatible and cleared with the admin session', async ({ page, context }) => {
+  await prepare(context)
+  await page.goto('/admin/audit')
+  await page.getByLabel('Clinical history type', { exact: true }).selectOption('publication')
+  const panel = page.getByRole('region', { name: 'Clinical publication history', exact: true })
+  for (const width of [320, 820, 1440]) {
+    await page.setViewportSize({ width, height: 950 })
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme)
+      await expect(panel.getByRole('article')).toHaveCount(25)
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+    }
+  }
+  const filter = panel.getByLabel('Consultation ID (optional)', { exact: true })
+  await filter.fill(fileId(300)); await filter.focus(); await expect(filter).toBeFocused(); await filter.press('Enter')
+  await expect(panel.getByText('Showing 1 of 1 events', { exact: true })).toBeVisible()
+  await page.evaluate(() => {
+    const key = 'qarevo:admin:identity'
+    localStorage.removeItem(key)
+    window.dispatchEvent(new StorageEvent('storage', { key, newValue: null }))
+  })
+  await expect(page.getByRole('article', { name: 'Clinical publication event', exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Consultation ID (optional)', { exact: true })).toHaveCount(0)
 })

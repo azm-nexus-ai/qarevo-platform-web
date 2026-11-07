@@ -46,7 +46,7 @@ const domains: Record<ClinicalStatusDomain, Record<string, StatusDescription>> =
     RESULTS_AVAILABLE: { label: 'Results available', tone: 'success' },
     COMPLETED: { label: 'Completed', tone: 'success' },
   },
-  record: { AVAILABLE: { label: 'Available', tone: 'success' } },
+  record: { AVAILABLE: { label: 'Available', tone: 'success' }, PUBLISHED: { label: 'Published', tone: 'info' } },
   episode: {},
 }
 
