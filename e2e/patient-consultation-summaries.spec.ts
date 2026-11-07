@@ -1,4 +1,4 @@
-import { test, expect, type BrowserContext, type Request } from '@playwright/test'
+import { test, expect, type BrowserContext } from '@playwright/test'
 import { seedPortalSession, testSessionTiming } from './helpers/portal-session'
 
 const first = '66666666-6666-4666-8666-666666666666'
@@ -13,7 +13,7 @@ function catalog(id = first, overrides: Record<string, unknown> = {}) {
 }
 async function prepare(context: BrowserContext) {
   const identity = await seedPortalSession(context, 'patient')
-  const control = { identity, records: [catalog()] as Record<string, unknown>[], summaries: new Map<string, unknown>([[first, published()], [second, published(second)]]), status: 200, reads: 0, holdNext: false, started: false, heldRequest: null as Request | null, release: () => {} }
+  const control = { identity, records: [catalog()] as Record<string, unknown>[], summaries: new Map<string, unknown>([[first, published()], [second, published(second)]]), status: 200, reads: 0, holdNext: false, started: false, heldDelivery: Promise.resolve(), release: () => {} }
   await context.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url()), path = url.pathname
     if (path.endsWith('/browser-csrf')) return route.fulfill({ json: { csrf_token: 'synthetic-csrf' } })
@@ -22,11 +22,15 @@ async function prepare(context: BrowserContext) {
     if (path.endsWith('/patient/consultation-summary')) {
       control.reads++
       const status = control.status, body = status === 200 ? control.summaries.get(url.searchParams.get('consultation_id') || '') : { detail: status === 404 ? 'Not published' : 'Synthetic clinical service temporarily unavailable' }
+      let deliveryFinished: (() => void) | undefined
       if (control.holdNext) {
-        control.holdNext = false; control.started = true; control.heldRequest = route.request()
+        control.holdNext = false
+        control.heldDelivery = new Promise<void>(resolve => { deliveryFinished = resolve })
+        control.started = true
         await new Promise<void>(resolve => { control.release = resolve })
       }
-      return route.fulfill({ status, json: body ?? { detail: 'No synthetic summary' } })
+      try { return await route.fulfill({ status, json: body ?? { detail: 'No synthetic summary' } }) }
+      finally { deliveryFinished?.() }
     }
     if (path.endsWith('/patient/settings')) return route.fulfill({ json: { first_name: 'Synthetic', last_name: 'Patient', emergency_contacts: [] } })
     if (path.endsWith('/patient/settings/health-info')) return route.fulfill({ json: { blood_type: '', allergies: '', medical_conditions: '' } })
@@ -118,13 +122,9 @@ test('an account change returns to patient sign-in and cannot revive its late su
   state.summaries.set(first, { ...published(), summary: 'Synthetic prior account clinical text' })
   await page.goto(summaryPath())
   await expect.poll(() => state.started).toBe(true)
-  const heldRequest = state.heldRequest!
-  // Bind to this exact old request before navigation. Request.response() settles
-  // to null if the sign-in navigation cancels it, otherwise wait for its body.
-  const lateRequestSettled = heldRequest.response().then(async response => {
-    if (response) { expect(response.status()).toBe(200); await response.finished() }
-    else expect(heldRequest.failure()).not.toBeNull()
-  })
+  // The browser may abandon this intercepted fetch during full navigation and
+  // never emit a response event. Await its exact fixture delivery attempt.
+  const lateDelivery = state.heldDelivery
   state.identity = { user_id: 'synthetic-new-patient', role: 'PATIENT', session_id: 'synthetic-new-session' }
   try {
     await page.evaluate(identity => {
@@ -133,7 +133,7 @@ test('an account change returns to patient sign-in and cannot revive its late su
     }, state.identity)
     await expect(page).toHaveURL(/\/auth\/sign-in$/)
   } finally { state.release() }
-  await lateRequestSettled
+  await lateDelivery
   await expect(page).toHaveURL(/\/auth\/sign-in$/)
   await expect(page.getByText('Synthetic prior account clinical text', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('article')).toHaveCount(0)
