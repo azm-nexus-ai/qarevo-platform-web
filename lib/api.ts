@@ -1313,13 +1313,16 @@ export async function getDoctorPatients(
     status?: string,
     pagination: PaginationParams = {},
     query?: string,
+    patientId?: string,
+    signal?: AbortSignal,
 ): Promise<DoctorPatientsResponse> {
     const params = new URLSearchParams();
     if (status) params.set("status", status);
     if (query?.trim()) params.set("q", query.trim());
+    if (patientId) params.set("patient_id", patientId);
     params.set("page", String(pagination.page ?? 1));
     params.set("page_size", String(pagination.page_size ?? 25));
-    return apiGet<DoctorPatientsResponse>(`/api/v1/doctor/patients?${params.toString()}`);
+    return apiGet<DoctorPatientsResponse>(`/api/v1/doctor/patients?${params.toString()}`, undefined, signal);
 }
 
 export async function verifyDoctorEmailCode(body: VerifyEmailCodeRequest): Promise<VerifyEmailCodeResponse> {
@@ -1613,6 +1616,8 @@ export type LabPartner = {
     directions_url?: string;
 };
 
+export type LabResultUploadReceipt = import('./lab-upload-attempt').LabUploadReceipt;
+
 export type PatientLabRequest = {
     id: string;
     patient_id: string;
@@ -1639,6 +1644,7 @@ export type PatientLabRequest = {
     selected_lab_name?: string | null;
     selected_lab_address?: string | null;
     home_collection?: boolean;
+    can_upload_result?: boolean;
     result_file_id?: string | null;
     result_uploaded_at?: string | null;
     result_filename?: string | null;
@@ -1647,6 +1653,7 @@ export type PatientLabRequest = {
 };
 
 export type PatientLabRequestsResponse = {
+    upload_receipt?: LabResultUploadReceipt;
     test_requests: PatientLabRequest[];
     partner_labs: LabPartner[];
     preparation: Array<Record<string, unknown>>;
@@ -1689,6 +1696,7 @@ export type DoctorLabOrderUpdatePayload = Partial<DoctorLabOrderPayload> & {
 };
 
 export type DoctorLabOrdersResponse = {
+    upload_receipt?: LabResultUploadReceipt;
     test_requests: PatientLabRequest[];
     provider_id?: string;
     lab_test?: PatientLabRequest;

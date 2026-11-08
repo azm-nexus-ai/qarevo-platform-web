@@ -1,13 +1,18 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import { currentPortal } from '@/lib/portal-scope'
+import { readAccountScope } from '@/lib/account-storage'
+import { labResultTarget } from '@/lib/doctor-lab-notifications'
+import { labUploadAttempt, labUploadReceipt, type LabUploadAttempt } from '@/lib/lab-upload-attempt'
 import { useNavigationGuard } from 'nextjs-nav-guard'
 import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import SecureDocumentAccessDialog from '@/components/ui/SecureDocumentAccessDialog'
 import { usePortalAction } from '@/lib/portal-action'
 import { medicalUploadError } from '@/lib/clinical-upload'
 import { orderDateFromIso, orderDateToIso } from '@/lib/clinical-order-dates'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import {
   clearPortalSession,
@@ -57,8 +62,22 @@ const inputStyle = {
   outline: 'none',
 } as const
 
-export default function DoctorLabOrdersPage() {
+function DoctorLabOrdersPageContent() {
   const router = useRouter()
+  const renderedScope = readAccountScope('doctor'), renderedPath = usePathname()
+  const directoryGeneration = useRef(0)
+  const parameters = useSearchParams()
+  const renderedQuery = parameters.toString()
+  const isRenderedContext = useCallback(() => currentPortal() === 'doctor' && renderedScope === readAccountScope('doctor') && window.location.pathname === renderedPath && new URLSearchParams(window.location.search).toString() === renderedQuery, [renderedScope, renderedPath, renderedQuery])
+  const linked = useMemo(() => labResultTarget(new URLSearchParams(parameters.toString())), [parameters])
+  const linkedKey = JSON.stringify(linked)
+  const appliedLink = useRef('')
+  const dirtyRef = useRef(false)
+  const uploadAttempt = useRef<LabUploadAttempt | null>(null)
+  const [failedUpload, setFailedUpload] = useState<{ orderId: string; file: File; note: string } | null>(null)
+  const [uploadNotice, setUploadNotice] = useState('')
+  const [patientListAttempt, setPatientListAttempt] = useState(0)
+  const [patientListState, setPatientListState] = useState<{ attempt: number; error: string } | null>(null)
   const captureAction = usePortalAction()
   const operationInFlight = useRef(false)
   const readVersion = useRef(0)
@@ -69,9 +88,9 @@ export default function DoctorLabOrdersPage() {
   const [documentAccess, setDocumentAccess] = useState<{ patientId: string; orderId: string; fileId: string; title: string } | null>(null)
   const closeDocumentAccess = useCallback(() => setDocumentAccess(null), [])
   const loadDocument = useCallback(() => {
-    if (!documentAccess || documentAccess.patientId !== patientScope.current) return Promise.reject(new Error('Choose the patient and refresh this result.'))
+    if (!documentAccess || documentAccess.patientId !== patientScope.current || !isRenderedContext()) return Promise.reject(new Error('Choose the patient and refresh this result.'))
     return getDoctorLabResultAccess(documentAccess.patientId, documentAccess.orderId)
-  }, [documentAccess])
+  }, [documentAccess, isRenderedContext])
   const [patients, setPatients] = useState<DoctorPatient[]>([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const [labTests, setLabTests] = useState<PatientLabRequest[]>([])
@@ -83,6 +102,8 @@ export default function DoctorLabOrdersPage() {
   const [form, setForm] = useState<DoctorLabOrderPayload>(emptyForm)
 
   const dirty = showAddForm && JSON.stringify(form) !== JSON.stringify(baseline.current)
+  useEffect(() => { dirtyRef.current = dirty }, [dirty])
+  const patientsReady = patientListState?.attempt === patientListAttempt && !patientListState.error
   const navigation = useNavigationGuard({ enabled: ({ to }) => (dirty || saving) && !to.startsWith('/auth/') })
 
   const selectedPatient = useMemo(
@@ -90,37 +111,11 @@ export default function DoctorLabOrdersPage() {
     [patients, selectedPatientId],
   )
 
-  useEffect(() => {
-    if (!readSessionMarker()) {
-      clearPortalSession()
-      router.replace('/auth/doctor/login')
-      return
-    }
-
-    const action = captureAction()
-    const fetchPatients = async () => {
-      try {
-        const data = await getDoctorPatients()
-        if (action.isCurrent()) setPatients(data.patients || [])
-      } catch (err) {
-        if (!action.isCurrent()) return
-        if (isAuthError(err)) {
-          clearPortalSession()
-          router.replace('/auth/doctor/login')
-          return
-        }
-        setError(getApiErrorDetail(err) ?? 'Unable to load your patients.')
-      }
-    }
-
-    fetchPatients()
-  }, [router, captureAction])
-
-  const fetchLabTests = async (patientId = patientScope.current) => {
-    if (!patientId || operationInFlight.current) return
+  const fetchLabTests = useCallback(async (patientId = patientScope.current) => {
+    if (!patientId || operationInFlight.current || !isRenderedContext()) return
     const action = captureAction()
     const version = ++readVersion.current
-    const isCurrent = () => action.isCurrent() && version === readVersion.current && patientId === patientScope.current
+    const isCurrent = () => action.isCurrent() && isRenderedContext() && version === readVersion.current && patientId === patientScope.current
     setLoading(true); setError(null)
     try {
       const data = await getDoctorLabOrders(patientId)
@@ -130,25 +125,61 @@ export default function DoctorLabOrdersPage() {
       if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
       setError(getApiErrorDetail(err) ?? 'Unable to load lab orders. Use Refresh to retry.')
     } finally { if (isCurrent()) setLoading(false) }
-  }
+  }, [captureAction, router, isRenderedContext])
 
-  const changePatient = (patientId: string) => {
-    if (operationInFlight.current) return
+  const changePatient = useCallback((patientId: string) => {
+    if (operationInFlight.current || !isRenderedContext()) return
     ++readVersion.current
     patientScope.current = patientId
     setDocumentAccess(null)
+    uploadAttempt.current = null; setFailedUpload(null); setUploadNotice('')
     setSelectedPatientId(patientId); setLabTests([]); setShowAddForm(false)
     setEditingId(null); setError(null); setLoading(false)
     baseline.current = { ...emptyForm, patient_id: patientId }
     originalDates.current = {}
     setForm(baseline.current); setPendingChange(null)
     if (patientId) void fetchLabTests(patientId)
-  }
+  }, [fetchLabTests, isRenderedContext])
   const handlePatientChange = (patientId: string) => {
     if (operationInFlight.current) return
     if (dirty) setPendingChange({ patientId })
     else changePatient(patientId)
   }
+
+  useEffect(() => {
+    if (!readSessionMarker()) {
+      clearPortalSession()
+      router.replace('/auth/doctor/login')
+      return
+    }
+
+    const action = captureAction(), controller = new AbortController(), generation = ++directoryGeneration.current
+    let current = true
+    const isCurrent = () => current && generation === directoryGeneration.current && action.isCurrent() && isRenderedContext()
+    const fetchPatients = async () => {
+      try {
+        const [data, exact] = await Promise.all([getDoctorPatients(undefined, {}, undefined, undefined, controller.signal), linked.target ? getDoctorPatients(undefined, {}, undefined, linked.target.patientId, controller.signal) : Promise.resolve(null)])
+        if (!isCurrent()) return
+        const available = exact && linked.target ? [...(data.patients || []).filter(patient => patient.patient_id !== linked.target!.patientId), ...(exact.patients || []).filter(patient => patient.patient_id === linked.target!.patientId)] : data.patients || []
+        setPatients(available); setPatientListState({ attempt: patientListAttempt, error: '' })
+        if (linked.target && appliedLink.current !== linkedKey && !dirtyRef.current && !operationInFlight.current && available.some(item => item.patient_id === linked.target!.patientId)) {
+          appliedLink.current = linkedKey; changePatient(linked.target.patientId)
+        }
+      } catch (err) {
+        if (!isCurrent()) return
+        if (isAuthError(err)) {
+          clearPortalSession()
+          router.replace('/auth/doctor/login')
+          return
+        }
+        const message = getApiErrorDetail(err) ?? 'Unable to load your patients.'
+        setError(message); setPatientListState({ attempt: patientListAttempt, error: message })
+      }
+    }
+
+    fetchPatients()
+    return () => { current = false; controller.abort() }
+  }, [router, captureAction, patientListAttempt, linked, linkedKey, changePatient, isRenderedContext])
 
   const beginEdit = (test: PatientLabRequest) => {
     setEditingId(test.id)
@@ -186,14 +217,14 @@ export default function DoctorLabOrdersPage() {
   // Serialize writes synchronously and bind their continuations to the patient,
   // portal, session and page that started the request.
   const beginMutation = () => {
-    if (!patientScope.current || operationInFlight.current) return null
+    if (!patientScope.current || operationInFlight.current || !renderedScope || !isRenderedContext()) return null
     operationInFlight.current = true
     ++readVersion.current
     const action = captureAction()
     const patientId = patientScope.current
     setSaving(true); setLoading(false); setError(null)
-    return { patientId, isCurrent: () => action.isCurrent() && patientScope.current === patientId,
-      finish: () => { operationInFlight.current = false; if (action.isCurrent() && patientScope.current === patientId) setSaving(false) } }
+    return { patientId, scope: action.scope, isCurrent: () => action.isCurrent() && isRenderedContext() && patientScope.current === patientId,
+      finish: () => { operationInFlight.current = false; if (action.isCurrent() && isRenderedContext() && patientScope.current === patientId) setSaving(false) } }
   }
 
   const handleSave = async () => {
@@ -242,20 +273,32 @@ export default function DoctorLabOrdersPage() {
     finally { operation.finish() }
   }
 
-  const handleUploadResult = async (test: PatientLabRequest, file?: File) => {
+  const handleUploadResult = async (test: PatientLabRequest, file?: File, retryNote?: string) => {
     if (!file) return
+    if (test.can_upload_result !== true) { setError('Only the ordering clinician can upload a result for this request.'); return }
     const uploadError = medicalUploadError(file.size) || (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? 'Choose a PDF, PNG, JPEG or WebP file.' : null)
     if (uploadError) { setError(uploadError); return }
     const operation = beginMutation()
     if (!operation) return
-    const formData = new FormData()
-    formData.set('file', file); formData.set('note', 'Lab result uploaded by clinician')
+    const note = retryNote ?? 'Lab result uploaded by clinician'
+    setUploadNotice('')
     try {
+      const attempt = await labUploadAttempt(uploadAttempt.current, JSON.stringify([operation.scope, operation.patientId, test.id]), file, note)
+      if (!operation.isCurrent()) return
+      uploadAttempt.current = attempt
+      const formData = new FormData()
+      formData.set('file', file); formData.set('note', attempt.note); formData.set('upload_id', attempt.uploadId)
       const response = await uploadDoctorLabResult(operation.patientId, test.id, formData)
-      if (operation.isCurrent()) setLabTests(response.test_requests || [])
-    } catch (err) { if (operation.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to upload this lab result.') }
+      if (!operation.isCurrent()) return
+      const receipt = labUploadReceipt(response.upload_receipt, attempt.uploadId)
+      if (!receipt) throw new Error('Upload confirmation is unavailable. Retry this same file to recover its saved upload safely.')
+      setLabTests(response.test_requests || []); uploadAttempt.current = null; setFailedUpload(null)
+      setUploadNotice(receipt.current ? (receipt.replayed ? 'This upload was already saved. No second file was created.' : 'Result upload saved. Uploading does not record clinical review.') : 'The earlier upload was already recorded; it is no longer the current available result. Review this lab request before uploading again.')
+    } catch (err) { if (operation.isCurrent()) { setFailedUpload({ orderId: test.id, file, note }); setError(getApiErrorDetail(err) ?? 'Unable to upload this lab result. Retry the same file safely.') } }
     finally { operation.finish() }
   }
+  const linkedOrder = linked.target?.patientId === selectedPatientId ? labTests.find(test => test.id === linked.target?.requestId && test.patient_id === linked.target.patientId) : null
+  const linkedFileMatches = Boolean(linkedOrder?.result_file_id && linkedOrder.result_file_id === linked.target?.fileId)
 
   return (
     <div className='doctor-lab-page'>
@@ -271,11 +314,22 @@ export default function DoctorLabOrdersPage() {
         .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
         .dl-field { display: grid; gap: 6px; }
         .dl-field span, .dl-eyebrow { font-size: 11px; font-weight: 800; color: ${T.slate2}; letter-spacing: 0.06em; text-transform: uppercase; }
+        .dl-order[data-notification-target=true] { border-color:var(--focus-ring); box-shadow:0 0 0 1px var(--focus-ring); scroll-margin-top:100px; }
         .dl-order { border-radius: 18px; border: 1px solid var(--border); background: var(--surface-subtle); padding: 16px; display: grid; gap: 12px; }
         .dl-meta { display: flex; gap: 10px; flex-wrap: wrap; color: ${T.slate2}; font-size: 12px; font-weight: 700; }
         .dl-empty { padding: 28px; border-radius: 18px; background: rgba(32,181,223,0.08); color: ${T.blue}; text-align: center; font-weight: 800; }
         @media (max-width: 700px) { .dl-card { padding: 16px; border-radius: 18px; } .dl-btn { width: 100%; } .dl-header { display: grid; } }
       `}</style>
+
+      {(linked.target || linked.invalid) && <section aria-label='Selected lab result' className='dl-card'>
+        <h2 className='portal-h2'>Result selected from notifications</h2>
+        <p className='text-sm leading-7 text-secondary'>{linked.invalid ? 'This result link is invalid. Open an update from your notification inbox.' : !patientsReady ? 'Confirming access to the selected patient…' : !patients.some(patient => patient.patient_id === linked.target?.patientId) ? 'The selected patient is not available to this clinician account.' : selectedPatientId !== linked.target?.patientId ? 'Choose the selected patient to view this order. Unsaved changes must be resolved first.' : loading ? 'Loading the selected order…' : error ? 'The selected result could not be confirmed. Refresh the order list to retry.' : !linkedOrder ? 'The selected order is no longer available to this account.' : !linkedFileMatches ? linkedOrder.result_file_id ? 'This notification refers to a different upload. The current result shown below is a separate file; it has not been opened automatically.' : 'The referenced result file is no longer available. No file has been opened automatically.' : 'The exact file from this notification is selected. Use Open selected result below to request access. No clinical review has been recorded.'}</p>
+        <div className='mt-3 flex flex-wrap gap-3'>{linkedOrder && <button className='dl-btn' onClick={() => { const order = document.getElementById(`lab-order-${linkedOrder.id}`); order?.focus(); order?.scrollIntoView({ block: 'center' }) }}>Jump to selected order</button>}<Link href='/doctor/notifications' className='portal-button portal-button-secondary q-button q-button-secondary'>Back to result updates</Link>
+          {patientsReady && linked.target && patients.some(patient => patient.patient_id === linked.target?.patientId) && selectedPatientId !== linked.target.patientId && <button className='dl-btn' disabled={saving} onClick={() => handlePatientChange(linked.target!.patientId)}>Show selected patient</button>}
+        </div>
+      </section>}
+      {patientListState?.error && <div role='alert' className='dl-card'><p>{patientListState.error}</p><button className='dl-btn' onClick={() => setPatientListAttempt(value => value + 1)}>Retry patient list</button></div>}
+      {uploadNotice && <p role='status' className='dl-card text-sm text-secondary'>{uploadNotice}</p>}
 
       <div className='dl-header'>
         <div>
@@ -355,7 +409,7 @@ export default function DoctorLabOrdersPage() {
         {selectedPatientId && !loading && !error && labTests.length === 0 && <div className='dl-empty'>No lab requests yet for this patient.</div>}
         <div style={{ display: 'grid', gap: '12px' }}>
           {labTests.map((test) => (
-            <article className='dl-order' key={test.id}>
+            <article className='dl-order' key={test.id} id={`lab-order-${test.id}`} tabIndex={linked.target?.requestId === test.id ? -1 : undefined} data-lab-order-id={test.id} data-notification-target={linked.target?.requestId === test.id ? 'true' : undefined}>
               <div className='dl-header'>
                 <div>
                   <h3 style={{ margin: '0 0 4px', color: T.navy }}>{test.title}</h3>
@@ -399,20 +453,22 @@ export default function DoctorLabOrdersPage() {
               {test.reason && <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>Reason: {test.reason}</p>}
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 {test.result_file_id ? <button className='dl-btn' type='button' aria-haspopup='dialog' aria-label={`Open result for ${test.title}`} disabled={saving}
-                  onClick={() => setDocumentAccess(current => current ?? { patientId: patientScope.current, orderId: test.id, fileId: test.result_file_id!, title: test.title })}>Open result</button>
+                  onClick={() => setDocumentAccess(current => current ?? { patientId: patientScope.current, orderId: test.id, fileId: test.result_file_id!, title: test.title })}>{linked.target?.requestId === test.id ? linkedFileMatches ? 'Open selected result' : 'Open current result (different upload)' : 'Open result'}</button>
                   : <span className='text-sm text-muted'>No result file available.</span>}
                 <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ edit: test }) : beginEdit(test)} disabled={saving}>Edit</button>
                 <input
                   id={`lab-result-${test.id}`}
                   type='file'
                   accept='.pdf,image/png,image/jpeg,image/webp'
-                  disabled={saving || showAddForm}
+                  disabled={saving || showAddForm || test.can_upload_result !== true}
                   style={{ display: 'none' }}
                   onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleUploadResult(test, file) }}
                 />
-                <button className='dl-btn primary' type='button' disabled={saving || showAddForm} onClick={() => document.getElementById(`lab-result-${test.id}`)?.click()}>
+                <button className='dl-btn primary' type='button' disabled={saving || showAddForm || test.can_upload_result !== true} onClick={() => document.getElementById(`lab-result-${test.id}`)?.click()}>
                   Upload Result
                 </button>
+                {test.can_upload_result !== true && <span className='text-sm text-secondary'>Only the ordering clinician can upload a result for this request.</span>}
+                {failedUpload?.orderId === test.id && <button className='dl-btn' type='button' disabled={saving} onClick={() => void handleUploadResult(test, failedUpload.file, failedUpload.note)}>Retry result upload</button>}
                 <button className='dl-btn danger' type='button' onClick={() => handleDelete(test.id)} disabled={saving || showAddForm}>Delete</button>
               </div>
             </article>
@@ -431,4 +487,12 @@ export default function DoctorLabOrdersPage() {
         }} />
     </div>
   )
+}
+
+function DoctorLabOrdersRoute() {
+  const parameters = useSearchParams()
+  return <DoctorLabOrdersPageContent key={parameters.toString()} />
+}
+export default function DoctorLabOrdersPage() {
+  return <Suspense fallback={<p role='status' className='text-secondary'>Loading lab orders…</p>}><DoctorLabOrdersRoute /></Suspense>
 }

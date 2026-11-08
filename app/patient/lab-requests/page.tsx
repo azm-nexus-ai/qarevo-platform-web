@@ -2,12 +2,15 @@
 
 import Link from 'next/link'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import { usePortalAction } from '@/lib/portal-action'
 import { orderDateFromIso, orderDateToIso } from '@/lib/clinical-order-dates'
+import { currentPortal } from '@/lib/portal-scope'
+import { readAccountScope } from '@/lib/account-storage'
+import { labUploadAttempt, labUploadReceipt, type LabUploadAttempt } from '@/lib/lab-upload-attempt'
 import { medicalUploadError } from '@/lib/clinical-upload'
 import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
 import Ico from '@/components/ui/Ico'
@@ -58,6 +61,9 @@ const downloadTextFile = (filename: string, content: string) => {
 
 function LabRequestsPageContent() {
   const router = useRouter()
+  const renderedScope = readAccountScope('patient'), renderedPath = usePathname()
+  const uploadAttempt = useRef<LabUploadAttempt | null>(null)
+  const [failedUpload, setFailedUpload] = useState<{ requestId: string; file: File; note: string } | null>(null)
   const captureAction = usePortalAction()
   const operationInFlight = useRef(false)
   const refreshInFlight = useRef(false)
@@ -96,6 +102,7 @@ function LabRequestsPageContent() {
   const applyResponse = (response: PatientLabRequestsResponse, preserveEdits = true) => {
     const selected = response.test_requests.find(item => item.id === selectedRequestRef.current) ?? response.test_requests[0] ?? null
     const sameRequest = selected?.id === selectedRequestRef.current
+    if (!sameRequest) { uploadAttempt.current = null; setFailedUpload(null) }
     selectedRequestRef.current = selected?.id || ''
     setData(response); setSelectedRequestId(selectedRequestRef.current)
     // Keep the selected request and its visit fields together. Never copy the
@@ -157,13 +164,14 @@ function LabRequestsPageContent() {
 
   const selectRequest = (requestId: string) => {
     if (operationInFlight.current) return
+    if (requestId !== selectedRequestRef.current) { uploadAttempt.current = null; setFailedUpload(null) }
     selectedRequestRef.current = requestId
     setSelectedRequestId(requestId)
     syncBookingFields(data.test_requests.find((item) => item.id === requestId))
   }
 
   const handleBook = async () => {
-    if (operationInFlight.current || refreshInFlight.current) return
+    if (operationInFlight.current || refreshInFlight.current || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath) return
     setNotice(''); setError(null)
     if (!planAllowed(selectedRequest)) { setError(planUnavailable); return }
     const errors: typeof validation = {}
@@ -199,25 +207,30 @@ function LabRequestsPageContent() {
     finally { operationInFlight.current = false; if (action.isCurrent()) setSaving(false) }
   }
 
-  const handleUpload = async (file?: File) => {
-    if (!selectedRequest || !file || operationInFlight.current || refreshInFlight.current) return
-    const uploadError = medicalUploadError(file.size)
+  const handleUpload = async (file?: File, retryNote?: string) => {
+    if (!selectedRequest || !file || operationInFlight.current || refreshInFlight.current || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath) return
+    const uploadError = medicalUploadError(file.size) || (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? 'Choose a PDF, PNG, JPEG or WebP file.' : null)
     if (uploadError) { setError(uploadError); return }
     operationInFlight.current = true
     ++refreshVersion.current
-    const action = captureAction()
-    setSaving(true)
-    setError(null)
-    const formData = new FormData()
-    formData.set('file', file)
-    formData.set('note', `${selectedRequest.title} result uploaded by patient`)
+    const action = captureAction(), requestId = selectedRequest.id
+    const note = retryNote ?? `${selectedRequest.title} result uploaded by patient`
+    setSaving(true); setError(null); setNotice('')
     try {
-      const response = await uploadPatientLabResult(selectedRequest.id, formData)
-      if (!action.isCurrent()) return
-      applyResponse(response)
+      const attempt = await labUploadAttempt(uploadAttempt.current, JSON.stringify([action.scope, requestId]), file, note)
+      if (!action.isCurrent() || selectedRequestRef.current !== requestId) return
+      uploadAttempt.current = attempt
+      const formData = new FormData()
+      formData.set('file', file); formData.set('note', attempt.note); formData.set('upload_id', attempt.uploadId)
+      const response = await uploadPatientLabResult(requestId, formData)
+      if (!action.isCurrent() || selectedRequestRef.current !== requestId) return
+      const receipt = labUploadReceipt(response.upload_receipt, attempt.uploadId)
+      if (!receipt) throw new Error('Upload confirmation is unavailable. Retry this same file to recover its saved upload safely.')
+      applyResponse(response); uploadAttempt.current = null; setFailedUpload(null)
+      setNotice(receipt.current ? (receipt.replayed ? 'This upload was already saved. No second file was created.' : 'Result upload saved in Medical Records. No clinical review has been recorded.') : 'The earlier upload was already recorded; it is no longer the current available result. Review this lab request before uploading again.')
       if (uploadInputRef.current) uploadInputRef.current.value = ''
     } catch (err) {
-      if (action.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to upload this lab result.')
+      if (action.isCurrent() && selectedRequestRef.current === requestId) { setFailedUpload({ requestId, file, note }); setError(getApiErrorDetail(err) ?? 'Unable to upload this lab result. Retry the same file safely.') }
     } finally {
       operationInFlight.current = false
       if (action.isCurrent()) setSaving(false)
@@ -446,8 +459,9 @@ function LabRequestsPageContent() {
                   <div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{selectedRequest?.title ?? 'Selected lab request'}</div>
                   <div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>PDF, PNG, JPG, or WEBP. Stored in Medical Records after upload.</div>
                 </div>
-                <input ref={uploadInputRef} type='file' accept='.pdf,image/png,image/jpeg,image/webp' style={{ display: 'none' }} onChange={(event) => handleUpload(event.target.files?.[0])} />
+                <input ref={uploadInputRef} type='file' accept='.pdf,image/png,image/jpeg,image/webp' style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleUpload(file) }} />
                 <button type='button' className='action-btn primary' onClick={() => uploadInputRef.current?.click()} disabled={saving}>{saving ? 'Uploading...' : 'Upload Result'}</button>
+                {failedUpload?.requestId === selectedRequestId && <button type='button' className='action-btn' disabled={saving} onClick={() => void handleUpload(failedUpload.file, failedUpload.note)}>Retry result upload</button>}
               </div>
             )}
             {data.recent_uploads.length > 0 && (
