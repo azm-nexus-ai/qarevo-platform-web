@@ -231,10 +231,10 @@ async function request<T>(path:string,init:RequestInit):Promise<T> {
 }
 export function apiGet<T>(path:string,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> { return request<T>(path,{headers,signal}); }
 function jsonRequest<T,B>(method:string,path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body),signal});}
-export function apiPost<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>):Promise<T> {return jsonRequest<T,B>('POST',path,body,headers);}
-export function apiPut<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>):Promise<T> {return jsonRequest<T,B>('PUT',path,body,headers);}
+export function apiPost<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('POST',path,body,headers,signal);}
+export function apiPut<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('PUT',path,body,headers,signal);}
 export function apiPatch<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('PATCH',path,body,headers,signal);}
-export function apiDelete<T>(path:string,headers?:Record<string,string>):Promise<T> {return request<T>(path,{method:'DELETE',headers});}
+export function apiDelete<T>(path:string,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method:'DELETE',headers,signal});}
 export function apiUpload<T>(path:string,body:FormData,headers?:Record<string,string>):Promise<T> {return request<T>(path,{method:'POST',body,headers});}
 
 export type CreateMeetingRequest = {
@@ -1359,10 +1359,8 @@ export async function getPatientDashboard(userId?: string | null): Promise<Patie
     return apiGet<PatientDashboardResponse>(`/api/v1/patient/dashboard${query ? `?${query}` : ""}`);
 }
 
-export async function markPatientMedicationTaken(medicationName: string): Promise<PatientDashboardResponse> {
-    return apiPost<PatientDashboardResponse>("/api/v1/patient/dashboard/medications/mark-taken", {
-        medication_name: medicationName,
-    });
+export async function markPatientMedicationTaken(medicationId: string, signal?: AbortSignal): Promise<PatientDashboardResponse> {
+    return apiPost<PatientDashboardResponse>("/api/v1/patient/dashboard/medications/mark-taken", { medication_id: medicationId }, undefined, signal);
 }
 
 export async function searchPatientDashboard(query: string): Promise<PatientDashboardSearchResponse> {

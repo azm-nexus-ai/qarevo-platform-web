@@ -71,3 +71,20 @@ on port 3100 with `E2E_EXTERNAL_SERVER=1`, `E2E_PRODUCTION=1` and
 synthetic upstream; all other clinical tests intercept their API calls. Never
 point this synthetic regression server at a deployed API. CI fails on flakes;
 use `--retries=0` when reproducing a failure locally.
+
+## Clinical instruction integrity
+
+Doctor medication and care-plan pages share one authoring component and safe read
+adapters. Historical missing values remain “Not recorded”; malformed schedules and
+ambiguous identifiers require review. Corrections send only changed fields through
+the existing PUT APIs, preserving untouched historical data and explicit optional
+clears. Episode associations are creation-only. Medication schedules accept the
+recorded dayparts or exact 24-hour `HH:MM` values without translating one into the
+other; optional care-plan progress distinguishes unknown from an explicit zero.
+Patient adherence is a separate patient-reported event addressed by medication ID;
+it never changes clinician status or progress, and medication names are never put
+in navigation URLs. Run `node --test tests/clinical-authoring-integrity.test.cjs`
+and, against the isolated production-build fixture server described above,
+`./node_modules/.bin/playwright test e2e/clinical-authoring-integrity.spec.ts --workers=1 --retries=0`.
+The existing clinician patient selector still lists the first 25 assigned patients;
+searchable pagination is an explicit follow-up rather than an access-rule change.

@@ -2,6 +2,8 @@
 import { readPortalIdentity } from '@/lib/portal-scope'
 import ProfileImage from '@/components/patient/ProfileImage'
 import PatientNotifications from '@/components/notifications/PatientNotifications'
+import PatientMedicationCards from '@/components/clinical/PatientMedicationCards'
+import { careInstruction, instructionList } from '@/lib/clinical-instructions'
 
 import Link from 'next/link'
 import Image from 'next/image'
@@ -9,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { apiGet, logoutCurrentUser, clearPortalSession, getPatientDashboard, getPatientHealthInfo, isAuthError, markPatientMedicationTaken, readSessionMarker, searchPatientDashboard, searchPatientDoctors } from '@/lib/api'
+import { apiGet, logoutCurrentUser, clearPortalSession, getPatientDashboard, getPatientHealthInfo, isAuthError, readSessionMarker, searchPatientDashboard, searchPatientDoctors } from '@/lib/api'
 import type { PatientDashboardResponse, PatientDashboardSearchResult, PatientDoctor } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
@@ -43,20 +45,11 @@ type QuickAction = {
 
 type CarePlanCard = {
   name: string
-  progress: number
+  progress: number | null
   physician: string
   eta: string
   tasks: string
-}
-
-type MedicationCard = {
-  name: string
-  dosage: string
-  frequency: string
-  remaining: string
-  progress: number
-  due: string
-  status: string
+  reviewNeeded: boolean
 }
 
 type LabDatum = {
@@ -177,15 +170,6 @@ function dashboardHasKey(payload: PatientDashboardResponse | null, snakeKey: str
 function text(value: unknown, fallback = ''): string {
   if (typeof value === 'string' && value.trim()) return value
   if (typeof value === 'number' || typeof value === 'boolean') return String(value)
-  return fallback
-}
-
-function numberValue(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value)
-    if (Number.isFinite(parsed)) return parsed
-  }
   return fallback
 }
 
@@ -443,8 +427,8 @@ export default function PatientDashboardPage() {
         if (cancelled) return
         setDashboardData(data)
         setPatientName(data.patient_name || '')
-        const plans = data.care_plans ?? data.carePlans ?? []
-        const activePlan = plans.find(plan => (plan.status ?? '').toLowerCase() === 'active') ?? plans[0]
+        const plans = instructionList(data.care_plans ?? data.carePlans ?? []).items.map(careInstruction)
+        const activePlan = plans.find(plan => plan.status?.trim().toLowerCase() === 'active') ?? plans[0]
         setCarePlanStatus(activePlan?.status || (plans.length ? 'Status not recorded' : 'Not started'))
       } catch (error) {
         if (cancelled) return
@@ -565,21 +549,6 @@ export default function PatientDashboardPage() {
     router.push(href)
   }
 
-  const handleMarkMedicationTaken = async (medicationName: string) => {
-    try {
-      const data = await markPatientMedicationTaken(medicationName)
-      setDashboardData(data)
-    } catch (error) {
-      if (isAuthError(error)) {
-        clearPortalSession()
-        router.replace('/auth/sign-in')
-        return
-      }
-      console.error('Failed to mark medication as taken:', error)
-      router.push(`${PATIENT_ROUTES.prescriptions}?medication=${encodeURIComponent(medicationName)}&action=mark-taken`)
-    }
-  }
-
   const categoryLabel = (category: PatientDashboardSearchResult['category']) => {
     if (category === 'doctors') return 'Doctor'
     if (category === 'records') return 'Record'
@@ -619,35 +588,17 @@ export default function PatientDashboardPage() {
     const source = dashboardArray(dashboardData, 'care_plans', 'carePlans')
     if (!source.length && !dashboardHasKey(dashboardData, 'care_plans', 'carePlans')) return []
     return source.map((item) => {
-      const fallback = { eta: 'In progress', tasks: 'No tasks yet' }
-      const planName = text(item.name ?? item.title, 'Care plan')
-      const status = text(item.status)
+      const plan = careInstruction(item)
       return {
-        name: planName,
-        progress: numberValue(item.progress, 0),
-        physician: text(item.physician ?? item.provider ?? item.doctor, 'Care team'),
-        eta: text(item.eta ?? item.duration ?? item.timeRemaining, status || fallback.eta),
-        tasks: text(item.tasks ?? item.taskSummary ?? item.hint, status ? `Status: ${status}` : fallback.tasks),
+        name: plan.title?.trim() || 'Care plan title not recorded', progress: plan.progress,
+        physician: text(item.physician ?? item.provider ?? item.doctor, 'Clinician not recorded'),
+        eta: plan.status?.trim() ? `Status: ${plan.status}` : 'Clinical status not recorded',
+        tasks: plan.description?.trim() || 'Plan details not recorded', reviewNeeded: plan.quality.reviewNeeded,
       }
     })
   }, [dashboardData])
 
-  const displayMedications = useMemo<MedicationCard[]>(() => {
-    const source = dashboardArray(dashboardData, 'medications')
-    if (!source.length && !dashboardHasKey(dashboardData, 'medications')) return []
-    return source.map((item) => {
-      const fallback = { dosage: '', frequency: '', remaining: '', due: '' }
-      return {
-        name: text(item.name, 'Medication'),
-        dosage: text(item.dosage ?? item.dose ?? item.strength, fallback.dosage),
-        frequency: text(item.frequency ?? item.schedule, fallback.frequency),
-        remaining: text(item.remaining ?? item.duration, fallback.remaining),
-        progress: numberValue(item.progress, 0),
-        due: text(item.due ?? item.nextDue ?? item.schedule, fallback.due),
-        status: text(item.status, 'Status not recorded'),
-      }
-    })
-  }, [dashboardData])
+  const medicationCount = dashboardArray(dashboardData, 'medications').length
 
   const displayLabData = useMemo<LabDatum[]>(() => {
     const source = dashboardArray(dashboardData, 'lab_data', 'labData')
@@ -781,25 +732,23 @@ export default function PatientDashboardPage() {
     const messages = findCard('message')
     return [
       { label: 'Upcoming Appointments', value: appointment?.value ?? '0', sub: appointment?.sub ?? 'No upcoming appointments' },
-      { label: 'Active Prescriptions', value: prescriptions?.value ?? String(displayMedications.length), sub: prescriptions?.sub ?? (displayMedications.length ? 'Recorded medications' : 'No medications recorded') },
+      { label: 'Active Prescriptions', value: prescriptions?.value ?? String(medicationCount), sub: prescriptions?.sub ?? (medicationCount ? 'Recorded medications' : 'No medications recorded') },
       { label: 'Pending Lab Tests', value: String(labs.length || displayLabData.length), sub: labs[0]?.status ?? 'No pending tests' },
       { label: 'Unread Messages', value: messages?.value ?? String(displayMessageThreads.filter((item) => item.unread).length), sub: messages?.sub ?? 'Care team updates' },
     ]
-  }, [dashboardData, displayLabData, displayMedications.length, displayMessageThreads, displaySummaryCards])
+  }, [dashboardData, displayLabData, medicationCount, displayMessageThreads, displaySummaryCards])
 
   const currentAppointment = displaySummaryCards.find((item) => item.label.toLowerCase().includes('appointment'))
   const primaryPhysician = displaySummaryCards.find((item) => item.label.toLowerCase().includes('physician'))
   const hasUpcomingAppointment = currentAppointment ? Number.parseInt(currentAppointment.value, 10) > 0 : false
-  const hasCareActivity = hasUpcomingAppointment || displayCarePlans.length > 0 || displayMedications.length > 0 || displayLabData.length > 0 || displayMessageThreads.length > 0
+  const hasCareActivity = hasUpcomingAppointment || displayCarePlans.length > 0 || medicationCount > 0 || displayLabData.length > 0 || displayMessageThreads.length > 0
   const heroBody = hasCareActivity
     ? 'View your appointments, care records and messages in one place.'
     : 'Choose a physician to book a consultation and begin your care.'
-  const careProgress = displayCarePlans.length
-    ? Math.round(displayCarePlans.reduce((total, plan) => total + plan.progress, 0) / displayCarePlans.length)
-    : 0
+  const recordedPlanProgress = displayCarePlans.flatMap(plan => plan.progress === null ? [] : [plan.progress])
+  const careProgress = recordedPlanProgress.length ? Math.round(recordedPlanProgress.reduce((total, value) => total + value, 0) / recordedPlanProgress.length) : null
   const todayScheduleItems = [
     ...(hasUpcomingAppointment && currentAppointment && primaryPhysician ? [{ title: 'Upcoming appointment', body: `${primaryPhysician.value} · ${primaryPhysician.sub}`, time: currentAppointment.sub }] : []),
-    ...displayMedications.slice(0, 1).map((item) => ({ title: 'Medication reminder', body: `${item.name} · ${item.dosage}`, time: `Due ${item.due}` })),
     ...displayLabData.slice(0, 1).map((item) => ({ title: 'Lab update', body: `${item.value} · ${item.status}`, time: item.detail })),
   ].slice(0, 3)
 
@@ -1321,24 +1270,25 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Active Care Plans' sub='Ongoing treatment paths and milestones.'>
+          <SectionCard title='Care Plans' sub='Care plans and recorded progress.'>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayCarePlans.length === 0 && (
                 <EmptyState>No active care plans yet. They will appear here after a consultation or clinical workflow assignment.</EmptyState>
               )}
-              {displayCarePlans.map((plan) => (
-                <div key={plan.name} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
+              {displayCarePlans.map((plan, index) => (
+                <div key={`${plan.name}:${index}`} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <div>
                       <h3 className='portal-h3'>{plan.name}</h3>
                       <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{plan.physician} · {plan.eta}</p>
                     </div>
-                    <div style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: T.link }}>{plan.progress}% complete</div>
+                    <div style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: T.link }}>{plan.progress === null ? 'Progress not recorded' : `${plan.progress}% recorded progress`}</div>
                   </div>
-                  <div style={{ marginTop: '12px', height: '8px', borderRadius: '999px', background: "var(--surface-hover)", overflow: 'hidden' }}>
+                  {plan.progress !== null && <div style={{ marginTop: '12px', height: '8px', borderRadius: '999px', background: "var(--surface-hover)", overflow: 'hidden' }}>
                     <div style={{ width: `${plan.progress}%`, height: '100%', borderRadius: 'inherit', background: 'linear-gradient(90deg, #20B5DF 0%, var(--primary-end) 100%)' }} />
-                  </div>
+                  </div>}
                   <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate }}>{plan.tasks}</p>
+                  {plan.reviewNeeded && <p className='mt-2 text-sm leading-7 text-secondary'>Clinician review needed for some saved care-plan fields.</p>}
                 </div>
               ))}
             </div>
@@ -1346,33 +1296,8 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Medications' sub='The medications supporting your active care plan.'>
-            <div style={{ display: 'grid', gap: '10px' }}>
-              {displayMedications.length === 0 && (
-                <EmptyState>No medications are active yet.</EmptyState>
-              )}
-              {displayMedications.map((item) => (
-                <div key={item.name} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                    <div>
-                      <h3 className='portal-h3'>{item.name}</h3>
-                      <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{item.dosage} · {item.frequency} · {item.remaining}</p>
-                    </div>
-                    <div style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: T.green }}>{item.status}</div>
-                  </div>
-                  <div style={{ marginTop: '12px', height: '8px', borderRadius: '999px', background: "var(--surface-hover)", overflow: 'hidden' }}>
-                    <div style={{ width: `${item.progress}%`, height: '100%', borderRadius: 'inherit', background: 'linear-gradient(90deg, #20B5DF 0%, #A5E0DA 100%)' }} />
-                  </div>
-                  <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>Due {item.due}</p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <HoverBtn onClick={() => router.push(`${PATIENT_ROUTES.prescriptions}?medication=${encodeURIComponent(item.name)}`)} base={{ minHeight: '36px', borderRadius: '10px', padding: '0 12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>View Details</HoverBtn>
-                      <HoverBtn onClick={() => handleMarkMedicationTaken(item.name)} base={{ minHeight: '36px', borderRadius: '10px', padding: '0 12px', border: 'none', background: 'linear-gradient(135deg, #20B5DF 0%, var(--primary-end) 100%)', color: '#fff', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>Mark as Taken</HoverBtn>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <SectionCard title='Medications' sub='Clinician instructions and separate patient-reported adherence.'>
+            <PatientMedicationCards records={dashboardData?.medications ?? []} onUpdated={setDashboardData} />
           </SectionCard>
 
           <div style={{ height: '14px' }} />
@@ -1640,12 +1565,12 @@ export default function PatientDashboardPage() {
             </SectionCard>
 
             <SectionCard title='Care Progress' sub='How your current plan is tracking.'>
-              {displayCarePlans.length ? (
+              {careProgress !== null ? (
                 <div style={{ borderRadius: '14px', padding: '14px', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.22) 100%)', border: "1px solid var(--border)" }}>
                   <div style={{ marginBottom: '8px', height: '8px', borderRadius: '999px', background: "var(--surface-hover)", overflow: 'hidden' }}>
                     <div style={{ width: `${careProgress}%`, height: '100%', borderRadius: 'inherit', background: 'linear-gradient(90deg, #20B5DF 0%, var(--primary-end) 100%)' }} />
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>Your active care plans are {careProgress}% complete on average.</p>
+                  <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>Recorded progress averages {careProgress}% across {recordedPlanProgress.length} plan(s). No progress is inferred for other plans.</p>
                 </div>
               ) : (
                 <EmptyState>No care plan progress yet.</EmptyState>

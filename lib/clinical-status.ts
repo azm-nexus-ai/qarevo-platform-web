@@ -30,6 +30,7 @@ const domains: Record<ClinicalStatusDomain, Record<string, StatusDescription>> =
     COMPLETED: { label: 'Completed', tone: 'neutral' },
   },
   'care-plan': {
+    MONITORING: { label: 'Monitoring', tone: 'info' },
     ACTIVE: { label: 'Active', tone: 'info' },
     COMPLETED: { label: 'Completed', tone: 'success' },
     ON_HOLD: { label: 'On hold', tone: 'warning' },

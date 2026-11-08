@@ -1,39 +1,21 @@
 'use client'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
-import { PortalCard } from '@/components/patient/PatientPortalPrimitives'
-import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
-import { EmptyRecords, RecordFields, RecordLoadState, recordList, recordText, type ClinicalRecord } from '@/components/patient/ClinicalRecords'
+import { EmptyRecords, RecordLoadState } from '@/components/patient/ClinicalRecords'
+import { MedicationRecordCard, CarePlanRecordCard } from '@/components/clinical/InstructionRecords'
 import { usePatientResource } from '@/lib/use-patient-resource'
-import { T } from '@/lib/tokens'
+import { instructionList, medicationInstruction, careInstruction } from '@/lib/clinical-instructions'
 
 export default function PrescriptionCarePlanPage() {
-  const resource = usePatientResource<ClinicalRecord>('/api/v1/patient/prescription-care-plan', false, { refreshOnFocus: true, refreshIntervalMs: 30000 })
-  const medications = recordList(resource.data?.medications)
-  const plans = recordList(resource.data?.care_plans)
-  return <PatientPortalShell title='Prescriptions & Care Plan' description='Medication instructions and care plans recorded for your account.'>
-    <RecordLoadState {...resource}>
-      <div style={{ display: 'grid', gap: 18 }}>
-        <section aria-labelledby='medications-title'>
-          <h2 id='medications-title' style={{ color: T.navy, fontSize: 20 }}>Your medications</h2>
-          {medications.length === 0 ? <EmptyRecords title='No medications recorded' description='Medication instructions will appear here when your clinician records them. No medication plan is available for this account yet.' /> :
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 16 }}>{medications.map((medication, index) => <PortalCard key={recordText(medication.id) || index}>
-              <h3 style={{ margin: '0 0 8px', color: T.navy }}>{recordText(medication.name) || 'Medication record'}</h3>
-              <ClinicalStatusBadge status={medication.status} domain='medication' />
-              <RecordFields record={medication} fields={[
-                ['strength', 'Strength'], ['dosage', 'Dose'], ['frequency', 'Frequency'], ['duration', 'Duration'], ['instructions', 'Clinician instructions'], ['food', 'Food instructions'],
-              ]} />
-              {!recordText(medication.instructions) && <p style={{ color: T.slate }}>No additional instructions were recorded. Contact your clinician if you need clarification.</p>}
-            </PortalCard>)}</div>}
-        </section>
-        <section aria-labelledby='plans-title'>
-          <h2 id='plans-title' style={{ color: T.navy, fontSize: 20 }}>Your care plans</h2>
-          {plans.length === 0 ? <EmptyRecords title='No care plan recorded' description='Your clinician’s care plan will appear here when it is available.' /> : <div style={{ display: 'grid', gap: 16 }}>{plans.map((plan, index) => <PortalCard key={recordText(plan.id) || index}>
-            <h3 style={{ marginTop: 0, color: T.navy }}>{recordText(plan.title) || 'Care plan'}</h3>
-            <ClinicalStatusBadge status={plan.status} domain='care-plan' />
-            <RecordFields record={plan} fields={[['description', 'Plan details']]} />
-          </PortalCard>)}</div>}
-        </section>
-      </div>
+  const resource = usePatientResource<Record<string, unknown>>('/api/v1/patient/prescription-care-plan', false, { refreshOnFocus: true, refreshIntervalMs: 30000, abortOnCleanup: true })
+  const medications = instructionList(resource.data?.medications), plans = instructionList(resource.data?.care_plans)
+  const invalid = resource.data !== null && (medications.invalid || plans.invalid)
+  return <PatientPortalShell title='Prescriptions & Care Plan' description='Medication instructions and care plans recorded for your account. Missing or historical fields remain visible for clinician review.'>
+    <RecordLoadState {...resource} error={resource.error || invalid} errorMessage={invalid ? 'The saved medications or care plans could not be confirmed. Please retry.' : resource.errorMessage}>
+      <div className='grid gap-6'><section aria-labelledby='medications-title'><h2 id='medications-title' className='portal-h2'>Your medications</h2>
+        {!medications.items.length ? <EmptyRecords title='No medications recorded' description='Medication instructions will appear here when your clinician records them. No medication plan is available for this account yet.' /> : <div className='grid gap-4 lg:grid-cols-2'>{medications.items.map((value, index) => { const medication = medicationInstruction(value); return <MedicationRecordCard key={`${medication.id || 'legacy'}:${index}`} medication={medication} /> })}</div>}
+      </section><section aria-labelledby='plans-title'><h2 id='plans-title' className='portal-h2'>Your care plans</h2>
+        {!plans.items.length ? <EmptyRecords title='No care plan recorded' description='Your clinician’s care plan will appear here when it is available.' /> : <div className='grid gap-4'>{plans.items.map((value, index) => { const plan = careInstruction(value); return <CarePlanRecordCard key={`${plan.id || 'legacy'}:${index}`} plan={plan} /> })}</div>}
+      </section>{(medications.truncated || plans.truncated || medications.invalidCount > 0 || plans.invalidCount > 0) && <p role='alert' className='rounded-xl border border-theme bg-surface p-4 text-sm leading-7 text-secondary'>Some historical entries could not be fully displayed in this bounded view. The saved data has not been changed; contact your care team if information is missing.</p>}</div>
     </RecordLoadState>
   </PatientPortalShell>
 }
