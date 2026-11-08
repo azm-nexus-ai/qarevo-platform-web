@@ -86,5 +86,26 @@ it never changes clinician status or progress, and medication names are never pu
 in navigation URLs. Run `node --test tests/clinical-authoring-integrity.test.cjs`
 and, against the isolated production-build fixture server described above,
 `./node_modules/.bin/playwright test e2e/clinical-authoring-integrity.spec.ts --workers=1 --retries=0`.
-The existing clinician patient selector still lists the first 25 assigned patients;
-searchable pagination is an explicit follow-up rather than an access-rule change.
+The shared clinician patient selector uses explicit-submit search and 25-row pages
+through the assigned-patient API's read-only POST search. Name, email and phone
+searches stay in JSON bodies and are never added to request/navigation URLs;
+background focus refresh does not record session activity. The selected patient remains independent
+of the visible search/page and is rechecked with an exact relationship lookup before
+clinical actions. Search terms, pages and selected clinical details remain in component
+memory; list results never grant access beyond server authorization. Failed access
+rechecks block clinical actions and offer a retry. Losing selected access during a
+write invalidates its UI continuation. If a create outcome cannot be confirmed,
+its draft stays visible after recovery, and creating again requires a successful
+authorized list reload plus an explicit review/discard/reset of that uncertain
+draft; a refresh alone never enables a blind duplicate create. Regression commands:
+`node --test tests/clinical-patient-directory.test.cjs` and
+`./node_modules/.bin/playwright test e2e/clinical-patient-directory.spec.ts --workers=1 --retries=0`.
+These browser tests also use the isolated fixture server described above.
+
+Release order: deploy the Platform API revision that implements
+`POST /api/v1/doctor/patients/search`, verify that exact revision is **READY** and
+that the authenticated read-only route responds correctly, then promote this
+frontend to live development. A GET-only API revision returns 404 for the new
+search requests. Frontend review/CI may run in parallel; frontend development
+promotion must wait for API readiness. The previous frontend remains compatible
+while the additive API route is deployed.

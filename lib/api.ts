@@ -232,6 +232,8 @@ async function request<T>(path:string,init:RequestInit):Promise<T> {
 export function apiGet<T>(path:string,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> { return request<T>(path,{headers,signal}); }
 function jsonRequest<T,B>(method:string,path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body),signal});}
 export function apiPost<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('POST',path,body,headers,signal);}
+/** Read-only JSON search with CSRF/auth guards; this does not record session activity. */
+export function apiReadPost<T>(path:string,body:Readonly<Record<string,string|number|boolean|null>>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,typeof body>('POST',path,body,undefined,signal);}
 export function apiPut<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('PUT',path,body,headers,signal);}
 export function apiPatch<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('PATCH',path,body,headers,signal);}
 export function apiDelete<T>(path:string,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method:'DELETE',headers,signal});}
@@ -1316,9 +1318,14 @@ export async function getDoctorPatients(
     patientId?: string,
     signal?: AbortSignal,
 ): Promise<DoctorPatientsResponse> {
+    if (query?.trim()) {
+        const body: Record<string, string | number | boolean | null> = { q: query.trim(), page: pagination.page ?? 1, page_size: pagination.page_size ?? 25 };
+        if (status) body.status = status;
+        if (patientId) body.patient_id = patientId;
+        return apiReadPost<DoctorPatientsResponse>('/api/v1/doctor/patients/search', body, signal);
+    }
     const params = new URLSearchParams();
     if (status) params.set("status", status);
-    if (query?.trim()) params.set("q", query.trim());
     if (patientId) params.set("patient_id", patientId);
     params.set("page", String(pagination.page ?? 1));
     params.set("page_size", String(pagination.page_size ?? 25));

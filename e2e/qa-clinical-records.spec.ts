@@ -119,7 +119,12 @@ for(const [path,addLabel,placeholder]of[
     if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
     if(path.startsWith('/api/v1/session'))return route.fulfill({json:testSessionTiming(identity)})
     if(path.endsWith('/doctor/profile'))return route.fulfill({json:{full_name:'Synthetic Clinician'}})
-    if(path.endsWith('/doctor/patients'))return route.fulfill({json:{patients:[{patient_id:'synthetic-alpha',name:'Synthetic Alpha'},{patient_id:'synthetic-beta',name:'Synthetic Beta'}],total_count:2}})
+    if(path.endsWith('/doctor/patients')||path.endsWith('/doctor/patients/search')){
+      const body=path.endsWith('/search')?route.request().postDataJSON():null
+      const url=new URL(route.request().url()),selectedId=body?.patient_id||url.searchParams.get('patient_id'),size=Number(body?.page_size||url.searchParams.get('page_size')||25)
+      const patients=[{patient_id:'synthetic-alpha',name:'Synthetic Alpha'},{patient_id:'synthetic-beta',name:'Synthetic Beta'}].filter(patient=>!selectedId||patient.patient_id===selectedId)
+      return route.fulfill({json:{patients,total_count:2,filtered_count:patients.length,page:1,page_size:size,has_next:false,has_previous:false}})
+    }
     return route.fulfill({status:404,json:{detail:'No synthetic fixture'}})
   })
   await page.goto(path)

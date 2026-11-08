@@ -20,7 +20,12 @@ async function prepare(context: BrowserContext, role: 'doctor' | 'patient' = 'do
     if (path.endsWith('/browser-csrf')) return route.fulfill({ json: { csrf_token: 'synthetic-csrf' } })
     if (path.startsWith('/api/v1/session')) { const portal = request.headers()['x-qarevo-portal'] === 'doctor' ? 'doctor' : 'patient'; return route.fulfill({ json: testSessionTiming(identities[portal]) }) }
     if (path.endsWith('/doctor/profile')) return route.fulfill({ json: { full_name: 'Synthetic Clinician' } })
-    if (path.endsWith('/doctor/patients')) return route.fulfill({ json: { patients: [{ patient_id: ALPHA, name: 'Synthetic Alpha' }, { patient_id: BETA, name: 'Synthetic Beta' }], total_count: 2 } })
+    if (path.endsWith('/doctor/patients') || path.endsWith('/doctor/patients/search')) {
+      const search = path.endsWith('/search') ? request.postDataJSON() : null
+      const selectedId = search?.patient_id || url.searchParams.get('patient_id'), size = Number(search?.page_size || url.searchParams.get('page_size') || 25)
+      const patients = [{ patient_id: ALPHA, name: 'Synthetic Alpha' }, { patient_id: BETA, name: 'Synthetic Beta' }].filter(patient => !selectedId || patient.patient_id === selectedId)
+      return route.fulfill({ json: { patients, total_count: 2, filtered_count: patients.length, page: 1, page_size: size, has_next: false, has_previous: false } })
+    }
     if (path.endsWith('/patient/settings')) return route.fulfill({ json: { first_name: 'Synthetic', last_name: 'Patient', emergency_contacts: [] } })
     if (path.endsWith('/patient/settings/health-info')) return route.fulfill({ json: {} })
     if (path.endsWith('/profile-image')) return route.fulfill({ json: { image: null } })

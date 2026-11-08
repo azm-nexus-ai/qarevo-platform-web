@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { ApiError, apiGet, getApiErrorDetail } from '@/lib/api'
+import { ApiError, apiGet, apiReadPost, getApiErrorDetail } from '@/lib/api'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 
 const subscribeAccount = (changed: () => void) => {
@@ -9,7 +9,7 @@ const subscribeAccount = (changed: () => void) => {
   return () => { window.removeEventListener(ACCOUNT_CHANGED, changed); window.removeEventListener('storage', changed) }
 }
 
-type RefreshOptions = { refreshOnFocus?: boolean; refreshIntervalMs?: number; abortOnCleanup?: boolean }
+type RefreshOptions = { refreshOnFocus?: boolean; refreshIntervalMs?: number; abortOnCleanup?: boolean; readOnlyPostBody?: Readonly<Record<string, string | number | boolean | null>> }
 
 // Account/path/policy changes hide prior data during render. Refreshes retain the
 // same account's read-only data until the new response arrives; nothing is cached
@@ -17,7 +17,10 @@ type RefreshOptions = { refreshOnFocus?: boolean; refreshIntervalMs?: number; ab
 export function usePatientResource<T>(path: string | null, missingIsEmpty = false, options: RefreshOptions = {}) {
   const scope = useSyncExternalStore(subscribeAccount, readAccountScope, () => null)
   const [attempt, setAttempt] = useState(0)
-  const request = useMemo(() => ({ scope, path, missingIsEmpty }), [scope, path, missingIsEmpty])
+  // Stable serialized body is part of the in-memory read identity. Query/page
+  // changes hide prior results during render and abort the obsolete request.
+  const readBody = options.readOnlyPostBody === undefined ? undefined : JSON.stringify(options.readOnlyPostBody)
+  const request = useMemo(() => ({ scope, path, missingIsEmpty, method: readBody === undefined ? 'GET' : 'POST', readBody }), [scope, path, missingIsEmpty, readBody])
   const [state, setState] = useState<{ request: typeof request; data: T | null; error: boolean; errorMessage: string; errorStatus: number | null } | null>(null)
   const operation = useMemo(() => ({request, attempt}), [request, attempt])
   const [settled, setSettled] = useState<typeof operation | null>(null)
@@ -33,7 +36,8 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
     let current = true
     const controller = abortOnCleanup ? new AbortController() : null
     inFlight.current = operation
-    apiGet<T>(path, undefined, controller?.signal).then(data => {
+    const pending = request.readBody === undefined ? apiGet<T>(path, undefined, controller?.signal) : apiReadPost<T>(path, JSON.parse(request.readBody), controller?.signal)
+    pending.then(data => {
       if (current) setState({ request, data, error: false, errorMessage: '', errorStatus: null })
     }).catch(error => {
       const empty = missingIsEmpty && error instanceof ApiError && error.status === 404
