@@ -160,3 +160,11 @@ Validation: `node --test tests/portal-bff.test.cjs tests/account-storage.test.cj
 and the isolated production browser suites
 `./node_modules/.bin/playwright test e2e/request-diagnostics.spec.ts e2e/qa-portal-cookies.spec.ts --workers=1 --retries=0`.
 No telemetry vendor, logging resource, schema or authentication policy is added.
+
+### Patient-supplied medical documents — upload/delete lifecycle
+
+Generic Medical Records uploads send an in-memory `upload_id` with the exact file and submitted metadata. An identical retry after an uncertain acknowledgment reuses that UUID; changed bytes/name/MIME or submitted metadata create a new intent. Success requires an exact upload/file receipt and canonical record; a deleted replay (`available:false`, `record:null`) never fabricates or restores an Available card. File provenance comes from canonical upload flags, so a patient-selected “Prescription” remains a patient-supplied document and entered provider text is reported information. The browser development ceiling remains 3 MB; the API retains its 5 MB ceiling and PDF/DOC/DOCX/PNG/JPEG/WEBP formats.
+
+Soft delete retries the same owned file and requires its exact idempotent acknowledgment. It removes the record from the portal, does not promise physical erasure, and cannot revoke an already-issued one-hour patient access link early. File bytes, names, descriptions, provider text, retry intent and signed links stay out of browser storage/URLs. Account, portal, path or query changes clear modal state and invalidate pending continuations. Preview/access errors retain the safe support reference.
+
+No database migration is required. Release order: deploy/verify the matching Platform API upload/delete receipt and provenance contract as READY, then promote this frontend. Older APIs cannot confirm this UI's strict receipts. Run `node --test tests/medical-record-lifecycle.test.cjs`, `./node_modules/.bin/tsc --noEmit --incremental false`, and `./node_modules/.bin/playwright test e2e/medical-record-lifecycle.spec.ts e2e/patient-document-download.spec.ts e2e/patient-document-audit.spec.ts --workers=1 --retries=0` against the isolated production build. Hosted manual acceptance remains pending in `docs/phase-two-handover.md`; mocked storage tests do not prove live object access or clinical/legal release readiness.

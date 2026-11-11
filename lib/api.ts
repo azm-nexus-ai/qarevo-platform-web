@@ -249,7 +249,7 @@ export function apiReadPost<T>(path:string,body:Readonly<Record<string,string|nu
 export function apiPut<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('PUT',path,body,headers,signal);}
 export function apiPatch<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('PATCH',path,body,headers,signal);}
 export function apiDelete<T>(path:string,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method:'DELETE',headers,signal});}
-export function apiUpload<T>(path:string,body:FormData,headers?:Record<string,string>):Promise<T> {return request<T>(path,{method:'POST',body,headers});}
+export function apiUpload<T>(path:string,body:FormData,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method:'POST',body,headers,signal});}
 
 export type CreateMeetingRequest = {
     patient_id: string;
@@ -635,9 +635,9 @@ export type MedicalRecordUploadResponse = {
     filename: string;
     file_size: number;
     content_type: string;
-    storage_path: string;
     uploaded_at: string;
-    record?: Record<string, unknown>;
+    upload_receipt?: unknown;
+    record?: Record<string, unknown> | null;
     message: string;
 };
 
@@ -1532,8 +1532,8 @@ export async function getMedicalRecords(): Promise<MedicalRecordsResponse> {
     return apiGet<MedicalRecordsResponse>("/api/v1/patient/medical-records");
 }
 
-export async function uploadMedicalRecord(formData: FormData): Promise<MedicalRecordUploadResponse> {
-    return apiUpload<MedicalRecordUploadResponse>("/api/v1/patient/medical-records/upload", formData);
+export async function uploadMedicalRecord(formData: FormData, signal?: AbortSignal): Promise<MedicalRecordUploadResponse> {
+    return apiUpload<MedicalRecordUploadResponse>("/api/v1/patient/medical-records/upload", formData, undefined, signal);
 }
 
 export async function downloadMedicalRecord(
@@ -1548,8 +1548,8 @@ export async function downloadMedicalRecord(
     );
 }
 
-export async function deleteMedicalRecord(fileId: string): Promise<{ message: string }> {
-    return apiDelete<{ message: string }>(`/api/v1/patient/medical-records/${fileId}`);
+export async function deleteMedicalRecord(fileId: string, signal?: AbortSignal): Promise<{ message: string; file_id?: string; deleted?: boolean; replayed?: boolean }> {
+    return apiDelete<{ message: string; file_id?: string; deleted?: boolean; replayed?: boolean }>(`/api/v1/patient/medical-records/${encodeURIComponent(fileId)}`, undefined, signal);
 }
 
 // Approval Workflow API Functions

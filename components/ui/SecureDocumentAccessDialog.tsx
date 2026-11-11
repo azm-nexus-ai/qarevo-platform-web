@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { ACCOUNT_CHANGED } from '@/lib/account-storage'
-import { getApiErrorDetail } from '@/lib/api'
+import { getApiErrorDetail, getApiErrorRequestId } from '@/lib/api'
 import { usePortalAction } from '@/lib/portal-action'
 import { documentFileSize, validateDocumentAccess, type DocumentAccessLifetime, type SecureDocumentAccess, type SecureDocumentMetadata } from '@/lib/secure-document-access'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
+import SupportReference from '@/components/ui/SupportReference'
 
-type State = { status: 'loading' | 'expired' | 'closed' } | { status: 'error'; message: string } | { status: 'ready'; access: SecureDocumentAccess }
+type State = { status: 'loading' | 'expired' | 'closed' } | { status: 'error'; message: string; requestId: string | null } | { status: 'ready'; access: SecureDocumentAccess }
 type Props = {
   documentTitle: string
   documentKind?: string
@@ -82,7 +83,7 @@ function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document',
         if (!current || closed.current || !action.isCurrent()) return
         setState({ status: 'ready', access: validateDocumentAccess(metadata, expectedFileId, requestedAt, Date.now(), maxLifetimeSeconds) })
       } catch (failure) {
-        if (current && !closed.current && action.isCurrent()) setState({ status: 'error', message: getApiErrorDetail(failure) || 'This document is unavailable. Retry access or close this dialog and refresh the records.' })
+        if (current && !closed.current && action.isCurrent()) setState({ status: 'error', message: getApiErrorDetail(failure) || 'This document is unavailable. Retry access or close this dialog and refresh the records.', requestId: getApiErrorRequestId(failure) })
       } finally { if (current) pending.current = false }
     }
     void run()
@@ -129,7 +130,7 @@ function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document',
     <p id={descriptionId} className='mt-4 text-sm leading-6 text-muted'>Access is requested for the file associated with this record. Opening a file does not mark it as clinically reviewed.</p>
     <div className='mt-5' aria-busy={state.status === 'loading'}>
       {state.status === 'loading' && <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm text-secondary'>Preparing document access…</p>}
-      {state.status === 'error' && <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-6'>{state.message}</p><PortalButton type='button' onClick={retry}>Retry document access</PortalButton></div>}
+      {state.status === 'error' && <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-6'>{state.message}</p><SupportReference requestId={state.requestId} /><PortalButton type='button' onClick={retry}>Retry document access</PortalButton></div>}
       {state.status === 'expired' && <div role='status' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-6'>This document link has expired. Request fresh access to download the file.</p><PortalButton type='button' onClick={retry}>Request fresh access</PortalButton></div>}
       {state.status === 'ready' && <>
         <dl className='grid gap-3 rounded-xl border border-theme bg-surface-subtle p-4 text-sm'>
