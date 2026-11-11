@@ -57,11 +57,22 @@ async function prepare(context: BrowserContext) {
   return state
 }
 async function open(page: Page, kind: Kind) {
-  const c = contracts[kind]; await page.goto(c.route); await page.getByLabel(kind === 'lab_request' ? 'Select patient' : 'Select Patient', { exact: true }).selectOption(ALPHA)
-  if (kind === 'lab_request') await expect(page.getByText('No lab requests yet for this patient.', { exact: true })).toBeVisible()
-  else await expect(page.getByRole('region', { name: 'Saved clinical instructions', exact: true })).toBeVisible()
+  const c = contracts[kind]; await page.goto(c.route)
+  const labRead = kind === 'lab_request' ? page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/doctor/lab-orders/${ALPHA}` && response.request().method() === 'GET') : null
+  const patientSelector = page.getByLabel(kind === 'lab_request' ? 'Select patient' : 'Select Patient', { exact: true })
+  await patientSelector.selectOption(ALPHA); await expect(patientSelector).toHaveValue(ALPHA)
+  if (labRead) {
+    const response = await labRead; expect(response.status()).toBe(200)
+    const payload = await response.json() as { test_requests: { id: string; title: string }[] }
+    expect(Array.isArray(payload.test_requests)).toBe(true)
+    await expect.poll(() => page.locator('[data-lab-order-id]').evaluateAll(elements => elements.map(element => (element as HTMLElement).dataset.labOrderId))).toEqual(payload.test_requests.map(row => row.id))
+    for (const row of payload.test_requests) await expect(page.locator(`[data-lab-order-id="${row.id}"]`).getByRole('heading', { name: row.title, exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled()
+    if (!payload.test_requests.length) await expect(page.getByText('No lab requests yet for this patient.', { exact: true })).toBeVisible()
+  } else await expect(page.getByRole('region', { name: 'Saved clinical instructions', exact: true })).toBeVisible()
   await page.getByRole('button', { name: c.add, exact: true }).click(); await fill(page, kind)
 }
+
 async function fill(page: Page, kind: Kind, title = TITLE) {
   if (kind === 'lab_request') await page.getByLabel('Test title (required)', { exact: true }).fill(title)
   else if (kind === 'care_plan') await page.locator('#instruction-title').fill(title)
