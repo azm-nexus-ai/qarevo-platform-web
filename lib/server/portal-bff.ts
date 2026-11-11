@@ -2,6 +2,7 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { signProxyContext } from './proxy-context';
+import { clinicalConditionalRoute, strongClinicalIfMatch } from '../clinical-write-version';
 
 export type Portal = 'patient' | 'doctor' | 'admin';
 type Environment = Record<string, string | undefined>;
@@ -277,6 +278,11 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
     const headers = new Headers({ 'X-Request-ID': requestId });
     for (const name of ['content-type', 'accept', 'range', 'user-agent']) {
       const value = request.headers.get(name); if (value) headers.set(name, value);
+    }
+    if (clinicalConditionalRoute(portal, request.method, upstreamPath) && request.headers.has('If-Match')) {
+      const version = strongClinicalIfMatch(request.headers.get('If-Match'));
+      if (!version) throw new BoundaryError(400, 'Supply one strong clinical record version.');
+      headers.set('If-Match', version);
     }
     for (const [name,value] of Object.entries(signProxyContext(request,target,env))) headers.set(name,value);
     // Never accept browser-supplied Authorization, Cookie, proxy context or refresh headers.

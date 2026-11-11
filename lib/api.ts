@@ -1,5 +1,6 @@
 import { accountChanged, assertCurrentAccount, readAccountScope, storePortalIdentity } from '@/lib/account-storage';
 import { currentPortal, portalKey, readPortalIdentity, retireLegacyCredentials, type Portal, type PortalIdentity } from '@/lib/portal-scope';
+import { clinicalWriteHeaders } from './clinical-write-version';
 import { notifyProfileChanged, profileRevision } from '@/lib/profile-events';
 
 const getBaseUrl = () => typeof window !== 'undefined' ? window.location.origin : (process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000');
@@ -1636,6 +1637,8 @@ export type LabPartner = {
 export type LabResultUploadReceipt = import('./lab-upload-attempt').LabUploadReceipt;
 
 export type PatientLabRequest = {
+    /** Doctor projection only; patient responses omit this field. */
+    write_version?: string | null;
     id: string;
     patient_id: string;
     provider_id?: string | null;
@@ -1747,12 +1750,12 @@ export async function createDoctorLabOrder(body: DoctorLabOrderPayload): Promise
     return apiPost<DoctorLabOrdersResponse, DoctorLabOrderPayload>("/api/v1/doctor/lab-orders", body);
 }
 
-export async function updateDoctorLabOrder(body: DoctorLabOrderUpdatePayload): Promise<DoctorLabOrdersResponse> {
-    return apiPut<DoctorLabOrdersResponse, DoctorLabOrderUpdatePayload>("/api/v1/doctor/lab-orders", body);
+export async function updateDoctorLabOrder(body: DoctorLabOrderUpdatePayload, version: string): Promise<DoctorLabOrdersResponse> {
+    return apiPut<DoctorLabOrdersResponse, DoctorLabOrderUpdatePayload>("/api/v1/doctor/lab-orders", body, clinicalWriteHeaders(version));
 }
 
-export async function deleteDoctorLabOrder(patientId: string, testId: string): Promise<DoctorLabOrdersResponse> {
-    return apiDelete<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${patientId}/${testId}`);
+export async function deleteDoctorLabOrder(patientId: string, testId: string, version: string): Promise<DoctorLabOrdersResponse> {
+    return apiDelete<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${patientId}/${testId}`, clinicalWriteHeaders(version));
 }
 
 export async function uploadDoctorLabResult(

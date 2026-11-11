@@ -9,7 +9,7 @@ function loadServer(name) {
   const mod = { exports: {} };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../lib/server', name + '.ts'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText, { module: mod, exports: mod.exports, require: dependency => dependency.startsWith('./') ? loadServer(dependency.slice(2)) : require(dependency), Request, Response, Headers, URL, Buffer, TextDecoder, AbortSignal, Date, process });
+  }).outputText, { module: mod, exports: mod.exports, require: dependency => dependency.startsWith('./') ? loadServer(dependency.slice(2)) : dependency === '../clinical-write-version' ? loadServer('../clinical-write-version') : require(dependency), Request, Response, Headers, URL, Buffer, TextDecoder, AbortSignal, Date, process });
   return mod.exports;
 }
 const { handlePortalRequest } = loadServer('portal-bff');
@@ -462,4 +462,33 @@ test('a rejected asynchronous diagnostic sink is isolated from the actual bounda
   const response = await handlePortalRequest(req('/api/v1/doctor/settings'), { portal: 'patient', path: ['api', 'v1', 'doctor', 'settings'] }, { env, fetchImpl: async () => Response.json({}), diagnosticLogger: async () => { throw new Error('Synthetic asynchronous sink failure'); } });
   assert.equal(response.status, 403); assert.match(response.headers.get('X-Request-ID'), requestUuid); assert.equal(response.headers.get('cache-control'), 'no-store, private');
   assert.doesNotMatch(await response.text(), /asynchronous sink failure/);
+})
+
+test('doctor conditional PUT/DELETE forwards only one validated strong version without weakening session or CSRF', async () => {
+  const version = '"qwv1_' + 'a'.repeat(43) + '"'
+  for (const [method, endpoint] of [['PUT', '/api/v1/doctor/prescriptions'], ['PUT', '/api/v1/doctor/lab-orders'], ['PUT', '/api/v1/doctor/care-plans/patient/cp-record'], ...['prescriptions', 'care-plans', 'lab-orders'].map(kind => ['DELETE', `/api/v1/doctor/${kind}/patient/record`])]) {
+    const result = await run(req(endpoint, { portal: 'doctor', method, body: method === 'PUT' ? { patient_id: 'patient' } : undefined, headers: { 'If-Match': version, Authorization: 'Bearer forged', 'X-Qarevo-Refresh-Token': 'forged' } }), 'doctor', async (_url, init) => {
+      assert.equal(init.headers.get('If-Match'), version); assert.equal(init.headers.get('Authorization'), `Bearer ${access('doctor')}`); assert.equal(init.headers.get('Cookie'), null); assert.equal(init.headers.get('X-Qarevo-Refresh-Token'), null)
+      return Response.json({ detail: { error_code: 'CLINICAL_RECORD_CHANGED', message: 'This clinical record has changed. Reload it before saving or deleting.' } }, { status: 412 })
+    })
+    assert.equal(result.status, 412); assert.equal((await result.json()).detail.error_code, 'CLINICAL_RECORD_CHANGED'); assert.equal(result.headers.get('cache-control'), 'no-store, private')
+  }
+  for (const headers of [{ Origin: 'https://forged.invalid', 'If-Match': version }, { 'X-Qarevo-CSRF': 'wrong', 'If-Match': version }]) assert.equal((await run(req('/api/v1/doctor/prescriptions', { portal: 'doctor', method: 'PUT', body: {}, headers }), 'doctor')).status, 403)
+})
+test('weak, wildcard, malformed and duplicate conditional versions fail closed and never echo their values', async () => {
+  const valid = '"qwv1_' + 'a'.repeat(43) + '"'
+  for (const value of ['*', 'W/' + valid, valid + ', ' + valid, '', 'synthetic-private-version']) {
+    let calls = 0
+    const response = await run(req('/api/v1/doctor/prescriptions', { portal: 'doctor', method: 'PUT', body: {}, headers: { 'If-Match': value } }), 'doctor', async () => { calls++; return Response.json({}) })
+    assert.equal(response.status, 400); assert.equal(calls, 0); assert.doesNotMatch(await response.text(), /synthetic-private-version|qwv1_/)
+  }
+})
+test('If-Match is not a generic browser header override and legacy missing values are not fabricated', async () => {
+  const value = '"qwv1_' + 'a'.repeat(43) + '"'
+  for (const [portal, method, endpoint] of [['doctor', 'POST', '/api/v1/doctor/lab-orders'], ['doctor', 'PUT', '/api/v1/doctor/profile'], ['patient', 'PUT', '/api/v1/patient/settings']]) {
+    const response = await run(req(endpoint, { portal, method, body: {}, headers: { 'If-Match': value } }), portal, async (_url, init) => { assert.equal(init.headers.get('If-Match'), null); return Response.json({}) })
+    assert.equal(response.status, 200)
+  }
+  const legacy = await run(req('/api/v1/doctor/prescriptions', { portal: 'doctor', method: 'PUT', body: {} }), 'doctor', async (_url, init) => { assert.equal(init.headers.get('If-Match'), null); return Response.json({}) })
+  assert.equal(legacy.status, 200)
 })

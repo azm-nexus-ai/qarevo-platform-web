@@ -37,7 +37,7 @@ async function prepare(context: BrowserContext) {
         return
       }
       const name = patients.find(patient => patient.patient_id === match[2])?.name || 'Unknown'
-      return route.fulfill({ json: { [key]: key === 'medications' ? [{ id: 'med-' + match[2], name: `${name} medication`, status: 'Active', times: [] }] : [{ id: 'cp-' + match[2], title: `${name} plan`, status: 'Monitoring', progress: null }] } })
+      return route.fulfill({ json: { [key]: key === 'medications' ? [{ id: 'med-' + match[2], write_version: 'qwv1_' + 'a'.repeat(43), name: `${name} medication`, status: 'Active', times: [] }] : [{ id: 'cp-' + match[2], write_version: 'qwv1_' + 'a'.repeat(43), title: `${name} plan`, status: 'Monitoring', progress: null }] } })
     }
     return route.fulfill({ status: 404, json: { detail: 'No synthetic fixture' } })
   })

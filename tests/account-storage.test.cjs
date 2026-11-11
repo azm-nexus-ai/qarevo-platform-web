@@ -96,6 +96,8 @@ function tab(localStorage = storage(), fetchImpl = async () => new Response('{}'
   })
   const profile = { exports: {} }
   vm.runInNewContext(compile('profile-events.ts'), { ...shared, module: profile, exports: profile.exports })
+  const conditional = { exports: {} }
+  vm.runInNewContext(compile('clinical-write-version.ts'), { ...shared, module: conditional, exports: conditional.exports })
   const api = { exports: {} }
   vm.runInNewContext(apiCode, {
     ...shared, module: api, exports: api.exports,
@@ -103,6 +105,7 @@ function tab(localStorage = storage(), fetchImpl = async () => new Response('{}'
       if (name === '@/lib/account-storage' || name === './account-storage') return core.exports
       if (name === '@/lib/portal-scope' || name === './portal-scope') return portal.exports
       if (name === '@/lib/profile-events') return profile.exports
+      if (name === './clinical-write-version') return conditional.exports
       throw new Error('Unexpected import: ' + name)
     },
   })

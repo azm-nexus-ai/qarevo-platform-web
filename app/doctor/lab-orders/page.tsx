@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { currentPortal } from '@/lib/portal-scope'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { labResultTarget } from '@/lib/doctor-lab-notifications'
+import { recordWriteVersion, clinicalRecordChanged, MISSING_CLINICAL_VERSION } from '@/lib/clinical-write-version'
 import { clinicalCreateIntent, sameClinicalCreateIntent, clinicalCreationReceipt, type ClinicalCreateIntent } from '@/lib/clinical-create-intent'
 import { clinicalValidationErrors } from '@/lib/clinical-instructions'
 import { labUploadAttempt, labUploadReceipt, type LabUploadAttempt } from '@/lib/lab-upload-attempt'
@@ -89,6 +90,11 @@ function DoctorLabOrdersPageContent() {
   const creationAttempt = useRef<{ intent: ClinicalCreateIntent; uncertain: boolean; reviewEpoch: number } | null>(null)
   const [createRecovery, setCreateRecovery] = useState(false)
   const ordersReadEpoch = useRef(0), ordersReadFailed = useRef(false)
+  const editorWriteVersion = useRef<string | null>(null), editorConflictEpoch = useRef(0)
+  const [editorConflict, setEditorConflict] = useState(false)
+  const quickWrites = useRef(new Map<string, { version: string; conflicted: boolean; reviewEpoch: number; label: string }>())
+  const [quickRecovery, setQuickRecovery] = useState<string[]>([])
+  useEffect(() => () => { quickWrites.current.clear(); editorWriteVersion.current = null }, [])
   useEffect(() => () => { creationAttempt.current = null }, [])
   const readVersion = useRef(0)
   const patientScope = useRef('')
@@ -126,6 +132,7 @@ function DoctorLabOrdersPageContent() {
 
 
   const dirty = showAddForm && JSON.stringify(form) !== JSON.stringify(baseline.current) || createRecovery
+  const writeResetReady = selectedAuthorized && !loading && !ordersReadFailed.current && ordersReadEpoch.current > editorConflictEpoch.current
   const creationResetReady = selectedAuthorized && !loading && !ordersReadFailed.current && (!creationAttempt.current?.uncertain || ordersReadEpoch.current > creationAttempt.current.reviewEpoch)
   useEffect(() => { dirtyRef.current = dirty }, [dirty])
   const patientsReady = !lookupPatientId || !selectedDirectory.loading
@@ -155,7 +162,7 @@ function DoctorLabOrdersPageContent() {
     setDocumentAccess(null); setReviewSelection(null)
     uploadAttempt.current = null; setFailedUpload(null); setUploadNotice('')
     setSelectedPatientId(patientId); setLabTests([]); setShowAddForm(false)
-    uncertainCreateRef.current = false; setUncertainCreate(false); creationAttempt.current = null; setCreateRecovery(false); ordersReadEpoch.current = 0; ordersReadFailed.current = false
+    uncertainCreateRef.current = false; setUncertainCreate(false); creationAttempt.current = null; setCreateRecovery(false); quickWrites.current.clear(); setQuickRecovery([]); editorWriteVersion.current = null; setEditorConflict(false); ordersReadEpoch.current = 0; ordersReadFailed.current = false
     setEditingId(null); setError(null); setLoading(false)
     baseline.current = { ...emptyForm, patient_id: patientId }
     originalDates.current = {}
@@ -175,14 +182,18 @@ function DoctorLabOrdersPageContent() {
 
   useEffect(() => {
     if (selectedAuthorized || !patientScope.current) return
-    setDocumentAccess(null); setReviewSelection(null); setLabTests([]); setLoading(false)
+    setDocumentAccess(null); setReviewSelection(null); setLabTests([]); setLoading(false); setQuickRecovery([...quickWrites.current.keys()])
     if (operationInFlight.current && creatingOrder.current) { uncertainCreateRef.current = true; setUncertainCreate(true); if (creationAttempt.current) creationAttempt.current.uncertain = true; setError('The earlier order may have been saved, but access was lost before confirmation. Reload the saved orders and explicitly discard this unconfirmed draft before creating another order.') }
   }, [selectedAuthorized])
 
   const beginEdit = (test: PatientLabRequest) => {
     if (operationInFlight.current || !isRenderedContext() || test.can_edit !== true) { setError('Editing is unavailable until the server confirms your authority for this order.'); return }
+    if (quickWrites.current.has(test.id)) { setError('Reload and review the saved order, then discard its earlier quick-action attempt before opening an editor.'); return }
+    const version = recordWriteVersion(test)
+    if (!version) { setError(MISSING_CLINICAL_VERSION); return }
     if (creationAttempt.current?.uncertain && !creationResetReady) { setError('Refresh and review the saved orders before discarding this unconfirmed create.'); return }
     creationAttempt.current = null; setCreateRecovery(false)
+    editorWriteVersion.current = version; setEditorConflict(false)
     setEditingId(test.id)
     setShowAddForm(true)
     const nextForm = {
@@ -209,6 +220,8 @@ function DoctorLabOrdersPageContent() {
 
   const resetForm = (confirmed = false) => {
     if (!isRenderedContext() || operationInFlight.current && !confirmed) return
+    if (!confirmed && editorConflict && !writeResetReady) { setError('Reload and review the changed order before discarding these edits.'); return }
+    editorWriteVersion.current = null; setEditorConflict(false)
     if ((uncertainCreateRef.current || creationAttempt.current?.uncertain) && (!creationResetReady || !selectedAuthorized)) { setError('Reload the saved orders before discarding this unconfirmed create.'); return }
     uncertainCreateRef.current = false; setUncertainCreate(false); creationAttempt.current = null; setCreateRecovery(false)
     setEditingId(null)
@@ -233,6 +246,8 @@ function DoctorLabOrdersPageContent() {
   }
 
   const handleSave = async () => {
+    if (editingId && editorConflict) { setError('Reload and review the saved order, then discard and reopen these edits before saving.'); return }
+    if (editingId && !editorWriteVersion.current) { setError(MISSING_CLINICAL_VERSION); return }
     if (editingId && currentOrders.current.find(order => order.id === editingId)?.can_edit !== true) { setError('This order cannot be edited by this account. Refresh the order list.'); return }
     if (!selectedPatientId || !form.title.trim()) { setError('Select a patient and enter a lab test title.'); return }
     let dates: { scheduled_for: string; recommended_date: string }
@@ -256,7 +271,7 @@ function DoctorLabOrdersPageContent() {
       // Deliberate updates remain changed-fields-only; creation IDs are POST-only.
       const changes = Object.fromEntries(Object.entries(payload).filter(([key, value]) => key === 'patient_id' || value !== savedBaseline[key as keyof DoctorLabOrderPayload]))
       sent = true
-      const response = editingId ? await updateDoctorLabOrder({ ...changes, patient_id: operation.patientId, test_id: editingId }) : await createDoctorLabOrder({ ...payload, creation_id: intent!.creationId })
+      const response = editingId ? await updateDoctorLabOrder({ ...changes, patient_id: operation.patientId, test_id: editingId }, editorWriteVersion.current!) : await createDoctorLabOrder({ ...payload, creation_id: intent!.creationId })
       if (!operation.isCurrent()) return
       const receipt = intent ? clinicalCreationReceipt(response, intent) : null
       if (intent && !receipt) throw new Error('The creation could not be confirmed. Retry the same details to recover this attempt; it may already have been saved.')
@@ -265,6 +280,7 @@ function DoctorLabOrdersPageContent() {
     } catch (err) {
       if (!operation.isCurrent()) return
       const fieldErrors = clinicalValidationErrors(err)
+      if (editingId && err instanceof ApiError && clinicalRecordChanged(err.status, err.body)) { editorConflictEpoch.current = ordersReadEpoch.current; setEditorConflict(true) }
       if (!editingId && sent && creationAttempt.current) {
         if (!creationAttempt.current.uncertain && err instanceof ApiError && err.status === 422 && Object.keys(fieldErrors).length) { creationAttempt.current = null; setCreateRecovery(false) }
         else { creationAttempt.current.uncertain = true; creationAttempt.current.reviewEpoch = ordersReadEpoch.current; setCreateRecovery(true) }
@@ -273,27 +289,40 @@ function DoctorLabOrdersPageContent() {
     } finally { operation.finish() }
   }
 
+  const quickVersion = (test: PatientLabRequest) => {
+    const original = quickWrites.current.get(test.id)
+    if (original?.conflicted) { setError('Reload and review the saved order, then discard this stale action before trying again.'); return null }
+    const version = original?.version || recordWriteVersion(test)
+    if (!version) { setError(MISSING_CLINICAL_VERSION); return null }
+    return original || { version, conflicted: false, reviewEpoch: ordersReadEpoch.current, label: test.title }
+  }
+  const discardQuickWrite = (id: string) => {
+    const original = quickWrites.current.get(id)
+    if (!isRenderedContext() || operationInFlight.current || !selectedAuthorized || loading || ordersReadFailed.current || !original || ordersReadEpoch.current <= original.reviewEpoch) return
+    quickWrites.current.delete(id); setQuickRecovery(previous => previous.filter(value => value !== id)); setError(null); setUploadNotice('The earlier action was discarded. Review the current order before choosing a new action.')
+  }
   const handleStatusChange = async (test: PatientLabRequest, status: string) => {
     if (currentOrders.current.find(order => order.id === test.id)?.can_edit !== true) { setError('Status changes are unavailable for this order.'); return }
-    const operation = beginMutation()
-    if (!operation) return
+    const attempt = quickVersion(test); if (!attempt) return
+    const operation = beginMutation(); if (!operation) return
+    quickWrites.current.set(test.id, attempt)
     try {
-      const response = await updateDoctorLabOrder({ patient_id: operation.patientId, test_id: test.id, status })
-      if (operation.isCurrent()) setLabTests(response.test_requests || [])
-    } catch (err) { if (operation.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to update lab order status.') }
+      const response = await updateDoctorLabOrder({ patient_id: operation.patientId, test_id: test.id, status }, attempt.version)
+      if (operation.isCurrent()) { quickWrites.current.delete(test.id); setQuickRecovery(previous => previous.filter(value => value !== test.id)); setLabTests(response.test_requests || []) }
+    } catch (err) { if (operation.isCurrent()) { attempt.conflicted = err instanceof ApiError && clinicalRecordChanged(err.status, err.body); attempt.reviewEpoch = ordersReadEpoch.current; setQuickRecovery(previous => previous.includes(test.id) ? previous : [...previous, test.id]); setError(getApiErrorDetail(err) ?? 'Unable to confirm the order status. Its original version has been retained.') } }
     finally { operation.finish() }
   }
-
-  const handleDelete = async (testId: string) => {
-    if (currentOrders.current.find(order => order.id === testId)?.can_delete !== true) { setError('Deletion is unavailable for this order.'); return }
-    const operation = beginMutation()
-    if (!operation) return
+  const handleDelete = async (test: PatientLabRequest) => {
+    if (currentOrders.current.find(order => order.id === test.id)?.can_delete !== true) { setError('Deletion is unavailable for this order.'); return }
+    const attempt = quickVersion(test); if (!attempt) return
+    const operation = beginMutation(); if (!operation) return
+    quickWrites.current.set(test.id, attempt)
     try {
-      const response = await deleteDoctorLabOrder(operation.patientId, testId)
+      const response = await deleteDoctorLabOrder(operation.patientId, test.id, attempt.version)
       if (!operation.isCurrent()) return
-      setLabTests(response.test_requests || [])
-      if (editingId === testId) resetForm()
-    } catch (err) { if (operation.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to delete this lab order.') }
+      quickWrites.current.delete(test.id); setQuickRecovery(previous => previous.filter(value => value !== test.id)); setLabTests(response.test_requests || [])
+      if (editingId === test.id) resetForm(true)
+    } catch (err) { if (operation.isCurrent()) { attempt.conflicted = err instanceof ApiError && clinicalRecordChanged(err.status, err.body); attempt.reviewEpoch = ordersReadEpoch.current; setQuickRecovery(previous => previous.includes(test.id) ? previous : [...previous, test.id]); setError(getApiErrorDetail(err) ?? 'Unable to confirm removal. The original order version has been retained.') } }
     finally { operation.finish() }
   }
 
@@ -381,6 +410,8 @@ function DoctorLabOrdersPageContent() {
 
       {uncertainCreate && <p role='alert' className='dl-card'>The earlier create has an unknown outcome. Reload and review the saved orders, then close and explicitly discard this draft before starting a new create.</p>}
       {createRecovery && !uncertainCreate && <section role='alert' className='dl-card'><p>This order may already have been saved. Retry unchanged details to recover the same creation. Changed details require refreshing and reviewing the saved orders, then explicitly discarding this draft before starting a new creation.</p><button className='dl-btn' type='button' disabled={saving || loading} onClick={() => fetchLabTests()}>Refresh saved orders</button></section>}
+      {editorConflict && <section role='alert' className='dl-card'><p>This order changed after you opened it. Your unsaved entries and original version remain here. Refresh and review the current order, then discard and reopen the edits before saving.</p><button className='dl-btn' disabled={saving || loading} onClick={() => fetchLabTests()}>Reload changed order</button></section>}
+      {quickRecovery.map(id => { const attempt = quickWrites.current.get(id); return <section role='alert' className='dl-card' key={id}><p className='mb-2 font-semibold'>{attempt?.label || 'Lab order'}</p><p>The quick action could not be confirmed against the original order version. Refresh and review the saved list before discarding this attempt. Nothing is retried automatically.</p><div className='mt-3 flex flex-wrap gap-3'><button className='dl-btn' disabled={saving || loading} onClick={() => fetchLabTests()}>Reload action outcome</button><button className='dl-btn' disabled={saving || loading || !selectedAuthorized || ordersReadFailed.current || !attempt || ordersReadEpoch.current <= attempt.reviewEpoch} onClick={() => discardQuickWrite(id)}>Discard stale action</button></div></section> })}
       {showAddForm && selectedPatientId && selectedAuthorized && (
         <section className='dl-card'>
           <div className='dl-header' style={{ marginBottom: '14px' }}>
@@ -388,7 +419,7 @@ function DoctorLabOrdersPageContent() {
               <p className='dl-eyebrow' style={{ margin: 0 }}>{editingId ? 'Edit request' : 'New request'}</p>
               <h2 style={{ margin: '5px 0 0', color: T.navy }}>{editingId ? 'Update lab order' : 'Order a lab test'}</h2>
             </div>
-            <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ cancel: true }) : resetForm()} disabled={saving || ((uncertainCreate || createRecovery) && !creationResetReady)}>Cancel</button>
+            <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ cancel: true }) : resetForm()} disabled={saving || ((uncertainCreate || createRecovery) && !creationResetReady) || (editorConflict && !writeResetReady)}>Cancel</button>
           </div>
           <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div className='dl-grid'>
@@ -408,7 +439,7 @@ function DoctorLabOrdersPageContent() {
             <label className='dl-field'><span>Reason for test</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} /></label>
             <label className='dl-field'><span>Preparation instructions</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.preparation_instructions} onChange={(event) => setForm({ ...form, preparation_instructions: event.target.value })} /></label>
           </div>
-          <button className='dl-btn primary' type='button' onClick={handleSave} disabled={saving || uncertainCreate} style={{ marginTop: '14px' }}>
+          <button className='dl-btn primary' type='button' onClick={handleSave} disabled={saving || uncertainCreate || editorConflict} style={{ marginTop: '14px' }}>
             {saving ? 'Saving...' : editingId ? 'Save Changes' : createRecovery ? 'Retry same creation' : 'Create Lab Request'}
           </button>
           </fieldset>
@@ -494,7 +525,7 @@ function DoctorLabOrdersPageContent() {
                 </button>
                 {test.can_upload_result !== true && <span className='text-sm text-secondary'>Only the ordering clinician can upload a result for this request.</span>}
                 {failedUpload?.orderId === test.id && <button className='dl-btn' type='button' disabled={saving} onClick={() => void handleUploadResult(test, failedUpload.file, failedUpload.note)}>Retry result upload</button>}
-                <button className='dl-btn danger' type='button' onClick={() => handleDelete(test.id)} disabled={saving || showAddForm || test.can_delete !== true}>Delete</button>
+                <button className='dl-btn danger' type='button' onClick={() => handleDelete(test)} disabled={saving || showAddForm || test.can_delete !== true}>Delete</button>
               </div>
             </article>
           ))}

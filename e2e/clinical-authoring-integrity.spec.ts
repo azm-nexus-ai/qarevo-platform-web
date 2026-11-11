@@ -4,6 +4,7 @@ import { expectEnabledControlContrast } from './helpers/contrast'
 
 const ALPHA = '11111111-1111-4111-8111-111111111111', BETA = '22222222-2222-4222-8222-222222222222'
 const MED = 'med-33333333-3333-4333-8333-333333333333', PLAN = 'cp-44444444-4444-4444-8444-444444444444'
+const WRITE_VERSION = 'qwv1_' + 'a'.repeat(43)
 const SENTINEL = 'Synthetic private medication sentinel'
 function medication(extra: Record<string, unknown> = {}) { return { id: MED, name: SENTINEL, strength: 'Synthetic strength', dosage: 'Synthetic dose', frequency: 'Synthetic frequency', duration: 'Synthetic duration', instructions: 'Synthetic instruction', brand: null, food: null, refill: null, times: ['Morning'], status: 'Active', can_mark_taken: true, taken_today: false, ...extra } }
 function plan(extra: Record<string, unknown> = {}) { return { id: PLAN, title: 'Synthetic care plan', status: 'Monitoring', description: 'Synthetic plan instruction', progress: null, ...extra } }
@@ -42,7 +43,7 @@ async function prepare(context: BrowserContext, role: 'doctor' | 'patient' = 'do
     if (match) {
       const kind = match[1], patientId = method === 'GET' ? match[2] : method === 'DELETE' ? match[2] : String(request.postDataJSON().patient_id), key = kind === 'prescriptions' ? 'medications' : 'care_plans', collection = kind === 'prescriptions' ? state.meds : state.plans
       if (method === 'GET') {
-        const rows = JSON.parse(JSON.stringify(collection[patientId] || [])), pending = patientId === ALPHA ? state.readHold : null
+        const rows = JSON.parse(JSON.stringify((collection[patientId] || []).map(record => ({ ...record, write_version: WRITE_VERSION })))), pending = patientId === ALPHA ? state.readHold : null
         if (pending) { state.readHold = null; pending.start(); await pending.wait }
         try { await route.fulfill({ json: { patient_id: patientId, [key]: rows } }) } finally { pending?.finish() }
         return
@@ -52,8 +53,8 @@ async function prepare(context: BrowserContext, role: 'doctor' | 'patient' = 'do
       if (method === 'POST') collection[patientId] = [...(collection[patientId] || []), kind === 'prescriptions' ? medication({ ...body, id: MED }) : plan({ ...body, id: PLAN })]
       if (method === 'PUT') { const id = kind === 'prescriptions' ? body.medication_id : match[3]; collection[patientId] = (collection[patientId] || []).map(record => record.id === id ? { ...record, ...body } : record) }
       if (method === 'DELETE') collection[patientId] = (collection[patientId] || []).filter(record => record.id !== match[3])
-      const created = method === 'POST' ? collection[patientId].at(-1) : null
-      const response = JSON.parse(JSON.stringify({ patient_id: patientId, [key]: collection[patientId], ...(created ? { [key === 'medications' ? 'medication' : 'care_plan']: created, creation_receipt: { creation_id: body.creation_id, kind: key === 'medications' ? 'medication' : 'care_plan', record_id: created.id, replayed: false, available: true } } : {}) })), pending = state.writeHold
+      const created: Record<string, unknown> | null = method === 'POST' ? { ...collection[patientId].at(-1), write_version: WRITE_VERSION } : null
+      const response = JSON.parse(JSON.stringify({ patient_id: patientId, [key]: collection[patientId].map(record => ({ ...record, write_version: WRITE_VERSION })), ...(created ? { [key === 'medications' ? 'medication' : 'care_plan']: created, creation_receipt: { creation_id: body.creation_id, kind: key === 'medications' ? 'medication' : 'care_plan', record_id: created.id, replayed: false, available: true } } : {}) })), pending = state.writeHold
       if (pending) { state.writeHold = null; pending.start(); await pending.wait }
       try { await route.fulfill({ json: response }) } finally { pending?.finish() }
       return

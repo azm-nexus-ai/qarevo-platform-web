@@ -3,7 +3,7 @@ import { seedPortalSession, testSessionTiming } from './helpers/portal-session'
 
 test.use({ timezoneId: 'Europe/Berlin' })
 function order(id: string, title: string) {
-  return { id, title, can_upload_result: true, can_edit: true, can_delete: true, status: 'Pending', priority: 'Routine', scheduled_for: '2026-11-05T14:30:22.123Z', recommended_date: null }
+  return { id, title, write_version: 'qwv1_' + 'a'.repeat(43), can_upload_result: true, can_edit: true, can_delete: true, status: 'Pending', priority: 'Routine', scheduled_for: '2026-11-05T14:30:22.123Z', recommended_date: null }
 }
 async function prepare(context: BrowserContext) {
   const identity = await seedPortalSession(context, 'doctor')
