@@ -1650,6 +1650,10 @@ export type PatientLabRequest = {
     selected_lab_address?: string | null;
     home_collection?: boolean;
     can_upload_result?: boolean;
+    can_edit?: boolean;
+    can_delete?: boolean;
+    can_review_result?: boolean;
+    result_review?: unknown;
     result_file_id?: string | null;
     result_uploaded_at?: string | null;
     result_filename?: string | null;
@@ -1701,6 +1705,7 @@ export type DoctorLabOrderUpdatePayload = Partial<DoctorLabOrderPayload> & {
 };
 
 export type DoctorLabOrdersResponse = {
+    review_receipt?: unknown;
     upload_receipt?: LabResultUploadReceipt;
     test_requests: PatientLabRequest[];
     provider_id?: string;
@@ -1748,6 +1753,10 @@ export type DoctorLabResultAccess = import('./secure-document-access').SecureDoc
 
 export async function getDoctorLabResultAccess(patientId: string, testId: string): Promise<DoctorLabResultAccess> {
     return apiGet<DoctorLabResultAccess>(`/api/v1/doctor/lab-orders/${encodeURIComponent(patientId)}/${encodeURIComponent(testId)}/result`);
+}
+
+export async function recordDoctorLabResultReview(patientId: string, testId: string, fileId: string, signal?: AbortSignal): Promise<DoctorLabOrdersResponse> {
+    return apiPost<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${encodeURIComponent(patientId)}/${encodeURIComponent(testId)}/result/review`, { file_id: fileId, reviewed: true }, undefined, signal);
 }
 
 export type PatientBillingPaymentMethod = {

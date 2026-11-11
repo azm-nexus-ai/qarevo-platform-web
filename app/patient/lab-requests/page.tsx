@@ -1,17 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useRef, useState, useCallback, useSyncExternalStore } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import { usePortalAction } from '@/lib/portal-action'
 import { orderDateFromIso, orderDateToIso } from '@/lib/clinical-order-dates'
 import { currentPortal } from '@/lib/portal-scope'
-import { readAccountScope } from '@/lib/account-storage'
+import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { labUploadAttempt, labUploadReceipt, type LabUploadAttempt } from '@/lib/lab-upload-attempt'
 import { medicalUploadError } from '@/lib/clinical-upload'
+import SecureDocumentAccessDialog from '@/components/ui/SecureDocumentAccessDialog'
+import LabResultReviewStatus from '@/components/clinical/LabResultReviewStatus'
+import { labReference, patientLabRequestTarget } from '@/lib/lab-result-review'
 import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
 import Ico from '@/components/ui/Ico'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
@@ -60,7 +63,9 @@ const downloadTextFile = (filename: string, content: string) => {
 }
 
 function LabRequestsPageContent() {
-  const router = useRouter()
+  const router = useRouter(), parameters = useSearchParams()
+  const linkedRequest = patientLabRequestTarget(parameters), appliedRequestLink = useRef(false)
+  const renderedQuery = parameters.toString()
   const renderedScope = readAccountScope('patient'), renderedPath = usePathname()
   const uploadAttempt = useRef<LabUploadAttempt | null>(null)
   const [failedUpload, setFailedUpload] = useState<{ requestId: string; file: File; note: string } | null>(null)
@@ -80,6 +85,15 @@ function LabRequestsPageContent() {
   const [error, setError] = useState<string | null>(null)
   const [selectedRequestId, setSelectedRequestId] = useState('')
   const [detailsRequest, setDetailsRequest] = useState<PatientLabRequest | null>(null)
+  const [resultAccess, setResultAccess] = useState<{ fileId: string; title: string } | null>(null)
+  const resultRestoreTarget = useRef<HTMLElement | null>(null)
+  const closeResultWithFocus = useCallback(() => { setResultAccess(null); if (resultRestoreTarget.current?.isConnected && renderedScope === readAccountScope('patient')) resultRestoreTarget.current.focus() }, [renderedScope])
+  const loadResult = useCallback(() => {
+    if (!resultAccess || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return Promise.reject(new Error('Your result context changed. Refresh the request before opening its file.'))
+    return downloadMedicalRecord(resultAccess.fileId, { disposition: 'attachment' })
+  }, [resultAccess, renderedScope, renderedPath, renderedQuery])
+  const currentDetails = detailsRequest ? data.test_requests.find(item => item.id === detailsRequest.id) : null
+  const activeResultAccess = resultAccess && data.test_requests.some(item => item.result_file_id === resultAccess.fileId) ? resultAccess : null
   const [appointmentLabName, setAppointmentLabName] = useState('')
   const [appointmentLabAddress, setAppointmentLabAddress] = useState('')
   const [selectedDate, setSelectedDate] = useState('')
@@ -100,7 +114,9 @@ function LabRequestsPageContent() {
   }
 
   const applyResponse = (response: PatientLabRequestsResponse, preserveEdits = true) => {
-    const selected = response.test_requests.find(item => item.id === selectedRequestRef.current) ?? response.test_requests[0] ?? null
+    let selected = response.test_requests.find(item => item.id === selectedRequestRef.current) ?? null
+    if (!appliedRequestLink.current && linkedRequest.id) { selected = response.test_requests.find(item => item.id === linkedRequest.id) ?? null; if (selected) appliedRequestLink.current = true }
+    else if (!selected && !linkedRequest.id && !linkedRequest.invalid) selected = response.test_requests[0] ?? null
     const sameRequest = selected?.id === selectedRequestRef.current
     if (!sameRequest) { uploadAttempt.current = null; setFailedUpload(null) }
     selectedRequestRef.current = selected?.id || ''
@@ -144,6 +160,9 @@ function LabRequestsPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
+  const refreshCurrent = useRef(refresh); refreshCurrent.current = refresh
+  useEffect(() => { const onFocus = () => { if (document.visibilityState === 'visible') void refreshCurrent.current() }; window.addEventListener('focus', onFocus); return () => window.removeEventListener('focus', onFocus) }, [])
+
   const preparationItems = useMemo(() => {
     if (!selectedRequest) return []
     const specific = selectedRequest.preparation_instructions?.trim()
@@ -156,6 +175,7 @@ function LabRequestsPageContent() {
 
   const beginBooking = (request: PatientLabRequest) => {
     if (!planAllowed(request) || operationInFlight.current) return
+    appliedRequestLink.current = true; setResultAccess(null)
     selectedRequestRef.current = request.id
     setSelectedRequestId(request.id)
     syncBookingFields(request)
@@ -164,6 +184,7 @@ function LabRequestsPageContent() {
 
   const selectRequest = (requestId: string) => {
     if (operationInFlight.current) return
+    appliedRequestLink.current = true; setResultAccess(null)
     if (requestId !== selectedRequestRef.current) { uploadAttempt.current = null; setFailedUpload(null) }
     selectedRequestRef.current = requestId
     setSelectedRequestId(requestId)
@@ -171,7 +192,7 @@ function LabRequestsPageContent() {
   }
 
   const handleBook = async () => {
-    if (operationInFlight.current || refreshInFlight.current || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath) return
+    if (operationInFlight.current || refreshInFlight.current || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return
     setNotice(''); setError(null)
     if (!planAllowed(selectedRequest)) { setError(planUnavailable); return }
     const errors: typeof validation = {}
@@ -208,7 +229,7 @@ function LabRequestsPageContent() {
   }
 
   const handleUpload = async (file?: File, retryNote?: string) => {
-    if (!selectedRequest || !file || operationInFlight.current || refreshInFlight.current || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath) return
+    if (!selectedRequest || !file || operationInFlight.current || refreshInFlight.current || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return
     const uploadError = medicalUploadError(file.size) || (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? 'Choose a PDF, PNG, JPEG or WebP file.' : null)
     if (uploadError) { setError(uploadError); return }
     operationInFlight.current = true
@@ -237,15 +258,12 @@ function LabRequestsPageContent() {
     }
   }
 
-  const previewResult = async (fileId: string) => {
-    const action = captureAction()
-    try {
-      const response = await downloadMedicalRecord(fileId, { disposition: 'inline' })
-      if (!action.isCurrent()) return
-      window.open(response.download_url, '_blank', 'noopener,noreferrer')
-    } catch (err) {
-      if (action.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to preview this result.')
-    }
+  const previewResult = (fileId: string) => {
+    if (!labReference(fileId) || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return
+    const request = data.test_requests.find(item => item.result_file_id === fileId)
+    if (!request) { setError('This result is no longer current. Reload the saved requests before opening a file.'); return }
+    resultRestoreTarget.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setDetailsRequest(null); setResultAccess({ fileId, title: request.title })
   }
 
   const downloadRequests = () => {
@@ -333,6 +351,7 @@ function LabRequestsPageContent() {
         </div>
       </section>
 
+      {(linkedRequest.id || linkedRequest.invalid) && <section aria-label='Selected lab request' className='lab-card'><h2 className='portal-h2'>Selected lab request</h2><p className='text-sm leading-7 text-secondary'>{linkedRequest.invalid ? 'This lab request link is invalid. Choose an available request below.' : loading ? 'Loading the selected request…' : !data.test_requests.some(item => item.id === linkedRequest.id) ? 'The referenced request is unavailable to this account. No other request has been selected automatically.' : 'The referenced request is available below. No result file has been opened automatically.'}</p></section>}
       {notice && <div role='status' className='lab-card'>{notice}</div>}
       {error && <div role='alert' className='lab-card' style={{ color: T.red, border: '1px solid rgba(220,38,38,0.18)' }}>{error}</div>}
       {loading && <div className='lab-card'>Loading your lab requests...</div>}
@@ -363,7 +382,7 @@ function LabRequestsPageContent() {
               <div style={{ display: 'grid', gap: '12px' }}>
                 {data.test_requests.map((item) => {
                   return (
-                    <article key={item.id} className='request-card'>
+                    <article key={item.id} className='request-card' data-lab-request-id={item.id} data-notification-target={item.id === linkedRequest.id ? 'true' : undefined}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                         <div>
                           <span className='badge' style={{ display: 'inline-flex', background: "var(--surface)", color: T.navy }}>{item.category ?? 'Diagnostic Test'}</span>
@@ -377,6 +396,7 @@ function LabRequestsPageContent() {
                         <div className='meta-item'><span>Recommended lab</span><strong>{item.recommended_lab_name || 'Any accredited laboratory'}</strong></div>
                         <div className='meta-item'><span>Processing time</span><strong>{item.processing_time || 'Lab dependent'}</strong></div>
                       </div>
+                      <div className='mt-3'><LabResultReviewStatus review={item.result_review} fileId={item.result_file_id} /></div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
                         <div style={{ fontSize: "13px", color: T.slate2 }}>Recommended completion: {item.completionDate ?? 'Not scheduled'}</div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -405,7 +425,7 @@ function LabRequestsPageContent() {
                     Doctor guidance: {selectedRequest.recommended_lab_name || 'Any accredited laboratory'}{selectedRequest.recommended_lab_address ? ` - ${selectedRequest.recommended_lab_address}` : ''}
                   </div>
                 )}
-                <label><span id='patient-lab-request-label' className='section-eyebrow'>Request (required)</span><select aria-labelledby='patient-lab-request-label' className='select-input' value={selectedRequestId} disabled={saving} onChange={(event) => selectRequest(event.target.value)}>{data.test_requests.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+                <label><span id='patient-lab-request-label' className='section-eyebrow'>Request (required)</span><select aria-labelledby='patient-lab-request-label' className='select-input' value={selectedRequestId} disabled={saving} onChange={(event) => selectRequest(event.target.value)}><option value=''>Choose a lab request</option>{data.test_requests.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
                 {!canRecord && <p role='status' className='empty-box'>{planUnavailable}</p>}
                 <fieldset disabled={saving || !canRecord} aria-describedby='lab-plan-guidance' style={{ border: 0, margin: '12px 0 0', padding: 0, minWidth: 0 }}>
                 <div className='form-grid'>
@@ -488,25 +508,27 @@ function LabRequestsPageContent() {
         </>
       )}
 
-      {detailsRequest && (
+      {activeResultAccess && <SecureDocumentAccessDialog key={activeResultAccess.fileId} documentTitle={activeResultAccess.title} documentKind='Lab result' expectedFileId={activeResultAccess.fileId} maxLifetimeSeconds={3600} loadDocument={loadResult} onClose={closeResultWithFocus} />}
+      {!activeResultAccess && currentDetails && (
         <div className='modal-backdrop' role='dialog' aria-modal='true' onClick={() => setDetailsRequest(null)}>
           <div className='modal-card' onClick={(event) => event.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' }}>
               <div>
-                <p className='section-eyebrow'>{detailsRequest.category ?? 'Lab request'}</p>
-                <h2 style={{ margin: '0 0 6px', color: T.navy }}>{detailsRequest.title}</h2>
-                <p style={{ margin: 0, color: T.slate }}>{detailsRequest.physician_name ?? 'Care team'} | {labStatusLabel(detailsRequest.status)}</p>
+                <p className='section-eyebrow'>{currentDetails.category ?? 'Lab request'}</p>
+                <h2 style={{ margin: '0 0 6px', color: T.navy }}>{currentDetails.title}</h2>
+                <p style={{ margin: 0, color: T.slate }}>{currentDetails.physician_name ?? 'Care team'} | {labStatusLabel(currentDetails.status)}</p>
               </div>
               <button type='button' className='icon-btn' aria-label='Close lab request details' onClick={() => setDetailsRequest(null)}>x</button>
             </div>
+            <LabResultReviewStatus review={currentDetails.result_review} fileId={currentDetails.result_file_id} />
             <div style={{ display: 'grid', gap: '10px', marginTop: '16px' }}>
-              <div className='meta-item'><span>Description</span><strong>{detailsRequest.description || 'No description provided.'}</strong></div>
-              <div className='meta-item'><span>Reason</span><strong>{detailsRequest.reason || 'No reason provided.'}</strong></div>
-              <div className='meta-item'><span>Doctor recommendation</span><strong>{detailsRequest.recommended_lab_name || 'Any accredited laboratory'}</strong></div>
-              <div className='meta-item'><span>Recommendation details</span><strong>{detailsRequest.recommended_lab_address || 'No specific centre or address provided.'}</strong></div>
-              <div className='meta-item'><span>Patient-reported visit</span><strong>{detailsRequest.scheduledForLabel || 'Not recorded yet'}</strong></div>
-              <div className='meta-item'><span>Patient recorded lab</span><strong>{detailsRequest.selected_lab_name || 'Not recorded yet'}</strong></div>
-              <div className='meta-item'><span>Patient lab address</span><strong>{detailsRequest.selected_lab_address || 'Not recorded yet'}</strong></div>
+              <div className='meta-item'><span>Description</span><strong>{currentDetails.description || 'No description provided.'}</strong></div>
+              <div className='meta-item'><span>Reason</span><strong>{currentDetails.reason || 'No reason provided.'}</strong></div>
+              <div className='meta-item'><span>Doctor recommendation</span><strong>{currentDetails.recommended_lab_name || 'Any accredited laboratory'}</strong></div>
+              <div className='meta-item'><span>Recommendation details</span><strong>{currentDetails.recommended_lab_address || 'No specific centre or address provided.'}</strong></div>
+              <div className='meta-item'><span>Patient-reported visit</span><strong>{currentDetails.scheduledForLabel || 'Not recorded yet'}</strong></div>
+              <div className='meta-item'><span>Patient recorded lab</span><strong>{currentDetails.selected_lab_name || 'Not recorded yet'}</strong></div>
+              <div className='meta-item'><span>Patient lab address</span><strong>{currentDetails.selected_lab_address || 'Not recorded yet'}</strong></div>
             </div>
           </div>
         </div>
@@ -515,10 +537,9 @@ function LabRequestsPageContent() {
   )
 }
 
-export default function LabRequestsPage() {
-  return (
-    <Suspense>
-      <LabRequestsPageContent />
-    </Suspense>
-  )
+const subscribeLabAccount = (changed: () => void) => { window.addEventListener(ACCOUNT_CHANGED, changed); window.addEventListener('storage', changed); return () => { window.removeEventListener(ACCOUNT_CHANGED, changed); window.removeEventListener('storage', changed) } }
+function LabRequestsRoute() {
+  const parameters = useSearchParams(), path = usePathname(), scope = useSyncExternalStore(subscribeLabAccount, () => readAccountScope('patient'), () => null)
+  return <LabRequestsPageContent key={JSON.stringify([scope, path, parameters.toString()])} />
 }
+export default function LabRequestsPage() { return <Suspense fallback={<p role='status'>Loading lab requests…</p>}><LabRequestsRoute /></Suspense> }

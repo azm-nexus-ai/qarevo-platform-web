@@ -12,6 +12,8 @@ import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import { deleteMedicalRecord, downloadMedicalRecord, getApiErrorDetail, uploadMedicalRecord, type PatientHealthInfo } from '@/lib/api'
 import { usePatientResource } from '@/lib/use-patient-resource'
 import { medicalUploadError } from '@/lib/clinical-upload'
+import LabResultReviewStatus from '@/components/clinical/LabResultReviewStatus'
+import { patientLabRequestHref } from '@/lib/lab-result-review'
 import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 import SecureDocumentAccessDialog from '@/components/ui/SecureDocumentAccessDialog'
@@ -47,6 +49,8 @@ type MedicalRecord = {
   revision?: number
   publishedAt?: string
   sourceHref?: string
+  resultReview?: unknown
+  reviewFileId?: string
 }
 
 type TimelineEvent = {
@@ -105,12 +109,14 @@ function normalizeRecord(value: Record<string, unknown>): MedicalRecord {
     canDelete: !publishedSummary && Boolean(value.canDelete),
     clinicalStatus: typeof value.clinicalStatus === 'string' ? value.clinicalStatus : undefined,
     sourceType: publishedSummary ? 'consultation-summary' : value.sourceType === 'medication' || value.sourceType === 'lab-request' ? value.sourceType : undefined,
-    sourceId: publishedSummary && typeof value.sourceId === 'string' ? value.sourceId : undefined,
+    sourceId: typeof value.sourceId === 'string' ? value.sourceId : undefined,
+    resultReview: value.result_review,
+    reviewFileId: value.type === 'Lab Result' ? String(value.id ?? '') : typeof value.result_file_id === 'string' ? value.result_file_id : undefined,
     revision: publishedSummary && Number.isSafeInteger(value.revision) && Number(value.revision) > 0 ? Number(value.revision) : undefined,
     publishedAt: publishedSummary && typeof value.publishedAt === 'string' ? value.publishedAt : undefined,
     // Navigation comes from a finite set of clinical destinations, never an arbitrary payload URL.
     sourceHref: publishedSummary ? consultationSummaryHref(value.sourceId) : value.sourceType === 'medication' ? '/patient/prescription-care-plan'
-      : value.sourceType === 'lab-request' ? '/patient/lab-requests' : undefined,
+      : value.sourceType === 'lab-request' ? patientLabRequestHref(value.sourceId) ?? '/patient/lab-requests' : value.type === 'Lab Result' ? patientLabRequestHref(value.lab_request_id) : undefined,
   }
 }
 
@@ -320,6 +326,7 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
       </div>
 
       <div style={{ padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {(record.type === 'Lab Result' || record.sourceType === 'lab-request') && <LabResultReviewStatus review={record.resultReview} fileId={record.reviewFileId} />}
         {record.sourceType === 'consultation-summary' && <div><h3 className='portal-h3'>Published consultation record</h3><p className='text-sm leading-7 text-secondary'>{record.revision ? `Last recorded revision ${record.revision}. ` : ''}{summaryPublicationTime(record.publishedAt) ? `Published ${summaryPublicationTime(record.publishedAt)}. ` : 'Publication time is available in the summary. '}Open the summary for the latest clinician-published version.</p>{!record.sourceHref && <p className='mt-3 text-sm text-secondary'>This summary link is unavailable. Refresh records or open the consultation in your appointments.</p>}</div>}
         {record.summary && (
           <div>
@@ -845,6 +852,7 @@ function MedicalRecordsPageInner() {
                   </div>
                 </div>
                 {record.sourceType === 'consultation-summary' && <p className='mb-3 text-sm leading-6 text-secondary'>{record.revision ? `Last recorded revision ${record.revision}. ` : ''}{summaryPublicationTime(record.publishedAt) ? `Published ${summaryPublicationTime(record.publishedAt)}.` : 'Open the summary for its publication details.'}</p>}
+                {(record.type === 'Lab Result' || record.sourceType === 'lab-request') && <div className='mb-3'><LabResultReviewStatus review={record.resultReview} fileId={record.reviewFileId} /></div>}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 'auto' }}>
                   {record.sourceType === 'consultation-summary' && record.sourceHref && <Link href={record.sourceHref} className='portal-button portal-button-primary q-button q-button-primary'>View consultation summary</Link>}
                   {record.sourceType === 'consultation-summary' && !record.sourceHref && <p className='text-sm leading-6 text-secondary'>This summary link is unavailable. Refresh records or open your appointments.</p>}

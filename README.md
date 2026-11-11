@@ -109,3 +109,26 @@ frontend to live development. A GET-only API revision returns 404 for the new
 search requests. Frontend review/CI may run in parallel; frontend development
 promotion must wait for API readiness. The previous frontend remains compatible
 while the additive API route is deployed.
+
+
+## Exact-file lab result review
+
+`/doctor/lab-orders` records result review only through explicit clinician
+confirmation tied to the current patient, order and file. Uploading, issuing a
+download, reading an inbox update or selecting Completed does not record review.
+Review receipts are idempotent for the same file, with in-memory retry recovery;
+a replacement starts without a review and cannot inherit an earlier file's receipt.
+Server capabilities govern review, edit and delete actions. Lab Orders reuses the
+bounded private patient selector and a separate exact relationship lookup, so
+patients beyond the first page remain reachable and search/page changes do not
+change the selected review target. Patient Lab Requests
+and Medical Records display only matched review metadata, without inferring a
+result interpretation or changing clinical instructions. Request-specific links
+contain validated UUIDs; patient file access uses an explicit expiring download
+link, with no automatic popup or medical content in URLs/browser storage.
+
+Deploy the additive review-receipt migration, verify the new API revision READY
+and its result-review contract, then promote this frontend. Missing new fields
+remain unavailable; legacy Completed statuses are never migrated into reviews.
+Run `node --test tests/lab-result-review.test.cjs` and the isolated production
+browser suite `./node_modules/.bin/playwright test e2e/lab-result-review.spec.ts --workers=1 --retries=0`.

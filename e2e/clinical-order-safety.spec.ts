@@ -3,7 +3,7 @@ import { seedPortalSession, testSessionTiming } from './helpers/portal-session'
 
 test.use({ timezoneId: 'Europe/Berlin' })
 function order(id: string, title: string) {
-  return { id, title, can_upload_result: true, status: 'Pending', priority: 'Routine', scheduled_for: '2026-11-05T14:30:22.123Z', recommended_date: null }
+  return { id, title, can_upload_result: true, can_edit: true, can_delete: true, status: 'Pending', priority: 'Routine', scheduled_for: '2026-11-05T14:30:22.123Z', recommended_date: null }
 }
 async function prepare(context: BrowserContext) {
   const identity = await seedPortalSession(context, 'doctor')
@@ -15,7 +15,11 @@ async function prepare(context: BrowserContext) {
     if (path.endsWith('/browser-csrf')) return route.fulfill({ json: { csrf_token: 'synthetic-csrf' } })
     if (path.startsWith('/api/v1/session')) return route.fulfill({ json: testSessionTiming(identity) })
     if (path.endsWith('/doctor/profile')) return route.fulfill({ json: { full_name: 'Synthetic Clinician' } })
-    if (path.endsWith('/doctor/patients')) return route.fulfill({ json: { patients: [{ patient_id: 'synthetic-alpha', name: 'Synthetic Alpha' }, { patient_id: 'synthetic-beta', name: 'Synthetic Beta' }], total_count: 2 } })
+    if (path.endsWith('/doctor/patients') || path.endsWith('/doctor/patients/search')) {
+      const url = new URL(route.request().url()), body = path.endsWith('/search') ? route.request().postDataJSON() : null, id = body?.patient_id || url.searchParams.get('patient_id'), size = Number(body?.page_size || url.searchParams.get('page_size') || 25)
+      const patients = [{ patient_id: 'synthetic-alpha', name: 'Synthetic Alpha' }, { patient_id: 'synthetic-beta', name: 'Synthetic Beta' }].filter(patient => !id || patient.patient_id === id)
+      return route.fulfill({ json: { patients, total_count: 2, filtered_count: patients.length, page: 1, page_size: size, has_next: false, has_previous: false } })
+    }
     if (path.includes('/doctor/lab-orders/') && method === 'GET') {
       const patient = path.split('/').at(-1)!
       control.reads.push(patient)

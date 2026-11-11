@@ -7,7 +7,7 @@ const noticeId = '44444444-4444-4444-8444-444444444444', otherPatient = '5555555
 const inbox = '/api/v1/doctor/notifications', cursor = 'v1.c3ludGhldGljX2N1cnNvcg'
 type Portal = 'doctor' | 'patient'
 function notice(id = noticeId, availability = 'current') { return { id, event_type: 'lab_result_uploaded', source: 'lab-result', patient_id: patient, lab_request_id: order, file_id: file, uploaded_by: 'patient', created_at: '2030-07-13T08:00:00Z', is_read: false, read_at: null, availability } }
-function labOrder(resultFile: string | null = file) { return { id: order, patient_id: patient, provider_id: 'synthetic-doctor-provider', can_upload_result: true, title: 'Synthetic diagnostic request', status: 'Results Available', priority: 'Routine', result_file_id: resultFile, result_uploaded_at: resultFile ? '2030-07-13T08:00:00Z' : null } }
+function labOrder(resultFile: string | null = file) { return { id: order, patient_id: patient, provider_id: 'synthetic-doctor-provider', can_upload_result: true, can_edit: true, can_delete: true, title: 'Synthetic diagnostic request', status: 'Results Available', priority: 'Routine', result_file_id: resultFile, result_uploaded_at: resultFile ? '2030-07-13T08:00:00Z' : null } }
 async function prepare(context: BrowserContext, portal: Portal = 'doctor') {
   const identity = await seedPortalSession(context, portal)
   const state = { identity, otherIdentity: null as Awaited<ReturnType<typeof seedPortalSession>> | null, notices: [notice()] as Record<string, unknown>[], older: [notice('66666666-6666-4666-8666-666666666666', 'superseded')], listFailed: false, readFailed: false, availablePatient: true, targetOnFirstPage: true, exactReads: 0, patientReads: [] as string[], pageCursors: [] as string[], marks: 0, grants: 0, externalReads: 0, order: labOrder(), lostAck: false, holdUpload: false, uploadStarted: false, uploadDelivery: Promise.resolve(), releaseUpload: () => {}, wrongFileReceipt: false, holdExactPatient: '', lookupStarted: false, lookupDelivery: Promise.resolve(), releaseLookup: () => {}, uploads: [] as string[], receipts: new Map<string, string>(), held: false, heldStarted: false, heldDelivery: Promise.resolve(), release: () => {} }
@@ -33,12 +33,13 @@ async function prepare(context: BrowserContext, portal: Portal = 'doctor') {
       return route.fulfill({ json: row })
     }
     if (path.endsWith('/doctor/profile')) return route.fulfill({ json: { full_name: 'Synthetic Clinician' } })
-    if (path.endsWith('/doctor/patients')) {
-      const exact = url.searchParams.get('patient_id'); if (exact) state.exactReads++
+    if (path.endsWith('/doctor/patients') || path.endsWith('/doctor/patients/search')) {
+      const body = path.endsWith('/search') ? request.postDataJSON() : null, size = Number(body?.page_size || url.searchParams.get('page_size') || 25)
+      const exact = body?.patient_id || url.searchParams.get('patient_id'); if (exact) state.exactReads++
       const rows = exact ? state.availablePatient ? exact === patient ? [{ patient_id: patient, name: 'Synthetic Alpha' }] : exact === otherPatient ? [{ patient_id: otherPatient, name: 'Synthetic Beta' }] : [] : [] : state.targetOnFirstPage ? [{ patient_id: patient, name: 'Synthetic Alpha' }] : [{ patient_id: otherPatient, name: 'Synthetic Beta' }]
       let delivered: (() => void) | undefined
       if (exact && exact === state.holdExactPatient) { state.holdExactPatient = ''; state.lookupDelivery = new Promise<void>(resolve => { delivered = resolve }); state.lookupStarted = true; await new Promise<void>(resolve => { state.releaseLookup = resolve }) }
-      try { return await route.fulfill({ json: { patients: rows, total_count: rows.length, filtered_count: rows.length, page: 1, page_size: 25, has_next: false, has_previous: false } }) } finally { delivered?.() }
+      try { return await route.fulfill({ json: { patients: rows, total_count: rows.length, filtered_count: rows.length, page: 1, page_size: size, has_next: false, has_previous: false } }) } finally { delivered?.() }
     }
     if (path.endsWith('/result') && path.includes('/doctor/lab-orders/')) {
       state.grants++

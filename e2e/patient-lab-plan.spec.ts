@@ -5,8 +5,8 @@ test.use({ timezoneId: 'Europe/Berlin' })
 async function prepare(context: BrowserContext) {
   const identity = await seedPortalSession(context, 'patient')
   const control = { record: { id: 'synthetic-lab-request', title: 'Synthetic laboratory request', status: 'Pending', scheduled_for: '', selected_lab_name: '', selected_lab_address: '', home_collection: false } as Record<string, unknown>,
-    extraRecords: [] as Record<string, unknown>[], writes: [] as string[], failNext: false, conflictNext: false, hold: false, release: () => {} }
-  const payload = () => ({ test_requests: [control.record, ...control.extraRecords], partner_labs: [], preparation: [], recent_uploads: [], summary: { requested_tests: 1, pending_tests: 1, completed_tests: 0, upcoming_lab_appointment: control.record.scheduled_for || null, estimated_completion: null } })
+    extraRecords: [] as Record<string, unknown>[], reverse: false, writes: [] as string[], failNext: false, conflictNext: false, hold: false, release: () => {} }
+  const payload = () => ({ test_requests: control.reverse ? [...control.extraRecords, control.record] : [control.record, ...control.extraRecords], partner_labs: [], preparation: [], recent_uploads: [], summary: { requested_tests: 1, pending_tests: 1, completed_tests: 0, upcoming_lab_appointment: control.record.scheduled_for || null, estimated_completion: null } })
   await context.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
     if (path.endsWith('/browser-csrf')) return route.fulfill({ json: { csrf_token: 'synthetic-csrf' } })
@@ -101,23 +101,50 @@ test('mobile dark-mode lab planning is keyboard accessible and rejects nonexiste
 
 test('reloading lab requests keeps visit details associated with the selected request', async ({ page, context }) => {
   const control = await prepare(context)
+  const reload = async () => {
+    const response = page.waitForResponse(reply => new URL(reply.url()).pathname === '/api/v1/patient/lab-requests' && reply.request().method() === 'GET')
+    const button = page.getByRole('button', { name: 'Reload saved requests', exact: true })
+    await button.click()
+    await response
+    await expect(button).toBeEnabled()
+  }
+  const alpha = '11111111-1111-4111-8111-111111111111', beta = '22222222-2222-4222-8222-222222222222'
+  control.record.id = alpha
   control.record.selected_lab_name = 'Synthetic Alpha laboratory'
+  control.record.selected_lab_address = 'Synthetic Alpha branch'
   control.record.scheduled_for = '2026-11-10T09:15:00.000Z'
-  control.extraRecords = [{ id: 'synthetic-second-request', title: 'Synthetic second laboratory request', status: 'Pending', selected_lab_name: 'Synthetic Beta laboratory', scheduled_for: '2026-11-12T13:45:00.000Z' }]
+  control.extraRecords = [{ id: beta, title: 'Synthetic second laboratory request', status: 'Pending', selected_lab_name: 'Synthetic Beta laboratory', scheduled_for: '2026-11-12T13:45:00.000Z' }]
   await page.goto('/patient/lab-requests')
   const selector = page.getByLabel('Request (required)', { exact: true })
-  await selector.selectOption('synthetic-second-request')
+  await selector.selectOption(beta)
   await expect(page.getByLabel('Lab or centre name (required)', { exact: true })).toHaveValue('Synthetic Beta laboratory')
-  await page.getByRole('button', { name: 'Reload saved requests', exact: true }).click()
-  await expect(selector).toHaveValue('synthetic-second-request')
+  await reload()
+  await expect(selector).toHaveValue(beta)
   await expect(page.getByLabel('Lab or centre name (required)', { exact: true })).toHaveValue('Synthetic Beta laboratory')
   await expect(page.getByLabel('Date (required)', { exact: true })).toHaveValue('2026-11-12')
   await expect(page.getByLabel('Time (required)', { exact: true })).toHaveValue('14:45')
+  await page.getByLabel('Lab or centre name (required)', { exact: true }).fill('Synthetic Beta unsaved laboratory')
+  await page.getByLabel('Address or branch (optional)', { exact: true }).fill('Synthetic Beta unsaved branch')
+  await page.getByLabel('Date (required)', { exact: true }).fill('2026-11-13')
+  await page.getByLabel('Time (required)', { exact: true }).fill('15:20')
+  const homeCollection = page.getByRole('button', { name: 'Home collection arranged with laboratory', exact: true })
+  await homeCollection.click()
+  control.reverse = true
+  await reload()
+  await expect(selector).toHaveValue(beta)
+  await expect(page.getByLabel('Lab or centre name (required)', { exact: true })).toHaveValue('Synthetic Beta unsaved laboratory')
+  await expect(page.getByLabel('Address or branch (optional)', { exact: true })).toHaveValue('Synthetic Beta unsaved branch')
+  await expect(page.getByLabel('Date (required)', { exact: true })).toHaveValue('2026-11-13')
+  await expect(page.getByLabel('Time (required)', { exact: true })).toHaveValue('15:20')
+  await expect(homeCollection).toHaveAttribute('aria-pressed', 'true')
   control.extraRecords = []
-  await page.getByRole('button', { name: 'Reload saved requests', exact: true }).click()
-  await expect(selector).toHaveValue('synthetic-lab-request')
+  await reload()
+  await expect(selector).toHaveValue(alpha)
   await expect(page.getByLabel('Lab or centre name (required)', { exact: true })).toHaveValue('Synthetic Alpha laboratory')
+  await expect(page.getByLabel('Address or branch (optional)', { exact: true })).toHaveValue('Synthetic Alpha branch')
   await expect(page.getByLabel('Date (required)', { exact: true })).toHaveValue('2026-11-10')
+  await expect(page.getByLabel('Time (required)', { exact: true })).toHaveValue('10:15')
+  await expect(homeCollection).toHaveAttribute('aria-pressed', 'false')
   expect(control.writes).toHaveLength(0)
 })
 

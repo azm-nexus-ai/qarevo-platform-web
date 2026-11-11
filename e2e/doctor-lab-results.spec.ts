@@ -15,7 +15,11 @@ async function prepare(context: BrowserContext) {
     if (path.startsWith('/api/v1/session')) return route.fulfill({ json: testSessionTiming(identity) })
     if (path.endsWith('/doctor/profile')) return route.fulfill({ json: { full_name: 'Synthetic Clinician', specialty: 'General practice' } })
     if (path.endsWith('/security')) return route.fulfill({ json: { password_change_available: true, mfa: { available: false, enabled: false, method: null, message: 'Unavailable in this synthetic test.' }, sessions: [], sessions_total: 0 } })
-    if (path.endsWith('/doctor/patients')) return route.fulfill({ json: { patients: [{ patient_id: 'synthetic-alpha', name: 'Synthetic Alpha' }, { patient_id: 'synthetic-beta', name: 'Synthetic Beta' }], total_count: 2 } })
+    if (path.endsWith('/doctor/patients') || path.endsWith('/doctor/patients/search')) {
+      const url = new URL(route.request().url()), body = path.endsWith('/search') ? route.request().postDataJSON() : null, id = body?.patient_id || url.searchParams.get('patient_id'), size = Number(body?.page_size || url.searchParams.get('page_size') || 25)
+      const patients = [{ patient_id: 'synthetic-alpha', name: 'Synthetic Alpha' }, { patient_id: 'synthetic-beta', name: 'Synthetic Beta' }].filter(patient => !id || patient.patient_id === id)
+      return route.fulfill({ json: { patients, total_count: 2, filtered_count: patients.length, page: 1, page_size: size, has_next: false, has_previous: false } })
+    }
     const result = path.match(/\/doctor\/lab-orders\/([^/]+)\/([^/]+)\/result$/)
     if (result) {
       state.metadata++
