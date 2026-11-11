@@ -1,4 +1,6 @@
 'use client'
+
+import { getApiErrorDetail } from '@/lib/api'
 import '@/components/doctor/doctor-clinical.css'
 
 import { useEffect, useState } from 'react'
@@ -40,7 +42,7 @@ export default function ConsultationDetailPage() {
           router.replace('/auth/doctor/login')
           return
         }
-        setError(err instanceof Error ? err.message : 'Failed to fetch consultation details')
+        setError(getApiErrorDetail(err) || 'Failed to fetch consultation details')
       } finally {
         if (!cancelled) setLoading(false)
       }

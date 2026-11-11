@@ -60,6 +60,7 @@ test('unavailable publication times remain unavailable rather than receiving an 
 })
 
 const records = load('components/patient/ClinicalRecords.tsx', {
+  '@/components/ui/SupportReference': { default: () => null },
   './PatientPortalPrimitives': {
     PortalCard: ({ children, ...props }) => React.createElement('section', props, children),
     PortalButton: ({ children, ...props }) => React.createElement('button', props, children),

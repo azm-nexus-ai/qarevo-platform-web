@@ -1,5 +1,7 @@
 'use client'
 
+import { getApiErrorDetail } from '@/lib/api'
+
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -75,7 +77,7 @@ export default function DoctorEpisodeDetailPage() {
       setContext(data)
       setTimeline(timelineData)
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to accept AI draft')
+      setActionError(getApiErrorDetail(err) || 'Failed to accept AI draft')
     } finally {
       setActionLoading(null)
     }
@@ -104,7 +106,7 @@ export default function DoctorEpisodeDetailPage() {
       setContext(data)
       setTimeline(timelineData)
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to reject AI draft')
+      setActionError(getApiErrorDetail(err) || 'Failed to reject AI draft')
     } finally {
       setActionLoading(null)
     }
@@ -136,7 +138,7 @@ export default function DoctorEpisodeDetailPage() {
           router.replace('/auth/sign-in')
           return
         }
-        setError(err instanceof Error ? err.message : 'Unable to load episode clinical context')
+        setError(getApiErrorDetail(err) || 'Unable to load episode clinical context')
       } finally {
         if (!cancelled) {
           setLoading(false)

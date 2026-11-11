@@ -132,3 +132,31 @@ and its result-review contract, then promote this frontend. Missing new fields
 remain unavailable; legacy Completed statuses are never migrated into reviews.
 Run `node --test tests/lab-result-review.test.cjs` and the isolated production
 browser suite `./node_modules/.bin/playwright test e2e/lab-result-review.spec.ts --workers=1 --retries=0`.
+
+
+## Safe request diagnostics
+
+The browser boundary generates a fresh UUIDv4 for each HTTP request, discards any
+browser-provided request ID and sends its own `X-Request-ID` to Platform API. The
+same reference is returned for successful responses, API failures and local
+boundary failures; login and its identity verification share that reference.
+API/CWS and the UI accept canonical lowercase UUID references of any version.
+References are diagnostic metadata, never access credentials or idempotency keys.
+Existing cookie, CSRF, role, private-cache and timing-header behavior is preserved.
+BFF failures and responses taking at least one second emit one bounded diagnostic
+to the existing server log: reference, status, duration, finite portal/method and
+the static route template only. No raw path, query, headers, body or exception text
+is logged. A failed logging sink cannot change the response or its cookies.
+
+Shared patient/doctor clinical errors and administrator clinical audit errors show
+a copyable reference when one exists. Copying includes only the UUID; denial
+offers manual selection. References clear on retry/success or context change and
+are not stored in browser storage. Runtime errors without a server reference do
+not receive an invented one. Raw non-JSON responses and error stacks are not used
+as UI copy; structured backend validation remains visible. Search this reference
+in API/CWS diagnostic logs when investigating a failed attempt.
+
+Validation: `node --test tests/portal-bff.test.cjs tests/account-storage.test.cjs`
+and the isolated production browser suites
+`./node_modules/.bin/playwright test e2e/request-diagnostics.spec.ts e2e/qa-portal-cookies.spec.ts --workers=1 --retries=0`.
+No telemetry vendor, logging resource, schema or authentication policy is added.

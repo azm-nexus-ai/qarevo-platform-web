@@ -1,10 +1,13 @@
 /** Same-origin, portal-scoped boundary. FastAPI remains the identity authority. */
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import { signProxyContext } from './proxy-context';
 
 export type Portal = 'patient' | 'doctor' | 'admin';
 type Environment = Record<string, string | undefined>;
-type BffOptions = { fetchImpl?: typeof fetch; env?: Environment };
+type BffDiagnostic = { event: 'bff_request_failed' | 'bff_request_slow'; request_id: string; status_code: number; duration_ms: number; portal: Portal | 'unknown'; method: string; route_template: '/api/v1/[...path]' };
+type BffOptions = { fetchImpl?: typeof fetch; env?: Environment; now?: () => number; diagnosticLogger?: (level: 'warn' | 'error', event: BffDiagnostic) => void | Promise<void> };
+const BFF_SLOW_REQUEST_MS = 1000;
 type BrowserSession = { user_id: string; role: string; provider_id: string | null; session_id: string };
 type CookieContext = { secure: boolean; prefix: string; csrf: string; values: Map<string, string> };
 
@@ -206,6 +209,31 @@ async function boundedBody(request: Request): Promise<ArrayBuffer> {
 }
 
 export async function handlePortalRequest(request: Request, params: { portal: string; path: string[] }, options: BffOptions = {}): Promise<Response> {
+  // Correlation is diagnostic metadata, never identity, authorization or idempotency.
+  // Mint before validation and never forward a browser-supplied reference.
+  const requestId = randomUUID(), now = options.now ?? (() => performance.now());
+  const started = now();
+  const response = await proxyPortalRequest(request, params, options, requestId);
+  response.headers.set('X-Request-ID', requestId);
+  // Only bounded, server-selected metadata reaches the existing logging sink.
+  // A broken sink must never replace a response or alter session cookies.
+  try {
+    const elapsed = now() - started;
+    const duration = Number.isFinite(elapsed) ? Math.min(86400000, Math.max(0, Math.round(elapsed))) : 0;
+    if (response.status >= 400 || duration >= BFF_SLOW_REQUEST_MS) {
+      const diagnostic: BffDiagnostic = { event: response.status >= 400 ? 'bff_request_failed' : 'bff_request_slow', request_id: requestId, status_code: response.status, duration_ms: duration,
+        portal: Object.hasOwn(ROLES, params.portal) ? params.portal as Portal : 'unknown',
+        method: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method) ? request.method : 'UNKNOWN', route_template: '/api/v1/[...path]' };
+      const level = response.status >= 500 ? 'error' : 'warn';
+      const logger = options.diagnosticLogger ?? ((severity, event) => console[severity](JSON.stringify(event)));
+      const pending = logger(level, diagnostic);
+      if (pending) void pending.catch(() => { /* An asynchronous sink is best-effort too. */ });
+    }
+  } catch { /* Diagnostics are best-effort; response and security semantics remain authoritative. */ }
+  return response;
+}
+
+async function proxyPortalRequest(request: Request, params: { portal: string; path: string[] }, options: BffOptions, requestId: string): Promise<Response> {
   let context: CookieContext | undefined;
   let upstreamPath = '';
   let forwardingStarted = false;
@@ -246,7 +274,7 @@ export async function handlePortalRequest(request: Request, params: { portal: st
     const query = new URL(request.url).searchParams;
     if ([...query.keys()].some(key => SECRET_FIELDS.has(key.toLowerCase()))) throw new BoundaryError(400, 'Session credentials must not appear in URLs.');
     target.search = query.toString();
-    const headers = new Headers();
+    const headers = new Headers({ 'X-Request-ID': requestId });
     for (const name of ['content-type', 'accept', 'range', 'user-agent']) {
       const value = request.headers.get(name); if (value) headers.set(name, value);
     }
@@ -289,7 +317,7 @@ export async function handlePortalRequest(request: Request, params: { portal: st
         throw new BoundaryError(502, 'The application service returned an incomplete session response.');
       }
       if (upstream.ok && typeof original.access_token === 'string' && typeof original.refresh_token === 'string') {
-        const verified = await fetchImpl(new URL('/api/v1/session', base), { headers: { Authorization: `Bearer ${original.access_token}` }, cache: 'no-store', redirect: 'manual', signal: AbortSignal.timeout(15_000) });
+        const verified = await fetchImpl(new URL('/api/v1/session', base), { headers: { Authorization: `Bearer ${original.access_token}`, 'X-Request-ID': requestId }, cache: 'no-store', redirect: 'manual', signal: AbortSignal.timeout(15_000) });
         if (!verified.ok) throw new BoundaryError(verified.status === 401 || verified.status === 403 ? verified.status : 502, 'The authenticated session could not be verified. Please sign in again.');
         const identity = await verified.json() as Record<string, unknown>;
         const metadata = sessionMetadata(identity, portal);

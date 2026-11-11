@@ -1,6 +1,9 @@
 'use client'
 
-export default function GlobalError({ reset }: { error: Error; reset: () => void }) {
+import SupportReference from '@/components/ui/SupportReference'
+import { getApiErrorRequestId } from '@/lib/api'
+
+export default function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <html lang="en">
       <body style={{ margin: 0, fontFamily: "'Inter', sans-serif", background: "var(--canvas)", minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -8,6 +11,7 @@ export default function GlobalError({ reset }: { error: Error; reset: () => void
           <div style={{ fontSize: '72px', fontWeight: 800, color: "var(--link)", lineHeight: 1, marginBottom: '8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", letterSpacing: '-0.04em' }}>500</div>
           <div style={{ fontSize: '18px', fontWeight: 600, color: "var(--text)", marginBottom: '8px', letterSpacing: '-0.02em' }}>Something went wrong</div>
           <div style={{ fontSize: '14px', color: '#4B6480', marginBottom: '28px' }}>An unexpected error occurred. Please try again.</div>
+          <SupportReference requestId={getApiErrorRequestId(error)} />
           <button onClick={reset} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '11px', background: '#20B5DF', color: '#fff', border: 'none', fontSize: '14px', fontWeight: 600, letterSpacing: '-0.015em', cursor: 'pointer' }}>
             Try again
           </button>

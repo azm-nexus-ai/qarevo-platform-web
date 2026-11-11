@@ -1,5 +1,7 @@
 'use client'
 
+import { getApiErrorDetail } from '@/lib/api'
+
 import Link from 'next/link'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -139,7 +141,7 @@ function ReviewPageContent() {
     }
     getPatientBookingSlots(physicianId, date)
       .then(response => { if (current) setVerifiedSlot(resolveBookingSlot(response.slot_details ?? [], slot, requestedStart)) })
-      .catch(error => { if (current) setSlotError(error instanceof Error ? error.message : 'The appointment time could not be verified.') })
+      .catch(error => { if (current) setSlotError(getApiErrorDetail(error) || 'The appointment time could not be verified.') })
     return () => { current = false }
   }, [physicianId, date, slot, requestedStart])
   const appointmentEnd = verifiedSlot
@@ -186,7 +188,7 @@ function ReviewPageContent() {
       if (aiDraftJobId) next.set('aiDraftJobId', aiDraftJobId)
       router.push(`/patient/consultation-booking/success?${next.toString()}`)
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Unable to confirm this appointment right now.')
+      setSubmitError(getApiErrorDetail(error) || 'Unable to confirm this appointment right now.')
     } finally {
       setIsSubmitting(false)
     }

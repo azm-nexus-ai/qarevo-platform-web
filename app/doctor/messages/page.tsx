@@ -1,5 +1,7 @@
 'use client'
 
+import { getApiErrorDetail } from '@/lib/api'
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import HoverBtn from '@/components/buttons/HoverBtn'
@@ -114,7 +116,7 @@ export default function DoctorMessagesPage() {
         router.replace('/auth/doctor/login')
         return
       }
-      setError(err instanceof Error ? err.message : 'Unable to load conversations.')
+      setError(getApiErrorDetail(err) || 'Unable to load conversations.')
     } finally {
       if (showLoading) setLoading(false)
     }
@@ -204,7 +206,7 @@ export default function DoctorMessagesPage() {
       setReplyToMessage(null)
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send reply.')
+      setError(getApiErrorDetail(err) || 'Unable to send reply.')
     } finally {
       setSending(false)
     }
@@ -217,7 +219,7 @@ export default function DoctorMessagesPage() {
       const blob = await downloadAuthenticatedFile(message.attachmentUrl)
       saveBlob(blob, message.attachmentName || 'attachment')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to download attachment.')
+      setError(getApiErrorDetail(err) || 'Unable to download attachment.')
     }
   }
 

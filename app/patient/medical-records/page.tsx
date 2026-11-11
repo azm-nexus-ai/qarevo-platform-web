@@ -16,6 +16,7 @@ import LabResultReviewStatus from '@/components/clinical/LabResultReviewStatus'
 import { patientLabRequestHref } from '@/lib/lab-result-review'
 import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
+import SupportReference from '@/components/ui/SupportReference'
 import SecureDocumentAccessDialog from '@/components/ui/SecureDocumentAccessDialog'
 import { usePortalAction } from '@/lib/portal-action'
 import { readAccountScope } from '@/lib/account-storage'
@@ -816,7 +817,7 @@ function MedicalRecordsPageInner() {
         </div>
 
         {/* Record List */}
-        {resource.error && <div role='alert' className='mb-4 rounded-xl border border-theme bg-surface-subtle p-4 text-ink'><p>{resource.errorMessage}</p><PortalButton onClick={resource.retry}>Retry medical records</PortalButton></div>}
+        {resource.error && <div role='alert' className='mb-4 rounded-xl border border-theme bg-surface-subtle p-4 text-ink'><p>{resource.errorMessage}</p><SupportReference requestId={resource.errorRequestId} /><PortalButton onClick={resource.retry}>Retry medical records</PortalButton></div>}
         <div className="mr-card-grid">
           {loadingRecords ? (
             <div style={{ padding: '48px 24px', textAlign: 'center', background: "var(--surface-hover)", borderRadius: '16px', border: "1px dashed var(--border)" }}>

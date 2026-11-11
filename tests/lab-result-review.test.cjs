@@ -4,6 +4,18 @@ vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/lab-result-review.ts'
 const helper=mod.exports, patient='11111111-1111-4111-8111-111111111111', order='22222222-2222-4222-8222-222222222222', file='33333333-3333-4333-8333-333333333333', review='44444444-4444-4444-8444-444444444444', provider='55555555-5555-4555-8555-555555555555'
 const pending={state:'pending',file_id:file,review_id:null,reviewed_at:null,reviewer_provider_id:null,reviewer_name:null}
 const ack={...pending,state:'acknowledged',review_id:review,reviewed_at:'2030-07-13T08:00:00Z',reviewer_provider_id:provider,reviewer_name:'Synthetic Clinician'}
+test('no current file requires an explicit all-null unavailable projection and an explicit null file reference',()=>{
+  const empty={...pending,state:'unavailable',file_id:null}
+  assert.equal(helper.labResultHasNoCurrentFile(empty,null),true)
+  for(const expected of [undefined,'',file,'invalid']) assert.equal(helper.labResultHasNoCurrentFile(empty,expected),false)
+  for(const input of [null,{},pending,ack,{...empty,state:'pending'},{...empty,file_id:file}]) assert.equal(helper.labResultHasNoCurrentFile(input,null),false)
+  for(const field of ['file_id','review_id','reviewed_at','reviewer_provider_id','reviewer_name']) {
+    const missing={...empty}; delete missing[field]
+    assert.equal(helper.labResultHasNoCurrentFile(missing,null),false)
+    assert.equal(helper.labResultHasNoCurrentFile({...empty,[field]:'unexpected'},null),false)
+  }
+  assert.equal(helper.labResultReview(empty,null).state,'unavailable')
+})
 test('pending requires explicit exact-file metadata; upload, order status and incomplete payloads never imply review',()=>{
   assert.equal(helper.labResultReview(pending,file).state,'pending')
   for(const input of [null,{}, {status:'Completed'}, {...pending,file_id:order},{state:'pending',file_id:file}, {...pending,state:'reviewed'}]) assert.equal(helper.labResultReview(input,file).state,'unavailable')

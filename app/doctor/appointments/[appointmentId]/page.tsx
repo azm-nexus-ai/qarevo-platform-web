@@ -1,4 +1,6 @@
 'use client'
+
+import { getApiErrorDetail } from '@/lib/api'
 import '@/components/doctor/doctor-clinical.css'
 
 import { useEffect, useState } from 'react'
@@ -41,7 +43,7 @@ export default function AppointmentDetailPage() {
           router.replace('/auth/doctor/login')
           return
         }
-        setError(err instanceof Error ? err.message : 'Failed to fetch appointment details')
+        setError(getApiErrorDetail(err) || 'Failed to fetch appointment details')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -76,7 +78,7 @@ export default function AppointmentDetailPage() {
         router.replace('/auth/doctor/login')
         return
       }
-      setError(err instanceof Error ? err.message : 'Failed to update status')
+      setError(getApiErrorDetail(err) || 'Failed to update status')
     } finally {
       setUpdatingStatus(false)
     }

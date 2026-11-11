@@ -26,16 +26,26 @@ export function storeBrowserSession(payload: { browser_session?: PortalIdentity 
     storePortalIdentity(payload.browser_session, portal);
 }
 
+export function safeRequestId(value: unknown): string | null {
+    return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value) ? value : null;
+}
+
 export class ApiError extends Error {
     status: number;
     body: string;
+    readonly requestId: string | null;
 
-    constructor(status: number, body: string) {
-        super(`API error ${status}: ${body}`);
+    constructor(status: number, body: string, requestId?: unknown) {
+        super(`API request failed (${status}).`);
         this.name = "ApiError";
         this.status = status;
         this.body = body;
+        this.requestId = safeRequestId(requestId);
     }
+}
+
+export function getApiErrorRequestId(error: unknown): string | null {
+    return error instanceof ApiError ? error.requestId : null;
 }
 
 export function getApiErrorDetail(error: unknown): string | null {
@@ -75,7 +85,8 @@ export function getApiErrorDetail(error: unknown): string | null {
             return messages.length ? messages.join(" ") : null;
         }
     } catch {
-        return body;
+        // HTML, stack traces and arbitrary upstream text never become UI copy.
+        return 'The service returned an unexpected response. Please retry.';
     }
 
     return null;
@@ -216,9 +227,10 @@ async function request<T>(path:string,init:RequestInit):Promise<T> {
             // An old portal's failure must not trigger a mounted caller's
             // default-current-portal sign-out after navigation elsewhere.
             if(currentPortal()!==portal) throw new Error('Your page changed. Return to the original portal and retry.');
-            throw new ApiError(response.status,body);
+            throw new ApiError(response.status,body,response.headers.get('X-Request-ID'));
         }
-        const result=body ? JSON.parse(body) : undefined;
+        let result;
+        try { result=body ? JSON.parse(body) : undefined; } catch { throw new ApiError(502, JSON.stringify({ detail: 'The service returned an unexpected response. Please retry.' }), response.headers.get('X-Request-ID')); }
         if(sessionMutation(path)) {
             // Publish the verified identity before allowing any other tab's
             // credential-changing operation to acquire this portal's lock.
@@ -1437,7 +1449,7 @@ export async function markDoctorConversationRead(conversationId: string): Promis
 export async function downloadAuthenticatedFile(path: string): Promise<Blob> {
     const portal=currentPortal(),scope=readAccountScope(portal);
     const response=await fetchWithAuthRetry(`${getBaseUrl()}${path}`,{cache:'no-store'},false,{portal,scope});
-    if(!response.ok) throw new ApiError(response.status,await response.text());
+    if(!response.ok) throw new ApiError(response.status,await response.text(),response.headers.get('X-Request-ID'));
     const result=await response.blob(); checkScope(portal,scope); return result;
 }
 

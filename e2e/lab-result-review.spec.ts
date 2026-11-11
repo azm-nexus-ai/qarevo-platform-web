@@ -50,6 +50,15 @@ async function prepare(context: BrowserContext, portal: 'doctor' | 'patient' = '
 async function doctorOrder(page: Page) { await page.goto('/doctor/lab-orders'); await page.getByLabel('Select patient', { exact: true }).selectOption(patient); await expect(page.getByRole('heading', { name: 'Synthetic laboratory request', exact: true })).toBeVisible() }
 async function confirmDialog(page: Page) { await page.getByRole('button', { name: 'Record result review', exact: true }).click(); return page.getByRole('dialog', { name: 'Record result review', exact: true }) }
 
+test('patient requests without a current result show neutral next steps without inferring a review failure', async ({ page, context }) => {
+  const state = await prepare(context, 'patient'); state.row.result_file_id = null; state.row.result_review = { state: 'unavailable', file_id: null, review_id: null, reviewed_at: null, reviewer_provider_id: null, reviewer_name: null }
+  await page.goto(`/patient/lab-requests?requestId=${order}`)
+  const status = page.getByRole('region', { name: 'Result review status', exact: true })
+  await expect(status).toContainText('No current result file'); await expect(status).toContainText('When a result file is available, its review status will appear here.')
+  await expect(page.getByText('Review status unavailable', { exact: true })).toHaveCount(0); await expect(page.getByText('Clinical review not recorded', { exact: true })).toHaveCount(0); await expect(page.getByText('Review recorded', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Preview Result', exact: true })).toHaveCount(0); expect(state.grants).toBe(0); expect(state.calls).toHaveLength(0)
+})
+
 test('only an explicit clinician confirmation records review; order status and opening a file do not', async ({ page, context }) => {
   const state = await prepare(context); await doctorOrder(page); await expect(page.getByText('Clinical review not recorded', { exact: true })).toBeVisible(); expect(state.calls).toHaveLength(0)
   await page.getByRole('button', { name: 'Open result for Synthetic laboratory request', exact: true }).click(); await expect(page.getByRole('dialog').getByRole('link', { name: 'Download lab result', exact: true })).toBeVisible(); expect(state.calls).toHaveLength(0); await page.getByRole('button', { name: 'Close document access', exact: true }).click()

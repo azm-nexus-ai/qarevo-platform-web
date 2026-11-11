@@ -1,5 +1,7 @@
 'use client'
 
+import { getApiErrorDetail } from '@/lib/api'
+
 import Image from 'next/image'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -290,7 +292,7 @@ function MessagesPageInner() {
         router.replace('/auth/sign-in')
         return
       }
-      setError(err instanceof Error ? err.message : 'Unable to load conversations.')
+      setError(getApiErrorDetail(err) || 'Unable to load conversations.')
     } finally {
       if (showLoading) setLoading(false)
     }
@@ -385,7 +387,7 @@ function MessagesPageInner() {
       setSelectedAttachment(null)
       setReplyToMessage(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send message.')
+      setError(getApiErrorDetail(err) || 'Unable to send message.')
     } finally {
       setSending(false)
     }
@@ -406,7 +408,7 @@ function MessagesPageInner() {
       setIsComposing(false)
       setReplyToMessage(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send message.')
+      setError(getApiErrorDetail(err) || 'Unable to send message.')
     } finally {
       setSending(false)
     }
@@ -435,7 +437,7 @@ function MessagesPageInner() {
       const blob = await downloadAuthenticatedFile(message.attachmentUrl)
       saveBlob(blob, message.attachmentName || 'attachment')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to download attachment.')
+      setError(getApiErrorDetail(err) || 'Unable to download attachment.')
     }
   }
 

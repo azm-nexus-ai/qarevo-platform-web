@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { apiGet, getApiErrorDetail, isAuthError } from '@/lib/api'
+import { apiGet, getApiErrorDetail, getApiErrorRequestId, isAuthError } from '@/lib/api'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { usePortalAction } from '@/lib/portal-action'
+import SupportReference from '@/components/ui/SupportReference'
 import { PortalBadge, PortalButton } from '@/components/patient/PatientPortalPrimitives'
 
 type HistoryKind = 'access' | 'publication'
@@ -55,7 +56,7 @@ function ClinicalHistoryContent() {
   const [validation, setValidation] = useState('')
   const [offset, setOffset] = useState(0)
   const [revision, setRevision] = useState(0)
-  const [result, setResult] = useState<{ key: string; data: ClinicalHistory | null; error: string } | null>(null)
+  const [result, setResult] = useState<{ key: string; data: ClinicalHistory | null; error: string; requestId: string | null } | null>(null)
   const config = definitions[kind]
   const key = JSON.stringify([kind, filterId, offset, revision])
   const loading = result?.key !== key
@@ -71,12 +72,12 @@ function ClinicalHistoryContent() {
       .then(history => {
         if (!current || !action.isCurrent()) return
         if (typeof history?.can_view !== 'boolean' || !Array.isArray(history.events)) throw new Error('Unexpected clinical history response.')
-        setResult({ key, data: history, error: '' })
+        setResult({ key, data: history, error: '', requestId: null })
       })
       .catch(failure => {
         if (!current || !action.isCurrent()) return
         if (isAuthError(failure)) { router.replace('/auth/admin/login'); return }
-        setResult({ key, data: null, error: getApiErrorDetail(failure) || 'Unable to load clinical history. Please retry.' })
+        setResult({ key, data: null, error: getApiErrorDetail(failure) || 'Unable to load clinical history. Please retry.', requestId: getApiErrorRequestId(failure) })
       })
     return () => { current = false }
   }, [captureAction, config.endpoint, config.filter, filterId, key, offset, router])
@@ -102,7 +103,7 @@ function ClinicalHistoryContent() {
       </select>
     </div>
     {loading ? <p role='status' className='py-6 text-muted'>Loading {config.title.toLowerCase()}…</p>
-      : error ? <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-3 text-ink'>{error}</p><PortalButton type='button' onClick={() => setRevision(number => number + 1)}>Retry {config.action}</PortalButton></div>
+      : error ? <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-3 text-ink'>{error}</p><SupportReference requestId={result?.requestId} /><PortalButton type='button' onClick={() => setRevision(number => number + 1)}>Retry {config.action}</PortalButton></div>
         : data?.can_view === false ? <p className='text-sm text-muted'>{config.title} is available to platform owners and compliance administrators.</p>
           : data && <>
             <form onSubmit={applyFilter} className='mb-5 flex flex-wrap items-end gap-3'>

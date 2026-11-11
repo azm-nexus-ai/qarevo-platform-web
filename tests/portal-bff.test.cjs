@@ -390,3 +390,76 @@ test('doctor registration phone verification is public only within the physician
     const result=await run(req('/api/v1/session',{headers:{Host:host}}));assert.equal(result.status,400);
   }
 });
+
+const requestUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+test('the boundary mints one reference per request, ignores browser/upstream IDs and preserves safe timing metadata', async () => {
+  for (const portal of ['patient', 'doctor', 'admin']) {
+    const forged = '11111111-1111-4111-8111-111111111111'; let forwarded;
+    const response = await run(req(`/api/v1/${portal}/settings`, { portal, headers: { 'X-Request-ID': forged } }), portal, async (_url, init) => {
+      forwarded = init.headers.get('X-Request-ID'); assert.match(forwarded, requestUuid); assert.notEqual(forwarded, forged);
+      return Response.json({ detail: 'Synthetic service unavailable' }, { status: 503, headers: { 'X-Request-ID': 'malformed-upstream', 'Server-Timing': 'db;dur=4', 'X-Query-Count': '2', 'Set-Cookie': 'foreign=private; Domain=.example' } });
+    });
+    assert.equal(response.headers.get('X-Request-ID'), forwarded); assert.equal(response.status, 503);
+    assert.equal(response.headers.get('server-timing'), 'db;dur=4'); assert.equal(response.headers.get('x-query-count'), '2');
+    assert.equal(response.headers.get('set-cookie'), null); assert.equal(response.headers.get('cache-control'), 'no-store, private');
+    assert.equal((await response.json()).detail, 'Synthetic service unavailable');
+  }
+});
+test('local boundary failures and unavailable upstreams always return fresh references without sensitive exception data', async () => {
+  const responses = [await run(req('/api/v1/patient/settings', { method: 'POST', body: {}, headers: { Origin: 'https://foreign.invalid' } })),
+    await run(req('/api/v1/doctor/settings'), 'patient'), await run(req('/api/v1/patient/settings'), 'patient', async () => { throw new Error('Synthetic secret token https://private.invalid/clinical'); }),
+    await run(req('/api/v1/patient/settings'), 'unknown'), await run(req('/api/v1/patient/settings'), 'patient', undefined, {})];
+  const references = responses.map(response => response.headers.get('X-Request-ID'));
+  references.forEach(value => assert.match(value, requestUuid)); assert.equal(new Set(references).size, references.length);
+  for (const response of responses) { assert.equal(response.headers.get('cache-control'), 'no-store, private'); assert.doesNotMatch(await response.text(), /secret token|private.invalid|clinical/); }
+});
+test('login and its private identity verification share correlation without changing host-only cookies or browser payloads', async () => {
+  const references = [];
+  const response = await run(req('/api/v1/auth/login', { method: 'POST', body: { email: 'synthetic@example.test' } }), 'patient', async (url, init) => {
+    references.push(init.headers instanceof Headers ? init.headers.get('X-Request-ID') : init.headers['X-Request-ID']);
+    return new URL(url).pathname === '/api/v1/session' ? Response.json(identity()) : authResponse();
+  });
+  assert.equal(response.status, 200); assert.equal(references.length, 2); references.forEach(value => assert.equal(value, response.headers.get('X-Request-ID')));
+  assert.match(response.headers.get('set-cookie'), /__Host-qarevo_patient_access=.*HttpOnly/); assert.doesNotMatch(response.headers.get('set-cookie'), /Domain=/);
+  const body = await response.json(); assert.equal(body.access_token, undefined); assert.equal(body.refresh_token, undefined); assert.equal(body.browser_session.role, 'PATIENT');
+});
+test('CSRF bootstrap, no-content and HEAD keep their original body/cookie semantics with a boundary reference', async () => {
+  const csrfResponse = await run(req('/api/v1/browser-csrf', { cookies: '' }), 'patient', undefined, env, ['csrf']); assert.match(csrfResponse.headers.get('X-Request-ID'), requestUuid); assert.match(csrfResponse.headers.get('set-cookie'), /qarevo_patient_csrf=/);
+  for (const method of ['GET', 'HEAD']) { const response = await run(req('/api/v1/patient/settings', { method }), 'patient', async () => new Response(null, { status: 204 })); assert.match(response.headers.get('X-Request-ID'), requestUuid); assert.equal(response.status, 204); assert.equal(await response.text(), ''); }
+});
+
+test('local boundary failures produce one safe diagnostic with the exact returned reference', async () => {
+  const events = [], sentinel = 'SyntheticPrivateClinicalToken', request = req('/api/v1/patient/' + sentinel + '?q=' + sentinel, { method: 'POST', body: { note: sentinel }, headers: { Origin: 'https://foreign.invalid/' + sentinel, 'X-Request-ID': sentinel, 'X-Sensitive': sentinel } });
+  const response = await handlePortalRequest(request, { portal: 'patient', path: ['api', 'v1', 'patient', sentinel] }, { env, now: () => 10, diagnosticLogger: (level, event) => events.push({ level, event }), fetchImpl: async () => { throw new Error('Must not forward'); } });
+  assert.equal(response.status, 403); assert.equal(events.length, 1); assert.equal(events[0].level, 'warn');
+  assert.equal(events[0].event.request_id, response.headers.get('X-Request-ID')); assert.equal(events[0].event.route_template, '/api/v1/[...path]');
+  assert.deepEqual(Object.keys(events[0].event).sort(), ['duration_ms', 'event', 'method', 'portal', 'request_id', 'route_template', 'status_code']);
+  assert.equal(events[0].event.method, 'POST'); assert.equal(events[0].event.portal, 'patient'); assert.equal(events[0].event.status_code, 403);
+  assert.doesNotMatch(JSON.stringify(events), new RegExp(sentinel + '|foreign.invalid|Origin|X-Sensitive|Cookie|Authorization|stack|note'));
+});
+test('upstream timeout and invalid portal diagnostics exclude exception text, raw route values and incoming references', async () => {
+  const events = [], sentinel = 'SyntheticPrivateTimeout https://private.invalid/record', references = [];
+  for (const portal of ['doctor', 'private-portal-sentinel']) {
+    let tick = 0;
+    const request = req('/api/v1/doctor/private-record?clinical=private-query-sentinel', { portal: 'doctor', headers: { 'X-Request-ID': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } });
+    const response = await handlePortalRequest(request, { portal, path: ['api', 'v1', 'doctor', 'private-record'] }, { env, now: () => (tick++ ? 30001 : 0), diagnosticLogger: (level, event) => events.push({ level, event }), fetchImpl: async () => { throw new DOMException(sentinel, 'TimeoutError'); } });
+    references.push(response.headers.get('X-Request-ID')); assert.equal(events.at(-1).event.request_id, references.at(-1));
+    assert.equal(response.headers.get('cache-control'), 'no-store, private'); assert.doesNotMatch(await response.text(), /SyntheticPrivateTimeout|private.invalid|private-query-sentinel/);
+  }
+  assert.equal(events[0].level, 'error'); assert.equal(events[0].event.status_code, 502); assert.equal(events[0].event.duration_ms, 30001);
+  assert.equal(events[1].event.portal, 'unknown'); assert.equal(events[1].event.status_code, 404);
+  assert.doesNotMatch(JSON.stringify(events), /SyntheticPrivateTimeout|private.invalid|private-record|private-query-sentinel|private-portal-sentinel|aaaaaaaa-aaaa/);
+});
+test('slow successes log one warning while a failed sink cannot change response headers, bytes or cookies', async () => {
+  let tick = 0; const events = [];
+  const response = await handlePortalRequest(req('/api/v1/patient/settings'), { portal: 'patient', path: ['api', 'v1', 'patient', 'settings'] }, { env, now: () => tick++ ? 1250.4 : 0, diagnosticLogger: (level, event) => events.push({ level, event }), fetchImpl: async () => Response.json({ ok: true }) });
+  assert.equal(response.status, 200); assert.equal(events.length, 1); assert.equal(events[0].level, 'warn'); assert.equal(events[0].event.event, 'bff_request_slow'); assert.equal(events[0].event.duration_ms, 1250); assert.equal(events[0].event.request_id, response.headers.get('X-Request-ID'));
+  const failedSink = await handlePortalRequest(req('/api/v1/browser-csrf', { cookies: '' }), { portal: 'patient', path: ['csrf'] }, { env, fetchImpl: async () => { throw new Error('CSRF must not forward'); }, now: () => 1000 * tick++, diagnosticLogger: () => { throw new Error('Synthetic sink unavailable'); } });
+  assert.equal(failedSink.status, 200); assert.match(failedSink.headers.get('X-Request-ID'), requestUuid); assert.match(failedSink.headers.get('set-cookie'), /qarevo_patient_csrf=.*SameSite=Lax; Secure/); assert.match((await failedSink.json()).csrf_token, /^[a-f0-9]{64}$/);
+});
+
+test('a rejected asynchronous diagnostic sink is isolated from the actual boundary response', async () => {
+  const response = await handlePortalRequest(req('/api/v1/doctor/settings'), { portal: 'patient', path: ['api', 'v1', 'doctor', 'settings'] }, { env, fetchImpl: async () => Response.json({}), diagnosticLogger: async () => { throw new Error('Synthetic asynchronous sink failure'); } });
+  assert.equal(response.status, 403); assert.match(response.headers.get('X-Request-ID'), requestUuid); assert.equal(response.headers.get('cache-control'), 'no-store, private');
+  assert.doesNotMatch(await response.text(), /asynchronous sink failure/);
+})

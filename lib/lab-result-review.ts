@@ -3,6 +3,12 @@ export const labReference = (value: unknown): string | null => typeof value === 
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 const instant = (value: unknown): string | null => typeof value === 'string' && /(?:Z|\+00:00)$/.test(value) && Number.isFinite(Date.parse(value)) ? value : null
 export type LabReview = { state: 'pending' | 'acknowledged' | 'unavailable'; fileId: string | null; reviewId: string | null; reviewedAt: string | null; providerId: string | null; reviewerName: string | null }
+/** An explicit empty projection is different from missing or inconsistent review data. */
+export function labResultHasNoCurrentFile(value: unknown, expectedFileId: unknown): boolean {
+  const row = object(value)
+  return expectedFileId === null && row.state === 'unavailable' &&
+    ['file_id', 'review_id', 'reviewed_at', 'reviewer_provider_id', 'reviewer_name'].every(field => row[field] === null)
+}
 export function labResultReview(value: unknown, expectedFileId: unknown): LabReview {
   const row = object(value), expected = labReference(expectedFileId), fileId = labReference(row.file_id)
   const unavailable: LabReview = { state: 'unavailable', fileId: null, reviewId: null, reviewedAt: null, providerId: null, reviewerName: null }

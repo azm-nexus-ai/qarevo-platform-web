@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { ApiError, apiGet, apiReadPost, getApiErrorDetail } from '@/lib/api'
+import { ApiError, apiGet, apiReadPost, getApiErrorDetail, getApiErrorRequestId } from '@/lib/api'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 
 const subscribeAccount = (changed: () => void) => {
@@ -21,7 +21,7 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
   // changes hide prior results during render and abort the obsolete request.
   const readBody = options.readOnlyPostBody === undefined ? undefined : JSON.stringify(options.readOnlyPostBody)
   const request = useMemo(() => ({ scope, path, missingIsEmpty, method: readBody === undefined ? 'GET' : 'POST', readBody }), [scope, path, missingIsEmpty, readBody])
-  const [state, setState] = useState<{ request: typeof request; data: T | null; error: boolean; errorMessage: string; errorStatus: number | null } | null>(null)
+  const [state, setState] = useState<{ request: typeof request; data: T | null; error: boolean; errorMessage: string; errorStatus: number | null; errorRequestId: string | null } | null>(null)
   const operation = useMemo(() => ({request, attempt}), [request, attempt])
   const [settled, setSettled] = useState<typeof operation | null>(null)
   const inFlight = useRef<object | null>(null)
@@ -38,10 +38,10 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
     inFlight.current = operation
     const pending = request.readBody === undefined ? apiGet<T>(path, undefined, controller?.signal) : apiReadPost<T>(path, JSON.parse(request.readBody), controller?.signal)
     pending.then(data => {
-      if (current) setState({ request, data, error: false, errorMessage: '', errorStatus: null })
+      if (current) setState({ request, data, error: false, errorMessage: '', errorStatus: null, errorRequestId: null })
     }).catch(error => {
       const empty = missingIsEmpty && error instanceof ApiError && error.status === 404
-      if (current) setState({ request, data: null, error: !empty, errorMessage: empty ? '' : getApiErrorDetail(error) || 'This information could not be loaded. Please retry.', errorStatus: error instanceof ApiError ? error.status : null })
+      if (current) setState({ request, data: null, error: !empty, errorMessage: empty ? '' : getApiErrorDetail(error) || 'This information could not be loaded. Please retry.', errorStatus: error instanceof ApiError ? error.status : null, errorRequestId: empty ? null : getApiErrorRequestId(error) })
     }).finally(() => {
       if (inFlight.current === operation) inFlight.current = null
       if (current) {
@@ -77,5 +77,5 @@ export function usePatientResource<T>(path: string | null, missingIsEmpty = fals
   }, [path, scope, onFocus, interval, retry])
   const matched = state?.request === request ? state : null
   const refreshing = Boolean(path && scope && settled !== operation)
-  return { data: matched?.data ?? null, loading: Boolean(path && scope && (!matched || (refreshing && matched.error))), refreshing, error: matched?.error ?? false, errorMessage: matched?.errorMessage ?? '', errorStatus: matched?.errorStatus ?? null, retry }
+  return { data: matched?.data ?? null, loading: Boolean(path && scope && (!matched || (refreshing && matched.error))), refreshing, error: matched?.error ?? false, errorMessage: matched?.errorMessage ?? '', errorStatus: matched?.errorStatus ?? null, errorRequestId: refreshing ? null : matched?.errorRequestId ?? null, retry }
 }

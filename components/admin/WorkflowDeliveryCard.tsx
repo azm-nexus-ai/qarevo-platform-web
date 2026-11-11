@@ -1,5 +1,8 @@
 'use client'
 
+import { getApiErrorDetail, getApiErrorRequestId } from '@/lib/api'
+
+import SupportReference from '@/components/ui/SupportReference'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiGet, apiPost, clearPortalSession, isAuthError } from '@/lib/api'
@@ -22,30 +25,31 @@ export default function WorkflowDeliveryCard() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
+  const [loadReference, setLoadReference] = useState<string | null>(null), [actionReference, setActionReference] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
 
   useEffect(() => {
     let current = true
-    setLoading(true); setLoadError('')
+    setLoading(true); setLoadError(''); setLoadReference(null)
     apiGet<Delivery>(path).then(result => { if (current) setData(result) })
       .catch(error => {
         if (!current) return
         if (isAuthError(error)) { clearPortalSession(); router.replace('/auth/admin/login'); return }
-        setLoadError(error instanceof Error ? error.message : 'Workflow delivery could not be loaded.')
+        setLoadError(getApiErrorDetail(error) || 'Workflow delivery could not be loaded.'); setLoadReference(getApiErrorRequestId(error))
       }).finally(() => { if (current) setLoading(false) })
     return () => { current = false }
   }, [attempt, router])
 
   async function retry(id: string) {
-    setBusy(id); setActionError(''); setNotice('')
+    setBusy(id); setActionError(''); setActionReference(null); setNotice('')
     try {
       const result = await apiPost<{ delivered: number; failed: number; status: string }>(`${path}/${encodeURIComponent(id)}/retry`, {})
       if (result.delivered || result.status === 'already_delivered') setNotice('The clinical workflow update is confirmed.')
       else setActionError('The update is still pending. Review the latest result below before retrying.')
     } catch (error) {
       if (isAuthError(error)) { clearPortalSession(); router.replace('/auth/admin/login'); return }
-      setActionError(error instanceof Error ? error.message : 'Delivery could not be confirmed. The update remains saved for retry.')
+      setActionError(getApiErrorDetail(error) || 'Delivery could not be confirmed. The update remains saved for retry.'); setActionReference(getApiErrorRequestId(error))
     } finally { setBusy(null); setAttempt(value => value + 1) }
   }
 
@@ -57,8 +61,8 @@ export default function WorkflowDeliveryCard() {
       <button type='button' className={button} disabled={loading || Boolean(busy)} onClick={() => setAttempt(value => value + 1)}>Refresh delivery status</button>
     </div>
     {loading && <p role='status' className='mt-5 text-sm text-muted'>Loading delivery status…</p>}
-    {loadError && <p role='alert' className='mt-5 rounded-xl border border-red-400 bg-surface-subtle p-4 text-sm text-ink'>{loadError} Use Refresh delivery status to try again.</p>}
-    {actionError && <p role='alert' className='mt-5 rounded-xl border border-amber-500 bg-surface-subtle p-4 text-sm text-ink'>{actionError}</p>}
+    {loadError && <div role='alert' className='mt-5 rounded-xl border border-red-400 bg-surface-subtle p-4 text-sm text-ink'><p>{loadError} Use Refresh delivery status to try again.</p><SupportReference requestId={loadReference} /></div>}
+    {actionError && <div role='alert' className='mt-5 rounded-xl border border-amber-500 bg-surface-subtle p-4 text-sm text-ink'><p>{actionError}</p><SupportReference requestId={actionReference} /></div>}
     {notice && <p role='status' className='mt-5 rounded-xl border border-theme bg-surface-subtle p-4 text-sm text-ink'>{notice}</p>}
     {data && !loadError && <>
       <div className='mt-6 flex flex-wrap items-center gap-3 text-sm'>

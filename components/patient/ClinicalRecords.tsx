@@ -1,4 +1,5 @@
 'use client'
+import SupportReference from '@/components/ui/SupportReference'
 import type { ReactNode } from 'react'
 import { PortalButton, PortalCard, PortalLinkButton } from './PatientPortalPrimitives'
 
@@ -7,9 +8,9 @@ export function recordText(value: unknown): string { return typeof value === 'st
 export function recordList(value: unknown): ClinicalRecord[] {
   return Array.isArray(value) ? value.filter(item => item && typeof item === 'object' && !Array.isArray(item)) : []
 }
-export function RecordLoadState({ loading, error, errorMessage, loadingMessage = 'Loading your records…', retry, children }: { loading: boolean; error: boolean; errorMessage?: string; loadingMessage?: string; retry: () => void; children: ReactNode }) {
+export function RecordLoadState({ loading, error, errorMessage, errorRequestId, loadingMessage = 'Loading your records…', retry, children }: { loading: boolean; error: boolean; errorMessage?: string; errorRequestId?: string | null; loadingMessage?: string; retry: () => void; children: ReactNode }) {
   if (loading) return <PortalCard role='status' aria-live='polite'><p className='text-sm leading-7 text-secondary'>{loadingMessage}</p></PortalCard>
-  if (error) return <PortalCard role='alert'><h2 className='portal-h2'>We couldn’t load your records</h2><p className='mb-4 text-sm leading-7 text-secondary'>{errorMessage || 'Your records have not been changed. Please try again.'}</p><PortalButton type='button' onClick={retry}>Try again</PortalButton></PortalCard>
+  if (error) return <PortalCard role='alert'><h2 className='portal-h2'>We couldn’t load your records</h2><p className='mb-4 text-sm leading-7 text-secondary'>{errorMessage || 'Your records have not been changed. Please try again.'}</p><SupportReference requestId={errorRequestId} /><PortalButton type='button' onClick={retry}>Try again</PortalButton></PortalCard>
   return <>{children}</>
 }
 export function EmptyRecords({ title, description, showDashboardLink = true }: { title: string; description: string; showDashboardLink?: boolean }) {

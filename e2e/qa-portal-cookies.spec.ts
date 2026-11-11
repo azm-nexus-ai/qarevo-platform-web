@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto'
 test.describe.configure({mode:'serial'})
 const families=new Map<string,{portal:string;user_id:string;session_id:string;provider_id?:string}>()
 const refreshes=new Map<string,string>()
+const forwardedReferences:string[]=[]
 const roles:Record<string,string>={patient:'PATIENT',doctor:'PROVIDER',admin:'ADMIN'}
 let server:http.Server
 function issue(portal:string) {
@@ -23,6 +24,7 @@ test.beforeAll(async()=>{
     let raw='';for await(const chunk of req)raw+=chunk
     const body=raw?JSON.parse(raw):{},path=new URL(req.url!,'http://localhost').pathname
     res.setHeader('Content-Type','application/json')
+    const reference=String(req.headers['x-request-id']||'');forwardedReferences.push(reference);res.setHeader('X-Request-ID',reference)
     const finish=(data:unknown,status=200)=>{res.statusCode=status;res.end(JSON.stringify(data))}
     if(path==='/api/v1/auth/social/providers')return finish({google:{enabled:false,message:'Synthetic fixture'},apple:{enabled:false,message:'Synthetic fixture'}})
     if(path==='/api/v1/auth/login')return finish(issue('patient'))
@@ -42,14 +44,14 @@ test.beforeAll(async()=>{
 test.afterAll(async()=>{await new Promise<void>(resolve=>server.close(()=>resolve()))})
 async function call(page:Page,portal:string,path:string,method='GET',body?:unknown,session?:string) {
   return page.evaluate(async({portal,path,method,body,session})=>{
-    const headers:Record<string,string>={'X-Qarevo-Portal':portal}
+    const headers:Record<string,string>={'X-Qarevo-Portal':portal,'X-Request-ID':'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'}
     if(session)headers['X-Qarevo-Session']=session
     if(method!=='GET'){
       const csrf=await fetch('/api/v1/browser-csrf',{headers:{'X-Qarevo-Portal':portal}}).then(r=>r.json())
       headers['X-Qarevo-CSRF']=csrf.csrf_token;headers['Content-Type']='application/json'
     }
     const response=await fetch(path,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})})
-    return {status:response.status,body:await response.json()}
+    return {status:response.status,requestId:response.headers.get('X-Request-ID'),body:await response.json()}
   },{portal,path,method,body,session})
 }
 test('three HttpOnly portal sessions coexist; logout and refresh affect only their own family',async({context,page})=>{
@@ -62,6 +64,7 @@ test('three HttpOnly portal sessions coexist; logout and refresh affect only the
       expect(result.body.mfa_pending).toBe(true);expect(result.body.temp_token).toBeUndefined()
       result=await call(page,portal,'/api/v1/auth/mfa/verify-email','POST',{code:'123456'})
     }
+    expect(result.requestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);expect(result.requestId).not.toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');expect(forwardedReferences).toContain(result.requestId)
     expect(result.status).toBe(200);expect(result.body.access_token).toBeUndefined();expect(result.body.refresh_token).toBeUndefined()
     identities[portal]=result.body.browser_session
   }

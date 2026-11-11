@@ -1,8 +1,11 @@
 'use client'
 
+import { getApiErrorDetail, getApiErrorRequestId } from '@/lib/api'
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useNavigationGuard } from 'nextjs-nav-guard'
+import SupportReference from '@/components/ui/SupportReference'
 import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import { apiGet, apiPost, apiPut, completeDoctorConsultation } from '@/lib/api'
 import { clinicalFields, contentOf, emptyRecord, recordErrors, type ClinicalRecordState, type PublishedClinicalRecord, type RecordContent } from '@/lib/clinical-record'
@@ -24,6 +27,7 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
   const [attempt, setAttempt] = useState(0)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [errorRequestId, setErrorRequestId] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [errors, setErrors] = useState<ReturnType<typeof recordErrors>>({})
   const [amendmentError, setAmendmentError] = useState('')
@@ -34,19 +38,19 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
 
   useEffect(() => {
     let current = true
-    setLoading(true); setError(''); setNotice(''); setReviewed(false)
+    setLoading(true); setError(''); setErrorRequestId(null); setNotice(''); setReviewed(false)
     apiGet<ClinicalRecordState>(path).then(data => {
       if (!current) return
       setState(data); setForm(contentOf(data.draft ?? data.published)); setDirty(false)
       setAmendment(data.draft?.amendment_reason ?? ''); setEditing(Boolean(data.draft) || !data.published)
       setErrors({}); setAmendmentError('')
-    }).catch(err => { if (current) setError(err instanceof Error ? err.message : 'The saved record could not be loaded.') })
+    }).catch(err => { if (current) { setError(getApiErrorDetail(err) || 'The saved record could not be loaded.'); setErrorRequestId(getApiErrorRequestId(err)) } })
       .finally(() => { if (current) setLoading(false) })
     return () => { current = false }
   }, [path, attempt])
 
   async function save() {
-    setError(''); setNotice('')
+    setError(''); setErrorRequestId(null); setNotice('')
     const validation = recordErrors(form, false)
     setErrors(validation)
     const reasonError = state.published && amendment.trim().length < 4 ? 'Enter an amendment reason of 4–500 characters.' : ''
@@ -59,12 +63,12 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
         record_id: base?.id ?? null, expected_version: base?.version ?? 0, amendment_reason: amendment.trim() || null })
       setState(previous => ({ ...previous, draft })); setForm(contentOf(draft)); setDirty(false); setReviewed(false)
       setNotice(`Draft saved at ${new Date(draft.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. It is not visible to the patient.`)
-    } catch (err) { setError(err instanceof Error ? err.message : 'The draft could not be saved. Your text is still here.') }
+    } catch (err) { setError(getApiErrorDetail(err) || 'The draft could not be saved. Your text is still here.'); setErrorRequestId(getApiErrorRequestId(err)) }
     finally { setBusy(null) }
   }
 
   async function publish() {
-    setError(''); setNotice('')
+    setError(''); setErrorRequestId(null); setNotice('')
     const validation = recordErrors(form, true); setErrors(validation)
     if (Object.keys(validation).length) { setError('Complete the highlighted fields before publishing.'); return }
     if (dirty || !state.draft) { setError('Save your draft, then review the saved version before publishing.'); return }
@@ -75,14 +79,14 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
       setState({ draft: null, published }); setEditing(false); setDirty(false); setReviewed(false)
       setNotice('Published to the patient. This version is retained; future changes require an amendment.')
       await onPublished()
-    } catch (err) { setError(err instanceof Error ? err.message : 'Publication could not be confirmed. Retry to recover the saved record safely.') }
+    } catch (err) { setError(getApiErrorDetail(err) || 'Publication could not be confirmed. Retry to recover the saved record safely.'); setErrorRequestId(getApiErrorRequestId(err)) }
     finally { setBusy(null) }
   }
 
   async function reconcile() {
     setBusy('reconcile'); setError('')
     try { await completeDoctorConsultation(consultationId); await onPublished(); setNotice('Consultation completion confirmed.') }
-    catch (err) { setError(err instanceof Error ? err.message : 'Completion could not be confirmed. Please retry.') }
+    catch (err) { setError(getApiErrorDetail(err) || 'Completion could not be confirmed. Please retry.'); setErrorRequestId(getApiErrorRequestId(err)) }
     finally { setBusy(null) }
   }
 
@@ -96,7 +100,7 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
       <div className='flex flex-wrap items-center gap-3'><span className='rounded-full border border-theme px-3 py-2 text-sm text-secondary'>{state.draft ? `Draft · revision ${state.draft.revision}` : state.published ? `Published · revision ${state.published.revision}` : 'Not yet recorded'}</span>
         {state.published && publicationHref('doctor', consultationId, state.published.id) && <Link href={publicationHref('doctor', consultationId, state.published.id)!} prefetch={false} className={secondary}>View published versions</Link>}</div>
     </div>
-    {error && <div role='alert' className='mb-5 rounded-xl border border-red-400 bg-surface-subtle p-4 text-ink'><p>{error}</p>
+    {error && <div role='alert' className='mb-5 rounded-xl border border-red-400 bg-surface-subtle p-4 text-ink'><p>{error}</p><SupportReference requestId={errorRequestId} />
       <button type='button' className={`${secondary} mt-3`} disabled={Boolean(busy)} onClick={() => {
         if (!dirty || window.confirm('Reload the saved record? Unsaved text on this page will be replaced.')) { setDirty(false); setAttempt(value => value + 1) }
       }}>Reload saved record</button></div>}

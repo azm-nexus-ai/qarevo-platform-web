@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 import { EmptyRecords, RecordFields, RecordLoadState } from '@/components/patient/ClinicalRecords'
 import { PortalButton, PortalCard } from '@/components/patient/PatientPortalPrimitives'
+import SupportReference from '@/components/ui/SupportReference'
 import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { publicationApiPath, publicationHref, publicationPage, selectedPublication, type PublicationPortal } from '@/lib/clinical-publications'
@@ -63,7 +64,7 @@ export default function ClinicalPublicationReader({ portal, consultationId, reco
   return <div className='space-y-5'>
     {enabled && <div className='flex flex-wrap items-center justify-between gap-3'><p className='max-w-2xl text-sm leading-6 text-secondary'>Published versions are read-only. Opening a version does not change clinical instructions or a saved draft.</p><PortalButton type='button' disabled={refreshing} onClick={refresh}>{refreshing ? 'Refreshing summary…' : 'Refresh summary'}</PortalButton></div>}
     {!enabled ? <EmptyRecords title={invalidLink ? 'This summary link is invalid' : 'No consultation summary available'} description='Open a published summary from your medical records or consultation details. The link must identify one consultation.' showDashboardLink={false} />
-      : <RecordLoadState loading={loading} error={error} errorMessage={errorMessage} loadingMessage='Loading your published consultation summary…' retry={refresh}>
+      : <RecordLoadState loading={loading} error={error} errorMessage={errorMessage} errorRequestId={content.errorRequestId ?? (doctorAwaitingHistory ? history.errorRequestId : null)} loadingMessage='Loading your published consultation summary…' retry={refresh}>
         {record ? <PortalCard role='article' aria-label='Published consultation summary'>
           <div className='flex flex-wrap items-start justify-between gap-3'><h2 className='portal-h2'>Clinician-approved consultation summary</h2><ClinicalStatusBadge status='Published' domain='record' /></div>
           <section aria-label='Published revision status' className={`mt-4 rounded-xl border border-theme p-4 ${superseded ? 'bg-surface-subtle' : 'bg-surface-subtle'}`}>
@@ -86,7 +87,7 @@ export default function ClinicalPublicationReader({ portal, consultationId, reco
     {enabled && !(doctorAwaitingHistory && historyError) && <PortalCard role='region' aria-label='Published summary versions'>
       <div className='mb-4 flex flex-wrap items-center justify-between gap-3'><div><h2 className='portal-h2'>Published versions</h2><p className='text-sm leading-6 text-secondary'>Only clinician-published versions are listed. Older versions preserve what was shared at that time.</p></div><PortalButton disabled={history.refreshing} onClick={history.retry}>Refresh versions</PortalButton></div>
       {history.loading ? <p role='status' className='text-sm text-secondary'>Loading published versions…</p>
-        : historyError ? <div role='alert'><p className='mb-3 text-sm leading-6 text-secondary'>{invalidHistory ? 'The published-version list could not be confirmed. Please retry.' : history.errorMessage}</p><PortalButton onClick={history.retry}>Retry published versions</PortalButton></div>
+        : historyError ? <div role='alert'><p className='mb-3 text-sm leading-6 text-secondary'>{invalidHistory ? 'The published-version list could not be confirmed. Please retry.' : history.errorMessage}</p><SupportReference requestId={history.errorRequestId} /><PortalButton onClick={history.retry}>Retry published versions</PortalButton></div>
           : !page?.items.length ? <p className='text-sm text-secondary'>No published versions are available through this portal.</p>
             : <ol className='grid gap-3'>{page.items.map(item => <li key={item.id} className='flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-theme bg-surface-subtle p-4'>
               <div className='min-w-0'><p className='font-semibold text-ink'>Revision {item.revision}{item.revision === latestKnown ? ' · Current' : ' · Superseded'}</p><p className='mt-1 text-sm leading-6 text-secondary'><time dateTime={item.published_at!}>{summaryPublicationTime(item.published_at)}</time> · {item.language === 'de' ? 'German' : 'English'}</p></div>

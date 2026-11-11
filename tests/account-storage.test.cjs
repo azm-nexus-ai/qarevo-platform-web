@@ -719,7 +719,7 @@ test('clinical conflict details survive HTTP 409 without renewing or clearing a 
   assert.equal(calls, 1); assert.equal(t.api.readSessionMarker(), 'session-A')
 })
 
-test('malformed and non-JSON conflicts retain their original body and session', async () => {
+test('malformed and non-JSON conflicts retain internal bodies and sessions while UI copy stays safe', async () => {
   for (const body of ['{"detail":', 'The requested appointment slot is no longer available.']) {
     let calls = 0
     const t = tab(undefined, async () => { calls++; return new Response(body, { status: 409 }) }); login(t, 'A')
@@ -727,7 +727,7 @@ test('malformed and non-JSON conflicts retain their original body and session', 
       assert.ok(error instanceof t.api.ApiError)
       assert.equal(error.status, 409)
       assert.equal(error.body, body)
-      assert.equal(t.api.getApiErrorDetail(error), body)
+      assert.equal(t.api.getApiErrorDetail(error), 'The service returned an unexpected response. Please retry.')
       assert.doesNotMatch(error.message, /session changed/i)
       return true
     })
@@ -1177,4 +1177,16 @@ test('private clinician patient searches use CSRF-protected read-only POST bodie
   assert.equal(calls.some(call => call.url.includes('/session/activity')), false)
   assert.equal(JSON.stringify({ ...t.localStorage, ...t.sessionStorage }).includes('Synthetic private search'), false)
   controller.abort(); assert.equal(calls[0].init.signal.aborted, true)
+})
+
+test('API errors accept only a strict server UUID header and never expose body data in their message', async () => {
+  const requestId = '11111111-1111-4111-8111-111111111111', sentinel = 'Synthetic private clinical text https://private.example.test/record'
+  const t = tab(undefined, async () => new Response(JSON.stringify({ detail: 'Synthetic operation unavailable', request_id: 'forged-body-reference' }), { status: 503, headers: { 'X-Request-ID': requestId } })); login(t, 'diagnostic-owner')
+  await assert.rejects(t.api.apiGet('/private'), error => { assert.equal(error.requestId, requestId); assert.equal(t.api.getApiErrorRequestId(error), requestId); assert.equal(t.api.getApiErrorDetail(error), 'Synthetic operation unavailable'); return true })
+  for (const value of [undefined, '', 'not-a-reference', requestId + ', ' + requestId, requestId + '\n', 'ABCDEFAB-1111-4111-8111-111111111111', sentinel]) assert.equal(new t.api.ApiError(502, sentinel, value).requestId, null)
+  const failure = new t.api.ApiError(502, sentinel, requestId)
+  assert.equal(failure.body, sentinel); assert.equal(failure.message.includes(sentinel), false); assert.equal(t.api.getApiErrorDetail(failure), 'The service returned an unexpected response. Please retry.')
+  assert.equal(t.api.getApiErrorRequestId(new Error(sentinel)), null)
+  assert.equal(t.api.safeRequestId('abcdefab-1111-1111-8111-111111111111'), 'abcdefab-1111-1111-8111-111111111111')
+  assert.equal(JSON.stringify({ ...t.localStorage, ...t.sessionStorage }).includes(requestId), false)
 })
