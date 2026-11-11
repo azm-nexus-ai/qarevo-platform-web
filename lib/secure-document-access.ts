@@ -22,7 +22,7 @@ export type SecureDocumentAccess = {
 
 const invalidMetadata = 'Document access could not be verified. Close this dialog, refresh the requests and try again.'
 
-/** A signed link is kept only in component memory and is never embedded or prefetched. */
+/** Validate an exact-file capability. Consumers keep it in memory and control explicit download or preview. */
 export function validateDocumentAccess(value: unknown, expectedFileId: string, requestedAt: number, now = Date.now(), maxLifetimeSeconds: DocumentAccessLifetime = 300): SecureDocumentAccess {
   if ((maxLifetimeSeconds !== 300 && maxLifetimeSeconds !== 3600) || !value || typeof value !== 'object') throw new Error(invalidMetadata)
   const metadata = value as Partial<SecureDocumentMetadata>
@@ -56,4 +56,10 @@ export function documentFileSize(bytes: number | null) {
   if (bytes === null) return 'Size unavailable'
   if (bytes < 1024) return `${bytes} bytes`
   return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/** Only these validated MIME types may be intentionally embedded by a preview. */
+export function documentPreviewType(contentType: string): 'pdf' | 'image' | null {
+  if (contentType === 'application/pdf') return 'pdf'
+  return ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(contentType) ? 'image' : null
 }

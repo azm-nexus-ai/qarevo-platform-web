@@ -17,6 +17,7 @@ import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 import SupportReference from '@/components/ui/SupportReference'
 import SecureDocumentAccessDialog from '@/components/ui/SecureDocumentAccessDialog'
+import { validateDocumentAccess, documentPreviewType, type SecureDocumentAccess } from '@/lib/secure-document-access'
 import { usePortalAction } from '@/lib/portal-action'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { currentPortal } from '@/lib/portal-scope'
@@ -67,8 +68,9 @@ type TimelineEvent = {
 
 type PreviewState = {
   record: MedicalRecord
-  url: string | null
-  contentType: string | null
+  access: SecureDocumentAccess | null
+  expired: boolean
+  unsupported: boolean
   loading: boolean
   error: string | null
   requestId?: string | null
@@ -280,94 +282,27 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
   )
 }
 
-function PreviewModal({ preview, onClose, onDownload }: { preview: PreviewState; onClose: () => void; onDownload: () => void }) {
-  const { record, url, contentType, loading, error } = preview
-  const fileLabel = record.fileType ? `${record.title}.${record.fileType.toLowerCase()}` : record.title
-  const isImage = Boolean(contentType?.startsWith('image/'))
-  const isPdf = contentType === 'application/pdf' || record.fileType === 'PDF'
-
+function PreviewModal({ preview, dialog, onClose, onDownload, onRetry, onEmbedError }: { preview: PreviewState; dialog: React.RefObject<HTMLDialogElement | null>; onClose: () => void; onDownload: () => void; onRetry: () => void; onEmbedError: (access: SecureDocumentAccess) => void }) {
+  const { record, access, loading, error } = preview
+  const format = access ? documentPreviewType(access.contentType) : null
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '22px', background: "var(--surface-hover)", backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-      <div aria-hidden onClick={onClose} style={{ position: 'absolute', inset: 0 }} />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${record.title} preview`}
-        style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '900px', maxHeight: '88vh', background: "var(--surface)", borderRadius: '18px', boxShadow: '0 24px 60px rgba(4,53,77,0.28)', border: "1px solid var(--border)", display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close preview"
-          style={{
-            position: 'absolute',
-            top: '14px',
-            right: '14px',
-            zIndex: 3,
-            width: '40px',
-            height: '40px',
-            borderRadius: '12px',
-            border: "1px solid var(--border)",
-            background: "var(--surface-glass)",
-            color: T.navy,
-            fontSize: '24px',
-            lineHeight: 1,
-            cursor: 'pointer',
-            boxShadow: '0 8px 20px rgba(4,53,77,0.12)',
-          }}
-        >
-          ✕
-        </button>
-        <div style={{ padding: '20px 72px 18px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '14px', borderBottom: "1px solid var(--border)", background: "var(--surface-glass)" }}>
-          <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 800, color: T.navy }}>{fileLabel}</h2>
-            <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{record.date} • {record.provider}</p>
-          </div>
-          {record.canDownload && (
-            <button
-              onClick={onDownload}
-              style={{ background: 'rgba(32,181,223,0.1)', border: '1px solid rgba(32,181,223,0.18)', borderRadius: '10px', color: T.link, padding: '0 14px', minHeight: '36px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
-            >
-              Download
-            </button>
-          )}
-        </div>
-        <div style={{ minHeight: '420px', maxHeight: 'calc(88vh - 74px)', background: "var(--surface)", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'auto' }}>
-          {loading ? (
-            <p style={{ margin: 0, fontSize: '14px', color: T.slate, fontWeight: 700 }}>Loading secure preview...</p>
-          ) : error ? (
-            <div style={{ padding: '28px', textAlign: 'center', maxWidth: '460px' }}>
-              <Ico p={ICONS.shield} size={48} sw={1.4} color="rgba(239,68,68,0.35)" />
-              <p style={{ margin: '16px 0 8px', fontSize: '15px', color: T.navy, fontWeight: 800 }}>Preview unavailable</p>
-              <p role='alert' style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{error}</p><SupportReference requestId={preview.requestId} />
-            </div>
-          ) : url && isImage ? (
-            <img src={url} alt={record.title} style={{ width: '100%', height: '100%', objectFit: 'contain', background: "var(--surface)" }} />
-          ) : url && isPdf ? (
-            <iframe title={record.title} src={url} style={{ width: '100%', minHeight: '70vh', border: 0, background: "var(--surface)" }} />
-          ) : (
-            <div style={{ padding: '32px', width: '100%', maxWidth: '700px' }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: '18px', fontWeight: 800, color: T.navy }}>{record.title}</h3>
-              <p style={{ margin: '0 0 16px', fontSize: '13px', color: T.slate }}>{record.provider} • {record.date}</p>
-              <div style={{ display: 'grid', gap: '14px' }}>
-                {[record.summary, record.clinicalNotes, record.recommendations].filter(Boolean).map((text, index) => (
-                  <p key={`${record.id}-preview-text-${index}`} style={{ margin: 0, padding: '14px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", color: T.slate, fontSize: '14px', lineHeight: 1.65 }}>{text}</p>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+    const node = dialog.current
+    node?.showModal()
+    // React autoFocus can run before a native dialog becomes focusable.
+    node?.querySelector<HTMLButtonElement>('[data-preview-close]')?.focus()
+    return () => { if (node?.open) node.close() }
+  }, [dialog])
+  return <dialog ref={dialog} aria-label={`${record.title} preview`} onCancel={event => { event.preventDefault(); onClose() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-4xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
+    <div className='flex flex-col gap-4 border-b border-theme pb-5 sm:flex-row sm:items-start sm:justify-between'><div data-preview-heading-panel className='w-full min-w-0 sm:w-auto sm:flex-1'><h2 className='portal-h2 break-words'>{access?.filename || record.title}</h2><p className='text-sm leading-6 text-secondary'>{record.date} · {record.uploadedBy === 'patient' ? 'Reported provider: ' : ''}{record.provider}</p></div><div className='flex w-full shrink-0 flex-wrap gap-3 sm:w-auto'>{record.canDownload && <PortalButton type='button' onClick={onDownload}>Download</PortalButton>}<PortalButton data-preview-close type='button' aria-label='Close preview' onClick={onClose}>Close</PortalButton></div></div>
+    <div className='min-w-0 pt-5' aria-busy={loading}>
+      {loading ? <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm text-secondary'>Loading secure preview…</p>
+        : preview.expired ? <div role='status' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-7'>This preview link has expired. Request fresh access to view this file again.</p><PortalButton type='button' onClick={onRetry}>Request fresh preview access</PortalButton></div>
+        : error ? <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-3 font-semibold'>Preview unavailable</p><p className='text-sm leading-7'>{error}</p><SupportReference requestId={preview.requestId} /><PortalButton type='button' onClick={onRetry}>Retry preview</PortalButton></div>
+        : preview.unsupported ? <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm leading-7 text-secondary'>This file format cannot be previewed safely here. Use Download to request an attachment link.</p>
+        : access && format ? <><p className='mb-4 text-sm leading-7 text-secondary'>Preview access expires at <time dateTime={new Date(access.expiresAt).toISOString()}>{new Date(access.expiresAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>. Use Download if your browser cannot display this file.</p>{format === 'image' ? <img src={access.downloadUrl} referrerPolicy='no-referrer' alt={record.title} onError={() => onEmbedError(access)} className='mx-auto max-h-[65dvh] max-w-full object-contain' /> : <iframe src={access.downloadUrl} referrerPolicy='no-referrer' title={record.title} onError={() => onEmbedError(access)} className='h-[65dvh] min-h-64 w-full rounded-xl border border-theme bg-surface' />}</>
+        : <div className='grid gap-4'><h3 className='portal-h3'>{record.title}</h3>{[record.summary, record.clinicalNotes, record.recommendations].filter(Boolean).map((text, index) => <p key={`${record.id}-preview-text-${index}`} className='break-words rounded-xl border border-theme bg-surface-subtle p-4 text-sm leading-7 text-ink'>{text}</p>)}</div>}
     </div>
-  )
+  </dialog>
 }
 
 function DeleteRecordModal({ record, busy, error, requestId, onClose, onConfirm }: { record: MedicalRecord; busy: boolean; error: string; requestId: string | null; onClose: () => void; onConfirm: () => void }) {
@@ -387,6 +322,9 @@ function MedicalRecordsPageInner() {
   const [deleteBusy, setDeleteBusy] = useState(false), [deleteError, setDeleteError] = useState(''), [deleteRequestId, setDeleteRequestId] = useState<string | null>(null)
   useEffect(() => () => { deleting.current?.abort(); deleting.current = null }, [])
   const previewVersion = useRef(0)
+  const previewDialog = useRef<HTMLDialogElement>(null)
+  const previewRequest = useRef<{ version: number; fileId: string; action: ReturnType<typeof captureAction>; controller: AbortController; pending: boolean; path: string; query: string } | null>(null)
+  const previewRestoreTarget = useRef<HTMLButtonElement | null>(null)
   const downloadNonce = useRef(0)
   const handledRecordLink = useRef<string | null>(null)
   const downloadRestoreTarget = useRef<HTMLButtonElement | null>(null)
@@ -417,7 +355,11 @@ function MedicalRecordsPageInner() {
   const [isUploading, setIsUploading] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null)
   const [previewState, setPreviewState] = useState<PreviewState | null>(null)
-  const closePreview = useCallback(() => { ++previewVersion.current; setPreviewState(null) }, [])
+  const closePreview = useCallback(() => {
+    ++previewVersion.current; const request = previewRequest.current; request?.controller.abort(); previewRequest.current = null; if (previewDialog.current?.open) previewDialog.current.close(); setPreviewState(null)
+    if (request?.action.isCurrent() && currentPortal() === 'patient' && window.location.pathname === request.path && new URLSearchParams(window.location.search).toString() === request.query && previewRestoreTarget.current?.isConnected) previewRestoreTarget.current.focus()
+  }, [])
+  useEffect(() => () => { ++previewVersion.current; previewRequest.current?.controller.abort(); previewRequest.current = null }, [])
   const [deleteRecord, setDeleteRecord] = useState<MedicalRecord | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const healthResource = usePatientResource<PatientHealthInfo>('/api/v1/patient/settings/health-info')
@@ -425,7 +367,7 @@ function MedicalRecordsPageInner() {
   // Dialogs are resolved from the current account's current index on every render.
   // A logout, account change or deleted order cannot leave an old patient's data open.
   const activeRecord = selectedRecord ? records.find(record => record.id === selectedRecord.id) : null
-  const activePreviewRecord = previewState ? records.find(record => record.id === previewState.record.id) : null
+  const activePreviewRecord = previewState && !resource.error ? records.find(record => record.id === previewState.record.id && record.canPreview && record.canDownload === previewState.record.canDownload && record.fileType === previewState.record.fileType && record.reviewFileId === previewState.record.reviewFileId && record.status === previewState.record.status) : null
   const activeDeleteRecord = isCurrentRecordsPage() && deleteRecord?.canDelete ? deleteRecord : null
   const activeDownloadRecord = downloadSelection?.scope === accountScope ? records.find(record => record.id === downloadSelection.recordId && record.canDownload) : null
 
@@ -494,28 +436,50 @@ function MedicalRecordsPageInner() {
   }
 
   const handlePreviewRecord = async (record: MedicalRecord) => {
-    if (!isCurrentRecordsPage()) return
-    const version = ++previewVersion.current
+    if (!isCurrentRecordsPage() || !record.canPreview || !records.some(item => item.id === record.id && item.canPreview)) return
+    if (previewRequest.current?.pending && previewRequest.current.fileId === record.id) return
+    previewRequest.current?.controller.abort()
+    const version = ++previewVersion.current, action = captureAction(), controller = new AbortController()
+    previewRequest.current = { version, fileId: record.id, action, controller, path: renderedPath, query: renderedQuery, pending: Boolean(record.canDownload && record.fileType) }
     if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`
-    const action = captureAction()
-    setPreviewState({ record, url: null, contentType: null, loading: Boolean(record.canDownload && record.fileType), error: null })
+    const card = Array.from(document.querySelectorAll<HTMLElement>('[data-medical-record-id]')).find(element => element.dataset.medicalRecordId === record.id)
+    previewRestoreTarget.current = card?.querySelector<HTMLButtonElement>('button.medical-record-preview') ?? null
+    previewRestoreTarget.current?.focus()
+    setPreviewState({ record, access: null, expired: false, unsupported: false, loading: Boolean(record.canDownload && record.fileType), error: null })
     if (!record.canDownload || !record.fileType) return
-
+    const isCurrent = () => version === previewVersion.current && action.isCurrent() && isCurrentRecordsPage() && !controller.signal.aborted
+    const requestedAt = Date.now()
     try {
-      const response = await downloadMedicalRecord(record.id, { disposition: 'inline' })
-      if (version !== previewVersion.current || !action.isCurrent() || !isCurrentRecordsPage()) return
-      setPreviewState({ record, url: response.download_url, contentType: response.content_type, loading: false, error: null })
+      const response = await downloadMedicalRecord(record.id, { disposition: 'inline', signal: controller.signal })
+      if (!isCurrent()) return
+      const access = validateDocumentAccess(response, record.id, requestedAt, Date.now(), 3600)
+      const supported = Boolean(documentPreviewType(access.contentType))
+      setPreviewState({ record, access: supported ? access : null, expired: false, unsupported: !supported, loading: false, error: null })
     } catch (error) {
-      if (version !== previewVersion.current || !action.isCurrent() || !isCurrentRecordsPage()) return
-      setPreviewState({
-        record,
-        url: null,
-        contentType: null,
-        loading: false,
-        error: getApiErrorDetail(error) ?? 'We could not open the secure preview for this record.',
-        requestId: getApiErrorRequestId(error),
-      })
+      if (!isCurrent()) return
+      setPreviewState({ record, access: null, expired: false, unsupported: false, loading: false,
+        error: getApiErrorDetail(error) ?? 'We could not open the secure preview for this record.', requestId: getApiErrorRequestId(error) })
+    } finally { if (previewRequest.current?.version === version) previewRequest.current.pending = false }
+  }
+
+  useEffect(() => {
+    if (!previewState) return
+    if (!activePreviewRecord) { closePreview(); return }
+    const access = previewState.access, request = previewRequest.current
+    const check = (event?: Event) => {
+      const expiredSession = event?.type === 'qarevo:auth-session-expired' && (event as CustomEvent<{ portal?: string }>).detail?.portal === 'patient'
+      if (!request?.action.isCurrent() || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery || expiredSession) { closePreview(); return }
+      if (access && Date.now() >= access.expiresAt) setPreviewState(current => current?.access === access ? { ...current, access: null, expired: true } : current)
     }
+    const timer = access ? window.setTimeout(check, Math.max(0, access.expiresAt - Date.now())) : null
+    window.addEventListener(ACCOUNT_CHANGED, check); window.addEventListener('storage', check); window.addEventListener('focus', check); window.addEventListener('qarevo:auth-session-expired', check); document.addEventListener('visibilitychange', check)
+    return () => { if (timer !== null) clearTimeout(timer); window.removeEventListener(ACCOUNT_CHANGED, check); window.removeEventListener('storage', check); window.removeEventListener('focus', check); window.removeEventListener('qarevo:auth-session-expired', check); document.removeEventListener('visibilitychange', check) }
+  }, [previewState, activePreviewRecord, closePreview, renderedPath, renderedQuery])
+
+  const previewEmbedError = (access: SecureDocumentAccess) => {
+    const request = previewRequest.current
+    if (!request?.action.isCurrent() || !isCurrentRecordsPage()) return
+    setPreviewState(current => current?.access === access ? { ...current, access: null, error: 'The file could not be displayed. Retry preview or use Download.', requestId: null } : current)
   }
 
   const handleDeleteConfirmed = async () => {
@@ -754,6 +718,7 @@ function MedicalRecordsPageInner() {
                   {record.canPreview && (
                     <HoverBtn
                       onClick={() => void handlePreviewRecord(record)}
+                      className='medical-record-preview'
                       base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: 'none', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}
                       on={{ background: 'rgba(32,181,223,0.15)', transform: 'translateY(-1px)' }}
                     >
@@ -790,7 +755,7 @@ function MedicalRecordsPageInner() {
           onDeleteRequest={() => chooseDelete(activeRecord)}
         />
       )}
-      {!documentAccessOpen && !isUploading && !activeDeleteRecord && previewState && activePreviewRecord && <PreviewModal preview={{...previewState, record: activePreviewRecord}} onClose={closePreview} onDownload={() => void handleDownloadRecord(activePreviewRecord)} />}
+      {!documentAccessOpen && !isUploading && !activeDeleteRecord && previewState && activePreviewRecord && <PreviewModal dialog={previewDialog} preview={{...previewState, record: activePreviewRecord}} onClose={closePreview} onDownload={() => void handleDownloadRecord(activePreviewRecord)} onRetry={() => void handlePreviewRecord(activePreviewRecord)} onEmbedError={previewEmbedError} />}
       {!isUploading && !documentAccessOpen && activeDeleteRecord && <DeleteRecordModal record={activeDeleteRecord} busy={deleteBusy} error={deleteError} requestId={deleteRequestId} onClose={() => { if (!deleting.current && isCurrentRecordsPage()) setDeleteRecord(null) }} onConfirm={() => void handleDeleteConfirmed()} />}
 
       {/* Toast */}

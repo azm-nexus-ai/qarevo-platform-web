@@ -5,7 +5,7 @@ const fileId = 'synthetic-patient-file'
 const makeRecord = (id = fileId, title = 'Synthetic patient report') => ({ id, type: 'Medical Document', title, provider: 'Synthetic care team', specialty: 'General medicine', date: 'Nov 07, 2026', status: 'Available', lastUpdated: 'Nov 07, 2026', fileType: 'PDF', fileSize: '2 KB', canPreview: true, canDownload: true, canDelete: false })
 async function prepare(context: BrowserContext) {
   const identity = await seedPortalSession(context, 'patient')
-  const state = { records: [makeRecord()] as Record<string, unknown>[], reads: [] as { id: string; disposition: string }[], storageReads: 0, listReads: 0, fail: false, holdInline: false, holdAttachment: false, releaseInline: () => {}, releaseAttachment: () => {}, expires: 3600 }
+  const state = { records: [makeRecord()] as Record<string, unknown>[], reads: [] as { id: string; disposition: string }[], storageReads: 0, listReads: 0, fail: false, holdInline: false, holdAttachment: false, releaseInline: () => {}, releaseAttachment: () => {}, inlineDelivery: Promise.resolve(), expires: 3600 }
   await context.route('https://storage.example.invalid/**', route => {
     state.storageReads++
     return route.fulfill({ contentType: 'application/pdf', headers: { 'Content-Disposition': 'attachment; filename="medical-record.pdf"' }, body: '%PDF-1.4\nSynthetic only\n%%EOF' })
@@ -22,10 +22,14 @@ async function prepare(context: BrowserContext) {
     if (match) {
       const disposition = url.searchParams.get('disposition') || 'attachment'
       state.reads.push({ id: match[1], disposition })
-      if (disposition === 'inline' && state.holdInline) await new Promise<void>(resolve => { state.releaseInline = resolve })
+      let finishInline = () => {}
+      if (disposition === 'inline') {
+        state.inlineDelivery = new Promise<void>(resolve => { finishInline = resolve })
+        if (state.holdInline) await new Promise<void>(resolve => { state.releaseInline = resolve })
+      }
       if (disposition === 'attachment' && state.holdAttachment) await new Promise<void>(resolve => { state.releaseAttachment = resolve })
       if (state.fail && disposition === 'attachment') return route.fulfill({ status: 503, json: { detail: 'Synthetic patient file is temporarily unavailable. Retry document access.' } })
-      return route.fulfill({ json: { id: match[1], filename: `${match[1]}.pdf`, content_type: 'application/pdf', file_size_bytes: 2048, uploaded_by: 'patient', download_url: `https://storage.example.invalid/${match[1]}?signature=synthetic-patient-capability`, expires_in: state.expires } })
+      return route.fulfill({ json: { id: match[1], filename: `${match[1]}.pdf`, content_type: 'application/pdf', file_size_bytes: 2048, uploaded_by: 'patient', download_url: `https://storage.example.invalid/${match[1]}?signature=synthetic-patient-capability`, expires_in: state.expires } }).finally(finishInline)
     }
     return route.fulfill({ status: 404, json: { detail: 'No synthetic fixture' } })
   })
@@ -76,8 +80,10 @@ test('a late preview cannot reopen or stack dialogs after patient download start
   await expect.poll(() => state.reads.filter(item => item.disposition === 'inline').length).toBe(1)
   await preview.getByRole('button', { name: 'Download', exact: true }).click()
   await expect(access(page).getByRole('link', { name: 'Download medical record', exact: true })).toBeVisible()
-  const returned = page.waitForResponse(response => response.url().includes(`/medical-records/${fileId}/download?disposition=inline`))
-  state.releaseInline(); await returned
+  // Closing the preview intentionally aborts its fetch; await this exact held
+  // fixture's fulfillment attempt instead of an abandoned browser response.
+  const delivered = state.inlineDelivery
+  state.releaseInline(); await delivered
   const reads = state.listReads
   const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/patient/medical-records')
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))

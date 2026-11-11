@@ -59,3 +59,11 @@ test('trusted patient caller preserves one-hour access while the default doctor 
   assert.throws(() => validateDocumentAccess({ ...valid, expires_in: 3601 }, fileId, started, started, 3600), /could not be verified/)
   assert.throws(() => validateDocumentAccess(valid, fileId, started, started, 7200), /could not be verified/)
 })
+
+
+test('inline preview MIME selection is finite and independent of card filenames or extensions', () => {
+  const { documentPreviewType } = target.exports
+  assert.equal(documentPreviewType('application/pdf'), 'pdf')
+  for (const type of ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']) assert.equal(documentPreviewType(type), 'image')
+  for (const type of ['text/html', 'image/svg+xml', 'application/javascript', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/pdf; charset=utf-8', 'APPLICATION/PDF', '', null, {}]) assert.equal(documentPreviewType(type), null)
+})

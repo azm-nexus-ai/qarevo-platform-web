@@ -1538,13 +1538,13 @@ export async function uploadMedicalRecord(formData: FormData, signal?: AbortSign
 
 export async function downloadMedicalRecord(
     fileId: string,
-    options?: { disposition?: "attachment" | "inline" },
+    options?: { disposition?: "attachment" | "inline"; signal?: AbortSignal },
 ): Promise<MedicalRecordDownloadResponse> {
     const params = new URLSearchParams();
     if (options?.disposition) params.set("disposition", options.disposition);
     const query = params.toString();
     return apiGet<MedicalRecordDownloadResponse>(
-        `/api/v1/patient/medical-records/${fileId}/download${query ? `?${query}` : ""}`,
+        `/api/v1/patient/medical-records/${encodeURIComponent(fileId)}/download${query ? `?${query}` : ""}`, undefined, options?.signal,
     );
 }
 
