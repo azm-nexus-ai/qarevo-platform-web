@@ -1694,6 +1694,7 @@ export type PatientLabRequestsResponse = {
 };
 
 export type DoctorLabOrderPayload = {
+    creation_id?: string;
     patient_id: string;
     episode_id?: string;
     title: string;
@@ -1711,12 +1712,13 @@ export type DoctorLabOrderPayload = {
     preparation_instructions?: string;
 };
 
-export type DoctorLabOrderUpdatePayload = Partial<DoctorLabOrderPayload> & {
+export type DoctorLabOrderUpdatePayload = Partial<Omit<DoctorLabOrderPayload, 'creation_id'>> & {
     patient_id: string;
     test_id: string;
 };
 
 export type DoctorLabOrdersResponse = {
+    creation_receipt?: import('./clinical-create-intent').ClinicalCreationReceipt;
     review_receipt?: unknown;
     upload_receipt?: LabResultUploadReceipt;
     test_requests: PatientLabRequest[];

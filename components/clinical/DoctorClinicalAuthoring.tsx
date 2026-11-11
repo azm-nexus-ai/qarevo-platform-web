@@ -8,12 +8,13 @@ import { clinicalSelectedPatient, clinicalSelectedPatientPath } from '@/lib/clin
 import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
 import { PortalButton, PortalCard } from '@/components/patient/PatientPortalPrimitives'
 import { MedicationRecordCard, CarePlanRecordCard } from './InstructionRecords'
-import { apiPost, apiPut, apiDelete, getApiErrorDetail, isAuthError } from '@/lib/api'
+import { ApiError, apiPost, apiPut, apiDelete, getApiErrorDetail, isAuthError } from '@/lib/api'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { currentPortal } from '@/lib/portal-scope'
 import { usePortalAction } from '@/lib/portal-action'
 import { usePortalResource } from '@/lib/use-portal-resource'
 import { MEDICATION_FIELDS, DAYPARTS, clinicalValidationErrors, instructionList, medicationInstruction, careInstruction, instructionIdentifier, instructionActionsAllowed } from '@/lib/clinical-instructions'
+import { clinicalCreateIntent, sameClinicalCreateIntent, clinicalCreationReceipt, type ClinicalCreateIntent } from '@/lib/clinical-create-intent'
 import { authoringChanges, emptyAuthoringForm, savedAuthoringForm, type AuthoringKind, type AuthoringForm } from '@/lib/clinical-authoring'
 
 const subscribe = (changed: () => void) => { window.addEventListener(ACCOUNT_CHANGED, changed); window.addEventListener('storage', changed); return () => { window.removeEventListener(ACCOUNT_CHANGED, changed); window.removeEventListener('storage', changed) } }
@@ -44,22 +45,24 @@ function ClinicalAuthoring({ kind, scope, path, query }: { kind: AuthoringKind; 
   const [errors, setErrors] = useState<Record<string, string>>({}), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false)
   const pending = useRef<AbortController | null>(null), pendingIntent = useRef<'create' | 'update' | 'delete' | null>(null), uncertainCreateRef = useRef(false)
   const [uncertainCreate, setUncertainCreate] = useState(false)
+  const creationAttempt = useRef<{ intent: ClinicalCreateIntent; uncertain: boolean; reviewBase: unknown } | null>(null)
+  const [createRecovery, setCreateRecovery] = useState(false)
   const [projection, setProjection] = useState<{ patientId: string; base: unknown; data: Record<string, unknown> } | null>(null)
   const source = projection?.patientId === patientId && projection.base === resource.data ? projection.data : resource.data
   const records = instructionList(source?.[collectionKey])
-  const dirty = JSON.stringify(form) !== JSON.stringify(baseline)
-  const reconciliationReady = authorized && resource.data !== null && !resource.refreshing && !resource.error && !records.invalid
+  const dirty = JSON.stringify(form) !== JSON.stringify(baseline) || createRecovery
+  const reconciliationReady = authorized && resource.data !== null && !resource.refreshing && !resource.error && !records.invalid && (!creationAttempt.current?.uncertain || resource.data !== creationAttempt.current.reviewBase)
   const navigation = useNavigationGuard({ enabled: ({ to }) => (dirty || busy) && !to.startsWith('/auth/') })
   const validPage = useCallback(() => !!scope && scope === doctorScope() && currentPortal() === 'doctor' && window.location.pathname === path && new URLSearchParams(window.location.search).toString() === query, [scope, path, query])
-  useEffect(() => () => { pending.current?.abort(); pending.current = null }, [])
+  useEffect(() => () => { pending.current?.abort(); pending.current = null; creationAttempt.current = null }, [])
   useEffect(() => {
     if (authorized || !pending.current) return
-    if (pendingIntent.current === 'create') { uncertainCreateRef.current = true; setUncertainCreate(true) }
+    if (pendingIntent.current === 'create') { uncertainCreateRef.current = true; setUncertainCreate(true); if (creationAttempt.current) creationAttempt.current.uncertain = true }
     pending.current.abort(); pending.current = null; pendingIntent.current = null; setBusy(false); setNotice('')
     setError('Selected patient access was lost during the operation. We could not confirm whether it was saved. Your entries remain here. Retry access and review the reloaded saved list before proceeding.')
   }, [authorized])
-  const reset = () => { uncertainCreateRef.current = false; setUncertainCreate(false); setForm(empty); setBaseline(empty); setEditingId(null); setErrors({}); setShowForm(false) }
-  const changePatient = (id: string) => { if (id === patientId && uncertainCreateRef.current && !reconciliationReady) { setError('Reload the saved instructions before discarding this unconfirmed create.'); return }; if (!validPage() || pending.current || (id && !clinicalSelectedPatientPath(id))) return; patientRef.current = id; setPatientId(id); setPendingPatientId(null); setProjection(null); setError(''); setNotice(''); reset() }
+  const reset = () => { creationAttempt.current = null; setCreateRecovery(false); uncertainCreateRef.current = false; setUncertainCreate(false); setForm(empty); setBaseline(empty); setEditingId(null); setErrors({}); setShowForm(false) }
+  const changePatient = (id: string) => { if (id === patientId && (uncertainCreateRef.current || creationAttempt.current?.uncertain) && !reconciliationReady) { setError('Reload the saved instructions before discarding this unconfirmed create.'); return }; if (!validPage() || pending.current || (id && !clinicalSelectedPatientPath(id))) return; patientRef.current = id; setPatientId(id); setPendingPatientId(null); setProjection(null); setError(''); setNotice(''); reset() }
   const choosePatient = (id: string) => { if (!validPage() || pending.current) return; if (dirty) setPendingPatientId(id); else changePatient(id) }
   function begin(intent: 'create' | 'update' | 'delete') {
     if (!validPage() || !patientId || patientRef.current !== patientId || !authorized || selectionAccess.current.id !== patientId || !selectionAccess.current.allowed || pending.current) return null
@@ -77,16 +80,34 @@ function ClinicalAuthoring({ kind, scope, path, query }: { kind: AuthoringKind; 
     const validation = authoringChanges(kind, form, baseline, Boolean(editingId)); setErrors(validation.errors)
     if (Object.keys(validation.errors).length) { setError('Correct the highlighted fields before saving.'); document.getElementById(`instruction-${Object.keys(validation.errors)[0]}`)?.focus(); return }
     if (editingId && !Object.keys(validation.payload).length) { setNotice('No changed fields to save.'); return }
+    const body = { patient_id: patientId, ...validation.payload }, creationKind = kind === 'medication' ? 'medication' : 'care_plan'
+    const owner = JSON.stringify([scope, path, query, patientId, creationKind])
+    if (!editingId && creationAttempt.current?.uncertain && !sameClinicalCreateIntent(creationAttempt.current.intent, owner, creationKind, body)) { setError('These details differ from the unconfirmed creation. Restore its original details to retry, or reload and review the saved list, then explicitly discard this draft before starting a new creation.'); return }
     const operation = begin(editingId ? 'update' : 'create'); if (!operation) return
+    let sent = false
     try {
-      const body = { patient_id: patientId, ...validation.payload }
+      const previous = creationAttempt.current
+      const intent = editingId ? null : clinicalCreateIntent(previous?.intent || null, owner, creationKind, body)
+      if (intent) creationAttempt.current = { intent, uncertain: previous?.uncertain || false, reviewBase: previous?.reviewBase ?? resource.data }
+      sent = true
       const data = editingId ? await apiPut<Record<string, unknown>>(kind === 'medication' ? endpoint : `${endpoint}/${encodeURIComponent(patientId)}/${encodeURIComponent(editingId)}`, kind === 'medication' ? { ...body, medication_id: editingId } : body, undefined, operation.controller.signal)
-        : await apiPost<Record<string, unknown>>(endpoint, body, undefined, operation.controller.signal)
+        : await apiPost<Record<string, unknown>>(endpoint, { ...body, creation_id: intent!.creationId }, undefined, operation.controller.signal)
       if (!operation.isCurrent()) return
-      apply(data); reset(); setNotice(editingId ? 'Changed clinical fields saved. Unchanged fields were preserved.' : kind === 'medication' ? 'Medication instructions saved. This does not issue an electronic prescription.' : 'Care plan saved.')
-    } catch (failure) { if (!operation.isCurrent()) return; if (isAuthError(failure)) { router.replace('/auth/doctor/login'); return }; setErrors(clinicalValidationErrors(failure)); setError(getApiErrorDetail(failure) || 'The clinical instructions could not be saved. Your entries remain here.') }
-    finally { operation.finish() }
+      const receipt = intent ? clinicalCreationReceipt(data, intent) : null
+      if (intent && !receipt) throw new Error('The creation could not be confirmed. Retry the same details to recover this attempt; it may already have been saved.')
+      apply(data); reset(); setNotice(editingId ? 'Changed clinical fields saved. Unchanged fields were preserved.' : receipt?.available === false ? 'The earlier creation was recorded but is no longer in the current instruction list. It has not been restored.' : receipt?.replayed ? 'This creation was already saved. The current recorded instructions are shown below.' : kind === 'medication' ? 'Medication instructions saved. This does not issue an electronic prescription.' : 'Care plan saved.')
+    } catch (failure) {
+      if (!operation.isCurrent()) return
+      const fieldErrors = clinicalValidationErrors(failure)
+      if (!editingId && sent && creationAttempt.current) {
+        if (!creationAttempt.current.uncertain && failure instanceof ApiError && failure.status === 422 && Object.keys(fieldErrors).length) { creationAttempt.current = null; setCreateRecovery(false) }
+        else { creationAttempt.current.uncertain = true; creationAttempt.current.reviewBase = resource.data; setCreateRecovery(true); resource.retry() }
+      }
+      if (isAuthError(failure)) { router.replace('/auth/doctor/login'); return }
+      setErrors(fieldErrors); setError(getApiErrorDetail(failure) || 'The clinical instructions could not be saved. Your entries remain here.')
+    } finally { operation.finish() }
   }
+
   function eligibleIdentifier(id: string) {
     const matches = records.items.filter(value => (kind === 'medication' ? medicationInstruction(value) : careInstruction(value)).id === id)
     return matches.length === 1 && instructionActionsAllowed(kind === 'medication' ? medicationInstruction(matches[0]) : careInstruction(matches[0]))
@@ -116,10 +137,11 @@ function ClinicalAuthoring({ kind, scope, path, query }: { kind: AuthoringKind; 
     {error && <p role='alert' className='rounded-xl border border-theme bg-surface p-4 text-sm leading-7 text-danger'>{error}</p>}{notice && <p role='status' className='rounded-xl border border-theme bg-surface p-4 text-sm leading-7 text-secondary'>{notice}</p>}
     {patientId && authorized && <><PortalButton disabled={busy} onClick={() => { if (validPage()) setShowForm(value => !value) }}>{showForm ? dirty ? 'Hide unsaved form' : 'Close form' : kind === 'medication' ? 'Add Medication' : 'Add Care Plan'}</PortalButton>
       {uncertainCreate && <PortalCard role='alert'><p className='text-sm leading-7 text-danger'>The previous create has an unknown outcome. Reload and review the saved instructions, then explicitly discard this unconfirmed draft before creating another record. A reload alone does not make retrying the create safe.</p><PortalButton className='mt-3' disabled={resource.refreshing} onClick={resource.retry}>Reload saved instructions</PortalButton><p className='mt-3 text-sm text-secondary'>{reconciliationReady ? 'Saved instructions have reloaded. Review them below, then use Discard edits to reset this draft.' : 'A successful authorized reload is required before resetting this draft.'}</p></PortalCard>}
+      {createRecovery && !uncertainCreate && <PortalCard role='alert'><p className='text-sm leading-7'>This creation may already have been saved. Retry unchanged details to recover the same creation. Changed details require reloading and reviewing the saved list, then explicitly discarding this draft before starting a new creation.</p><PortalButton className='mt-3' disabled={resource.refreshing} onClick={resource.retry}>Reload saved instructions</PortalButton></PortalCard>}
       {showForm && <PortalCard><h2 className='portal-h2'>{editingId ? 'Correct saved instructions' : kind === 'medication' ? 'New Medication' : 'New Care Plan'}</h2><p className='mb-5 text-sm leading-7 text-secondary'>{editingId ? 'Only changed fields are saved. Untouched historical gaps remain flagged; optional fields can be cleared explicitly.' : 'Required fields must be completed. Optional fields may be left blank.'}</p><form noValidate onSubmit={event => { event.preventDefault(); void save() }}><fieldset disabled={busy} className='grid min-w-0 gap-5'>
         {!editingId && field('episode_id', 'Episode ID', false, 80, 'CWS Episode ID')}
         {kind === 'medication' ? <>{MEDICATION_FIELDS.map(item => field(item.key, item.label, 'required' in item && item.required, item.max, item.placeholder, 'multiline' in item && item.multiline))}<div><p id='instruction-times-label' className='font-semibold text-ink'>Times of Day (Optional)</p><div aria-labelledby='instruction-times-label' className='mt-2 flex flex-wrap gap-2'>{DAYPARTS.map(part => <PortalButton type='button' key={part} aria-pressed={form.times.includes(part)} onClick={() => { if (validPage() && !pending.current) setForm(previous => ({ ...previous, times: previous.times.includes(part) ? previous.times.filter(value => value !== part) : [...previous.times, part] })) }}>{part}</PortalButton>)}</div><label htmlFor='instruction-times' className='mt-4 block text-sm font-semibold text-secondary'>Additional clock times (24-hour HH:MM, optional)</label><input id='instruction-times' className={`${control} mt-2`} value={form.clockTimes} placeholder='08:00, 20:00' aria-invalid={Boolean(errors.times)} aria-describedby={errors.times ? 'instruction-times-error' : undefined} onChange={event => { if (validPage()) setForm(previous => ({ ...previous, clockTimes: event.target.value })) }} />{errors.times && <p id='instruction-times-error' role='alert' className='mt-2 text-sm text-danger'>{errors.times}</p>}</div>{editingId && field('status', 'Clinical status', true, 80)}</> : <>{field('title', 'Title', true, 220, 'Care plan title')}{field('status', 'Clinical status', true, 80)}<p className='text-sm text-secondary'>Supported examples: Active, Monitoring, Completed, On Hold. Preserve the recorded status when no change is intended.</p>{field('description', 'Description', false, 10000, 'Care plan description', true)}<div><label htmlFor='instruction-progress' className='font-semibold text-ink'>Progress (Optional, 0–100%)</label><input id='instruction-progress' className={`${control} mt-2`} type='number' min={0} max={100} step={1} value={form.values.progress} aria-invalid={Boolean(errors.progress)} aria-describedby={errors.progress ? 'instruction-progress-error' : undefined} onChange={event => update('progress', event.target.value)} /><p className='mt-2 text-sm text-secondary'>Leave blank when progress has not been recorded.</p>{errors.progress && <p id='instruction-progress-error' role='alert' className='mt-2 text-sm text-danger'>{errors.progress}</p>}</div></>}
-        <div className='flex flex-wrap gap-3'><PortalButton type='submit' tone='primary' disabled={uncertainCreate && !editingId}>{busy ? 'Saving...' : editingId ? 'Save changes' : kind === 'medication' ? 'Add Medication' : 'Create Care Plan'}</PortalButton>{dirty && <PortalButton type='button' disabled={uncertainCreate && !reconciliationReady} onClick={() => { if (validPage()) { setPendingPatientId(patientId) } }}>Discard edits</PortalButton>}</div>
+        <div className='flex flex-wrap gap-3'><PortalButton type='submit' tone='primary' disabled={uncertainCreate && !editingId}>{busy ? 'Saving...' : editingId ? 'Save changes' : createRecovery ? 'Retry same creation' : kind === 'medication' ? 'Add Medication' : 'Create Care Plan'}</PortalButton>{dirty && <PortalButton type='button' disabled={(uncertainCreate || createRecovery) && !reconciliationReady} onClick={() => { if (validPage()) { setPendingPatientId(patientId) } }}>Discard edits</PortalButton>}</div>
       </fieldset></form></PortalCard>}
       {resource.loading ? <p role='status' className='text-secondary'>Loading saved instructions…</p> : resource.error || records.invalid ? <PortalCard role='alert'><p className='mb-3'>{resource.errorMessage || 'The saved instruction list could not be confirmed. Please retry.'}</p><PortalButton onClick={resource.retry}>Retry {plural.toLowerCase()}</PortalButton></PortalCard> : <section aria-label='Saved clinical instructions' className='space-y-4'><h2 className='portal-h2'>{kind === 'medication' ? 'Current Medications' : 'Existing Care Plans'}</h2>{!records.items.length && <p className='rounded-xl border border-dashed border-theme p-5 text-secondary'>{kind === 'medication' ? 'No medications found for this patient' : 'No care plans found for this patient'}</p>}{records.invalidCount > 0 && <p role='alert' className='text-sm text-secondary'>Some historical entries could not be displayed. The saved data has not been changed.</p>}{records.truncated && <p role='alert' className='text-sm text-secondary'>Showing the first 200 saved records. Remaining records have not been loaded in this view.</p>}{records.items.map((record, index) => { const normalized = kind === 'medication' ? medicationInstruction(record) : careInstruction(record); return <div key={`${normalized.id || 'legacy'}:${index}`} className='space-y-2'>{kind === 'medication' ? <MedicationRecordCard medication={medicationInstruction(record)} busy={busy} actionsAvailable={instructionActionsAllowed(normalized) && !records.duplicateIds.includes(normalized.id!)} onDelete={() => void remove(normalized.id)} /> : <CarePlanRecordCard plan={careInstruction(record)} busy={busy} actionsAvailable={instructionActionsAllowed(normalized) && !records.duplicateIds.includes(normalized.id!)} onDelete={() => void remove(normalized.id)} />}<PortalButton disabled={busy || !instructionActionsAllowed(normalized) || records.duplicateIds.includes(normalized.id!)} onClick={() => edit(record)}>Edit</PortalButton>{normalized.id && records.duplicateIds.includes(normalized.id) && <p className='text-sm leading-7 text-secondary'>This record identifier is duplicated. Edit and delete are unavailable until the data is repaired.</p>}</div> })}</section>}
     </>}

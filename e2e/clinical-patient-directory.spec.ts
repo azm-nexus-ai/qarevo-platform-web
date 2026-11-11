@@ -30,9 +30,10 @@ async function prepare(context: BrowserContext) {
     if (match) {
       const key = match[1] === 'prescriptions' ? 'medications' : 'care_plans'
       if (request.method() !== 'GET') {
-        state.writes.push(request.postDataJSON()); const pending = state.heldWrite; state.heldWrite = null
+        const body = request.postDataJSON(); state.writes.push(body); const pending = state.heldWrite; state.heldWrite = null
         if (pending) { pending.start(); await pending.wait }
-        try { await route.fulfill({ json: { [key]: [] } }) } finally { pending?.finish() }
+        const created = request.method() === 'POST' ? { ...body, id: (key === 'medications' ? 'med-' : 'cp-') + body.creation_id, status: body.status || 'Active', times: body.times || [] } : null
+        try { await route.fulfill({ json: { [key]: created ? [created] : [], ...(created ? { [key === 'medications' ? 'medication' : 'care_plan']: created, creation_receipt: { creation_id: body.creation_id, kind: key === 'medications' ? 'medication' : 'care_plan', record_id: created.id, replayed: false, available: true } } : {}) } }) } finally { pending?.finish() }
         return
       }
       const name = patients.find(patient => patient.patient_id === match[2])?.name || 'Unknown'

@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { currentPortal } from '@/lib/portal-scope'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { labResultTarget } from '@/lib/doctor-lab-notifications'
+import { clinicalCreateIntent, sameClinicalCreateIntent, clinicalCreationReceipt, type ClinicalCreateIntent } from '@/lib/clinical-create-intent'
+import { clinicalValidationErrors } from '@/lib/clinical-instructions'
 import { labUploadAttempt, labUploadReceipt, type LabUploadAttempt } from '@/lib/lab-upload-attempt'
 import { useNavigationGuard } from 'nextjs-nav-guard'
 import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
@@ -21,6 +23,7 @@ import { orderDateFromIso, orderDateToIso } from '@/lib/clinical-order-dates'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import {
+  ApiError,
   clearPortalSession,
   createDoctorLabOrder,
   deleteDoctorLabOrder,
@@ -83,6 +86,10 @@ function DoctorLabOrdersPageContent() {
   const captureAction = usePortalAction()
   const operationInFlight = useRef(false), creatingOrder = useRef(false), uncertainCreateRef = useRef(false)
   const [uncertainCreate, setUncertainCreate] = useState(false)
+  const creationAttempt = useRef<{ intent: ClinicalCreateIntent; uncertain: boolean; reviewEpoch: number } | null>(null)
+  const [createRecovery, setCreateRecovery] = useState(false)
+  const ordersReadEpoch = useRef(0), ordersReadFailed = useRef(false)
+  useEffect(() => () => { creationAttempt.current = null }, [])
   const readVersion = useRef(0)
   const patientScope = useRef('')
   const baseline = useRef({ ...emptyForm })
@@ -118,7 +125,8 @@ function DoctorLabOrdersPageContent() {
   useEffect(() => { if (documentAccess && !documentStillCurrent) setDocumentAccess(null) }, [documentAccess, documentStillCurrent])
 
 
-  const dirty = showAddForm && JSON.stringify(form) !== JSON.stringify(baseline.current)
+  const dirty = showAddForm && JSON.stringify(form) !== JSON.stringify(baseline.current) || createRecovery
+  const creationResetReady = selectedAuthorized && !loading && !ordersReadFailed.current && (!creationAttempt.current?.uncertain || ordersReadEpoch.current > creationAttempt.current.reviewEpoch)
   useEffect(() => { dirtyRef.current = dirty }, [dirty])
   const patientsReady = !lookupPatientId || !selectedDirectory.loading
   const navigation = useNavigationGuard({ enabled: ({ to }) => (dirty || saving) && !to.startsWith('/auth/') })
@@ -132,11 +140,11 @@ function DoctorLabOrdersPageContent() {
     setLoading(true); setError(null)
     try {
       const data = await getDoctorLabOrders(patientId)
-      if (isCurrent()) setLabTests(data.test_requests || [])
+      if (isCurrent()) { ++ordersReadEpoch.current; ordersReadFailed.current = false; setLabTests(data.test_requests || []) }
     } catch (err) {
       if (!isCurrent()) return
       if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
-      setError(getApiErrorDetail(err) ?? 'Unable to load lab orders. Use Refresh to retry.')
+      ordersReadFailed.current = true; setError(getApiErrorDetail(err) ?? 'Unable to load lab orders. Use Refresh to retry.')
     } finally { if (isCurrent()) setLoading(false) }
   }, [captureAction, router, isRenderedContext])
 
@@ -147,7 +155,7 @@ function DoctorLabOrdersPageContent() {
     setDocumentAccess(null); setReviewSelection(null)
     uploadAttempt.current = null; setFailedUpload(null); setUploadNotice('')
     setSelectedPatientId(patientId); setLabTests([]); setShowAddForm(false)
-    uncertainCreateRef.current = false; setUncertainCreate(false)
+    uncertainCreateRef.current = false; setUncertainCreate(false); creationAttempt.current = null; setCreateRecovery(false); ordersReadEpoch.current = 0; ordersReadFailed.current = false
     setEditingId(null); setError(null); setLoading(false)
     baseline.current = { ...emptyForm, patient_id: patientId }
     originalDates.current = {}
@@ -168,11 +176,13 @@ function DoctorLabOrdersPageContent() {
   useEffect(() => {
     if (selectedAuthorized || !patientScope.current) return
     setDocumentAccess(null); setReviewSelection(null); setLabTests([]); setLoading(false)
-    if (operationInFlight.current && creatingOrder.current) { uncertainCreateRef.current = true; setUncertainCreate(true); setError('The earlier order may have been saved, but access was lost before confirmation. Reload the saved orders and explicitly discard this unconfirmed draft before creating another order.') }
+    if (operationInFlight.current && creatingOrder.current) { uncertainCreateRef.current = true; setUncertainCreate(true); if (creationAttempt.current) creationAttempt.current.uncertain = true; setError('The earlier order may have been saved, but access was lost before confirmation. Reload the saved orders and explicitly discard this unconfirmed draft before creating another order.') }
   }, [selectedAuthorized])
 
   const beginEdit = (test: PatientLabRequest) => {
-    if (!isRenderedContext() || test.can_edit !== true) { setError('Editing is unavailable until the server confirms your authority for this order.'); return }
+    if (operationInFlight.current || !isRenderedContext() || test.can_edit !== true) { setError('Editing is unavailable until the server confirms your authority for this order.'); return }
+    if (creationAttempt.current?.uncertain && !creationResetReady) { setError('Refresh and review the saved orders before discarding this unconfirmed create.'); return }
+    creationAttempt.current = null; setCreateRecovery(false)
     setEditingId(test.id)
     setShowAddForm(true)
     const nextForm = {
@@ -197,9 +207,10 @@ function DoctorLabOrdersPageContent() {
     setForm(nextForm); setPendingChange(null)
   }
 
-  const resetForm = () => {
-    if (uncertainCreateRef.current && (!selectedAuthorized || loading || error)) { setError('Reload the saved orders before discarding this unconfirmed create.'); return }
-    uncertainCreateRef.current = false; setUncertainCreate(false)
+  const resetForm = (confirmed = false) => {
+    if (!isRenderedContext() || operationInFlight.current && !confirmed) return
+    if ((uncertainCreateRef.current || creationAttempt.current?.uncertain) && (!creationResetReady || !selectedAuthorized)) { setError('Reload the saved orders before discarding this unconfirmed create.'); return }
+    uncertainCreateRef.current = false; setUncertainCreate(false); creationAttempt.current = null; setCreateRecovery(false)
     setEditingId(null)
     setShowAddForm(false)
     baseline.current = { ...emptyForm, patient_id: patientScope.current }
@@ -210,7 +221,7 @@ function DoctorLabOrdersPageContent() {
   // Serialize writes synchronously and bind their continuations to the patient,
   // portal, session and page that started the request.
   const beginMutation = (intent: 'write' | 'create' = 'write') => {
-    if (!patientScope.current || operationInFlight.current || !renderedScope || !isRenderedContext() || authority.current.id !== patientScope.current || !authority.current.allowed || selectedDirectory.refreshing) return null
+    if (!selectedPatientId || selectedPatientId !== patientScope.current || operationInFlight.current || !renderedScope || !isRenderedContext() || authority.current.id !== patientScope.current || !authority.current.allowed || selectedDirectory.refreshing) return null
     if (intent === 'create' && uncertainCreateRef.current) { setError('Review the saved orders and explicitly discard this unconfirmed draft before creating a new order.'); return null }
     creatingOrder.current = intent === 'create'; operationInFlight.current = true
     ++readVersion.current
@@ -229,21 +240,37 @@ function DoctorLabOrdersPageContent() {
       dates = { scheduled_for: orderDateToIso(form.scheduled_for, originalDates.current.scheduled_for),
         recommended_date: orderDateToIso(form.recommended_date, originalDates.current.recommended_date) }
     } catch (err) { setError(err instanceof Error ? err.message : 'Check the lab order dates.'); return }
+    const payload = { ...form, ...dates, patient_id: patientScope.current, title: form.title.trim() }
+    const owner = JSON.stringify([renderedScope, renderedPath, renderedQuery, patientScope.current, 'lab_request'])
+    if (!editingId && creationAttempt.current?.uncertain && !sameClinicalCreateIntent(creationAttempt.current.intent, owner, 'lab_request', payload)) { setError('These details differ from the unconfirmed creation. Restore its original details to retry, or refresh and review the saved orders, then explicitly discard this draft before starting a new creation.'); return }
     const operation = beginMutation(editingId ? 'write' : 'create')
     if (!operation) return
+    let sent = false
     try {
-      const payload = { ...form, ...dates, patient_id: operation.patientId, title: form.title.trim() }
+      const previous = creationAttempt.current
+      const intent = editingId ? null : clinicalCreateIntent(previous?.intent || null, owner, 'lab_request', payload)
+      if (intent) creationAttempt.current = { intent, uncertain: previous?.uncertain || false, reviewEpoch: previous?.reviewEpoch ?? ordersReadEpoch.current }
       const savedBaseline = { ...baseline.current,
         scheduled_for: orderDateToIso(baseline.current.scheduled_for, originalDates.current.scheduled_for),
         recommended_date: orderDateToIso(baseline.current.recommended_date, originalDates.current.recommended_date) }
-      // Send only deliberate edits: unrelated changes made in another view must
-      // not be replaced by this editor's older snapshot.
+      // Deliberate updates remain changed-fields-only; creation IDs are POST-only.
       const changes = Object.fromEntries(Object.entries(payload).filter(([key, value]) => key === 'patient_id' || value !== savedBaseline[key as keyof DoctorLabOrderPayload]))
-      const response = editingId ? await updateDoctorLabOrder({ ...changes, patient_id: operation.patientId, test_id: editingId }) : await createDoctorLabOrder(payload)
+      sent = true
+      const response = editingId ? await updateDoctorLabOrder({ ...changes, patient_id: operation.patientId, test_id: editingId }) : await createDoctorLabOrder({ ...payload, creation_id: intent!.creationId })
       if (!operation.isCurrent()) return
-      setLabTests(response.test_requests || []); resetForm()
-    } catch (err) { if (operation.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to save this lab order. Your changes are still here.') }
-    finally { operation.finish() }
+      const receipt = intent ? clinicalCreationReceipt(response, intent) : null
+      if (intent && !receipt) throw new Error('The creation could not be confirmed. Retry the same details to recover this attempt; it may already have been saved.')
+      setLabTests(response.test_requests || []); creationAttempt.current = null; setCreateRecovery(false); uncertainCreateRef.current = false; setUncertainCreate(false); resetForm(true)
+      if (receipt) setUploadNotice(!receipt.available ? 'The earlier creation was recorded but is no longer in the current order list. It has not been restored.' : receipt.replayed ? 'This order was already saved. Its current recorded details are shown below.' : 'Lab order saved.')
+    } catch (err) {
+      if (!operation.isCurrent()) return
+      const fieldErrors = clinicalValidationErrors(err)
+      if (!editingId && sent && creationAttempt.current) {
+        if (!creationAttempt.current.uncertain && err instanceof ApiError && err.status === 422 && Object.keys(fieldErrors).length) { creationAttempt.current = null; setCreateRecovery(false) }
+        else { creationAttempt.current.uncertain = true; creationAttempt.current.reviewEpoch = ordersReadEpoch.current; setCreateRecovery(true) }
+      }
+      setError(getApiErrorDetail(err) ?? 'Unable to save this lab order. Your changes are still here.')
+    } finally { operation.finish() }
   }
 
   const handleStatusChange = async (test: PatientLabRequest, status: string) => {
@@ -314,7 +341,8 @@ function DoctorLabOrdersPageContent() {
         .dl-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
         .dl-btn { min-height: 42px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: ${T.navy}; padding: 0 14px; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .dl-btn:hover, .dl-btn:focus-visible { transform: translateY(-1px); box-shadow: ${Sh.glow}; outline: none; }
-        .dl-btn.primary { border: none; background: linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%); color: white; }
+        .dl-btn.primary { border-color: transparent; background: var(--action-primary); color: var(--action-primary-text); }
+        .dl-btn.primary:hover:not(:disabled) { background: var(--action-primary-hover); }
         .dl-btn.danger { color: ${T.red}; border-color: rgba(220,38,38,0.18); background: rgba(220,38,38,0.06); }
         .dl-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
         .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
@@ -352,6 +380,7 @@ function DoctorLabOrdersPageContent() {
       {lookupPatientId && <section className='dl-card'>{selectedDirectory.refreshing && <p role='status'>Confirming access to the selected patient…</p>}{!selectedDirectory.loading && !selectedAuthorized && <div role='alert'><p>{selectedDirectory.errorMessage || 'The selected patient is unavailable to this clinician account. Clinical actions are blocked until access is confirmed.'}</p><button className='dl-btn' disabled={selectedDirectory.refreshing} onClick={selectedDirectory.retry}>Retry selected patient access</button></div>}</section>}
 
       {uncertainCreate && <p role='alert' className='dl-card'>The earlier create has an unknown outcome. Reload and review the saved orders, then close and explicitly discard this draft before starting a new create.</p>}
+      {createRecovery && !uncertainCreate && <section role='alert' className='dl-card'><p>This order may already have been saved. Retry unchanged details to recover the same creation. Changed details require refreshing and reviewing the saved orders, then explicitly discarding this draft before starting a new creation.</p><button className='dl-btn' type='button' disabled={saving || loading} onClick={() => fetchLabTests()}>Refresh saved orders</button></section>}
       {showAddForm && selectedPatientId && selectedAuthorized && (
         <section className='dl-card'>
           <div className='dl-header' style={{ marginBottom: '14px' }}>
@@ -359,7 +388,7 @@ function DoctorLabOrdersPageContent() {
               <p className='dl-eyebrow' style={{ margin: 0 }}>{editingId ? 'Edit request' : 'New request'}</p>
               <h2 style={{ margin: '5px 0 0', color: T.navy }}>{editingId ? 'Update lab order' : 'Order a lab test'}</h2>
             </div>
-            <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ cancel: true }) : resetForm()} disabled={saving}>Cancel</button>
+            <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ cancel: true }) : resetForm()} disabled={saving || ((uncertainCreate || createRecovery) && !creationResetReady)}>Cancel</button>
           </div>
           <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div className='dl-grid'>
@@ -380,7 +409,7 @@ function DoctorLabOrdersPageContent() {
             <label className='dl-field'><span>Preparation instructions</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.preparation_instructions} onChange={(event) => setForm({ ...form, preparation_instructions: event.target.value })} /></label>
           </div>
           <button className='dl-btn primary' type='button' onClick={handleSave} disabled={saving || uncertainCreate} style={{ marginTop: '14px' }}>
-            {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Lab Request'}
+            {saving ? 'Saving...' : editingId ? 'Save Changes' : createRecovery ? 'Retry same creation' : 'Create Lab Request'}
           </button>
           </fieldset>
           <p style={{ margin: '12px 0 0', color: T.slate2, fontSize: '13px' }}>Dates and times use your device’s local timezone. Changes remain unsaved until you save this request.</p>
