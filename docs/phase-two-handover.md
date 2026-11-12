@@ -1,6 +1,31 @@
-# Phase 2: identity, privacy and clinical-data integrity
+# Stage 2 close-out and technical handover
 
-Current status, 11 November: the latest patient-document lifecycle increment and consolidated pending owner-acceptance checklist are at the end of this document. [Portal sessions and rollout](portal-sessions.md) describes the operative architecture. The dated releases are historical evidence; later changes supersede their shared-theme, JavaScript-token and deployment instructions. Patient, doctor and admin now have separate HttpOnly cookie sessions, tab/account guards and portal-scoped themes. Production portal hosts are prepared for `qarevohealth.com`; current development remains on Vercel and no DNS activation is included.
+## Fixed Stage 2 completion checklist — 12 November 2026
+
+This is the authoritative finish line for Stage 2; the older dated “remaining” lists below are release history. The scope is frozen. Critical regressions may reopen a listed item; optional enhancements and future R&D go into later-stage planning. Funding commitments are not waived by this boundary.
+
+**Engineering completion:** E1–E6 implemented with passing automated gates, plus E7 verified for the exact deployed revisions. **Overall acceptance:** O1 and applicable external approvals remain separate; engineering completion alone is not clinical, legal or production-launch approval.
+
+| ID | Fixed completion requirement | Status / evidence |
+| --- | --- | --- |
+| E1 | Secure patient, doctor and admin roles; isolated sessions/themes; recovery, revocation and inactivity controls. | Released baseline; API and portal/security regressions. Configured-provider acceptance remains X2. |
+| E2 | Owned booking, both appointment views, availability/timezone handling, reschedule/cancel and conflict recovery. | Released baseline; transactional/PostgreSQL and browser regressions. |
+| E3 | Intake and clinician workspace; private AI drafts; human-reviewed summary publication/amendment and patient visibility. | Released baseline; cross-service authority, publication and patient-record contracts. Existing access-expiry rule remains unchanged pending X1. |
+| E4 | Retry-safe medication/care-plan authoring, stale-write protection, patient care notices and complete paged inbox. | Released baseline; exact creation/audit/read-state/provenance and account-isolation tests. |
+| E5 | Patient document upload/access/preview/deletion, patient-associated lab records, exact-file review receipts and private audit evidence. | Released implementation and automated tests; hosted storage/lab acceptance remains O1. |
+| E6 | Admin can reach every pending workflow update, retry exactly one with current authority, and see truthful persisted results without stale account/page state. | Implemented and independently reviewed; targeted API/PostgreSQL and browser regressions passed. No blanket outbox activation. |
+| E7 | Complete relevant backend/PostgreSQL, unit, browser, type, lint and build gates; API READY before frontend; exact revision and development alias verified. | Runtime gate: GitHub CI, API `/health/ready`, Vercel READY and alias. Source changes committed; owner IDE files preserved. |
+| O1 | Owner accepts the hosted synthetic patient → doctor → patient and admin workflows, including errors, files, notices, security, accessibility and recovery. | Pending owner acceptance using the detailed table below. **Live lab-review and video checks are explicitly deferred to the owner.** |
+| X1 | Approve published-record retention/access policy, final legal facts, privacy/clinical sign-off and operational responsibility. | External/launch gate. No inferred policy, publication approval or extension of existing document access. |
+| X2 | Complete applicable provider-console acceptance and commercial/production arrangements. | External/later-stage gate: Google/Apple configuration, payment sandbox, approved fees/invoicing, practice/insurance arrangements and production rollout. No fake readiness. |
+
+Admin owner check: use an approved synthetic pending consultation beyond the first 25 rows; confirm only that selected reference is retried, the refreshed queue returns to its first page, and pending/newer generations never show a false confirmation. Repeat as a read-only administrator and after a permission/account/route change. No historical backlog activation or real provider rehearsal was performed by these automated tests.
+
+No additional features will be added to the Stage 2 engineering exit criteria. The close-out release and its final verification report supply E7 evidence; the owner checklist records acceptance separately.
+
+## Historical release notes
+
+Historical status, 11 November: the latest patient-document lifecycle increment and consolidated pending owner-acceptance checklist are at the end of this document. [Portal sessions and rollout](portal-sessions.md) describes the operative architecture. The dated releases are historical evidence; later changes supersede their shared-theme, JavaScript-token and deployment instructions. Patient, doctor and admin now have separate HttpOnly cookie sessions, tab/account guards and portal-scoped themes. Production portal hosts are prepared for `qarevohealth.com`; current development remains on Vercel and no DNS activation is included.
 
 Platform API `d112db4e` passed 1,076 CI tests, including real bound-session booking, both appointment views, clinician medication/lab writes and patient medical-record projection through fresh PostgreSQL connections. Direct physician APIs now enforce the same expiry/revocation authority as other roles. CWS `8eeb2581` passed 380 CI tests, including concurrent billing-intent integrity. Both exact revisions were verified live. CWS now has a tested deployment gate; its missing repository secrets explicitly skipped automatic delivery, so this revision was deployed manually. These automated checks do not replace role-authenticated hosted acceptance or a real media rehearsal.
 
