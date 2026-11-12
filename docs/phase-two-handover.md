@@ -246,7 +246,7 @@ PDF display uses the browser's native viewer with no referrer, relying on the ex
 Extend the pending Secure file access check above: preview PDF and each supported raster type; verify DOC/DOCX use explicit Download, malformed/wrong-file grants never appear, expiry removes the iframe/image, retry requests fresh authorization, keyboard Close/Escape returns to the record's Preview button, and account/route/file changes cannot revive a held response. Recheck 320/820/1440 px and both themes. These hosted checks remain pending; automated storage traffic is stubbed and no real provider/storage call is part of this increment.
 
 
-#### Retry-safe clinician creation — 11 November 2026 (release/hosted acceptance pending)
+#### Retry-safe clinician creation — 11 November 2026 (released; owner acceptance pending)
 
 Medication, care-plan and lab-order creation now sends a stable `creation_id` with the canonical submitted body. The UUID/body binding lives only in the original doctor/session/path/query/patient/kind component context. An unchanged retry after a lost acknowledgment or malformed response recovers that same creation; success requires an exact creation/source receipt and consistent current singular/list projection. Replays after later edits show current recorded values; confirmed deleted replays show absence and never recreate or restore the initial body. PUT/delete behavior is unchanged.
 
@@ -254,10 +254,19 @@ If details change after an uncertain outcome, the UI blocks another creation unt
 
 Release order is **tested durable-create-receipt migration → matching Platform API revision READY → frontend promotion**. New UI callers require the receipt contract; legacy API clients omitting creation_id retain their existing response contract. Extend pending Clinical authoring acceptance: simulate commit followed by lost acknowledgment for all three editors; retry unchanged details and confirm one source record/audit; replay after edit/delete; verify malformed receipts preserve the form, changed uncertain details cannot send, initial validation correction works, and account/patient/route changes never restore stale data. All hosted checks remain pending; synthetic fixtures do not prove live end-to-end clinical acceptance.
 
-#### Conditional clinical corrections — pending release and owner acceptance
+#### Conditional clinical corrections — released; owner acceptance pending
 
 Doctor medication, care-plan and lab-order projections now carry an opaque `write_version`. Upgraded editors send exactly one strong quoted `If-Match` value on existing PUT/DELETE routes; new creations, uploads and result-review receipts retain their separate contracts. A missing/invalid version blocks the UI action with reload guidance. The BFF forwards this header only on the explicit existing doctor conditional-write routes while retaining portal cookies, CSRF and server authorization; it never manufactures a version or forwards a generic browser header override.
 
 Edits retain their original field baseline and version through refresh, uncertain delivery and conflicts. A412 `CLINICAL_RECORD_CHANGED` preserves unsaved entries and requires explicit reload/review followed by discard/reopen before accepting another version. Quick status/delete attempts likewise retain their original displayed token after uncertainty; a refreshed list cannot silently rebase them. Explicitly discarding an attempt does not submit any mutation. Tokens and drafts stay in component memory, never navigation URLs or browser storage. Server authority still takes precedence; versions are concurrency checks, not access credentials.
 
 Deploy and verify the matching conditional-write API revision READY before promoting this frontend; legacy direct clients without the header remain compatible but upgraded editors require the new doctor DTO fields. Extend pending Clinical authoring acceptance: open the same record in two sessions; change it in one, refresh the dirty editor in the other and confirm its original entries persist; stale save/delete/status must412 with no overwrite. A lost acknowledgment must not permit a retry to overwrite the committed result. Verify missing versions block requests, reload alone never adopts the newer version, explicit discard/reopen permits a deliberate correction, and session/patient/route changes invalidate old continuations. No new retention, clinical-signature, payment or provider behavior is introduced.
+
+
+The preceding safety release was verified on 12 November 2026: Platform API `0468b13` database-ready, frontend `b4e931c` READY on the development alias, with matching cloud CI passed. Owner acceptance in the table above remains open.
+
+#### Patient care-record notifications — pending owner acceptance
+
+Medication and care-plan create/update/remove actions now stage a fixed-copy in-app notice and timeline entry with the same immutable audit UUID, in the existing source transaction. Proof binds patient, clinician, record reference, action and event time; invalid historical provenance loses official copy/navigation. No medication names, doses or clinical narrative enter the activity text or URL. The shared inbox/dashboard shows a care-record label and the literal care-page destination; reading a notice is independent of clinical acknowledgment. No email provider, schema or retention rule is added.
+
+Owner checks: create, correct and remove a synthetic medication and care plan; refresh patient notifications, dashboard and history; open the care page and explicitly mark the notice read, then refresh/re-enter. Expect one notice per committed audit, persistent read state and current saved instructions. Replayed creates, stale writes, empty-field updates and rolled-back changes must add no notices. A removed-record notice does not mean treatment was clinically stopped. Live lab-review and video acceptance remain deferred.
