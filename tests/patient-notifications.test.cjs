@@ -108,3 +108,27 @@ test('recent notification collections stay bounded and distinguish corrupt rows 
   const amended = official({ id: amendedId, source_id: amendedId, extra_data: { ...official().extra_data, record_id: amendedId } })
   assert.equal(h.patientNotices({ notifications: [official(), amended] }).items.length, 2)
 })
+
+test('notification pages validate complete bounded metadata and never invent legacy totals', () => {
+  const modern = { notifications: [official()], has_more: true, next_cursor: 'v1.cGFnZQ', unread_count: 73 }
+  assert.deepEqual(JSON.parse(JSON.stringify(h.patientNotices(modern))), {
+    items: JSON.parse(JSON.stringify(h.patientNotices({ notifications: [official()] }).items)), invalidCount: 0,
+    paginated: true, hasMore: true, nextCursor: 'v1.cGFnZQ', unreadCount: 73,
+  })
+  const legacy = h.patientNotices({ notifications: [official()] })
+  assert.equal(legacy.paginated, false); assert.equal(legacy.unreadCount, null); assert.equal(legacy.hasMore, false); assert.equal(legacy.nextCursor, null)
+  for (const change of [
+    { has_more: undefined }, { has_more: 'true' }, { next_cursor: undefined }, { next_cursor: null },
+    { next_cursor: '' }, { next_cursor: 'v2.cGFnZQ' }, { next_cursor: 'v1.bad cursor' }, { next_cursor: 'v1.' + 'a'.repeat(254) },
+    { unread_count: undefined }, { unread_count: -1 }, { unread_count: .5 }, { unread_count: '73' }, { unread_count: Infinity }, { unread_count: Number.MAX_SAFE_INTEGER + 1 },
+    { notifications: [] }, { has_more: false },
+  ]) assert.equal(h.patientNotices({ ...modern, ...change }), null)
+  for (const key of ['has_more', 'next_cursor', 'unread_count']) assert.equal(h.patientNotices({ notifications: [], [key]: modern[key] }), null)
+  assert.equal(h.patientNotices({ notifications: [], has_more: false, next_cursor: null, unread_count: 0 }).unreadCount, 0)
+  assert.equal(h.patientNotices({ ...modern, notifications: [null] }).hasMore, true)
+})
+
+test('notification cursors stay opaque in API query parameters', () => {
+  assert.equal(h.patientNotificationPath(null), h.PATIENT_NOTIFICATIONS_PATH + '?limit=50')
+  assert.equal(h.patientNotificationPath('v1.cGFnZQ'), h.PATIENT_NOTIFICATIONS_PATH + '?limit=50&before=v1.cGFnZQ')
+})

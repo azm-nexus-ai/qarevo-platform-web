@@ -13,12 +13,16 @@ function official(overrides: Record<string, unknown> = {}) {
 function careRecord(overrides: Record<string, unknown> = {}) {
   return official({ event_type: 'medication_instruction.updated', source: 'clinical-authoring', source_id: notificationId, extra_data: { audit_id: notificationId, actor_user_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', kind: 'medication_instruction', action: 'updated', resource_id: recordId, record_reference_hash: null }, ...overrides })
 }
+function accountUpdate(index: number, overrides: Record<string, unknown> = {}) {
+  return official({ id: `${index.toString(16).padStart(8, '0')}-1111-4111-8111-111111111111`, event_type: 'account.update', source: 'platform', source_id: null, title: `Synthetic account update ${index}`, body: 'Synthetic account update', href: '/patient/settings', extra_data: {}, ...overrides })
+}
+function cursorFor(item: Record<string, unknown>) { return 'v1.' + Buffer.from(JSON.stringify([item.created_at, item.id])).toString('base64url') }
 function published() {
   return { id: recordId, episode_id: episodeId, consultation_id: consultationId, revision: 2, version: 3, language: 'en', authored_by: 'synthetic-clinician', approved_by: 'synthetic-clinician', published_at: '2030-07-13T08:00:00Z', created_at: '2030-07-10T07:45:00Z', updated_at: '2030-07-13T08:00:00Z', summary: 'Synthetic published care summary', history: 'Synthetic history', findings: 'Synthetic findings', assessment: 'Synthetic assessment', plan: 'Synthetic care plan', safety_net: 'Synthetic follow-up advice', amendment_reason: 'Synthetic amendment' }
 }
 async function prepare(context: BrowserContext) {
   const identity = await seedPortalSession(context, 'patient')
-  const state = { identity, notifications: [official()] as Record<string, unknown>[], timeline: [] as Record<string, unknown>[], listStatus: 200, markStatus: 200, wrongAck: false, listReads: 0, marks: 0, holdList: false, listStarted: false, listDelivery: Promise.resolve(), releaseList: () => {}, holdMark: false, markStarted: false, markDelivery: Promise.resolve(), releaseMark: () => {} }
+  const state = { identity, notifications: [official()] as Record<string, unknown>[], timeline: [] as Record<string, unknown>[], legacy: false, listStatus: 200, markStatus: 200, wrongAck: false, listReads: 0, listQueries: [] as (string | null)[], marks: 0, holdList: false, listStarted: false, listDelivery: Promise.resolve(), releaseList: () => {}, holdMark: false, markStarted: false, markDelivery: Promise.resolve(), releaseMark: () => {} }
   await context.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
     expect(route.request().headers()['authorization']).toBeUndefined()
@@ -27,7 +31,13 @@ async function prepare(context: BrowserContext) {
     if (path === notificationsPath) {
       expect(route.request().headers()['x-qarevo-portal']).toBe('patient')
       state.listReads++
-      const status = state.listStatus, body = status === 200 ? { notifications: JSON.parse(JSON.stringify(state.notifications)) } : { detail: 'Synthetic notifications temporarily unavailable' }
+      const url = new URL(route.request().url()), before = url.searchParams.get('before'), limit = Number(url.searchParams.get('limit') ?? 50)
+      state.listQueries.push(before)
+      const sorted = [...state.notifications].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)) || String(b.id).localeCompare(String(a.id)))
+      const boundary = before ? JSON.parse(Buffer.from(before.slice(3), 'base64url').toString()) as [string, string] : null
+      const eligible = boundary ? sorted.filter(item => String(item.created_at) < boundary[0] || (item.created_at === boundary[0] && String(item.id) < boundary[1])) : sorted
+      const rows = eligible.slice(0, limit), hasMore = eligible.length > limit
+      const status = state.listStatus, body = status === 200 ? { notifications: JSON.parse(JSON.stringify(rows)), ...(state.legacy ? {} : { has_more: hasMore, next_cursor: hasMore ? cursorFor(rows.at(-1)!) : null, unread_count: state.notifications.filter(item => item.is_read === false).length }) } : { detail: 'Synthetic notifications temporarily unavailable' }
       let delivered: (() => void) | undefined
       if (state.holdList) {
         state.holdList = false; state.listDelivery = new Promise<void>(resolve => { delivered = resolve }); state.listStarted = true
@@ -297,21 +307,158 @@ test('desktop dashboard uses the working notification loop and links to the resp
   expect(state.marks).toBe(1)
 })
 
-test('dashboard shows five recent updates while the full notification route retains all recent records', async ({ page, context }) => {
+test('dashboard shows five recent updates and the global unread count while the full inbox stays bounded', async ({ page, context }) => {
   const state = await prepare(context)
-  state.notifications = Array.from({ length: 6 }, (_, index) => official({ id: `0000000${index + 1}-1111-4111-8111-111111111111`, event_type: 'account.update', source: 'platform', source_id: null, title: `Synthetic account update ${index + 1}`, body: 'Synthetic account update', href: '/patient/settings', extra_data: {} }))
+  state.notifications = Array.from({ length: 61 }, (_, index) => accountUpdate(index + 1))
   await page.setViewportSize({ width: 1600, height: 1000 }); await page.goto('/patient/dashboard')
   await expect(region(page).locator('[data-notification-id]')).toHaveCount(5)
   await expect(region(page).getByText('Up to 5 recent account and care updates.', { exact: true })).toBeVisible()
+  await expect(region(page).getByText('Unread notifications: 61', { exact: true })).toBeVisible()
   await region(page).getByRole('link', { name: 'View all recent notifications', exact: true }).click()
-  await expect(region(page).locator('[data-notification-id]')).toHaveCount(6)
-  await expect(region(page).getByText('Up to 50 recent account and care updates.', { exact: true })).toBeVisible()
+  await expect(region(page).locator('[data-notification-id]')).toHaveCount(50)
+  await expect(region(page).getByText('Unread notifications: 61', { exact: true })).toBeVisible()
+  await expect(region(page).getByText('Up to 50 account and care updates per page.', { exact: true })).toBeVisible()
+})
+
+test('older tied care and publication notices remain accessible and read refreshes preserve their page', async ({ page, context }) => {
+  const state = await prepare(context), careId = '77777777-7777-4777-8777-777777777777'
+  state.notifications = [...Array.from({ length: 50 }, (_, index) => accountUpdate(index + 1, { created_at: '2030-07-14T08:00:00Z' })), official(), careRecord({ id: careId, source_id: careId, extra_data: { ...careRecord().extra_data as object, audit_id: careId } })]
+  await page.goto('/patient/notifications')
+  await expect(region(page).locator('[data-notification-id]')).toHaveCount(50)
+  await expect(region(page).getByText('Unread notifications: 52', { exact: true })).toBeVisible()
+  await region(page).getByRole('button', { name: 'Older notifications', exact: true }).click()
+  await expect(region(page).getByRole('status')).toHaveText('Page 2')
+  await expect(region(page).getByRole('status')).toBeFocused()
+  await expect(region(page).locator('[data-notification-id]')).toHaveCount(2)
+  const before = state.listQueries.at(-1)
+  expect(before).toMatch(/^v1\./)
+  await expect(region(page).getByText('Unread notifications: 52', { exact: true })).toBeVisible()
+  const care = region(page).locator(`[data-notification-id='${careId}']`)
+  await expect(care.getByRole('link', { name: 'View current care instructions', exact: true })).toHaveAttribute('href', '/patient/prescription-care-plan')
+  await expect(row(page).getByRole('link', { name: 'View consultation summary', exact: true })).toHaveAttribute('href', `/patient/consultation-summary?consultationId=${consultationId}&recordId=${recordId}`)
+  await care.getByRole('button', { name: 'Mark Medication record updated as read', exact: true }).click()
+  await expect(care.getByText('Read', { exact: true })).toBeVisible()
+  await expect(region(page).getByText('Unread notifications: 51', { exact: true })).toBeVisible()
+  expect(state.listQueries.at(-1)).toBe(before)
+  await region(page).getByRole('button', { name: 'Refresh notifications', exact: true }).click()
+  await expect(region(page).getByRole('status')).toHaveText('Page 2')
+  await expect(care.getByText('Read', { exact: true })).toBeVisible()
+  expect(state.listQueries.at(-1)).toBe(before)
+  await row(page).getByRole('button', { name: 'Mark Consultation summary updated as read', exact: true }).click()
+  await expect(row(page).getByText('Read', { exact: true })).toBeVisible()
+  await expect(region(page).getByText('Unread notifications: 50', { exact: true })).toBeVisible()
+  await care.getByRole('link', { name: 'View current care instructions', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Your medications', exact: true })).toBeVisible()
+  await page.goto('/patient/notifications')
+  await expect(region(page).getByRole('status')).toHaveText('Page 1')
+  await region(page).getByRole('button', { name: 'Older notifications', exact: true }).click()
+  await expect(row(page).getByText('Read', { exact: true })).toBeVisible()
+  await expect(care.getByText('Read', { exact: true })).toBeVisible()
+  await row(page).getByRole('link', { name: 'View consultation summary', exact: true }).click()
+  await expect(page.getByRole('article')).toContainText('Synthetic published care summary')
+  expect(state.marks).toBe(2)
+  expect(page.url()).not.toContain('before=')
+  expect(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))).not.toContain(before)
+})
+
+test('older page failures retry the same cursor and Newer or Newest restores a bounded head page', async ({ page, context }) => {
+  const state = await prepare(context)
+  state.notifications = Array.from({ length: 51 }, (_, index) => accountUpdate(index + 1))
+  await page.goto('/patient/notifications')
+  await expect(region(page).locator('[data-notification-id]')).toHaveCount(50)
+  state.listStatus = 503
+  await region(page).getByRole('button', { name: 'Older notifications', exact: true }).click()
+  await expect(region(page).getByRole('alert')).toContainText('Synthetic notifications temporarily unavailable')
+  const before = state.listQueries.at(-1)
+  await expect(region(page).getByRole('button', { name: 'Newer notifications', exact: true })).toBeEnabled()
+  state.listStatus = 200
+  await region(page).getByRole('button', { name: 'Retry notifications', exact: true }).click()
+  await expect(region(page).locator('[data-notification-id]')).toHaveCount(1)
+  expect(state.listQueries.at(-1)).toBe(before)
+  await region(page).getByRole('button', { name: 'Newer notifications', exact: true }).click()
+  await expect(region(page).getByRole('status')).toHaveText('Page 1')
+  await expect(region(page).getByRole('status')).toBeFocused()
+  await expect(region(page).locator('[data-notification-id]')).toHaveCount(50)
+  await region(page).getByRole('button', { name: 'Older notifications', exact: true }).click()
+  await expect(region(page).getByRole('status')).toHaveText('Page 2')
+  await region(page).getByRole('button', { name: 'Newest notifications', exact: true }).click()
+  await expect(region(page).getByRole('status')).toHaveText('Page 1')
+  await expect(region(page).getByRole('status')).toBeFocused()
+  expect(state.listQueries.at(-1)).toBeNull()
+  expect(new URL(page.url()).search).toBe('')
+})
+
+test('legacy recent-only notification responses make their limits explicit', async ({ page, context }) => {
+  const state = await prepare(context); state.legacy = true
+  state.notifications = Array.from({ length: 51 }, (_, index) => accountUpdate(index + 1))
+  await page.goto('/patient/notifications')
+  await expect(region(page).locator('[data-notification-id]')).toHaveCount(50)
+  await expect(region(page)).toContainText('Only recent updates are available. Older history and the total unread count could not be confirmed.')
+  await expect(region(page).getByText(/^Unread notifications:/)).toHaveCount(0)
+  await expect(region(page).getByRole('navigation', { name: 'Notification pages', exact: true })).toHaveCount(0)
+})
+
+test('a page of invalid clinical notices does not hide the working older-page control', async ({ page, context }) => {
+  const state = await prepare(context)
+  state.notifications = [...Array.from({ length: 50 }, (_, index) => accountUpdate(index + 1, { created_at: '2030-07-14T08:00:00Z', source: 'clinical-publication', event_type: 'clinical_record.published' })), official()]
+  await page.goto('/patient/notifications')
+  await expect(region(page)).toContainText('No verified notifications are available on this page.')
+  await expect(region(page).locator('[data-notification-id]')).toHaveCount(0)
+  await region(page).getByRole('button', { name: 'Older notifications', exact: true }).click()
+  await expect(row(page).getByRole('heading', { name: 'Consultation summary updated', exact: true })).toBeVisible()
+})
+
+for (const action of ['account', 'route'] as const) test(`a late older page and receipt cannot cross a changed ${action}`, async ({ page, context }) => {
+  const state = await prepare(context)
+  state.notifications = [...Array.from({ length: 50 }, (_, index) => accountUpdate(index + 1, { created_at: '2030-07-14T08:00:00Z' })), official()]
+  await page.goto('/patient/notifications')
+  await expect(region(page).locator('[data-notification-id]')).toHaveCount(50)
+  state.holdList = true; state.listStarted = false
+  await region(page).getByRole('button', { name: 'Older notifications', exact: true }).click()
+  await expect.poll(() => state.listStarted).toBe(true)
+  const completed = state.listDelivery
+  if (action === 'route') {
+    await page.getByRole('navigation', { name: 'Patient navigation', exact: true }).getByRole('link', { name: 'Medical Records', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Medical Records', exact: true })).toBeVisible()
+  } else {
+    state.identity = { user_id: 'synthetic-other-patient', role: 'PATIENT', session_id: 'synthetic-other-session' }
+    await page.evaluate(identity => { const key = 'qarevo:patient:identity', value = JSON.stringify(identity); localStorage.setItem(key, value); window.dispatchEvent(new StorageEvent('storage', { key, newValue: value })) }, state.identity)
+    await expect(page).toHaveURL(/\/auth\/sign-in$/)
+  }
+  state.releaseList(); await completed
+  await expect(region(page)).toHaveCount(0)
+  expect(state.marks).toBe(0)
+})
+
+for (const action of ['account', 'route'] as const) test(`a late older read receipt cannot cross a changed ${action}`, async ({ page, context }) => {
+  const state = await prepare(context)
+  state.notifications = [...Array.from({ length: 50 }, (_, index) => accountUpdate(index + 1, { created_at: '2030-07-14T08:00:00Z' })), official()]
+  await page.goto('/patient/notifications')
+  await region(page).getByRole('button', { name: 'Older notifications', exact: true }).click()
+  state.holdMark = true
+  await row(page).getByRole('button', { name: 'Mark Consultation summary updated as read', exact: true }).click()
+  await expect.poll(() => state.markStarted).toBe(true)
+  await expect(region(page).getByRole('button', { name: 'Newer notifications', exact: true })).toBeDisabled()
+  await expect(region(page).getByRole('button', { name: 'Newest notifications', exact: true })).toBeDisabled()
+  const completed = state.markDelivery, reads = state.listReads
+  if (action === 'route') {
+    await page.getByRole('navigation', { name: 'Patient navigation', exact: true }).getByRole('link', { name: 'Medical Records', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Medical Records', exact: true })).toBeVisible()
+  } else {
+    state.identity = { user_id: 'synthetic-other-patient', role: 'PATIENT', session_id: 'synthetic-other-session' }
+    await page.evaluate(identity => { const key = 'qarevo:patient:identity', value = JSON.stringify(identity); localStorage.setItem(key, value); window.dispatchEvent(new StorageEvent('storage', { key, newValue: value })) }, state.identity)
+    await expect(page).toHaveURL(/\/auth\/sign-in$/)
+  }
+  state.releaseMark(); await completed
+  await expect(region(page)).toHaveCount(0)
+  expect(state.listReads).toBe(reads)
 })
 
 for (const width of [320, 820, 1440]) test(`patient notifications remain usable in both themes at ${width}px`, async ({ page, context }, testInfo) => {
   const state = await prepare(context)
   const careId = '55555555-5555-4555-8555-555555555555'
   state.notifications.push(careRecord({ id: careId, source_id: careId, extra_data: { ...careRecord().extra_data as object, audit_id: careId } }))
+  state.notifications.push(...Array.from({ length: 50 }, (_, index) => accountUpdate(index + 1)))
   await page.setViewportSize({ width, height: 900 }); await page.goto('/patient/notifications')
   for (const theme of ['light', 'dark']) {
     await page.evaluate(value => document.documentElement.setAttribute('data-theme', value), theme)
@@ -330,5 +477,16 @@ for (const width of [320, 820, 1440]) test(`patient notifications remain usable 
     await expectEnabledControlContrast(link)
     await expectEnabledControlContrast(careLink)
     await expectEnabledControlContrast(row(page).getByRole('button', { name: 'Mark Consultation summary updated as read', exact: true }))
+    const older = region(page).getByRole('button', { name: 'Older notifications', exact: true })
+    await older.focus(); await expect(older).toBeFocused(); await expectEnabledControlContrast(older)
+    await page.keyboard.press('Enter')
+    await expect(region(page).getByRole('status')).toHaveText('Page 2')
+    await expect(region(page).getByRole('status')).toBeFocused()
+    const newer = region(page).getByRole('button', { name: 'Newer notifications', exact: true })
+    await expectEnabledControlContrast(newer)
+    await expectEnabledControlContrast(region(page).getByRole('button', { name: 'Newest notifications', exact: true }))
+    await newer.click()
+    await expect(region(page).getByRole('status')).toHaveText('Page 1')
+    await expect(region(page).getByRole('status')).toBeFocused()
   }
 })

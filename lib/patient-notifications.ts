@@ -2,6 +2,7 @@ import { consultationSummaryId } from './patient-consultation-summary'
 import { publicationHref } from './clinical-publications'
 
 export const PATIENT_NOTIFICATIONS_PATH = '/api/v1/patient/activity/notifications'
+export const PATIENT_NOTIFICATION_PAGE_SIZE = 50
 export type PatientNotice = {
   id: string; eventType: string; title: string; body: string; href?: string; source: string; sourceId: string | null
   isRead: boolean; readAt: string | null; createdAt: string | null; official: boolean; careRecord: boolean; extra: Record<string, unknown>
@@ -65,10 +66,24 @@ export function patientNotice(value: unknown): PatientNotice | null {
     title, body, href,
   }
 }
-export function patientNotices(value: unknown): { items: PatientNotice[]; invalidCount: number } | null {
+export type PatientNoticePage = {
+  items: PatientNotice[]; invalidCount: number; paginated: boolean; hasMore: boolean; nextCursor: string | null; unreadCount: number | null
+}
+const notificationCursor = (value: unknown): value is string => typeof value === 'string' && value.length <= 256 && /^v1\.[A-Za-z0-9_-]+$/.test(value)
+
+export function patientNotificationPath(before: string | null): string {
+  const query = new URLSearchParams({ limit: String(PATIENT_NOTIFICATION_PAGE_SIZE) })
+  if (before !== null) query.set('before', before)
+  return `${PATIENT_NOTIFICATIONS_PATH}?${query}`
+}
+
+export function patientNotices(value: unknown): PatientNoticePage | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  const rows = (value as Record<string, unknown>).notifications
-  if (!Array.isArray(rows) || rows.length > 50) return null
+  const page = value as Record<string, unknown>, rows = page.notifications
+  if (!Array.isArray(rows) || rows.length > PATIENT_NOTIFICATION_PAGE_SIZE) return null
+  const paginated = ['has_more', 'next_cursor', 'unread_count'].some(key => Object.hasOwn(page, key))
+  if (paginated && (typeof page.has_more !== 'boolean' || !Number.isSafeInteger(page.unread_count) || Number(page.unread_count) < 0 ||
+      (page.has_more ? !rows.length || !notificationCursor(page.next_cursor) : page.next_cursor !== null))) return null
   const ids = new Set<string>(), items: PatientNotice[] = []
   let invalidCount = 0
   for (const row of rows) {
@@ -76,5 +91,7 @@ export function patientNotices(value: unknown): { items: PatientNotice[]; invali
     if (!notice || ids.has(notice.id)) { invalidCount++; continue }
     ids.add(notice.id); items.push(notice)
   }
-  return { items, invalidCount }
+  return { items, invalidCount, paginated, hasMore: paginated && page.has_more === true,
+    nextCursor: paginated && page.has_more === true ? page.next_cursor as string : null,
+    unreadCount: paginated ? page.unread_count as number : null }
 }
