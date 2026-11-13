@@ -1,366 +1,108 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { usePathname } from 'next/navigation'
+import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
+import { currentPortal } from '@/lib/portal-scope'
+import { usePortalResource } from '@/lib/use-portal-resource'
+import { clinicianPage, clinicianPagePath, type ClinicianRow } from '@/lib/admin-clinicians'
 import DoctorReviewDialog from '@/components/admin/DoctorReviewDialog'
-import {
-  clearPortalSession,
-  getAdminDoctors,
-  getPendingDoctors,
-  isAuthError,
-  readSessionMarker,
-  isAdmin,
-  type AdminDoctor,
-  type AdminDoctorVerification,
-} from '@/lib/api'
+import ProfileAvatar from '@/components/branding/ProfileAvatar'
+import { PortalBadge, PortalButton, PortalEmptyState } from '@/components/patient/PatientPortalPrimitives'
+import SupportReference from '@/components/ui/SupportReference'
 
 type Tab = 'all' | 'pending'
-
-function StatusBadge({ status }: { status: string }) {
-  const getStatusStyle = (s: string) => {
-    switch (s.toLowerCase()) {
-      case 'active':
-      case 'verified':
-        return { bg: 'rgba(15,158,119,0.12)', color: T.green }
-      case 'pending':
-      case 'pending_verification':
-        return { bg: 'rgba(217,119,6,0.12)', color: T.amber }
-      case 'suspended':
-      case 'rejected':
-        return { bg: 'rgba(220,38,38,0.12)', color: T.red }
-      default:
-        return { bg: 'rgba(32,181,223,0.12)', color: T.link }
-    }
-  }
-
-  const style = getStatusStyle(status)
-
-  return (
-    <span style={{
-      padding: '4px 10px',
-      borderRadius: '999px',
-      fontSize: "13px",
-      fontWeight: 700,
-      background: style.bg,
-      color: style.color
-    }}>
-      {status.replace('_', ' ').toUpperCase()}
-    </span>
-  )
+const readScope = () => readAccountScope('admin')
+const subscribe = (changed: () => void) => {
+  window.addEventListener(ACCOUNT_CHANGED, changed); window.addEventListener('storage', changed)
+  return () => { window.removeEventListener(ACCOUNT_CHANGED, changed); window.removeEventListener('storage', changed) }
 }
 
-function DoctorCard({ doctor, onView, onVerify }: {
-  doctor: AdminDoctor | AdminDoctorVerification
-  onView: (id: string) => void
-  onVerify?: (id: string) => void
-}) {
-  const isVerification = Boolean(onVerify)
-  const providerId = doctor.provider_id
+function DoctorCard({ doctor, onView, canReview }: { doctor: ClinicianRow; onView: (id: string) => void; canReview: boolean }) {
   const access = doctor.clinical_access
-
-  return (
-    <article className="admin-doctor-card" aria-label={doctor.full_name || 'Clinician'} style={{
-      background: "var(--surface-glass)",
-      backdropFilter: 'blur(22px) saturate(175%)',
-      WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-      borderRadius: '16px',
-      border: "1px solid var(--border)",
-      boxShadow: Sh.card,
-      padding: '20px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '16px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flex: 1, minWidth: 0 }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          flexShrink: 0,
-          borderRadius: '12px',
-          background: 'rgba(32,181,223,0.1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: T.link,
-          fontSize: '16px',
-          fontWeight: 700
-        }}>
-          {doctor.full_name.split(' ').map((n: string) => n[0]).join('')}
-        </div>
-        <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
-          <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{doctor.full_name}</p>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.slate2 }}>{doctor.email}</p>
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-            <span style={{ fontSize: "13px", color: T.slate }}>{doctor.specialty}</span>
-            <span style={{ fontSize: "13px", color: T.slate2 }}>•</span>
-            <span style={{ fontSize: "13px", color: T.slate }}>{doctor.phone}</span>
-          </div>
-          <dl style={{ margin: '14px 0 0', display: 'grid', gap: 10, fontSize: 13 }}>
-            <div><dt style={{ color: T.slate2, marginBottom: 5 }}>Account status</dt><dd style={{ margin: 0 }}><StatusBadge status={doctor.status} /></dd></div>
-            <div><dt style={{ color: T.slate2, marginBottom: 5 }}>Clinical access</dt><dd style={{ margin: 0, fontWeight: 650, color: access?.status === 'enabled' ? T.green : T.amber }}>{access?.status === 'enabled' ? 'Enabled' : access?.status === 'blocked' ? 'Blocked' : 'Not assessed'}</dd></div>
-          </dl>
-          <p style={{ margin: '8px 0 0', color: T.slate, lineHeight: 1.6, fontSize: 13 }}>{access?.message || 'Open the review to check clinical eligibility.'}</p>
-        </div>
-      </div>
-      <div className="admin-doctor-actions" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
-        <button
-          type="button"
-          onClick={() => onView(providerId)}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '10px',
-            border: "1px solid var(--border)",
-            background: "var(--surface)",
-            color: T.navy,
-            fontSize: '13px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-        >
-          View
-        </button>
-        {onVerify && isVerification && (
-          <button
-            type="button"
-            onClick={() => onVerify(providerId)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '10px',
-              border: 'none',
-              background: T.green,
-              color: '#fff',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            Verify
-          </button>
-        )}
-      </div>
-    </article>
-  )
+  const tone = doctor.status === 'ACTIVE' ? 'success' : ['SUSPENDED', 'REJECTED', 'DEACTIVATED'].includes(doctor.status) ? 'danger' : 'warning'
+  return <article className='admin-doctor-card flex min-w-0 flex-col gap-5 rounded-2xl border border-theme bg-surface p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between' aria-label={doctor.full_name}>
+    <div className='flex min-w-0 flex-1 items-start gap-4'><ProfileAvatar name={doctor.full_name} kind='doctor' size={48} />
+      <div className='min-w-0 flex-1 break-words'><h2 className='text-base font-semibold text-ink'>{doctor.full_name}</h2>
+        <p className='mt-1 break-all text-sm text-secondary'>{doctor.email}</p><p className='mt-2 text-sm leading-6 text-secondary'>{doctor.specialty || 'Specialty not provided'}{doctor.phone ? ` · ${doctor.phone}` : ''}</p>
+        <dl className='mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm'>
+          <div><dt className='mb-1 text-muted'>Account status</dt><dd><PortalBadge tone={tone}>{doctor.status.replaceAll('_', ' ').toUpperCase()}</PortalBadge></dd></div>
+          <div><dt className='mb-1 text-muted'>Clinical access</dt><dd><PortalBadge tone={access?.status === 'enabled' ? 'success' : 'warning'}>{access?.status === 'enabled' ? 'Enabled' : access?.status === 'blocked' ? 'Blocked' : 'Not assessed'}</PortalBadge></dd></div>
+        </dl><p className='mt-3 text-sm leading-6 text-secondary'>{access?.message || 'Open the review to check clinical eligibility.'}</p>
+      </div></div>
+    <div className='admin-doctor-actions flex flex-wrap items-center gap-3'><PortalButton type='button' onClick={() => onView(doctor.provider_id)}>View</PortalButton>
+      {canReview && <PortalButton type='button' tone='primary' onClick={() => onView(doctor.provider_id)}>Verify</PortalButton>}</div>
+  </article>
 }
 
 export default function AdminDoctorsPage() {
-  const router = useRouter()
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
-  const [revision, setRevision] = useState(0)
-  const [activeTab, setActiveTab] = useState<Tab>('all')
-  const [doctors, setDoctors] = useState<AdminDoctor[]>([])
-  const [pendingDoctors, setPendingDoctors] = useState<AdminDoctorVerification[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const pathname = usePathname(), scope = useSyncExternalStore(subscribe, readScope, () => null)
+  return <ClinicianRoster key={JSON.stringify([scope, pathname])} scope={scope} pathname={pathname} />
+}
 
+function ClinicianRoster({ scope, pathname }: { scope: string | null; pathname: string }) {
+  const [activeTab, setActiveTab] = useState<Tab>('all'), [allPage, setAllPage] = useState({ limit: 25, offset: 0 }), [pendingPage, setPendingPage] = useState({ limit: 25, offset: 0 })
+  const [searchDraft, setSearchDraft] = useState(''), [search, setSearch] = useState(''), [status, setStatus] = useState('')
+  const [selected, setSelected] = useState<{ providerId: string; context: object } | null>(null), [notice, setNotice] = useState('')
+  const all = usePortalResource<unknown>(scope ? clinicianPagePath('all', allPage, search, status) : null, false, { abortOnCleanup: true, refreshOnFocus: true })
+  const pending = usePortalResource<unknown>(scope ? clinicianPagePath('pending', pendingPage, search) : null, false, { abortOnCleanup: true, refreshOnFocus: true })
+  const allData = useMemo(() => clinicianPage(all.data, allPage), [all.data, allPage]), pendingData = useMemo(() => clinicianPage(pending.data, pendingPage), [pending.data, pendingPage])
+  if (allData?.paginated && allData.offset !== allPage.offset) { setAllPage({ ...allPage, offset: allData.offset }); setNotice('The clinician list changed. Showing the nearest available page.') }
+  if (pendingData?.paginated && pendingData.offset !== pendingPage.offset) { setPendingPage({ ...pendingPage, offset: pendingData.offset }); setNotice('The pending queue changed. Showing the nearest available page.') }
+  const resource = activeTab === 'all' ? all : pending, data = activeTab === 'all' ? allData : pendingData
+  const page = activeTab === 'all' ? allPage : pendingPage, setPage = activeTab === 'all' ? setAllPage : setPendingPage
+  const busy = resource.refreshing || searchDraft.trim() !== search, invalid = resource.data !== null && !data
+  const loadError = resource.error ? resource.errorMessage : invalid ? 'The clinician list returned an invalid response. Refresh the list before continuing.' : ''
+  const context = useMemo(() => ({ scope, pathname, activeTab, page, searchDraft, search, status, permission: data?.canReview ?? false }), [scope, pathname, activeTab, page, searchDraft, search, status, data?.canReview])
+  const latestContext = useRef(context), changingPage = useRef(false), focusPage = useRef(false), pageStatus = useRef<HTMLParagraphElement>(null)
+  const current = () => Boolean(scope && latestContext.current === context && readScope() === scope && currentPortal() === 'admin' && window.location.pathname === pathname)
+  useLayoutEffect(() => { latestContext.current = context; changingPage.current = false }, [context])
   useEffect(() => {
-    if (!readSessionMarker()) {
-      clearPortalSession()
-      router.replace('/auth/admin/login')
-      return
-    }
-
-    if (!isAdmin()) {
-      router.replace('/auth/admin/login')
-      return
-    }
-
-    let cancelled = false
-
-    async function fetchData() {
-      try {
-        const [doctorsData, pendingData] = await Promise.all([
-          getAdminDoctors(statusFilter, undefined, undefined, searchQuery),
-          getPendingDoctors(),
-        ])
-        if (!cancelled) {
-          setDoctors(doctorsData.doctors)
-          setPendingDoctors(pendingData)
-          setError(null)
-        }
-      } catch (err) {
-        if (isAuthError(err)) {
-          clearPortalSession()
-          router.replace('/auth/admin/login')
-          return
-        }
-        console.error('Failed to load doctors', err)
-        if (!cancelled) setError('Unable to load doctors data right now.')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    fetchData()
-
-    return () => {
-      cancelled = true
-    }
-  }, [router, statusFilter, searchQuery, revision])
-
-  const handleViewDoctor = (providerId: string) => {
-    setSelectedProvider(providerId)
+    const timer = setTimeout(() => { const normalized = searchDraft.trim(); if (normalized === search) return
+      setAllPage(value => ({ ...value, offset: 0 })); setPendingPage(value => ({ ...value, offset: 0 })); setSearch(normalized)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [searchDraft, search])
+  useEffect(() => { if (!busy && focusPage.current) { pageStatus.current?.focus(); focusPage.current = false } }, [busy, page])
+  const changeTab = (tab: Tab) => { if (!current() || activeTab === tab || changingPage.current) return; changingPage.current = true; setSelected(null); setNotice(''); setActiveTab(tab) }
+  const navigate = (direction: 'previous' | 'next' | 'first') => {
+    if (!current() || busy || changingPage.current || (direction === 'next' && !data?.hasNext) || (direction !== 'next' && page.offset === 0)) return
+    changingPage.current = true; focusPage.current = true; setSelected(null); setNotice('')
+    setPage({ ...page, offset: direction === 'first' ? 0 : direction === 'next' ? page.offset + page.limit : Math.max(0, page.offset - page.limit) })
   }
-
-  const handleVerifyDoctor = (providerId: string) => {
-    setSelectedProvider(providerId)
-  }
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '280px', color: T.slate2 }}>
-        Loading doctors...
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div role="alert" aria-label="Clinician list error" style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
-        <p>{error}</p><button type="button" onClick={() => { setLoading(true); setRevision(value => value + 1) }}>Retry clinician list</button>
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <style>{`@media(max-width:700px){.admin-doctor-card{flex-direction:column;align-items:stretch!important}.admin-doctor-actions{padding-left:0}.admin-doctor-filters{flex-direction:column;align-items:stretch!important}.admin-doctor-filters>*{min-width:0;width:100%}}`}</style>
-      {/* Page Header */}
-      <div>
-        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
-          Doctors Management
-        </h1>
-        <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate2 }}>
-          Review clinician credentials and account status. An active account still needs clinical approval before it can provide care.
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', borderBottom: "1px solid var(--border)", paddingBottom: '16px' }}>
-        <button
-          type="button"
-          onClick={() => setActiveTab('all')}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '10px',
-            border: 'none',
-            background: activeTab === 'all' ? 'rgba(32,181,223,0.12)' : 'transparent',
-            color: activeTab === 'all' ? T.link : T.slate,
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-        >
-          All Doctors ({doctors.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('pending')}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '10px',
-            border: 'none',
-            background: activeTab === 'pending' ? 'rgba(32,181,223,0.12)' : 'transparent',
-            color: activeTab === 'pending' ? T.link : T.slate,
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-        >
-          Pending Verification ({pendingDoctors.length})
-        </button>
-      </div>
-
-      {/* Filters */}
-      {activeTab === 'all' && (
-        <div className="admin-doctor-filters" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Ico p={ICONS.search} size={16} sw={1.6} color={T.slate2} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              placeholder="Search doctors..."
-              aria-label="Search clinicians"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px 10px 40px',
-                borderRadius: '10px',
-                border: "1px solid var(--border)",
-                background: "var(--surface-glass)",
-                fontSize: '14px',
-                color: T.navy,
-                outline: 'none',
-              }}
-            />
-          </div>
-          <select
-            aria-label="Filter clinicians by status"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '10px',
-              border: "1px solid var(--border)",
-              background: "var(--surface-glass)",
-              fontSize: '14px',
-              color: T.navy,
-              cursor: 'pointer',
-            }}
-          >
-            <option value="">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="VERIFIED">Clinical access enabled</option>
-            <option value="PENDING_VERIFICATION">Pending</option>
-            <option value="SUSPENDED">Suspended</option>
-          </select>
-        </div>
-      )}
-
-      {/* Doctors List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {activeTab === 'all' ? (
-          doctors.length === 0 ? (
-            <div style={{ padding: '48px', textAlign: 'center', color: T.slate2, fontSize: '14px' }}>
-              No doctors found
-            </div>
-          ) : (
-            doctors.map((doctor) => (
-              <DoctorCard
-                key={doctor.provider_id}
-                doctor={doctor}
-                onView={handleViewDoctor}
-              />
-            ))
-          )
-        ) : (
-          pendingDoctors.length === 0 ? (
-            <div style={{ padding: '48px', textAlign: 'center', color: T.slate2, fontSize: '14px' }}>
-              No pending verifications
-            </div>
-          ) : (
-            pendingDoctors.map((doctor) => (
-              <DoctorCard
-                key={doctor.provider_id}
-                doctor={doctor}
-                onView={handleViewDoctor}
-                onVerify={handleVerifyDoctor}
-              />
-            ))
-          )
-        )}
-      </div>
-      {selectedProvider && <DoctorReviewDialog key={selectedProvider} providerId={selectedProvider}
-        onClose={() => setSelectedProvider(null)} onSaved={() => { setSelectedProvider(null); setRevision(value => value + 1) }} />}
-    </div>
-  )
+  const refresh = () => { if (!current() || changingPage.current) return; setSelected(null); all.retry(); pending.retry() }
+  const review = (providerId: string) => { if (!current() || busy || changingPage.current || !data?.doctors.some(doctor => doctor.provider_id === providerId)) return; setSelected({ providerId, context }) }
+  const closeReview = (saved: boolean) => { if (!current()) return; setSelected(null); if (saved) setNotice('Clinician decision saved. The clinician list and pending queue are being refreshed.'); all.retry(); pending.retry() }
+  const title = activeTab === 'all' ? 'clinicians' : 'pending verifications'
+  const countLabel = (kind: Tab) => { const source = kind === 'all' ? all : pending, result = kind === 'all' ? allData : pendingData; return source.error ? 'unavailable' : result?.total === null ? 'total unavailable' : result?.total ?? '…' }
+  return <section aria-labelledby='clinician-roster-title' className='flex min-w-0 flex-col gap-5'>
+    <header className='flex flex-wrap items-start justify-between gap-4'><div><h1 id='clinician-roster-title' className='text-3xl font-extrabold tracking-tight text-ink'>Doctors Management</h1>
+      <p className='mt-2 max-w-3xl text-sm leading-7 text-secondary'>Review clinician credentials and account status. An active account still needs clinical approval before it can provide care.</p></div>
+      <PortalButton type='button' onClick={refresh} disabled={busy}>Refresh clinician lists</PortalButton></header>
+    <nav aria-label='Clinician queues' className='flex flex-wrap gap-3 border-b border-theme pb-4'>
+      <PortalButton type='button' aria-pressed={activeTab === 'all'} tone={activeTab === 'all' ? 'primary' : 'secondary'} onClick={() => changeTab('all')}>All Doctors ({countLabel('all')})</PortalButton>
+      <PortalButton type='button' aria-pressed={activeTab === 'pending'} tone={activeTab === 'pending' ? 'primary' : 'secondary'} onClick={() => changeTab('pending')}>Pending Verification ({countLabel('pending')})</PortalButton></nav>
+    <div className='admin-doctor-filters flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end'><div className='min-w-0 flex-1'><label htmlFor='clinician-search' className='mb-2 block text-sm font-semibold text-ink'>Search clinicians</label>
+      <input id='clinician-search' type='search' maxLength={200} placeholder='Search doctors...' value={searchDraft} onChange={event => { setSelected(null); setNotice(''); setSearchDraft(event.target.value) }} className='min-h-11 w-full min-w-0 rounded-xl border border-theme bg-surface px-3 py-2 text-sm text-ink' /></div>
+      {activeTab === 'all' && <div className='min-w-0 sm:w-60'><label htmlFor='clinician-status' className='mb-2 block text-sm font-semibold text-ink'>Filter clinicians by status</label>
+        <select id='clinician-status' value={status} disabled={!allData?.statusOptions.length} onChange={event => { if (!current() || event.target.value === status) return; changingPage.current = true; setSelected(null); setNotice(''); setAllPage(value => ({ ...value, offset: 0 })); setStatus(event.target.value) }} className='min-h-11 w-full min-w-0 rounded-xl border border-theme bg-surface px-3 py-2 text-sm text-ink'>
+          <option value=''>All Status</option>{allData?.statusOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>}</div>
+    <nav aria-label='Clinician list pages' className='flex flex-wrap items-center gap-3'>
+      <p ref={pageStatus} tabIndex={-1} role='status' aria-label='Clinician list page' aria-live='polite' className='text-sm leading-6 text-secondary'>Page {Math.floor(page.offset / page.limit) + 1}{busy ? ' · Loading doctors...' : data?.total !== null && data ? ` · ${data.total} ${title}` : ''}</p>
+      <PortalButton type='button' disabled={busy || page.offset === 0} onClick={() => navigate('previous')}>Previous {title}</PortalButton>
+      <PortalButton type='button' disabled={busy || !data?.hasNext} onClick={() => navigate('next')}>Next {title}</PortalButton>
+      {page.offset > 0 && <PortalButton type='button' disabled={busy} onClick={() => navigate('first')}>First page</PortalButton>}
+      <label className='flex min-w-0 items-center gap-2 text-sm text-secondary'>Per page<select aria-label='Clinicians per page' value={page.limit} disabled={busy} onChange={event => { const limit = Number(event.target.value); if (!current() || ![25, 50].includes(limit) || limit === page.limit) return; changingPage.current = true; setSelected(null); setPage({ limit, offset: 0 }) }} className='min-h-11 rounded-xl border border-theme bg-surface px-3 py-2 text-ink'><option value={25}>25</option><option value={50}>50</option></select></label></nav>
+    {notice && <p role='status' className='rounded-xl border border-theme bg-surface-subtle p-4 text-sm leading-6 text-ink'>{notice}</p>}
+    {loadError && <div role='alert' aria-label='Clinician list error' className='rounded-xl border border-theme bg-surface-subtle p-5 text-sm leading-6 text-ink'><p>{loadError}</p><SupportReference requestId={resource.errorRequestId} /><PortalButton type='button' onClick={refresh}>Retry clinician list</PortalButton></div>}
+    {busy && <p role='status' className='py-5 text-sm text-secondary'>Loading doctors...</p>}
+    {!busy && !loadError && data && <>
+      {data.paginated && data.doctors.length > 0 && <p className='text-sm text-secondary'>Showing {data.offset + 1}–{data.offset + data.doctors.length} of {data.total} {title}.</p>}
+      {!data.paginated && <p className='text-sm leading-6 text-secondary'>This service returned only a bounded first-page view. Complete pagination could not be confirmed. Refresh after the service update; no further pages are assumed.</p>}
+      {!data.canReview && <p className='text-sm leading-6 text-secondary'>You can inspect clinician details. Recording decisions requires current super administrator or operations administrator permission.</p>}
+      {!data.doctors.length ? <PortalEmptyState title={activeTab === 'all' ? 'No doctors found' : 'No pending verifications'} description={search ? 'Try a different search or clear the filters.' : activeTab === 'all' ? 'Clinician accounts will appear here after registration.' : 'No applications are awaiting review on this page.'} />
+        : <div className='flex min-w-0 flex-col gap-3'>{data.doctors.map(doctor => <DoctorCard key={doctor.provider_id} doctor={doctor} onView={review} canReview={activeTab === 'pending' && data.canReview} />)}</div>}
+    </>}
+    {selected?.context === context && data?.doctors.some(doctor => doctor.provider_id === selected.providerId) && <DoctorReviewDialog key={selected.providerId} providerId={selected.providerId} onClose={() => closeReview(false)} onSaved={() => closeReview(true)} />}
+  </section>
 }

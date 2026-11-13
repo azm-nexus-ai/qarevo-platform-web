@@ -2556,6 +2556,14 @@ export type AdminDoctorsListResponse = {
     total: number;
     limit: number;
     offset: number;
+    has_next?: boolean;
+    has_previous?: boolean;
+    can_review?: boolean;
+    status_options?: { value: string; label: string }[];
+};
+
+export type AdminPendingDoctorsPageResponse = Omit<AdminDoctorsListResponse, 'doctors'> & {
+    doctors: AdminDoctorVerification[];
 };
 
 export type AdminVerifyDoctorRequest = {
@@ -2653,16 +2661,22 @@ export async function getPendingDoctors(limit: number = 50, offset: number = 0):
     return apiGet<AdminDoctorVerification[]>(`/api/v1/admin/doctors/pending?${params.toString()}`);
 }
 
+export async function getPendingDoctorsPage(limit: number = 25, offset: number = 0, search?: string): Promise<AdminPendingDoctorsPageResponse> {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (search?.trim()) params.set('search', search.trim());
+    return apiGet<AdminPendingDoctorsPageResponse>(`/api/v1/admin/doctors/pending/page?${params.toString()}`);
+}
+
 export async function getDoctorVerificationDetails(providerId: string): Promise<AdminDoctorVerification> {
     return apiGet<AdminDoctorVerification>(`/api/v1/admin/doctors/${providerId}/verification`);
 }
 
-export async function verifyDoctor(providerId: string, body: AdminVerifyDoctorRequest): Promise<{ message: string }> {
-    return apiPut<{ message: string }, AdminVerifyDoctorRequest>(`/api/v1/admin/doctors/${providerId}/verify`, body);
+export async function verifyDoctor(providerId: string, body: AdminVerifyDoctorRequest, signal?: AbortSignal): Promise<{ message: string }> {
+    return apiPut<{ message: string }, AdminVerifyDoctorRequest>(`/api/v1/admin/doctors/${encodeURIComponent(providerId)}/verify`, body, undefined, signal);
 }
 
-export async function updateDoctorStatus(providerId: string, body: AdminUpdateDoctorStatusRequest): Promise<{ message: string }> {
-    return apiPut<{ message: string }, AdminUpdateDoctorStatusRequest>(`/api/v1/admin/doctors/${providerId}/status`, body);
+export async function updateDoctorStatus(providerId: string, body: AdminUpdateDoctorStatusRequest, signal?: AbortSignal): Promise<{ message: string }> {
+    return apiPut<{ message: string }, AdminUpdateDoctorStatusRequest>(`/api/v1/admin/doctors/${encodeURIComponent(providerId)}/status`, body, undefined, signal);
 }
 
 // Admin Patients API Functions

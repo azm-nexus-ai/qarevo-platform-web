@@ -1,99 +1,103 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { getDoctorVerificationDetails, getApiErrorDetail, verifyDoctor, updateDoctorStatus, type AdminDoctorVerification } from '@/lib/api'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { usePathname } from 'next/navigation'
+import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
+import { currentPortal } from '@/lib/portal-scope'
+import { usePortalAction } from '@/lib/portal-action'
+import { usePortalResource } from '@/lib/use-portal-resource'
+import { clinicianIdentifier, clinicianRow } from '@/lib/admin-clinicians'
+import { getApiErrorDetail, getApiErrorRequestId, verifyDoctor, updateDoctorStatus, type AdminDoctorVerification } from '@/lib/api'
 import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
+import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
+import SupportReference from '@/components/ui/SupportReference'
+import DoctorTimeOffPanel from '@/components/admin/DoctorTimeOffPanel'
 
 type Decision = 'approve' | 'reject' | 'suspend' | 'activate'
+type Props = { providerId: string; onClose: () => void; onSaved: () => void }
+const readScope = () => readAccountScope('admin')
+const subscribe = (changed: () => void) => {
+  window.addEventListener(ACCOUNT_CHANGED, changed); window.addEventListener('storage', changed)
+  return () => { window.removeEventListener(ACCOUNT_CHANGED, changed); window.removeEventListener('storage', changed) }
+}
+const emptyForm = () => ({ decision: 'approve' as Decision, reference: '', confirmed: false, errors: {} as Record<string, string> })
 
-export default function DoctorReviewDialog({ providerId, onClose, onSaved }: {
-  providerId: string; onClose: () => void; onSaved: () => void
-}) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  const [details, setDetails] = useState<AdminDoctorVerification | null>(null)
-  const [loadError, setLoadError] = useState('')
-  const [retry, setRetry] = useState(0)
-  const [decision, setDecision] = useState<Decision>('approve')
-  const [reference, setReference] = useState('')
-  const [confirmed, setConfirmed] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [saveError, setSaveError] = useState('')
-  const [saving, setSaving] = useState(false)
+export default function DoctorReviewDialog(props: Props) {
+  const pathname = usePathname(), scope = useSyncExternalStore(subscribe, readScope, () => null)
+  return <ScopedReview key={JSON.stringify([scope, pathname, props.providerId])} {...props} scope={scope} pathname={pathname} />
+}
 
+function ScopedReview({ providerId, onClose, onSaved, scope, pathname }: Props & { scope: string | null; pathname: string }) {
+  const dialog = useRef<HTMLDialogElement>(null), captureAction = usePortalAction(), inFlight = useRef<AbortController | null>(null)
+  const resource = usePortalResource<unknown>(scope && clinicianIdentifier(providerId) ? `/api/v1/admin/doctors/${encodeURIComponent(providerId)}/verification` : null, false, { abortOnCleanup: true, refreshOnFocus: true })
+  const details = useMemo(() => { const parsed = clinicianRow(resource.data); return parsed?.provider_id === providerId ? parsed as AdminDoctorVerification : null }, [resource.data, providerId])
+  const authorityKey = JSON.stringify([scope, pathname, providerId, details?.can_review === true, details?.status, details?.verification_status, details?.email_verified, details?.license_number])
+  const authority = useRef(authorityKey)
+  const [observed, setObserved] = useState(authorityKey), [form, setForm] = useState(emptyForm)
+  const [action, setAction] = useState<{ authority: string; busy: boolean; error: string; reference: string | null } | null>(null)
+  if (observed !== authorityKey) { setObserved(authorityKey); setForm(emptyForm()) }
+  const saving = action?.authority === authorityKey && action.busy
+  const stalePending = action?.busy && action.authority !== authorityKey
+  const busy = saving || resource.refreshing
+  const loadError = resource.error ? resource.errorMessage : resource.data !== null && !details ? 'The clinician details returned an invalid response. Refresh before making a decision.' : ''
+  const currentPage = () => Boolean(scope && scope === readScope() && currentPortal() === 'admin' && window.location.pathname === pathname)
   useEffect(() => { dialog.current?.showModal(); const element = dialog.current; return () => element?.close() }, [])
-  useEffect(() => {
-    let current = true
-    setLoadError('')
-    getDoctorVerificationDetails(providerId).then(value => {
-      if (current) setDetails(value)
-    }).catch(error => { if (current) setLoadError(getApiErrorDetail(error) || 'Could not load clinician details.') })
-    return () => { current = false }
-  }, [providerId, retry])
-
+  useLayoutEffect(() => { authority.current = authorityKey; return () => { inFlight.current?.abort(); inFlight.current = null } }, [authorityKey])
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (details?.can_review !== true) return
-    const next: Record<string, string> = {}
-    if (reference.trim().length < 4 || reference.trim().length > 500) next.reference = 'Enter a review reference or reason using 4–500 characters.'
-    if (decision === 'approve' && !confirmed) next.confirmed = 'Confirm that you have reviewed the clinician’s identity and professional credentials.'
-    if (decision === 'approve' && !details?.email_verified) next.email = 'The clinician must verify their email before approval.'
-    setErrors(next)
-    if (Object.keys(next).length) { focusValidation(event.currentTarget); return }
-    setSaving(true); setSaveError('')
+    if (!currentPage() || busy || inFlight.current || !details || details.can_review !== true) return
+    const errors: Record<string, string> = {}, reference = form.reference.trim(), decision = form.decision
+    if (reference.length < 4 || reference.length > 500) errors.reference = 'Enter a review reference or reason using 4–500 characters.'
+    if (decision === 'approve' && !form.confirmed) errors.confirmed = 'Confirm that you have reviewed the clinician’s identity and professional credentials.'
+    if (decision === 'approve' && !details.email_verified) errors.email = 'The clinician must verify their email before approval.'
+    setForm(previous => ({ ...previous, errors }))
+    if (Object.keys(errors).length) { focusValidation(event.currentTarget); return }
+    const captured = captureAction(), controller = new AbortController()
+    if (!captured.isCurrent() || captured.portal !== 'admin' || captured.scope !== scope) return
+    inFlight.current = controller; setAction({ authority: authorityKey, busy: true, error: '', reference: null })
+    const current = () => captured.isCurrent() && currentPage() && authority.current === authorityKey && !controller.signal.aborted
     try {
-      if (decision === 'approve' || decision === 'reject') {
-        await verifyDoctor(providerId, { approve: decision === 'approve', review_confirmed: confirmed,
-          review_reference: reference.trim(), rejection_reason: reference.trim() })
-      } else {
-        await updateDoctorStatus(providerId, { status: decision === 'suspend' ? 'SUSPENDED' : 'ACTIVE', reason: reference.trim() })
-      }
-      onSaved()
-    } catch (error) { setSaveError(getApiErrorDetail(error) || 'The decision could not be saved. Please try again.') }
-    finally { setSaving(false) }
+      if (decision === 'approve' || decision === 'reject') await verifyDoctor(providerId, { approve: decision === 'approve', review_confirmed: form.confirmed, review_reference: reference, rejection_reason: reference }, controller.signal)
+      else await updateDoctorStatus(providerId, { status: decision === 'suspend' ? 'SUSPENDED' : 'ACTIVE', reason: reference }, controller.signal)
+      if (current()) onSaved()
+    } catch (error) {
+      if (!current()) return
+      setAction({ authority: authorityKey, busy: false, error: getApiErrorDetail(error) || 'The decision could not be confirmed. Review the refreshed clinician details before trying again.', reference: getApiErrorRequestId(error) })
+      setForm(previous => ({ ...previous, confirmed: false })); resource.retry()
+    } finally {
+      if (current()) setAction(previous => previous ? { ...previous, busy: false } : previous)
+      if (inFlight.current === controller) inFlight.current = null
+    }
   }
-
-  return <dialog ref={dialog} aria-labelledby="doctor-review-title" onCancel={event => { event.preventDefault(); if (!saving) onClose() }}
-    style={{ width: 'min(620px, calc(100vw - 32px))', maxHeight: '85dvh', overflowY: 'auto', padding: 28, borderRadius: 20,
-      border: '1px solid var(--border)', color: 'var(--text)', background: 'var(--surface)', boxShadow: 'var(--shadow-card)' }}>
-    <style>{`dialog::backdrop { background: rgba(4,20,35,.65); } .doctor-review-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; } .doctor-review-grid dt { color:var(--text-muted); font-size:13px; } .doctor-review-grid dd { margin:4px 0 0; overflow-wrap:anywhere; }`}</style>
-    <header style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'center' }}>
-      <h2 id="doctor-review-title" style={{ margin: 0 }}>Clinician review</h2>
-      <button type="button" disabled={saving} onClick={onClose} aria-label="Close clinician review">Close</button>
-    </header>
-    {loadError ? <div role="alert"><p>{loadError}</p><button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button></div>
-      : !details ? <p role="status">Loading clinician details…</p>
-      : <>
-        <dl className="doctor-review-grid">
-          <div><dt>Name</dt><dd>{details.full_name}</dd></div>
-          <div><dt>Email</dt><dd>{details.email}</dd></div>
-          <div><dt>Email verification</dt><dd>{details.email_verified ? 'Verified' : 'Pending'}</dd></div>
-          <div><dt>Professional licence</dt><dd>{details.license_number || 'Not provided'}</dd></div>
-          <div><dt>Specialty</dt><dd>{details.specialty || 'Not provided'}</dd></div>
-          <div><dt>Clinical approval</dt><dd>{details.verification_status.replaceAll('_', ' ')}</dd></div>
-          <div><dt>Account status</dt><dd>{details.status.replaceAll('_', ' ')}</dd></div>
-          <div><dt>Clinical access</dt><dd>{details.clinical_access?.status === 'enabled' ? 'Enabled' : details.clinical_access?.status === 'blocked' ? 'Blocked' : 'Not assessed'}</dd></div>
+  return <dialog ref={dialog} aria-labelledby='doctor-review-title' onCancel={event => { event.preventDefault(); if (!saving && currentPage()) onClose() }}
+    className='max-h-[85dvh] w-[min(680px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-xl sm:p-7'>
+    <style>{`dialog::backdrop{background:var(--overlay,rgba(4,20,35,.65))}.doctor-review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:16px}.doctor-review-grid dt{color:var(--text-muted);font-size:13px}.doctor-review-grid dd{margin:4px 0 0;overflow-wrap:anywhere}`}</style>
+    <header className='flex flex-wrap items-center justify-between gap-4'><h2 id='doctor-review-title' className='text-xl font-semibold text-ink'>Clinician review</h2><PortalButton type='button' disabled={saving} onClick={() => { if (currentPage()) onClose() }} aria-label='Close clinician review'>Close</PortalButton></header>
+    {loadError ? <div role='alert' className='mt-5 rounded-xl border border-theme bg-surface-subtle p-4 text-sm leading-6'><p>{loadError}</p><SupportReference requestId={resource.errorRequestId} /><PortalButton type='button' onClick={resource.retry} disabled={resource.refreshing}>Try again</PortalButton></div>
+      : !details ? <p role='status' className='mt-5 text-sm text-secondary'>Loading clinician details…</p> : <>
+        <dl className='doctor-review-grid mt-6'>
+          <div><dt>Name</dt><dd>{details.full_name}</dd></div><div><dt>Email</dt><dd>{details.email}</dd></div>
+          <div><dt>Email verification</dt><dd>{details.email_verified ? 'Verified' : 'Pending'}</dd></div><div><dt>Professional licence</dt><dd>{details.license_number || 'Not provided'}</dd></div>
+          <div><dt>Specialty</dt><dd>{details.specialty || 'Not provided'}</dd></div><div><dt>Clinical approval</dt><dd>{details.verification_status.replaceAll('_', ' ')}</dd></div>
+          <div><dt>Account status</dt><dd>{details.status.replaceAll('_', ' ')}</dd></div><div><dt>Clinical access</dt><dd>{details.clinical_access?.status === 'enabled' ? 'Enabled' : details.clinical_access?.status === 'blocked' ? 'Blocked' : 'Not assessed'}</dd></div>
         </dl>
-        {details.clinical_access && <p style={{ lineHeight: 1.6 }}>{details.clinical_access.message}</p>}
-        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>Email verification does not verify a medical licence. Review the clinician’s identity and credentials through your approved process before granting clinical access. Record the evidence reference below; do not paste patient information.</p>
-        {details.can_review !== true ? <p role="status">Super administrator or operations administrator access is required to record a decision. You can review the clinician details here.</p> : <form noValidate onSubmit={submit}>
-          <ValidationSummary errors={errors} />
-          {saveError && <p role="alert" className="field-error">{saveError}</p>}
-          <label htmlFor="review-decision">Decision (Required)</label>
-          <select id="review-decision" value={decision} disabled={saving} onChange={event => { setDecision(event.target.value as Decision); setErrors({}) }} style={{ display: 'block', width: '100%', margin: '8px 0 18px', padding: 12 }}>
-            <option value="approve">Approve clinical access</option><option value="reject">Reject application</option>
-            <option value="suspend">Suspend account</option><option value="activate">Restore account status</option>
-          </select>
-          {decision === 'activate' && <p>Restoring account status does not grant or replace clinical approval.</p>}
-          <label htmlFor="review-reference">Review reference or reason (Required)</label>
-          <textarea id="review-reference" value={reference} disabled={saving} maxLength={500} rows={3} aria-invalid={!!errors.reference} aria-describedby="review-reference-hint review-reference-error"
-            onChange={event => { setReference(event.target.value); setErrors(previous => ({ ...previous, reference: '' })) }} style={{ display: 'block', width: '100%', marginTop: 8, padding: 12 }} />
-          <FieldFeedback name="review-reference" hint="4–500 characters. Use a credential-review reference or an operational reason." error={errors.reference} />
-          {decision === 'approve' && <div style={{ margin: '18px 0' }}>
-            <label style={{ display: 'flex', gap: 10, alignItems: 'start' }}><input type="checkbox" checked={confirmed} disabled={saving} aria-invalid={!!errors.confirmed} aria-describedby={errors.confirmed ? 'review-confirmed-error' : undefined}
-              onChange={event => { setConfirmed(event.target.checked); setErrors(previous => ({ ...previous, confirmed: '' })) }} />I have reviewed the clinician’s identity and professional credentials (Required)</label>
-            <FieldFeedback name="review-confirmed" error={errors.confirmed} />
-          </div>}
-          <button type="submit" disabled={saving} style={{ marginTop: 16, padding: '12px 18px', borderRadius: 10, border: 0, background: 'var(--primary)', color: '#fff', fontWeight: 650 }}>{saving ? 'Saving decision…' : 'Save decision'}</button>
+        {details.clinical_access && <p className='mt-4 text-sm leading-7 text-secondary'>{details.clinical_access.message}</p>}
+        <p className='my-5 text-sm leading-7 text-secondary'>Email verification does not verify a medical licence. Review the clinician’s identity and credentials through your approved process before granting clinical access. Record the evidence reference below; do not paste patient information.</p>
+        <DoctorTimeOffPanel providerId={providerId} />
+        {action?.error && <div role='alert' className='my-4 rounded-xl border border-theme bg-surface-subtle p-4 text-sm leading-6'><p>{action.error}</p><p className='mt-2'>No decision is retried automatically. Review the current details before submitting again.</p><SupportReference requestId={action.reference} /></div>}
+        {stalePending && <p role='alert' className='my-4 text-sm leading-6 text-secondary'>Clinician details changed while a decision was in flight. Review the current status; the earlier outcome could not be confirmed here.</p>}
+        {resource.refreshing && <p role='status' className='my-4 text-sm text-secondary'>Refreshing clinician details…</p>}
+        {details.can_review !== true ? <p role='status' className='mt-5 text-sm leading-7 text-secondary'>Super administrator or operations administrator access is required to record a decision. You can review the clinician details here.</p> : <form noValidate onSubmit={submit} aria-busy={busy} className='mt-5'>
+          <ValidationSummary errors={form.errors} />
+          <label htmlFor='review-decision' className='mb-2 block text-sm font-semibold'>Decision (Required)</label>
+          <select id='review-decision' value={form.decision} disabled={busy} onChange={event => setForm(previous => ({ ...previous, decision: event.target.value as Decision, errors: {} }))} className='mb-5 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-sm text-ink'>
+            <option value='approve'>Approve clinical access</option><option value='reject'>Reject application</option><option value='suspend'>Suspend account</option><option value='activate'>Restore account status</option></select>
+          {form.decision === 'activate' && <p className='mb-4 text-sm leading-6 text-secondary'>Restoring account status does not grant or replace clinical approval.</p>}
+          <label htmlFor='review-reference' className='mb-2 block text-sm font-semibold'>Review reference or reason (Required)</label>
+          <textarea id='review-reference' value={form.reference} disabled={busy} maxLength={500} rows={3} aria-invalid={!!form.errors.reference} aria-describedby='review-reference-hint review-reference-error' onChange={event => setForm(previous => ({ ...previous, reference: event.target.value, errors: { ...previous.errors, reference: '' } }))} className='min-h-28 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-sm text-ink' />
+          <FieldFeedback name='review-reference' hint='4–500 characters. Use a credential-review reference or an operational reason.' error={form.errors.reference} />
+          {form.decision === 'approve' && <div className='my-5'><label className='flex items-start gap-3 text-sm leading-7'><input type='checkbox' checked={form.confirmed} disabled={busy} aria-invalid={!!form.errors.confirmed} aria-describedby={form.errors.confirmed ? 'review-confirmed-error' : undefined} onChange={event => setForm(previous => ({ ...previous, confirmed: event.target.checked, errors: { ...previous.errors, confirmed: '' } }))} className='mt-1 h-5 w-5 shrink-0' />I have reviewed the clinician’s identity and professional credentials (Required)</label><FieldFeedback name='review-confirmed' error={form.errors.confirmed} /></div>}
+          <PortalButton type='submit' tone='primary' disabled={busy}>{saving ? 'Saving decision…' : 'Save decision'}</PortalButton>
         </form>}
       </>}
   </dialog>

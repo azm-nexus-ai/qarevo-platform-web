@@ -51,6 +51,26 @@ This proves the exercised local logical format and fixture, not production backu
 
 AI production-image hardening fixes the nonexistent `app` package/entrypoint, excludes environment/IDE files from build context and builds the installed `src.main` runtime as non-root. Its CI smoke runs the real image without network egress or published ports, with mock/disabled providers and workers: liveness must be 200 and unavailable dependencies must produce readiness 503. This verifies a portable release artifact; it does not create an AWS deployment or change the existing FastAPI Cloud AI service.
 
+## Stage 3 increment: scheduling integrity and clinician roster — 13 November 2026
+
+This increment addresses the two confirmed post-close-out defects; it does not create practice memberships, shared clinical access, billing arrangements or new infrastructure. The frozen Stage 2 engineering checklist and pending owner/external acceptance gates remain distinct.
+
+- Approved clinician absences now feed the shared patient/doctor/matching calendar and direct booking/rescheduling validation. Intervals are UTC-normalized and half-open; visit buffers are not applied to absence boundaries. Pending, rejected and explicitly cancelled requests do not remove slots. Malformed legacy approvals fail closed until withdrawn.
+- Absence approval and booking serialize on the same provider row. An overlapping existing appointment produces actionable HTTP 409; no appointment is silently cancelled or reassigned. Bound session, active account and current operations/super-admin membership are rechecked after both business-row lock waits. State and audit evidence commit atomically. Equivalent pending creation and repeated decisions recover saved state; explicit reasoned cancellation preserves the record/history rather than reactivating a previous request.
+- Admin `/admin/doctors` has independent all/pending queue pages, search, canonical server-defined status filters, real totals, stale-page recovery and current-role review controls. The legacy pending-array API still terminates with an empty array, including huge offsets. New paged metadata is private/no-store. Account/route/provider/page/permission changes invalidate old reads and decisions; uncertain mutations require canonical refresh instead of blind replay.
+- A collapsed **Clinician absences** section in the clinician review dialog exposes bounded history, requests, approval/rejection and explicit cancellation to authorized administrators. Dates identify the browser's IANA timezone and submitted instants; invalid or repeated DST boundaries display validation errors. Read-only administrators can inspect but cannot manage absences.
+
+Measured roster query improvement: a 25-row approved-clinician page required 77 SELECTs before the change and 3 after it, in each of five controlled runs. Synthetic in-process SQLite median was 7.49 ms before and 0.80 ms after. This is local evidence of removed N+1 reads, **not hosted latency** or a production SLA.
+
+No database migration is required: cancellation uses an additional canonical value in the existing string status field. No provider calls, notifications, automatic appointment cancellation, practice-wide permissions, real video or live lab-file review are activated.
+
+Owner acceptance after the exact tested revisions are released:
+
+1. As an operations/owner admin, open Doctors → View → Show clinician absences for a designated synthetic clinician with future weekly hours. Request and approve an unbooked interval; refresh patient and doctor slot views. Slots inside it must disappear and a stale booking submission must return 409 without creating an appointment.
+2. Repeat with an already booked interval. Approval must fail with a conflict message/count and the existing visit must remain visible to patient and clinician. Resolve that appointment through the normal deliberate booking workflow, or cancel the absence request; the absence action never cancels the visit.
+3. Cancel an approved test absence with a reason. History remains visible as Cancelled; matching normal weekly slots may become bookable again. Repeated decisions create no duplicate audit event and do not revive rejected/cancelled requests.
+4. With more than 50 synthetic clinicians/review applications, reach later pages, search/filter, review a designated item and refresh. Counts and pages must remain truthful. Repeat read-only, failure/retry, changed-account and 320/820/1440 light/dark/keyboard checks. Automated paginated fixtures provide separate evidence if the hosted test database has fewer records.
+
 ## Historical release notes
 
 Historical status, 11 November: the latest patient-document lifecycle increment and consolidated pending owner-acceptance checklist are at the end of this document. [Portal sessions and rollout](portal-sessions.md) describes the operative architecture. The dated releases are historical evidence; later changes supersede their shared-theme, JavaScript-token and deployment instructions. Patient, doctor and admin now have separate HttpOnly cookie sessions, tab/account guards and portal-scoped themes. Production portal hosts are prepared for `qarevohealth.com`; current development remains on Vercel and no DNS activation is included.
