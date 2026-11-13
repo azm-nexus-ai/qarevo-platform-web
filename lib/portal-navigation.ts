@@ -3,19 +3,16 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import { usePathname } from 'next/navigation'
 import { ACCOUNT_CHANGED, assertCurrentAccount } from '@/lib/account-storage'
-import { currentPortal, readPortalIdentity, type Portal } from '@/lib/portal-scope'
-import { PATIENT_ROUTES } from '@/constants/patient-navigation'
-import { DOCTOR_ROUTES } from '@/constants/doctor-navigation'
-import { ADMIN_ROUTES } from '@/constants/admin-navigation'
+import { currentPortal, readPortalIdentity, PORTALS, PORTAL_DEFINITIONS, type Portal } from '@/lib/portal-scope'
 
-export type PortalRole = 'patient' | 'doctor' | 'admin'
+export type PortalRole = Portal
 
 /** Navigation context only; protected layouts and APIs still verify authority. */
 export function currentPortalRole(portal: Portal = currentPortal()): PortalRole | null {
   try {
     assertCurrentAccount(portal)
     const role = readPortalIdentity(portal)?.role
-    return role === 'PATIENT' ? 'patient' : role === 'PROVIDER' ? 'doctor' : role === 'ADMIN' ? 'admin' : null
+    return PORTALS.find(candidate => PORTAL_DEFINITIONS[candidate].role === role) ?? null
   } catch { return null }
 }
 const subscribe = (changed: () => void) => {
@@ -31,6 +28,6 @@ export function usePortalRole() {
   return useSyncExternalStore(subscribe, snapshot, () => null)
 }
 export function portalHome(role: PortalRole | null) {
-  return role === 'patient' ? PATIENT_ROUTES.dashboard : role === 'doctor' ? DOCTOR_ROUTES.dashboard : role === 'admin' ? ADMIN_ROUTES.dashboard : '/'
+  return role ? PORTAL_DEFINITIONS[role].home : '/'
 }
 export function usePortalHome() { return portalHome(usePortalRole()) }

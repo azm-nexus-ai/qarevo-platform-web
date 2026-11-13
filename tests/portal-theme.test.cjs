@@ -107,3 +107,10 @@ test('theme remains usable without browser storage and does not leak its in-memo
   assert.equal(tab.theme.applyPortalTheme(), 'light')
   assert.equal(tab.document.documentElement.dataset.theme, 'light')
 })
+
+test('practice theme and first paint remain isolated from all three existing portals', () => {
+  const tab = browser({ pathname: '/auth/practice/login', local: { 'qarevo:patient:theme': 'dark', 'qarevo:doctor:theme': 'dark', 'qarevo:admin:theme': 'dark', 'qarevo:practice:theme': 'light' } });
+  tab.bootstrap(); assert.equal(tab.document.documentElement.dataset.themePortal, 'practice'); assert.equal(tab.document.documentElement.dataset.theme, 'light');
+  tab.theme.setPortalTheme('dark', 'practice'); assert.equal(tab.localStorage.getItem('qarevo:practice:theme'), 'dark');
+  for (const portal of ['patient', 'doctor', 'admin']) assert.equal(tab.localStorage.getItem(`qarevo:${portal}:theme`), 'dark');
+});

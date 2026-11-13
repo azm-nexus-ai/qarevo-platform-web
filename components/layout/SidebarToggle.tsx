@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react'
 
 export const SIDEBAR_PREFERENCE_CHANGED = 'qarevo:sidebar-preference'
-export type PortalRole = 'patient' | 'doctor' | 'admin'
+export type PortalRole = import('@/lib/portal-scope').Portal
 
 export default function SidebarToggle({ role, side = 'left' }: { role: PortalRole; side?: 'left' | 'right' }) {
   const path = usePathname()

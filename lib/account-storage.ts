@@ -1,4 +1,4 @@
-import { currentPortal, portalKey, readPortalIdentity, PORTALS, type Portal } from './portal-scope'
+import { currentPortal, portalKey, readPortalIdentity, PORTALS, PORTAL_DEFINITIONS, type Portal } from './portal-scope'
 
 const DRAFT_PREFIX = 'qarevo.draft.v3:'
 export const ACCOUNT_CHANGED = 'qarevo:account-changed'
@@ -35,7 +35,7 @@ export function accountChanged(portal = currentPortal()) {
   window.dispatchEvent(new CustomEvent(ACCOUNT_CHANGED, {detail:{portal}}))
 }
 export function storePortalIdentity(identity: import('./portal-scope').PortalIdentity, portal = currentPortal()) {
-  const expected = {patient:'PATIENT',doctor:'PROVIDER',admin:'ADMIN'}[portal]
+  const expected = PORTAL_DEFINITIONS[portal].role
   if(identity.role !== expected || !identity.user_id || !identity.session_id) throw new Error('This session does not belong to this portal.')
   const before = readAccountScope(portal)
   window.localStorage.setItem(portalKey('identity', portal), JSON.stringify(identity))

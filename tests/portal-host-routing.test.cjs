@@ -132,3 +132,12 @@ test('valid staging domains, explicit default HTTPS ports and root slashes norma
   const staging = portalHostRedirects({ PORTAL_PATIENT_ORIGIN: 'https://patient.dev.qarevo.example:443/', PORTAL_DOCTOR_ORIGIN: 'https://doctor.dev.qarevo.example/', PORTAL_ADMIN_ORIGIN: 'https://admin.dev.qarevo.example/' })
   assert.equal(redirect('https://doctor.dev.qarevo.example/patient/settings?tab=profile', staging).url.href, 'https://patient.dev.qarevo.example/patient/settings?tab=profile')
 })
+
+test('an optional fourth practice origin preserves the existing three-origin rollout', () => {
+  const four = portalHostRedirects({ ...origins, PORTAL_PRACTICE_ORIGIN: 'https://practice.qarevo.example' });
+  assert.equal(redirect('https://practice.qarevo.example/', four).url.href, 'https://practice.qarevo.example/practice/dashboard');
+  assert.equal(redirect('https://patient.qarevo.example/practice/dashboard', four).url.href, 'https://practice.qarevo.example/practice/dashboard');
+  assert.equal(redirect('https://practice.qarevo.example/admin/audit', four).url.href, 'https://admin.qarevo.example/admin/audit');
+  assert.throws(() => portalHostRedirects({ PORTAL_PRACTICE_ORIGIN: 'https://practice.qarevo.example' }), /Configure all three/);
+  assert.throws(() => portalHostRedirects({ ...origins, PORTAL_PRACTICE_ORIGIN: 'https://patient.qarevo.example' }), /distinct hostnames|canonical practice/);
+});
