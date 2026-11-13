@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { ApiError, getSessionStatus, logoutCurrentUser } from '@/lib/api'
 import { sessionTiming, type SessionStatus } from '@/lib/session-timeout'
-import { currentPortal, isPortalEvent } from '@/lib/portal-scope'
+import { currentPortal, isPortalEvent, protectedPortalPath } from '@/lib/portal-scope'
 
 type Timing = ReturnType<typeof sessionTiming>
 const button = 'rounded-xl px-5 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-60'
@@ -14,7 +14,7 @@ export type InitialSessionCheck = {status:SessionStatus; receivedAt:number; requ
 export function SessionGuard({ children, initialCheck }: { children: ReactNode; initialCheck?:InitialSessionCheck }) {
   const pathname = usePathname()
   const portal = currentPortal()
-  const protectedPage = /^\/(patient|doctor|admin)(\/|$)|^\/auth\/profile-setup(\/|$)/.test(pathname)
+  const protectedPage = protectedPortalPath(pathname)
   const monitorSession = protectedPage || /^\/support(?:\/|$)/.test(pathname)
   const [scope, setScope] = useState<string | null>(null)
   const [checked, setChecked] = useState(false)

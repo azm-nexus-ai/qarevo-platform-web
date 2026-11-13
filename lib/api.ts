@@ -143,7 +143,7 @@ function requestHeaders(portal: Portal, marker: string | null, extra?: HeadersIn
     return headers;
 }
 function sessionMutation(path: string): boolean {
-    return /^\/api\/v1\/auth\/(?:login|(?:admin|doctor)\/login|mfa\/verify-(?:email|phone)|verify-(?:otp|email|email-code)|passkeys\/authenticate|social\/(?:google|apple)\/finish)$/.test(path) || ['/api/v1/security/password','/api/v1/security/sessions/revoke-all'].includes(path);
+    return /^\/api\/v1\/auth\/(?:login|(?:admin|doctor)\/login|practice\/(?:verify|invitations\/accept-owner)|mfa\/verify-(?:email|phone)|verify-(?:otp|email|email-code)|passkeys\/authenticate|social\/(?:google|apple)\/finish)$/.test(path) || ['/api/v1/security/password','/api/v1/security/sessions/revoke-all','/api/v1/practice/security/password','/api/v1/practice/security/sessions/revoke-all'].includes(path);
 }
 async function withSessionLock<T>(portal: Portal, operation: () => Promise<T>): Promise<T> {
     if(typeof navigator==='undefined'||!navigator.locks) throw new SessionRefreshError('Secure sessions require a current browser on HTTPS or localhost. Please update your browser.');
@@ -236,7 +236,7 @@ async function request<T>(path:string,init:RequestInit):Promise<T> {
             // Publish the verified identity before allowing any other tab's
             // credential-changing operation to acquire this portal's lock.
             if(result?.browser_session) storeBrowserSession(result,portal);
-            else if(result?.mfa_pending || ['/api/v1/security/password','/api/v1/security/sessions/revoke-all'].includes(path)) clearPortalSession(portal);
+            else if(result?.mfa_pending || ['/api/v1/security/password','/api/v1/security/sessions/revoke-all','/api/v1/practice/security/password','/api/v1/practice/security/sessions/revoke-all'].includes(path)) clearPortalSession(portal);
         }
         return result as T;
     };

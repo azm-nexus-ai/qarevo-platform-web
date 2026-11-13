@@ -1,10 +1,18 @@
-export type Portal = 'patient' | 'doctor' | 'admin'
-export type PortalIdentity = { user_id: string; role: 'PATIENT' | 'PROVIDER' | 'ADMIN'; session_id: string; provider_id?: string | null }
-export const PORTALS: Portal[] = ['patient', 'doctor', 'admin']
+export type Portal = 'patient' | 'doctor' | 'admin' | 'practice'
+export type PortalIdentity = { user_id: string; role: 'PATIENT' | 'PROVIDER' | 'ADMIN' | 'PRACTICE'; session_id: string; provider_id?: string | null }
+export const PORTAL_DEFINITIONS = {
+  patient: { role: 'PATIENT', signIn: '/auth/sign-in', home: '/patient/dashboard' },
+  doctor: { role: 'PROVIDER', signIn: '/auth/doctor/login', home: '/doctor/dashboard' },
+  admin: { role: 'ADMIN', signIn: '/auth/admin/login', home: '/admin/dashboard' },
+  practice: { role: 'PRACTICE', signIn: '/auth/practice/login', home: '/practice/dashboard' },
+} as const
+export const PORTALS = Object.keys(PORTAL_DEFINITIONS) as Portal[]
+export const protectedPortalPath = (path: string) => /^\/(patient|doctor|admin|practice)(\/|$)|^\/auth\/profile-setup(\/|$)/.test(path)
 export const PORTAL_PATH_PREFIXES: Record<Portal, readonly string[]> = {
   patient: ['/patient', '/auth/sign-in', '/auth/sign-up', '/auth/forgot-password', '/auth/reset-password', '/auth/profile-setup', '/auth/otp', '/auth/verify-email', '/auth/account-created', '/auth/welcome'],
   doctor: ['/doctor', '/auth/doctor', '/auth/doctor-register', '/auth/doctor-verify-email', '/auth/doctor-verify-phone'],
   admin: ['/admin', '/auth/admin'],
+  practice: ['/practice', '/auth/practice'],
 }
 const TAB_PORTAL = 'qarevo:active-portal'
 
@@ -31,7 +39,7 @@ export function readPortalIdentity(portal = currentPortal()): PortalIdentity | n
   if (typeof window === 'undefined') return null
   try {
     const value = JSON.parse(window.localStorage.getItem(portalKey('identity', portal)) || 'null')
-    const role = {patient:'PATIENT',doctor:'PROVIDER',admin:'ADMIN'}[portal]
+    const role = PORTAL_DEFINITIONS[portal].role
     if (!value || value.role !== role || typeof value.user_id !== 'string' || !value.user_id || typeof value.session_id !== 'string' || !value.session_id) return null
     return value
   } catch { return null }

@@ -9,6 +9,7 @@ export type AdminNavItem = {
 export const ADMIN_ROUTES = {
   dashboard: '/admin/dashboard',
   doctors: '/admin/doctors',
+  practices: '/admin/practices',
   patients: '/admin/patients',
   adminUsers: '/admin/admin-users',
   exceptions: '/admin/exceptions',
@@ -21,6 +22,7 @@ export const ADMIN_ROUTES = {
 export const ADMIN_SIDEBAR_ITEMS: AdminNavItem[] = [
   { label: 'Dashboard', icon: ICONS.activity, href: ADMIN_ROUTES.dashboard },
   { label: 'Doctors', icon: ICONS.steth, href: ADMIN_ROUTES.doctors },
+  { label: 'Practices', icon: ICONS.user, href: ADMIN_ROUTES.practices },
   { label: 'Patients', icon: ICONS.user, href: ADMIN_ROUTES.patients },
   { label: 'Admin Users', icon: ICONS.shield, href: ADMIN_ROUTES.adminUsers },
   { label: 'Exceptions', icon: ICONS.zap, href: ADMIN_ROUTES.exceptions },

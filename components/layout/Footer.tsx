@@ -28,7 +28,7 @@ const SOCIAL_LINKS = [
 export default function Footer() {
   const path = usePathname()
   const role = usePortalRole()
-  const portal = ['patient', 'doctor', 'admin'].includes(path.split('/')[1]) ? path.split('/')[1] : role
+  const portal = ['patient', 'doctor', 'admin', 'practice'].includes(path.split('/')[1]) ? path.split('/')[1] : role
   const dialog = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const { setTheme } = useTheme()

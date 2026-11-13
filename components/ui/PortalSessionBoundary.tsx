@@ -3,17 +3,17 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { accountChanged, acknowledgePortalScope, readAccountScope } from '@/lib/account-storage'
 import { ApiError, getSessionStatus, storeBrowserSession } from '@/lib/api'
-import { currentPortal, portalFromPath, readPortalIdentity, rememberPortal, retireLegacyCredentials, portalKey } from '@/lib/portal-scope'
+import { currentPortal, portalFromPath, readPortalIdentity, rememberPortal, retireLegacyCredentials, portalKey, protectedPortalPath, PORTAL_DEFINITIONS } from '@/lib/portal-scope'
 import { BookingProvider } from '@/contexts/BookingContext'
 import { SessionGuard, type InitialSessionCheck } from '@/components/ui/SessionGuard'
 
 export function PortalSessionBoundary({children}:{children:ReactNode}) {
   const path=usePathname()
   const portal=typeof window === 'undefined' ? portalFromPath(path) || 'patient' : currentPortal(path)
-  return <PortalBoundary key={`${portal}:${/^\/(patient|doctor|admin)(\/|$)|^\/auth\/profile-setup(\/|$)/.test(path)}`} portal={portal} path={path}>{children}</PortalBoundary>
+  return <PortalBoundary key={`${portal}:${protectedPortalPath(path)}`} portal={portal} path={path}>{children}</PortalBoundary>
 }
 function PortalBoundary({children,portal,path}:{children:ReactNode;portal:ReturnType<typeof currentPortal>;path:string}) {
-  const protectedPage=/^\/(patient|doctor|admin)(\/|$)|^\/auth\/profile-setup(\/|$)/.test(path)
+  const protectedPage=protectedPortalPath(path)
   const [entryPath] = useState(path)
   const [initialCheck,setInitialCheck]=useState<InitialSessionCheck>()
   const [ready,setReady]=useState(false),[error,setError]=useState(''),[attempt,setAttempt]=useState(0)
@@ -23,7 +23,7 @@ function PortalBoundary({children,portal,path}:{children:ReactNode;portal:Return
     acknowledgePortalScope(portal)
     if(!protectedPage)return
     let alive=true
-    const signIn=portal==='patient'?'/auth/sign-in':`/auth/${portal}/login`
+    const signIn=PORTAL_DEFINITIONS[portal].signIn
     if(window.localStorage.getItem(portalKey('signed-out',portal))) {
       window.location.replace(`${signIn}?${new URLSearchParams({next:entryPath})}`);return
     }

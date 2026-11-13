@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { readAccountScope } from './account-storage'
-import { currentPortal, portalKey, readPortalIdentity, type PortalIdentity } from './portal-scope'
+import { currentPortal, portalKey, readPortalIdentity, PORTAL_DEFINITIONS, type PortalIdentity } from './portal-scope'
 
 type ContinuationOptions = { allowEndedSession?: boolean; completedSession?: PortalIdentity }
 
@@ -20,7 +20,7 @@ export function capturePortalAction(isMounted: () => boolean) {
       if (!isMounted() || currentPortal() !== portal || window.location.pathname !== pathname) return false
       const current = readAccountScope(portal)
       if (completedSession) {
-        const expectedRole = { patient: 'PATIENT', doctor: 'PROVIDER', admin: 'ADMIN' }[portal]
+        const expectedRole = PORTAL_DEFINITIONS[portal].role
         return completedSession.role === expectedRole && !!completedSession.user_id && !!completedSession.session_id &&
           current === JSON.stringify([portal, completedSession.user_id, completedSession.session_id])
       }
