@@ -1,5 +1,10 @@
 'use client'
 
+import AdminMobileNavigation from '@/components/layout/AdminMobileNavigation'
+import PortalAccessLinks from '@/components/layout/PortalAccessLinks'
+import SidebarToggle from '@/components/layout/SidebarToggle'
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
+
 import React, { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { ADMIN_SIDEBAR_ITEMS, ADMIN_ROUTES, isAdminNavActive } from '@/constants/admin-navigation'
@@ -7,12 +12,12 @@ import { ICONS } from '@/constants/icons'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import Link from 'next/link'
 import {
-  clearAuthTokens,
-  isAuthError,
+  clearPortalSession,
   isAdmin,
   logoutCurrentUser,
-  readAccessToken,
+  readSessionMarker,
 } from '@/lib/api'
 
 export default function AdminLayout({
@@ -29,15 +34,15 @@ export default function AdminLayout({
   useEffect(() => {
     const mountedTimer = window.setTimeout(() => setMounted(true), 0)
 
-    if (!readAccessToken()) {
-      clearAuthTokens()
-      router.replace('/auth/sign-in')
+    if (!readSessionMarker()) {
+      clearPortalSession()
+      router.replace('/auth/admin/login')
       return () => window.clearTimeout(mountedTimer)
     }
 
     if (!isAdmin()) {
-      clearAuthTokens()
-      router.replace('/auth/sign-in')
+      clearPortalSession()
+      router.replace('/auth/admin/login')
       return () => window.clearTimeout(mountedTimer)
     }
 
@@ -60,50 +65,95 @@ export default function AdminLayout({
       console.error('Admin logout failed before local cleanup', error)
     } finally {
       setShowLogoutConfirm(false)
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
     }
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: PAGE_BG }}>
+    <div className='admin-portal-shell portal-shell' style={{ minHeight: '100vh', background: PAGE_BG }}>
+      <AdminMobileNavigation onSignOut={handleLogoutClick} />
       <style>{`
         @media (max-width: 920px) {
-          aside {
+          #admin-primary-sidebar {
             display: none !important;
           }
-          main {
+          [data-portal-main=admin] {
             margin-left: 0 !important;
           }
-          header {
+          [data-portal-main=admin] > header {
             display: none !important;
           }
-          div[style*="padding: 28px 32px"] {
+          .admin-portal-shell div[style*="padding: 28px 32px"] {
             padding: 16px !important;
           }
         }
       `}</style>
+          {/* Header */}
+          <header className="portal-desktop-navbar" aria-label="Admin main navigation" style={{
+            background: "var(--surface-glass)",
+            backdropFilter: 'blur(22px) saturate(175%)',
+            WebkitBackdropFilter: 'blur(22px) saturate(175%)',
+            borderBottom: "1px solid var(--border)",
+            padding: '12px 24px', minHeight: '80px',
+            position: 'sticky',
+            top: 0,
+            zIndex: 5,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94)',
+          }}>
+            <div className='portal-navbar-row' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+              <Link href='/admin/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health admin dashboard'><AuthenticatedLogo width={156} /></Link>
+              <SidebarToggle role='admin' />
+              <div className='portal-navbar-title'>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Admin Portal</h2>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Platform administration and monitoring</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <PortalAccessLinks /><ThemeToggle />
+                <button
+                  onClick={handleLogoutClick}
+                  disabled={loggingOut}
+                  style={{
+                    minHeight: '40px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(220,38,38,0.16)',
+                    background: 'rgba(220,38,38,0.06)',
+                    color: T.red,
+                    cursor: loggingOut ? 'wait' : 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    transition: 'all 0.15s',
+                    opacity: loggingOut ? 0.65 : 1,
+                  }}
+                  title="Sign out"
+                >
+                  {loggingOut ? 'Signing out...' : 'Sign out'}
+                </button>
+              </div>
+            </div>
+          </header>
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <aside style={{
+        <aside id="admin-primary-sidebar" style={{
           width: '260px',
-          background: 'rgba(247,250,252,0.82)',
+          background: "var(--surface-subtle)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-          borderRight: '1px solid rgba(4,53,77,0.08)',
-          minHeight: '100vh',
+          borderRight: "1px solid var(--border)",
+          minHeight: 0, height: 'calc(100dvh - 80px)',
           position: 'fixed',
           left: 0,
-          top: 0,
+          top: '80px',
           zIndex: 10,
           boxShadow: Sh.nav,
           display: 'flex',
           flexDirection: 'column',
         }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)', flexShrink: 0 }}>
-            <AuthenticatedLogo width={140} />
-            <p style={{ margin: '8px 0 0', fontSize: '11px', color: T.slate2, fontWeight: 500 }}>Admin Portal</p>
+          <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+            <Link href='/admin/dashboard' aria-label='Qarevo Health admin dashboard'><AuthenticatedLogo width={140} /></Link>
+            <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate2, fontWeight: 500 }}>Admin Portal</p>
           </div>
-          
+
           <nav style={{ padding: '16px 12px', flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {ADMIN_SIDEBAR_ITEMS.map((item) => {
@@ -143,7 +193,7 @@ export default function AdminLayout({
                         {loggingOut ? 'Signing out...' : item.label}
                       </button>
                     ) : (
-                      <a
+                      <Link
                         href={item.href}
                         style={{
                           display: 'flex',
@@ -155,7 +205,7 @@ export default function AdminLayout({
                           textDecoration: 'none',
                           transition: 'all 0.15s ease',
                           ...(isActive
-                            ? { background: 'rgba(32,181,223,0.12)', color: T.blue, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }
+                            ? { background: 'rgba(32,181,223,0.12)', color: T.link, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }
                             : { color: T.slate, background: 'transparent' }
                           ),
                         }}
@@ -172,7 +222,7 @@ export default function AdminLayout({
                       >
                         <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={isActive ? T.blue : T.slate2} /></span>
                         {item.label}
-                      </a>
+                      </Link>
                     )}
                   </li>
                 )
@@ -182,48 +232,8 @@ export default function AdminLayout({
         </aside>
 
         {/* Main content */}
-        <main style={{ flex: 1, marginLeft: '260px' }}>
-          {/* Header */}
-          <header style={{
-            background: 'rgba(255,255,255,0.86)',
-            backdropFilter: 'blur(22px) saturate(175%)',
-            WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-            borderBottom: '1px solid rgba(4,53,77,0.08)',
-            padding: '16px 32px',
-            position: 'sticky',
-            top: 0,
-            zIndex: 5,
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Admin Portal</h2>
-                <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Platform administration and monitoring</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button
-                  onClick={handleLogoutClick}
-                  disabled={loggingOut}
-                  style={{
-                    minHeight: '40px',
-                    padding: '0 14px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(220,38,38,0.16)',
-                    background: 'rgba(220,38,38,0.06)',
-                    color: T.red,
-                    cursor: loggingOut ? 'wait' : 'pointer',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    transition: 'all 0.15s',
-                    opacity: loggingOut ? 0.65 : 1,
-                  }}
-                  title="Sign out"
-                >
-                  {loggingOut ? 'Signing out...' : 'Sign out'}
-                </button>
-              </div>
-            </div>
-          </header>
+        <main data-portal-main='admin' style={{ flex: 1, marginLeft: '260px' }}>
+
 
           {/* Page content */}
           <div style={{ padding: '28px 32px' }}>
@@ -244,7 +254,7 @@ export default function AdminLayout({
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px',
-            background: 'rgba(4,53,77,0.32)',
+            background: "var(--surface-hover)",
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
           }}
@@ -253,8 +263,8 @@ export default function AdminLayout({
             width: '100%',
             maxWidth: '380px',
             borderRadius: '18px',
-            border: '1px solid rgba(255,255,255,0.88)',
-            background: 'rgba(255,255,255,0.96)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             boxShadow: '0 24px 64px rgba(4,53,77,0.2)',
             padding: '24px',
           }}>
@@ -274,7 +284,7 @@ export default function AdminLayout({
                 type="button"
                 onClick={() => setShowLogoutConfirm(false)}
                 disabled={loggingOut}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer' }}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer' }}
               >
                 No, stay
               </button>
@@ -282,7 +292,7 @@ export default function AdminLayout({
                 type="button"
                 onClick={handleConfirmLogout}
                 disabled={loggingOut}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: T.red, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer', opacity: loggingOut ? 0.7 : 1 }}
+                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: '#b92332', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer', opacity: loggingOut ? 0.7 : 1 }}
               >
                 {loggingOut ? 'Signing out...' : 'Yes, sign out'}
               </button>

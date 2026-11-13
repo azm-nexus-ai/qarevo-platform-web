@@ -16,7 +16,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 function JourneyVisual() {
@@ -168,7 +168,7 @@ function LeftPanel() {
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontSize: '24px',
               fontWeight: 800,
               color: '#fff',
@@ -180,7 +180,7 @@ function LeftPanel() {
             Personalized care begins here.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Built around your health story.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Your profile helps us match you with the right physicians and enable more meaningful, secure consultations.
           </p>
         </div>
@@ -220,7 +220,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -253,8 +253,8 @@ function SetupTimeline() {
               gap: '11px',
               padding: '11px 12px',
               borderRadius: '12px',
-              background: 'rgba(4,53,77,0.024)',
-              border: '1px solid rgba(4,53,77,0.06)',
+              background: "var(--surface-hover)",
+              border: "1px solid var(--border)",
             }}
           >
             <div
@@ -274,7 +274,7 @@ function SetupTimeline() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em', marginBottom: '2px' }}>{step.title}</div>
-              <div style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.005em' }}>{step.sub}</div>
+              <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.005em' }}>{step.sub}</div>
             </div>
           </div>
           {i < steps.length - 1 ? (
@@ -324,11 +324,11 @@ export default function ProfileSetupPage() {
             className='onboard-card'
             aria-live='polite'
             style={{
-              background: 'rgba(255,255,255,0.9)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(34px) saturate(200%)',
               WebkitBackdropFilter: 'blur(34px) saturate(200%)',
               borderRadius: '24px',
-              border: '1px solid rgba(255,255,255,0.92)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)',
               padding: '38px 38px 30px',
               animation: 'fadeUp 0.35s ease',
@@ -338,7 +338,7 @@ export default function ProfileSetupPage() {
               <h1
                 style={{
                   margin: '0 0 8px',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                   fontSize: '25px',
                   fontWeight: 800,
                   color: T.navy,
@@ -361,8 +361,8 @@ export default function ProfileSetupPage() {
                 marginBottom: '14px',
                 padding: '12px 14px',
                 borderRadius: '12px',
-                background: 'rgba(4,53,77,0.024)',
-                border: '1px solid rgba(4,53,77,0.06)',
+                background: "var(--surface-hover)",
+                border: "1px solid var(--border)",
                 display: 'flex',
                 justifyContent: 'space-between',
                 gap: '12px',
@@ -370,11 +370,11 @@ export default function ProfileSetupPage() {
               }}
             >
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 1 of 6</p>
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Estimated Completion</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Estimated Completion</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>3-5 Minutes</p>
               </div>
             </div>
@@ -384,7 +384,7 @@ export default function ProfileSetupPage() {
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <p style={{ margin: '0 0 10px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              <p style={{ margin: '0 0 10px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                 Why we need this
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -400,7 +400,7 @@ export default function ProfileSetupPage() {
                 {[
                   { icon: ICONS.lock, label: 'Secure & Encrypted' },
                   { icon: ICONS.steth, label: 'Verified Healthcare Professionals' },
-                  { icon: ICONS.shield, label: 'HIPAA-Oriented Security' },
+                  { icon: ICONS.shield, label: 'Account-Based Access' },
                   { icon: ICONS.brain, label: 'AI-Assisted Healthcare' },
                   { icon: ICONS.activity, label: 'Private Medical Records' },
                 ].map(({ icon, label }) => (
@@ -412,10 +412,10 @@ export default function ProfileSetupPage() {
                       gap: '5px',
                       padding: '6px 11px',
                       borderRadius: '100px',
-                      background: 'rgba(4,53,77,0.03)',
-                      border: '1px solid rgba(4,53,77,0.08)',
+                      background: "var(--surface-hover)",
+                      border: "1px solid var(--border)",
                       color: T.slate2,
-                      fontSize: '11.5px',
+                      fontSize: "13px",
                       fontWeight: 600,
                       letterSpacing: '-0.005em',
                     }}
@@ -439,7 +439,7 @@ export default function ProfileSetupPage() {
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                  background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',

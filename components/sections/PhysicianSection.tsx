@@ -10,10 +10,10 @@ export default function PhysicianSection() {
   const router = useRouter()
 
   const features = [
-    { icon: ICONS.steth, title: 'Verified Physicians', desc: 'Board-certified specialists across Europe' },
-    { icon: ICONS.video, title: 'Virtual Consultations', desc: 'HD video with AI-assisted diagnostics' },
-    { icon: ICONS.brain, title: 'Clinical Intelligence', desc: 'AI-powered treatment recommendations' },
-    { icon: ICONS.shield, title: 'Secure Platform', desc: 'HIPAA & GDPR compliant infrastructure' },
+    { icon: ICONS.steth, title: 'Verified Physicians', desc: 'Professional access follows administrator review' },
+    { icon: ICONS.video, title: 'Virtual Consultations', desc: 'Video consultation workflow under development' },
+    { icon: ICONS.brain, title: 'Optional Drafting', desc: 'Consent-based draft assistance requiring clinician review' },
+    { icon: ICONS.shield, title: 'Secure Platform', desc: 'Account verification and controlled clinical access' },
   ]
 
   return (
@@ -22,12 +22,12 @@ export default function PhysicianSection() {
       style={{
         position: 'relative',
         zIndex: 1,
-        background: 'rgba(255,255,255,0.52)',
+        background: 'var(--surface-subtle)',
         backdropFilter: 'blur(28px) saturate(160%)',
         WebkitBackdropFilter: 'blur(28px) saturate(160%)',
-        borderTop: '1px solid rgba(255,255,255,0.72)',
-        borderBottom: '1px solid rgba(255,255,255,0.56)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(4,53,77,0.02)',
+        borderTop: "1px solid var(--border)",
+        borderBottom: '1px solid var(--border)',
+        boxShadow: 'none',
       }}
     >
       <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '88px 24px' }}>
@@ -57,7 +57,7 @@ export default function PhysicianSection() {
                   flexShrink: 0,
                 }}
               />
-              <span style={{ fontSize: '11.5px', fontWeight: 600, color: T.blue, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: "13px", fontWeight: 600, color: T.link, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                 For Healthcare Providers
               </span>
             </div>
@@ -73,7 +73,7 @@ export default function PhysicianSection() {
               }}
             >
               Join the network of{' '}
-              <span style={{ color: T.blue, fontWeight: 700 }}>verified physicians</span>
+              <span style={{ color: T.link, fontWeight: 700 }}>verified physicians</span>
             </h2>
 
             <p
@@ -86,7 +86,7 @@ export default function PhysicianSection() {
                 maxWidth: '420px',
               }}
             >
-              Expand your practice with AI-powered clinical tools, secure patient management, and seamless care coordination across Europe.
+              Explore patient intake, assigned clinical work and care coordination in our development preview for independent practices.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '36px' }}>
@@ -154,7 +154,7 @@ export default function PhysicianSection() {
                   letterSpacing: '-0.015em',
                   ...Glass.pill,
                 }}
-                on={{ background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(4,53,77,0.13)' }}
+                on={{ background: "var(--surface-glass)", border: "1px solid var(--border)" }}
               >
                 Physician Sign In
               </HoverBtn>
@@ -182,10 +182,10 @@ export default function PhysicianSection() {
                 width: '280px',
                 padding: '28px',
                 borderRadius: '20px',
-                background: 'rgba(255,255,255,0.9)',
+                background: "var(--surface-glass)",
                 backdropFilter: 'blur(24px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                border: '1px solid rgba(255,255,255,0.9)',
+                border: "1px solid var(--border)",
                 boxShadow: '0 8px 32px rgba(4,53,77,0.08), 0 24px 64px rgba(4,53,77,0.06)',
               }}
             >
@@ -196,7 +196,7 @@ export default function PhysicianSection() {
                     width: '56px',
                     height: '56px',
                     borderRadius: '14px',
-                    background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                    background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -210,10 +210,10 @@ export default function PhysicianSection() {
                 </div>
                 <div>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em', marginBottom: '2px' }}>
-                    Dr. Sarah Chen
+                    Practice workspace
                   </div>
-                  <div style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.005em' }}>
-                    Cardiology • Berlin
+                  <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.005em' }}>
+                    Illustrative workflow
                   </div>
                 </div>
               </div>
@@ -222,38 +222,38 @@ export default function PhysicianSection() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                 <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(9,173,112,0.08)', border: '1px solid rgba(9,173,112,0.15)' }}>
                   <div style={{ fontSize: '24px', fontWeight: 800, color: T.green, letterSpacing: '-0.02em', marginBottom: '2px' }}>
-                    247
+                    Intake
                   </div>
-                  <div style={{ fontSize: '11px', color: T.slate2, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                    Patients
+                  <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                    Review
                   </div>
                 </div>
                 <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.15)' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 800, color: T.blue, letterSpacing: '-0.02em', marginBottom: '2px' }}>
-                    4.9
+                  <div style={{ fontSize: '24px', fontWeight: 800, color: T.link, letterSpacing: '-0.02em', marginBottom: '2px' }}>
+                    Notes
                   </div>
-                  <div style={{ fontSize: '11px', color: T.slate2, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                    Rating
+                  <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                    Document
                   </div>
                 </div>
               </div>
 
               {/* Activity */}
-              <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(4,53,77,0.03)', border: '1px solid rgba(4,53,77,0.08)' }}>
+              <div style={{ padding: '16px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <Ico p={ICONS.activity} size={14} sw={1.6} color={T.blue} />
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                    Today&apos;s Schedule
+                  <span style={{ fontSize: "13px", fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
+                    A connected care journey
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
-                    <span style={{ fontSize: '12px', color: T.slate }}>09:00 AM</span>
-                    <span style={{ fontSize: '12px', fontWeight: 500, color: T.navy }}>Patient Consultation</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: "1px solid var(--border)" }}>
+                    <span style={{ fontSize: "13px", color: T.slate }}>01</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>Review patient intake</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-                    <span style={{ fontSize: '12px', color: T.slate }}>11:30 AM</span>
-                    <span style={{ fontSize: '12px', fontWeight: 500, color: T.navy }}>Follow-up Call</span>
+                    <span style={{ fontSize: "13px", color: T.slate }}>02</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>Document follow-up</span>
                   </div>
                 </div>
               </div>
@@ -267,10 +267,10 @@ export default function PhysicianSection() {
                 right: '20px',
                 padding: '12px 16px',
                 borderRadius: '12px',
-                background: 'rgba(255,255,255,0.95)',
+                background: "var(--surface-glass)",
                 backdropFilter: 'blur(16px)',
                 WebkitBackdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255,255,255,0.9)',
+                border: "1px solid var(--border)",
                 boxShadow: '0 4px 20px rgba(4,53,77,0.08)',
                 display: 'flex',
                 alignItems: 'center',
@@ -278,8 +278,8 @@ export default function PhysicianSection() {
               }}
             >
               <Ico p={ICONS.check} size={16} sw={2.5} color={T.green} />
-              <span style={{ fontSize: '12px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                License Verified
+              <span style={{ fontSize: "13px", fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
+                Approval required
               </span>
             </div>
 
@@ -290,10 +290,10 @@ export default function PhysicianSection() {
                 left: '0px',
                 padding: '12px 16px',
                 borderRadius: '12px',
-                background: 'rgba(255,255,255,0.95)',
+                background: "var(--surface-glass)",
                 backdropFilter: 'blur(16px)',
                 WebkitBackdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255,255,255,0.9)',
+                border: "1px solid var(--border)",
                 boxShadow: '0 4px 20px rgba(4,53,77,0.08)',
                 display: 'flex',
                 alignItems: 'center',
@@ -301,8 +301,8 @@ export default function PhysicianSection() {
               }}
             >
               <Ico p={ICONS.shield} size={16} sw={1.75} color={T.blue} />
-              <span style={{ fontSize: '12px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                HIPAA Compliant
+              <span style={{ fontSize: "13px", fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
+                Account verification
               </span>
             </div>
           </div>

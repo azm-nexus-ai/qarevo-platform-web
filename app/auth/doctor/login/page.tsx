@@ -1,20 +1,26 @@
 'use client'
+import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
+import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
+import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
 
 import { useState, useId } from 'react'
 import Link from 'next/link'
+import SocialSignInButtons from '@/components/auth/SocialSignInButtons'
+import { useLoginCooldown } from '@/lib/use-login-cooldown'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { ApiError, apiPost, getApiErrorDetail, type DoctorLoginRequest } from '@/lib/api'
+import { ApiError, apiPost, getApiErrorDetail, getLoginThrottleMessage, type DoctorLoginRequest } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 // Page background
 const PAGE_BG = [
   'radial-gradient(ellipse 65% 55% at 12% 8%,   rgba(32,181,223,0.08) 0%, transparent 55%)',
   'radial-gradient(ellipse 55% 50% at 90% 18%,  rgba(32,181,223,0.06) 0%, transparent 52%)',
   'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(52,140,234,0.06) 0%, transparent 58%)',
-  '#EDF2FA',
+  'var(--canvas)',
 ].join(', ')
 
 // Left panel background
@@ -23,11 +29,15 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 function getFriendlyDoctorLoginError(error: unknown) {
+  const throttle = getLoginThrottleMessage(error)
+  if (throttle) return throttle
+
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+  if (detail.includes('administrator') || detail.includes('clinician_approval') || detail.includes('not active')) return getApiErrorDetail(error) || 'Administrator review is required.'
 
   if (detail.includes('phone not verified')) {
     return 'Phone verification is required. Please complete phone verification to continue.'
@@ -41,7 +51,7 @@ function getFriendlyDoctorLoginError(error: unknown) {
   if (detail.includes('use patient login endpoint') || detail.includes('patient account')) {
     return 'This is a patient account. Please use the patient login page instead.'
   }
-  if (detail.includes('valid email')) {
+  if (error instanceof ApiError && error.status === 422 && detail.includes('valid email')) {
     return 'Enter a valid email, username, or phone number.'
   }
   if (error instanceof ApiError && error.status === 401) {
@@ -91,12 +101,12 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
     : 'none'
 
   const bg = error
-    ? '#FFF5F5'
+    ? 'var(--danger-soft)'
     : success
-    ? '#F0FDF8'
+    ? 'var(--success-soft)'
     : focused
-    ? '#fff'
-    : 'rgba(255,255,255,0.7)'
+    ? 'var(--surface)'
+    : 'var(--surface)'
 
   const hasLeft = !!icon
   const hasRight = !!rightSlot || success || !!error
@@ -104,16 +114,19 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label}
+        {label} <span>(Required)</span>
       </label>
       <div style={{ position: 'relative' }}>
         {icon && (
-          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.blue : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
+          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.link : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
             <Ico p={icon} size={14} sw={1.75} />
           </span>
         )}
         <input
           id={id}
+          required
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           type={type}
           value={value}
           placeholder={placeholder}
@@ -146,40 +159,8 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
           </span>
         )}
       </div>
-      {error && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{error}</p>}
+      {error && <p id={`${id}-error`} role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
     </div>
-  )
-}
-
-// Checkbox component
-function Checkbox({ checked, onChange, children }: { checked: boolean; onChange: () => void; children: React.ReactNode }) {
-  return (
-    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', cursor: 'pointer', userSelect: 'none' }}>
-      <div
-        role="checkbox"
-        aria-checked={checked}
-        tabIndex={0}
-        onClick={onChange}
-        onKeyDown={e => e.key === ' ' && onChange()}
-        style={{
-          width: '17px',
-          height: '17px',
-          borderRadius: '5px',
-          flexShrink: 0,
-          border: `1.5px solid ${checked ? T.blue : 'rgba(4,53,77,0.18)'}`,
-          background: checked ? T.blue : '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.14s',
-          boxShadow: checked ? '0 1px 4px rgba(32,181,223,0.25)' : 'none',
-          outline: 'none',
-        }}
-      >
-        {checked && <Ico p={ICONS.check} size={9} sw={3} color="#fff" />}
-      </div>
-      <span style={{ fontSize: '13px', color: T.slate, letterSpacing: '-0.005em' }}>{children}</span>
-    </label>
   )
 }
 
@@ -218,18 +199,18 @@ function LeftPanel() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-        <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
+        <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
           Physician Portal
         </h2>
-        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-          Access your clinical workspace and manage patient consultations with AI-powered support.
+        <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          Access your clinical workspace and manage your patient consultations.
         </p>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['Secure 2FA', 'HIPAA', 'GDPR'].map(b => (
-            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.48)', letterSpacing: '0.04em' }}>{b}</span>
+          {['Email verification', 'Clinician review', 'Protected access'].map(b => (
+            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
           ))}
         </div>
       </div>
@@ -239,61 +220,70 @@ function LeftPanel() {
 
 // Main page
 export default function DoctorLoginPage() {
+  const captureAction = usePortalAction()
   const router = useRouter()
-  
+
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [remember, setRemember] = useState(false)
-  
+
   const [touched, setTouched] = useState({
     identifier: false,
     password: false,
   })
-  
+
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
+  const [handoff, setHandoff] = useState<PortalHandoff | null>(null)
+  const cooldown = useLoginCooldown()
 
   const identifierErr = touched.identifier && !identifier ? 'Email, username, or phone is required' : ''
   const passErr = touched.password && !password ? 'Password is required' : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading || cooldown.seconds > 0) return
     setTouched({ identifier: true, password: true })
-    
+
     if (!identifier || !password) {
       return
     }
 
     setLoading(true)
-    setAuthError('')
+    setAuthError(''); setHandoff(null)
+    const action = captureAction()
+    const current = () => action.isCurrent({ allowEndedSession: true })
 
     try {
       const loginData: DoctorLoginRequest = {
         identifier: identifier.trim(),
         password,
-        remember_me: remember,
       }
 
-      const response = await apiPost('/api/v1/auth/doctor/login', loginData) as { temp_token: string }
-      
+      const response = await apiPost('/api/v1/auth/doctor/login', loginData) as { mfa_pending: boolean }
+      if (!current()) return
+
       // Store TEMP_AUTH token for 2FA flow
-      localStorage.setItem('doctor_temp_token', response.temp_token)
-      localStorage.setItem('doctor_identifier', identifier)
-      
+      if (!response.mfa_pending) throw new Error('Secure clinician verification could not be started. Please retry.')
+      sessionStorage.setItem('qarevo:doctor:identifier', identifier)
+
       // Redirect to 2FA verification page
-      router.push('/auth/doctor/2fa')
+      const intended = safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PROVIDER')
+      router.push('/auth/doctor/2fa' + (intended ? `?${new URLSearchParams({ next: intended })}` : ''))
     } catch (error) {
-      setAuthError(getFriendlyDoctorLoginError(error))
+      if (!current()) return
+      cooldown.record(error)
+      const wrongPortal = authenticatedPortalHandoff(error)
+      setHandoff(wrongPortal)
+      setAuthError(wrongPortal ? '' : getFriendlyDoctorLoginError(error))
     } finally {
-      setLoading(false)
+      if (current()) setLoading(false)
     }
   }
 
   const pwToggle = (
     <button
       type="button"
-      tabIndex={-1}
       onClick={() => setShowPassword(s => !s)}
       aria-label={showPassword ? 'Hide password' : 'Show password'}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex' }}
@@ -304,7 +294,7 @@ export default function DoctorLoginPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`* { box-sizing: border-box; } input::placeholder { color: rgba(4,53,77,0.3); } @media (max-width: 860px) { .doctor-login-left { display: none !important; } }`}</style>
+      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } @media (max-width: 860px) { .doctor-login-left { display: none !important; } }`}</style>
 
       {/* Left panel */}
       <div className="doctor-login-left">
@@ -322,39 +312,40 @@ export default function DoctorLoginPage() {
 
           {/* Form card */}
           <div style={{
-            background: 'rgba(255,255,255,0.88)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(28px) saturate(200%)',
             WebkitBackdropFilter: 'blur(28px) saturate(200%)',
             borderRadius: '22px',
-            border: '1px solid rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
-            padding: '40px 40px 36px',
+            padding: 'clamp(20px, 5vw, 40px)',
           }}>
             {/* Header */}
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
-                <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
+                <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
                   Physician Sign In
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
                   Enter your credentials to access your clinical workspace
                 </p>
               </div>
-              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.steth} size={20} sw={1.25} color="#fff" />
               </div>
             </div>
 
+            {handoff && <WrongPortalNotice handoff={handoff}/>}
             {/* Error banner */}
-            {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: '#FFF5F5', border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+            {(cooldown.message || authError) && (
+              <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={16} sw={1.75} color={T.red} />
-                <span style={{ fontSize: '13px', color: '#991B1B', lineHeight: 1.4 }}>{authError}</span>
+                <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.4 }}>{cooldown.message || authError}</span>
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Field
                 label="Email, Username, or Phone"
                 placeholder="doctor@example.com"
@@ -379,14 +370,9 @@ export default function DoctorLoginPage() {
                 autoComplete="current-password"
               />
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Checkbox
-                  checked={remember}
-                  onChange={() => setRemember(!remember)}
-                >
-                  Remember me
-                </Checkbox>
-                <Link href="/auth/forgot-password" style={{ fontSize: '13px', color: T.blue, textDecoration: 'none', fontWeight: 500 }}>
+              <SessionPolicyHint />
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Link href="/auth/doctor/forgot-password" style={{ fontSize: '13px', color: T.link, textDecoration: 'none', fontWeight: 500 }}>
                   Forgot password?
                 </Link>
               </div>
@@ -394,13 +380,13 @@ export default function DoctorLoginPage() {
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || cooldown.seconds > 0}
                 style={{
                   width: '100%',
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,#348CEA 100%)`,
+                  background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,var(--primary-end) 100%)`,
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',
@@ -420,15 +406,18 @@ export default function DoctorLoginPage() {
               </button>
             </form>
 
+            <PortalSignInReference portal='PROVIDER'/>
+              <SocialSignInButtons portal='PROVIDER' />
+
             {/* 2FA notice */}
             <div style={{ marginTop: '20px', padding: '12px 16px', borderRadius: '11px', background: 'rgba(32,181,223,0.06)', border: '1px solid rgba(32,181,223,0.12)' }}>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                 <Ico p={ICONS.shield} size={16} sw={1.75} color={T.blue} />
                 <div>
-                  <p style={{ margin: 0, fontSize: '12px', color: T.navy, fontWeight: 600, marginBottom: '4px' }}>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.navy, fontWeight: 600, marginBottom: '4px' }}>
                     Two-Factor Authentication Required
                   </p>
-                  <p style={{ margin: 0, fontSize: '11.5px', color: T.slate, lineHeight: 1.4 }}>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.4 }}>
                     For your security, you&apos;ll need to verify your identity with a code sent to your email or phone after entering your credentials.
                   </p>
                 </div>
@@ -438,7 +427,7 @@ export default function DoctorLoginPage() {
             {/* Register link */}
             <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
               New physician?{' '}
-              <Link href="/auth/doctor-register" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>
+              <Link href="/auth/doctor-register" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>
                 Create an account
               </Link>
             </p>

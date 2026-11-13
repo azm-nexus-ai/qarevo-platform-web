@@ -3,16 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
+import ClinicalAccessAuditPanel from '@/components/admin/ClinicalAccessAuditPanel'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getAdminAuditLogs,
   getActionSummary,
   exportAdminAuditLogs,
-  getAuditLog,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   isAdmin,
   type AdminAuditLog,
   type AdminActionSummary,
@@ -21,11 +19,11 @@ import {
 function AuditLogCard({ log }: { log: AdminAuditLog }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '20px',
       display: 'flex',
@@ -34,18 +32,18 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '12px', color: T.slate2 }}>
+          <span style={{ fontSize: "13px", color: T.slate2 }}>
             {new Date(log.created_at).toLocaleString()}
           </span>
-          <span style={{ fontSize: '12px', color: T.slate }}>
-            #{log.log_id.slice(-8)}
+          <span style={{ fontSize: "13px", color: T.slate }}>
+            #{log.id.slice(-8)}
           </span>
         </div>
-        <span style={{ fontSize: '12px', fontWeight: 600, color: T.blue }}>
+        <span style={{ fontSize: "13px", fontWeight: 600, color: T.link }}>
           {log.action}
         </span>
       </div>
-      
+
       <div>
         <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: T.navy }}>
           {log.admin_user_name || log.admin_user_id}
@@ -54,7 +52,7 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
           Target: {log.target_type} {log.target_id && `#${log.target_id.slice(-8)}`}
         </p>
         {log.ip_address && (
-          <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate }}>
+          <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate }}>
             IP: {log.ip_address}
           </p>
         )}
@@ -62,10 +60,10 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
 
       {log.changes && Object.keys(log.changes).length > 0 && (
         <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.18)' }}>
-          <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: T.blue }}>Changes:</p>
+          <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.link }}>Changes:</p>
           {Object.entries(log.changes).map(([field, change]) => (
-            <div key={field} style={{ marginBottom: '8px', fontSize: '12px', color: T.slate }}>
-              <span style={{ fontWeight: 600 }}>{field}:</span> {String(change.old)} → {String(change.new)}
+            <div key={field} style={{ marginBottom: '8px', fontSize: "13px", color: T.slate }}>
+              <span style={{ fontWeight: 600 }}>{field}:</span> {change && typeof change === 'object' && 'old' in change && 'new' in change ? `${String(change.old)} → ${String(change.new)}` : JSON.stringify(change)}
             </div>
           ))}
         </div>
@@ -74,11 +72,12 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
   )
 }
 
-export default function AuditLogsPage() {
+function AdminActionAuditPanel() {
   const router = useRouter()
   const [logs, setLogs] = useState<AdminAuditLog[]>([])
   const [actionSummary, setActionSummary] = useState<AdminActionSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [retry, setRetry] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [actionFilter, setActionFilter] = useState('')
   const [targetTypeFilter, setTargetTypeFilter] = useState('')
@@ -86,34 +85,36 @@ export default function AuditLogsPage() {
   const [dateTo, setDateTo] = useState('')
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
-      router.replace('/auth/sign-in')
+    if (!readSessionMarker()) {
+      clearPortalSession()
+      router.replace('/auth/admin/login')
       return
     }
 
     if (!isAdmin()) {
-      router.replace('/auth/sign-in')
+      router.replace('/auth/admin/login')
       return
     }
 
     let cancelled = false
 
     async function fetchData() {
+      setLoading(true)
       try {
         const [logsData, summaryData] = await Promise.all([
           getAdminAuditLogs(undefined, actionFilter, targetTypeFilter, undefined, dateFrom, dateTo),
           getActionSummary(dateFrom, dateTo),
         ])
+        if (!Array.isArray(logsData.logs) || !Array.isArray(summaryData.actions)) throw new Error('Unexpected audit service response')
         if (!cancelled) {
           setLogs(logsData.logs)
-          setActionSummary(summaryData)
+          setActionSummary(summaryData.actions)
           setError(null)
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
+          clearPortalSession()
+          router.replace('/auth/admin/login')
           return
         }
         console.error('Failed to load audit logs', err)
@@ -128,7 +129,7 @@ export default function AuditLogsPage() {
     return () => {
       cancelled = true
     }
-  }, [router, actionFilter, targetTypeFilter, dateFrom, dateTo])
+  }, [router, actionFilter, targetTypeFilter, dateFrom, dateTo, retry])
 
   const handleExport = async () => {
     try {
@@ -150,8 +151,9 @@ export default function AuditLogsPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
-        {error}
+      <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+        <p role='alert'>{error}</p>
+        <button type='button' className='theme-toggle' onClick={() => setRetry(value => value + 1)}>Try again</button>
       </div>
     )
   }
@@ -188,11 +190,11 @@ export default function AuditLogsPage() {
 
       {actionSummary.length > 0 && (
         <div style={{
-          background: 'rgba(255,255,255,0.88)',
+          background: "var(--surface-glass)",
           backdropFilter: 'blur(22px) saturate(175%)',
           WebkitBackdropFilter: 'blur(22px) saturate(175%)',
           borderRadius: '16px',
-          border: '1px solid rgba(255,255,255,0.88)',
+          border: "1px solid var(--border)",
           boxShadow: Sh.card,
           padding: '20px',
         }}>
@@ -223,8 +225,8 @@ export default function AuditLogsPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -243,8 +245,8 @@ export default function AuditLogsPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -264,8 +266,8 @@ export default function AuditLogsPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -278,8 +280,8 @@ export default function AuditLogsPage() {
           style={{
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
+            background: "var(--surface-glass)",
             fontSize: '14px',
             color: T.navy,
             cursor: 'pointer',
@@ -294,10 +296,15 @@ export default function AuditLogsPage() {
           </div>
         ) : (
           logs.map((log) => (
-            <AuditLogCard key={log.log_id} log={log} />
+            <AuditLogCard key={log.id} log={log} />
           ))
         )}
       </div>
     </div>
   )
+}
+
+
+export default function AuditLogsPage() {
+  return <div className='space-y-8'><AdminActionAuditPanel /><ClinicalAccessAuditPanel /></div>
 }

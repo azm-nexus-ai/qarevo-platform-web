@@ -1,4 +1,5 @@
 'use client'
+import '@/components/doctor/doctor-clinical.css'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -6,11 +7,11 @@ import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorDashboard,
   getDoctorEpisodes,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   type DoctorDashboardResponse,
   type DoctorEpisodeListResponse,
   type DoctorEpisodeSummary,
@@ -42,13 +43,13 @@ function formatTime(dateString: string) {
 function getStatusColor(status: string) {
   switch (status.toLowerCase()) {
     case 'booked':
-      return { bg: 'rgba(15,158,119,0.12)', color: T.green }
+      return { bg: 'var(--success-soft, var(--surface-hover))', color: T.green }
     case 'completed':
-      return { bg: 'rgba(15,158,119,0.1)', color: T.green }
+      return { bg: 'var(--success-soft, var(--surface-hover))', color: T.green }
     case 'cancelled':
-      return { bg: 'rgba(220,38,38,0.1)', color: T.red }
+      return { bg: 'var(--danger-soft)', color: T.red }
     default:
-      return { bg: 'rgba(32,181,223,0.12)', color: T.blue }
+      return { bg: 'var(--brand-soft)', color: T.link }
   }
 }
 
@@ -58,11 +59,11 @@ function StatCard({ title, value, icon, color, href, onNavigate }: { title: stri
       type="button"
       onClick={() => onNavigate(href)}
       style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '20px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       padding: '24px',
       cursor: 'pointer',
@@ -70,10 +71,10 @@ function StatCard({ title, value, icon, color, href, onNavigate }: { title: stri
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <p style={{ margin: 0, fontSize: '12.5px', fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{title}</p>
-          <p style={{ margin: '8px 0 0', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{value}</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{title}</p>
+          <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{value}</p>
         </div>
-        <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
+        <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'var(--brand-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
           <Ico p={icon} size={28} sw={1.8} color={color} />
         </div>
       </div>
@@ -89,19 +90,19 @@ function ActivityCard({ title, items, type, onNavigate }: { title: string; items
       onNavigate(`/doctor/workspace/${item.consultation_id}`)
     }
   }
-    
+
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '20px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       overflow: 'hidden',
     }}>
-      <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)' }}>
-        <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{title}</h3>
+      <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)" }}>
+        <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{title}</h3>
       </div>
       <div style={{ padding: '16px 24px 24px' }}>
         {items.length === 0 ? (
@@ -109,36 +110,19 @@ function ActivityCard({ title, items, type, onNavigate }: { title: string; items
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {items.map((item) => (
-              <div
+              <button
+                type="button"
+                className="doctor-activity-row"
                 key={isRecentAppointment(item) ? item.appointment_id : item.consultation_id}
                 onClick={() => handleClick(item)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '14px 16px',
-                  borderRadius: '14px',
-                  background: 'rgba(247,250,252,0.6)',
-                  border: '1px solid rgba(4,53,77,0.04)',
-                  transition: 'all 0.15s ease',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(32,181,223,0.08)'
-                  e.currentTarget.style.borderColor = 'rgba(32,181,223,0.15)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(247,250,252,0.6)'
-                  e.currentTarget.style.borderColor = 'rgba(4,53,77,0.04)'
-                }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(32,181,223,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.blue, fontSize: '13px', fontWeight: 700 }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--brand-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.link, fontSize: '13px', fontWeight: 700 }}>
                     {item.patient_name.split(' ').map((n: string) => n[0]).join('')}
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: T.navy }}>{item.patient_name}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate2 }}>
+                    <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate2 }}>
                       {isRecentAppointment(item) ? `${formatDate(item.scheduled_time)} at ${formatTime(item.scheduled_time)}` : formatDate(item.completed_at)}
                     </p>
                   </div>
@@ -148,7 +132,7 @@ function ActivityCard({ title, items, type, onNavigate }: { title: string; items
                     <span style={{
                       padding: '4px 10px',
                       borderRadius: '999px',
-                      fontSize: '11px',
+                      fontSize: "13px",
                       fontWeight: 700,
                       background: getStatusColor(item.status).bg,
                       color: getStatusColor(item.status).color
@@ -157,11 +141,11 @@ function ActivityCard({ title, items, type, onNavigate }: { title: string; items
                     </span>
                   )}
                   {!isRecentAppointment(item) && item.duration_minutes && (
-                    <span style={{ fontSize: '12px', color: T.slate, fontWeight: 500 }}>{item.duration_minutes} min</span>
+                    <span style={{ fontSize: "13px", color: T.slate, fontWeight: 500 }}>{item.duration_minutes} min</span>
                   )}
                   <span style={{ color: T.slate2, fontSize: '14px' }}>→</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -173,20 +157,20 @@ function ActivityCard({ title, items, type, onNavigate }: { title: string; items
 function ClinicalEpisodeCard({ episodes, onNavigate }: { episodes: DoctorEpisodeSummary[]; onNavigate: (href: string) => void }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.88)',
+      background: "var(--surface-glass)",
       backdropFilter: 'blur(22px) saturate(175%)',
       WebkitBackdropFilter: 'blur(22px) saturate(175%)',
       borderRadius: '20px',
-      border: '1px solid rgba(255,255,255,0.88)',
+      border: "1px solid var(--border)",
       boxShadow: Sh.card,
       overflow: 'hidden',
     }}>
-      <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(4,53,77,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Clinical Workflow Episodes</h3>
-          <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate2 }}>CWS intake and AI draft status for assigned patients</p>
+          <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Clinical Workflow Episodes</h3>
+          <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate2 }}>CWS intake and AI draft status for assigned patients</p>
         </div>
-        <button type="button" onClick={() => onNavigate('/doctor/workspace')} style={{ border: 'none', background: 'transparent', color: T.blue, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+        <button type="button" onClick={() => onNavigate('/doctor/workspace')} style={{ border: 'none', background: 'transparent', color: T.link, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
           Open Workspace →
         </button>
       </div>
@@ -207,20 +191,20 @@ function ClinicalEpisodeCard({ episodes, onNavigate }: { episodes: DoctorEpisode
                   justifyContent: 'space-between',
                   padding: '14px 16px',
                   borderRadius: '14px',
-                  background: 'rgba(247,250,252,0.6)',
-                  border: '1px solid rgba(4,53,77,0.04)',
+                  background: "var(--surface-subtle)",
+                  border: "1px solid var(--border)",
                   cursor: 'pointer',
                   textAlign: 'left',
                 }}
               >
                 <div>
                   <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{episode.patient.name}</p>
-                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: T.slate2 }}>
+                  <p style={{ margin: '3px 0 0', fontSize: "13px", color: T.slate2 }}>
                     {episode.chief_complaint || episode.status.replaceAll('_', ' ')}
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: episode.ai_draft_ready ? 'rgba(15,158,119,0.12)' : 'rgba(32,181,223,0.12)', color: episode.ai_draft_ready ? T.green : T.blue }}>
+                  <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, background: episode.ai_draft_ready ? 'var(--success-soft, var(--surface-hover))' : 'var(--brand-soft)', color: episode.ai_draft_ready ? T.green : T.link }}>
                     {episode.ai_draft_ready ? 'AI READY' : episode.latest_ai_job_status?.toUpperCase() || 'NO AI DRAFT'}
                   </span>
                   <span style={{ color: T.slate2 }}>→</span>
@@ -242,8 +226,8 @@ export default function DoctorDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -263,8 +247,8 @@ export default function DoctorDashboard() {
         }
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
+          clearPortalSession()
+          router.replace('/auth/doctor/login')
           return
         }
         console.error('Failed to load doctor dashboard', err)
@@ -291,7 +275,7 @@ export default function DoctorDashboard() {
 
   if (error) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
+      <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         {error}
       </div>
     )

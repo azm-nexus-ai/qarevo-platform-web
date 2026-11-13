@@ -12,7 +12,7 @@ export interface Physician {
   insurance: string[]
   gender: 'female' | 'male'
   consultationTypes: Array<'video' | 'physical'>
-  distanceKm: number
+  distanceKm: number | null
   conditions: string[]
   imageUrl: string
   verification: string

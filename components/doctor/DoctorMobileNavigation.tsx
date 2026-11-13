@@ -2,26 +2,26 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
+import ProfileAvatar from '@/components/branding/ProfileAvatar'
+import PortalAccountMenu from '@/components/layout/PortalAccountMenu'
+import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
+import { isPortalIdentityEvent } from '@/lib/portal-scope'
+import { subscribeProfileChanges } from '@/lib/profile-events'
 import { T, Glass } from '@/lib/tokens'
 import { DOCTOR_SIDEBAR_ITEMS, DOCTOR_ROUTES, isDoctorNavActive } from '@/constants/doctor-navigation'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorProfile,
   isAuthError,
   logoutCurrentUser,
-  readAccessToken,
+  readSessionMarker,
   type DoctorProfileResponse,
 } from '@/lib/api'
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return 'DR'
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('')
-}
 
 export default function DoctorMobileNavigation() {
   const pathname = usePathname()
@@ -29,6 +29,7 @@ export default function DoctorMobileNavigation() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [doctorProfile, setDoctorProfile] = useState<DoctorProfileResponse | null>(null)
+  const [identityRevision, setIdentityRevision] = useState(0)
   const [loggingOut, setLoggingOut] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
@@ -36,7 +37,6 @@ export default function DoctorMobileNavigation() {
   const fullName = doctorProfile?.full_name?.trim() || 'Doctor'
   const displayName = fullName.toLowerCase().startsWith('dr.') ? fullName : `Dr. ${fullName}`
   const specialty = doctorProfile?.specialty || 'Doctor'
-  const doctorInitials = getInitials(fullName)
 
   // Body scroll lock
   useEffect(() => {
@@ -69,6 +69,10 @@ export default function DoctorMobileNavigation() {
     hamburgerRef.current?.focus()
   }, [])
 
+  // A guarded link delays its original click callback. Close the drawer once
+  // the route actually changes, including accepted browser Back/Forward.
+  useEffect(() => { closeDrawer() }, [pathname, closeDrawer])
+
   const handleLogout = async () => {
     if (loggingOut) return
     setLoggingOut(true)
@@ -79,30 +83,40 @@ export default function DoctorMobileNavigation() {
     } finally {
       setShowLogoutModal(false)
       closeDrawer()
-      router.replace('/auth/sign-in')
+      router.replace('/auth/doctor/login')
     }
   }
 
   useEffect(() => {
-    const token = readAccessToken()
+    const token = readSessionMarker()
     if (!token) return
+    let active = true
+    let generation = 0
+    const scope = readAccountScope('doctor')
 
     const fetchProfile = async () => {
+      const ticket = ++generation
       try {
         const profile = await getDoctorProfile()
-        setDoctorProfile(profile)
+        if (active && ticket === generation && scope === readAccountScope('doctor')) setDoctorProfile(profile)
       } catch (error) {
+        if (!active || ticket !== generation || scope !== readAccountScope('doctor')) return
         if (isAuthError(error)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
+          clearPortalSession()
+          router.replace('/auth/doctor/login')
           return
         }
         console.error('Failed to load doctor profile:', error)
       }
     }
 
-    fetchProfile()
-  }, [router])
+    void fetchProfile()
+    const unsubscribe = subscribeProfileChanges('doctor', () => { void fetchProfile() })
+    const reset = (event: Event) => { if (!isPortalIdentityEvent(event, 'doctor')) return; setDoctorProfile(null); setIdentityRevision(value => value + 1) }
+    window.addEventListener(ACCOUNT_CHANGED, reset)
+    window.addEventListener('storage', reset)
+    return () => { active = false; unsubscribe(); window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset) }
+  }, [router, identityRevision])
 
   return (
     <div>
@@ -117,17 +131,18 @@ export default function DoctorMobileNavigation() {
           gap: 12px;
           padding: 0 16px;
           height: 56px;
-          background: rgba(247,250,252,0.97);
+          background: var(--surface-subtle);
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border-bottom: 1px solid rgba(4,53,77,0.08);
+          border-bottom: 1px solid var(--border);
           box-shadow: 0 2px 12px rgba(4,53,77,0.06);
         }
+        @media(max-width:420px) { .dmn-topbar button[aria-label="Profile"] { display: none; } }
         .dmn-hamburger {
           width: 40px;
           height: 40px;
           border-radius: 10px;
-          border: 1px solid rgba(4,53,77,0.12);
+          border: 1px solid var(--border);
           background: transparent;
           cursor: pointer;
           display: flex;
@@ -164,7 +179,7 @@ export default function DoctorMobileNavigation() {
           max-width: min(88vw, 360px);
           z-index: 1001;
           background: #f8fbfd;
-          border-right: 1px solid rgba(255,255,255,0.8);
+          border-right: 1px solid var(--border);
           box-shadow: 14px 0 44px rgba(4,53,77,0.2);
           padding: 20px 16px;
           display: flex;
@@ -184,7 +199,7 @@ export default function DoctorMobileNavigation() {
           width: 34px;
           height: 34px;
           border-radius: 8px;
-          border: 1px solid rgba(4,53,77,0.12);
+          border: 1px solid var(--border);
           background: transparent;
           color: ${T.slate};
           cursor: pointer;
@@ -202,7 +217,14 @@ export default function DoctorMobileNavigation() {
       `}</style>
 
       {/* Mobile Top Bar */}
-      <div className="dmn-topbar" role="banner">
+      <div className="dmn-topbar portal-mobile-navbar" role="banner">
+          <Link
+            href="/doctor/dashboard"
+            aria-label="Qarevo Health Doctor Dashboard"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+          >
+            <AuthenticatedLogo width={100} />
+          </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
           <button
             ref={hamburgerRef}
@@ -216,33 +238,12 @@ export default function DoctorMobileNavigation() {
             <span />
             <span />
           </button>
-          <Link
-            href="/doctor/dashboard"
-            aria-label="Qarevo Health Doctor Dashboard"
-            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
-          >
-            <AuthenticatedLogo width={120} />
-          </Link>
+
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-          <button
-            type="button"
-            aria-label="Profile"
-            onClick={() => router.push('/doctor/profile')}
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              border: '1px solid rgba(4,53,77,0.11)',
-              background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))',
-              color: T.navy,
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontSize: '15px',
-            }}
-          >
-            {doctorInitials}
-          </button>
+          <ThemeToggle />
+          <PortalAccountMenu portal='doctor' name={displayName} description={specialty} avatar={<ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={34} />} profileHref='/doctor/profile' settingsHref='/doctor/settings' />
+
         </div>
       </div>
 
@@ -259,7 +260,9 @@ export default function DoctorMobileNavigation() {
         id="dmn-drawer"
         ref={drawerRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal={mobileOpen ? true : undefined}
+        aria-hidden={!mobileOpen}
+        inert={!mobileOpen}
         aria-label="Navigation menu"
         className={`dmn-drawer${mobileOpen ? ' dmn-drawer--open' : ''}`}
       >
@@ -268,7 +271,7 @@ export default function DoctorMobileNavigation() {
         </button>
 
         <div style={{ marginBottom: '18px', paddingTop: '8px' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+          <Link href="/doctor/dashboard" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
             <AuthenticatedLogo />
           </Link>
         </div>
@@ -278,25 +281,10 @@ export default function DoctorMobileNavigation() {
           style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))',
-                border: '1px solid rgba(4,53,77,0.11)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: T.navy,
-                fontWeight: 700,
-              }}
-            >
-              {doctorInitials}
-            </div>
+            <ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={42} />
             <div>
               <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{displayName}</p>
-              <p style={{ margin: 0, fontSize: '11.5px', color: T.slate2 }}>{specialty}</p>
+              <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{specialty}</p>
             </div>
           </div>
         </section>
@@ -348,7 +336,7 @@ export default function DoctorMobileNavigation() {
                       padding: '10px 12px',
                       borderRadius: '12px',
                       background: isActive ? 'rgba(32,181,223,0.14)' : 'transparent',
-                      color: isActive ? T.blue : T.slate,
+                      color: isActive ? T.link : T.slate,
                       fontSize: '13.5px',
                       fontWeight: isActive ? 700 : 500,
                       transition: 'all 0.15s',
@@ -370,6 +358,7 @@ export default function DoctorMobileNavigation() {
           isOpen={showLogoutModal}
           onClose={() => setShowLogoutModal(false)}
           onConfirm={handleLogout}
+          description="Save any unfinished clinical draft before signing out. Unsaved changes will be discarded."
         />
       )}
     </div>

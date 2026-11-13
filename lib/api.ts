@@ -1,61 +1,52 @@
-const getBaseUrl = () => {
-    const baseUrl = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseUrl) {
-        console.error("API_BASE_URL or NEXT_PUBLIC_API_BASE_URL not set, defaulting to http://localhost:8000");
-        return "http://localhost:8000";
-    }
-    return baseUrl;
-};
+import { accountChanged, assertCurrentAccount, readAccountScope, storePortalIdentity } from '@/lib/account-storage';
+import { currentPortal, portalKey, readPortalIdentity, retireLegacyCredentials, type Portal, type PortalIdentity } from '@/lib/portal-scope';
+import { clinicalWriteHeaders } from './clinical-write-version';
+import { notifyProfileChanged, profileRevision } from '@/lib/profile-events';
 
-export function readAccessToken(): string | null {
-    if (typeof window === "undefined") return null;
-    return window.localStorage.getItem("qarevo_access_token");
+const getBaseUrl = () => typeof window !== 'undefined' ? window.location.origin : (process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000');
+/** Public session marker only; credentials are held exclusively in HttpOnly cookies. */
+export function readSessionMarker(): string | null { assertCurrentAccount(); return readPortalIdentity()?.session_id ?? null; }
+export function readUserRole() { return readPortalIdentity()?.role ?? null; }
+export function isPatient() { return readUserRole() === 'PATIENT'; }
+export function isProvider() { return readUserRole() === 'PROVIDER'; }
+export function clearPortalSession(portal = currentPortal()) {
+    if (typeof window === 'undefined') return;
+    const previous=readPortalIdentity(portal);
+    if(previous)window.localStorage.setItem(portalKey('signed-out',portal),previous.session_id);
+    window.localStorage.removeItem(portalKey('identity', portal));
+    window.localStorage.removeItem(portalKey('renewal', portal));
+    window.localStorage.removeItem(portalKey('refresh-retry', portal));
+    retireLegacyCredentials(); accountChanged(portal);
+}
+export type BrowserSessionResponse = { browser_session: PortalIdentity };
+export function storeBrowserSession(payload: { browser_session?: PortalIdentity }, portal = currentPortal()) {
+    if (!payload.browser_session) throw new Error('The server could not establish a secure session. Please sign in again.');
+    retireLegacyCredentials();
+    window.localStorage.removeItem(portalKey('signed-out',portal));
+    window.localStorage.removeItem(portalKey('logout-pending',portal));
+    storePortalIdentity(payload.browser_session, portal);
 }
 
-export function readRefreshToken(): string | null {
-    if (typeof window === "undefined") return null;
-    return window.localStorage.getItem("qarevo_refresh_token");
-}
-
-export function readUserRole(): 'PATIENT' | 'PROVIDER' | null {
-    if (typeof window === "undefined") return null;
-    const role = window.localStorage.getItem("qarevo_role");
-    return (role === 'PATIENT' || role === 'PROVIDER') ? role : null;
-}
-
-export function isPatient(): boolean {
-    return readUserRole() === 'PATIENT';
-}
-
-export function isProvider(): boolean {
-    return readUserRole() === 'PROVIDER';
-}
-
-export function clearAuthTokens() {
-    if (typeof window === "undefined") return;
-    [
-        "qarevo_access_token",
-        "qarevo_refresh_token",
-        "qarevo_token_type",
-        "qarevo_expires_in",
-        "qarevo_user_id",
-        "qarevo_provider_id",
-        "qarevo_role",
-        "qarevo_temp_auth",
-        "qarevo_temp_token",
-    ].forEach((key) => window.localStorage.removeItem(key));
+export function safeRequestId(value: unknown): string | null {
+    return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value) ? value : null;
 }
 
 export class ApiError extends Error {
     status: number;
     body: string;
+    readonly requestId: string | null;
 
-    constructor(status: number, body: string) {
-        super(`API error ${status}: ${body}`);
+    constructor(status: number, body: string, requestId?: unknown) {
+        super(`API request failed (${status}).`);
         this.name = "ApiError";
         this.status = status;
         this.body = body;
+        this.requestId = safeRequestId(requestId);
     }
+}
+
+export function getApiErrorRequestId(error: unknown): string | null {
+    return error instanceof ApiError ? error.requestId : null;
 }
 
 export function getApiErrorDetail(error: unknown): string | null {
@@ -76,6 +67,15 @@ export function getApiErrorDetail(error: unknown): string | null {
             }
             return detail;
         }
+        if (
+            detail &&
+            typeof detail === "object" &&
+            !Array.isArray(detail) &&
+            "message" in detail &&
+            typeof detail.message === "string"
+        ) {
+            return detail.message;
+        }
         if (Array.isArray(detail)) {
             const messages = detail
                 .map((item) => {
@@ -86,199 +86,171 @@ export function getApiErrorDetail(error: unknown): string | null {
             return messages.length ? messages.join(" ") : null;
         }
     } catch {
-        return body;
+        // HTML, stack traces and arbitrary upstream text never become UI copy.
+        return 'The service returned an unexpected response. Please retry.';
     }
 
     return null;
+}
+
+export function getLoginThrottleMessage(error: unknown): string | null {
+    if (!(error instanceof ApiError) || error.status !== 429) return null;
+    return getApiErrorDetail(error) || 'Too many sign-in attempts. Please wait before trying again, or use password recovery.';
 }
 
 export function isAuthError(error: unknown): boolean {
     return error instanceof ApiError && error.status === 401;
 }
 
-export function storeAuthTokens(payload: {
-    access_token: string;
-    refresh_token: string;
-    token_type?: string;
-    expires_in?: number;
-    user_id?: string;
-    provider_id?: string;
-    role?: string;
-}) {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("qarevo_access_token", payload.access_token);
-    window.localStorage.setItem("qarevo_refresh_token", payload.refresh_token);
-    window.localStorage.setItem("qarevo_token_type", payload.token_type ?? "bearer");
-    if (payload.expires_in) window.localStorage.setItem("qarevo_expires_in", String(payload.expires_in));
-    if (payload.user_id) window.localStorage.setItem("qarevo_user_id", payload.user_id);
-    if (payload.provider_id) window.localStorage.setItem("qarevo_provider_id", payload.provider_id);
-    if (payload.role) window.localStorage.setItem("qarevo_role", payload.role);
+// A temporary renewal failure is not an authentication rejection. In particular,
+// callers must not treat the original access-token 401 as a reason to log out.
+export class SessionRefreshError extends Error {
+    constructor(message = "We couldn't renew your session right now. Please try again shortly.") {
+        super(message);
+        this.name = "SessionRefreshError";
+    }
 }
 
-async function refreshAuthToken(): Promise<boolean> {
-    const refreshToken = readRefreshToken();
-    if (!refreshToken) return false;
-
-    let res: Response;
-    try {
-        res = await fetch(`${getBaseUrl()}/api/v1/auth/refresh`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refresh_token: refreshToken }),
-            cache: "no-store",
-        });
-    } catch (error) {
-        console.warn("Auth refresh request failed", error);
-        clearAuthTokens();
-        if (typeof window !== "undefined") {
-            window.dispatchEvent(new Event("qarevo:auth-session-expired"));
+const refreshRequests = new Map<string, Promise<boolean>>();
+const csrfRequests = new Map<Portal, Promise<string>>();
+function savedCsrf(portal: Portal): string | null {
+    if(typeof document==='undefined')return null;
+    const entry=document.cookie.split(';').map(value=>value.trim()).find(value=>value.startsWith(`qarevo_${portal}_csrf=`));
+    const value=entry?.split('=')[1]; return value && /^[a-f0-9]{64}$/.test(value) ? value : null;
+}
+async function csrfToken(portal: Portal): Promise<string> {
+    const saved=savedCsrf(portal); if(saved)return saved;
+    const existing = csrfRequests.get(portal); if (existing) return existing;
+    const pending = (async () => {
+        const response = await fetch(`${getBaseUrl()}/api/v1/browser-csrf`, { headers: {'X-Qarevo-Portal':portal}, cache:'no-store', credentials:'same-origin', signal:AbortSignal.timeout(10_000) });
+        const result = await response.json();
+        if (!response.ok || typeof result.csrf_token !== 'string') throw new SessionRefreshError('Secure request verification is unavailable. Please retry.');
+        return result.csrf_token as string;
+    })();
+    csrfRequests.set(portal,pending);
+    try { return await pending; } finally { if(csrfRequests.get(portal)===pending) csrfRequests.delete(portal); }
+}
+function checkScope(portal: Portal, scope: string | null) {
+    assertCurrentAccount(portal);
+    if (scope !== readAccountScope(portal)) throw new Error('Your session changed. Reload this page.');
+}
+function requestHeaders(portal: Portal, marker: string | null, extra?: HeadersInit): Headers {
+    const headers = new Headers(extra);
+    // Browser credentials and refresh secrets must never be supplied by JavaScript.
+    headers.delete('Authorization'); headers.delete('X-Qarevo-Refresh-Token');
+    headers.set('X-Qarevo-Portal',portal);
+    if(marker) headers.set('X-Qarevo-Session',marker); else headers.delete('X-Qarevo-Session');
+    return headers;
+}
+function sessionMutation(path: string): boolean {
+    return /^\/api\/v1\/auth\/(?:login|(?:admin|doctor)\/login|mfa\/verify-(?:email|phone)|verify-(?:otp|email|email-code)|passkeys\/authenticate|social\/(?:google|apple)\/finish)$/.test(path) || ['/api/v1/security/password','/api/v1/security/sessions/revoke-all'].includes(path);
+}
+async function withSessionLock<T>(portal: Portal, operation: () => Promise<T>): Promise<T> {
+    if(typeof navigator==='undefined'||!navigator.locks) throw new SessionRefreshError('Secure sessions require a current browser on HTTPS or localhost. Please update your browser.');
+    const signal=AbortSignal.timeout(35_000);
+    return navigator.locks.request(`qarevo:${portal}:session-refresh`,{signal},operation);
+}
+async function send(input: string, init: RequestInit, portal: Portal, marker: string | null): Promise<Response> {
+    const headers = requestHeaders(portal,marker,init.headers);
+    if (!['GET','HEAD','OPTIONS'].includes((init.method || 'GET').toUpperCase())) headers.set('X-Qarevo-CSRF',await csrfToken(portal));
+    const deadline = AbortSignal.timeout(35_000);
+    const signal = init.signal ? AbortSignal.any([init.signal,deadline]) : deadline;
+    const response = await fetch(input,{...init,headers,cache:'no-store',credentials:'same-origin',signal});
+    const returned = response.headers.get('X-Qarevo-Session-Id');
+    const entry = sessionMutation(new URL(input).pathname);
+    if (returned && marker && returned !== marker && !entry) throw new Error('Your session changed. Reload this page.');
+    if (response.status === 409 && marker) {
+        // Clinical/version conflicts also use 409. Only the BFF's explicit
+        // machine code identifies a cookie-session mismatch; preserve all
+        // other bodies for the normal ApiError/recovery path.
+        let sessionChanged = false;
+        try {
+            const conflict = await response.clone().json() as { detail?: { error_code?: unknown } } | null;
+            sessionChanged = conflict?.detail?.error_code === 'SESSION_CHANGED';
+        } catch { /* A non-JSON conflict remains an ordinary API response. */ }
+        if (sessionChanged) throw new Error('Your session changed in another tab. Reload this page.');
+    }
+    return response;
+}
+async function refreshAuthToken(portal: Portal, scope: string, revision: string | null, alreadyLocked = false): Promise<boolean> {
+    const existing = refreshRequests.get(scope); if(existing && !alreadyLocked) return existing;
+    const pending = (async () => {
+        if (typeof navigator === 'undefined' || !navigator.locks) throw new SessionRefreshError('Automatic session renewal requires a current browser on HTTPS or localhost. Your draft has been kept.');
+        const controller = new AbortController(); const timer = setTimeout(()=>controller.abort(),15_000);
+        const renew=async()=>{
+            const check = () => checkScope(portal,scope); check();
+            if(window.localStorage.getItem(portalKey('renewal',portal))!==revision) return true;
+            const retryAt = Number(window.localStorage.getItem(portalKey('refresh-retry',portal)) || 0);
+            if(retryAt>Date.now()) throw new SessionRefreshError();
+            let response: Response;
+            try { response=await send(`${getBaseUrl()}/api/v1/auth/refresh`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:controller.signal},portal,readPortalIdentity(portal)?.session_id ?? null); }
+            catch(error) { check(); window.localStorage.setItem(portalKey('refresh-retry',portal),String(Date.now()+5000)); throw error instanceof SessionRefreshError ? error : new SessionRefreshError(); }
+            check();
+            if([401,403].includes(response.status)) { clearPortalSession(portal); window.dispatchEvent(new CustomEvent('qarevo:auth-session-expired',{detail:{portal}})); return false; }
+            if(!response.ok) {
+                const requested = Number(response.headers.get('Retry-After'))*1000;
+                window.localStorage.setItem(portalKey('refresh-retry',portal),String(Date.now()+Math.min(60000,Math.max(5000,requested || 0)))); throw new SessionRefreshError();
+            }
+            let result: BrowserSessionResponse;
+            try { result = await response.json(); } catch { check(); window.localStorage.setItem(portalKey("refresh-retry",portal),String(Date.now()+5000)); throw new SessionRefreshError(); }
+            check();
+            const identity = result.browser_session as PortalIdentity | undefined;
+            if(!identity || JSON.stringify([portal,identity.user_id,identity.session_id])!==scope || identity.role!==readPortalIdentity(portal)?.role) {window.localStorage.setItem(portalKey('refresh-retry',portal),String(Date.now()+5000)); throw new SessionRefreshError();}
+            window.localStorage.setItem(portalKey('renewal',portal),crypto.randomUUID());
+            window.localStorage.removeItem(portalKey('refresh-retry',portal)); return true;
+        };
+        try { return alreadyLocked ? await renew() : await navigator.locks.request(`qarevo:${portal}:session-refresh`,{signal:controller.signal},renew); } finally {clearTimeout(timer);}
+    })();
+    if(!alreadyLocked)refreshRequests.set(scope,pending);
+    try {return await pending;} finally {if(refreshRequests.get(scope)===pending)refreshRequests.delete(scope);}
+}
+async function fetchWithAuthRetry(input: string, init: RequestInit, alreadyLocked = false, context?: {portal:Portal;scope:string|null}): Promise<Response> {
+    const portal=context?.portal ?? currentPortal(); assertCurrentAccount(portal);
+    const scope=context ? context.scope : readAccountScope(portal);
+    checkScope(portal,scope);
+    const marker=readPortalIdentity(portal)?.session_id ?? null;
+    const revision=typeof window==='undefined'?null:window.localStorage.getItem(portalKey('renewal',portal));
+    const check=()=>checkScope(portal,scope);
+    const response=await send(input,init,portal,marker); check();
+    // Explicit sign-in failures must not renew or invalidate an unrelated portal.
+    if(response.status!==401 || !scope || new URL(input).pathname.startsWith('/api/v1/auth/')) return response;
+    const renewed=await refreshAuthToken(portal,scope,revision,alreadyLocked);
+    if(!renewed) return response;
+    check(); const retried=await send(input,init,portal,marker); check(); return retried;
+}
+async function request<T>(path:string,init:RequestInit):Promise<T> {
+    const portal=currentPortal(),scope=readAccountScope(portal);
+    const perform=async()=>{
+        checkScope(portal,scope);
+        const response=await fetchWithAuthRetry(`${getBaseUrl()}${path}`,init,sessionMutation(path),{portal,scope});
+        const body=await response.text(); checkScope(portal,scope);
+        if(!response.ok) {
+            // An old portal's failure must not trigger a mounted caller's
+            // default-current-portal sign-out after navigation elsewhere.
+            if(currentPortal()!==portal) throw new Error('Your page changed. Return to the original portal and retry.');
+            throw new ApiError(response.status,body,response.headers.get('X-Request-ID'));
         }
-        return false;
-    }
-
-    if (!res.ok) {
-        clearAuthTokens();
-        if (typeof window !== "undefined") {
-            window.dispatchEvent(new Event("qarevo:auth-session-expired"));
+        let result;
+        try { result=body ? JSON.parse(body) : undefined; } catch { throw new ApiError(502, JSON.stringify({ detail: 'The service returned an unexpected response. Please retry.' }), response.headers.get('X-Request-ID')); }
+        if(sessionMutation(path)) {
+            // Publish the verified identity before allowing any other tab's
+            // credential-changing operation to acquire this portal's lock.
+            if(result?.browser_session) storeBrowserSession(result,portal);
+            else if(result?.mfa_pending || ['/api/v1/security/password','/api/v1/security/sessions/revoke-all'].includes(path)) clearPortalSession(portal);
         }
-        return false;
-    }
-
-    const payload = (await res.json()) as {
-        access_token: string;
-        refresh_token: string;
-        token_type?: string;
-        expires_in?: number;
-        user_id?: string;
-        provider_id?: string;
-        role?: string;
+        return result as T;
     };
-    storeAuthTokens(payload);
-    return true;
+    return sessionMutation(path) ? withSessionLock(portal,perform) : perform();
 }
-
-function authHeaders(headers?: Record<string, string>): Record<string, string> {
-    const token = readAccessToken();
-    return {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...headers,
-    };
-}
-
-async function fetchWithAuthRetry(input: string, init: RequestInit): Promise<Response> {
-    const res = await fetch(input, init);
-    if (res.status !== 401 || !readRefreshToken()) return res;
-
-    const refreshed = await refreshAuthToken().catch(() => false);
-    if (!refreshed) return res;
-
-    return fetch(input, {
-        ...init,
-        headers: authHeaders(init.headers as Record<string, string> | undefined),
-    });
-}
-
-export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        headers: authHeaders(headers),
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new ApiError(res.status, text);
-    }
-
-    return res.json() as Promise<T>;
-}
-
-export async function apiPost<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            ...authHeaders(headers),
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new ApiError(res.status, text);
-    }
-
-    return res.json() as Promise<T>;
-}
-
-export async function apiPut<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            ...authHeaders(headers),
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new ApiError(res.status, text);
-    }
-
-    return res.json() as Promise<T>;
-}
-
-export async function apiPatch<T, B = unknown>(path: string, body?: B, headers?: Record<string, string>): Promise<T> {
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "PATCH",
-        headers: {
-            "Content-Type": "application/json",
-            ...authHeaders(headers),
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new ApiError(res.status, text);
-    }
-
-    return res.json() as Promise<T>;
-}
-
-export async function apiDelete<T>(path: string, headers?: Record<string, string>): Promise<T> {
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "DELETE",
-        headers: authHeaders(headers),
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new ApiError(res.status, text);
-    }
-
-    return res.json() as Promise<T>;
-}
-
-export async function apiUpload<T>(path: string, formData: FormData, headers?: Record<string, string>): Promise<T> {
-    const res = await fetchWithAuthRetry(`${getBaseUrl()}${path}`, {
-        method: "POST",
-        headers: authHeaders(headers),
-        body: formData,
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new ApiError(res.status, text);
-    }
-
-    return res.json() as Promise<T>;
-}
+export function apiGet<T>(path:string,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> { return request<T>(path,{headers,signal}); }
+function jsonRequest<T,B>(method:string,path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method,headers:{'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body),signal});}
+export function apiPost<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('POST',path,body,headers,signal);}
+/** Read-only JSON search with CSRF/auth guards; this does not record session activity. */
+export function apiReadPost<T>(path:string,body:Readonly<Record<string,string|number|boolean|null>>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,typeof body>('POST',path,body,undefined,signal);}
+export function apiPut<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('PUT',path,body,headers,signal);}
+export function apiPatch<T,B=unknown>(path:string,body?:B,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return jsonRequest<T,B>('PATCH',path,body,headers,signal);}
+export function apiDelete<T>(path:string,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method:'DELETE',headers,signal});}
+export function apiUpload<T>(path:string,body:FormData,headers?:Record<string,string>,signal?:AbortSignal):Promise<T> {return request<T>(path,{method:'POST',body,headers,signal});}
 
 export type CreateMeetingRequest = {
     patient_id: string;
@@ -417,7 +389,7 @@ export type DoctorLoginRequest = {
 };
 
 export type DoctorLoginResponse = {
-    temp_token: string;
+    mfa_pending: boolean;
     token_type: string;
     expires_in: number;
     email_verified: boolean;
@@ -425,14 +397,18 @@ export type DoctorLoginResponse = {
 };
 
 export type AuthTokenResponse = {
-    access_token: string;
-    refresh_token: string;
+    browser_session: PortalIdentity;
     token_type: string;
     expires_in: number;
     email_verified: boolean;
     phone_verified: boolean;
     user_id?: string;
     provider_id?: string;
+};
+
+export type AdminLoginResponse = AuthTokenResponse & {
+    role: string;
+    admin_role: string;
 };
 
 export type PatientDoctor = {
@@ -449,9 +425,9 @@ export type PatientDoctor = {
     insurance: string[];
     gender: "female" | "male" | "other";
     consultationTypes: string[];
-    distanceKm: number;
+    distanceKm: number | null;
     conditions: string[];
-    imageUrl: string;
+    imageUrl: string | null;
     verification: string;
     tags: string[];
     profile?: Record<string, unknown>;
@@ -492,7 +468,17 @@ export type PatientBookingAvailabilityResponse = {
 export type PatientBookingSlotsResponse = {
     date: string;
     slots: string[];
+    slot_details?: PatientBookingSlot[];
+    schedule_ready?: boolean;
     working_hours?: PatientBookingWorkingHours;
+};
+
+export type PatientBookingSlot = {
+    label: string;
+    start_at: string;
+    end_at: string;
+    time_zone: string;
+    duration_minutes: number;
 };
 
 export type PatientDashboardCarePlan = {
@@ -650,9 +636,9 @@ export type MedicalRecordUploadResponse = {
     filename: string;
     file_size: number;
     content_type: string;
-    storage_path: string;
     uploaded_at: string;
-    record?: Record<string, unknown>;
+    upload_receipt?: unknown;
+    record?: Record<string, unknown> | null;
     message: string;
 };
 
@@ -662,6 +648,8 @@ export type MedicalRecordDownloadResponse = {
     content_type: string;
     download_url: string;
     expires_in: number;
+    file_size_bytes?: number | null;
+    uploaded_by?: "patient" | "care_team" | "unknown";
 };
 
 // Approval Workflow Types
@@ -714,10 +702,10 @@ export type BillingStatusResponse = {
     currency: string;
     insurance_type: string;
     billing_requirements?: {
-        claim_submission_required: boolean;
-        direct_billing: boolean;
-        requires_pre_authorization: boolean;
-        patient_pays_upfront: boolean;
+        claim_submission_required: boolean | null;
+        direct_billing: boolean | null;
+        requires_pre_authorization: boolean | null;
+        patient_pays_upfront: boolean | null;
     } | null;
     authorized_by?: string | null;
     authorized_at?: string | null;
@@ -742,8 +730,7 @@ export type VerifyEmailCodeRequest = {
 
 export type VerifyEmailCodeResponse = {
     message: string;
-    access_token?: string;
-    refresh_token?: string;
+    browser_session?: PortalIdentity;
     token_type?: string;
     expires_in?: number;
     email_verified?: boolean;
@@ -779,8 +766,7 @@ export type VerifyOtpRequest = {
 
 export type VerifyOtpResponse = {
     message: string;
-    access_token?: string;
-    refresh_token?: string;
+    browser_session?: PortalIdentity;
     token_type?: string;
     expires_in?: number;
     email_verified?: boolean;
@@ -812,16 +798,37 @@ export async function loginPatient(body: { email: string; password: string }): P
     return apiPost<AuthTokenResponse>("/api/v1/auth/login", body);
 }
 
+export async function loginAdmin(body: { email: string; password: string }): Promise<AdminLoginResponse> {
+  return apiPost<AdminLoginResponse>("/api/v1/auth/admin/login", body);
+}
+const sessionChecks = new Map<string, Promise<import('./session-timeout').SessionStatus & BrowserSessionResponse>>();
+export async function getSessionStatus(activity = false): Promise<import('./session-timeout').SessionStatus & BrowserSessionResponse> {
+    const key = JSON.stringify([currentPortal(),readAccountScope()]);
+    if(!activity && sessionChecks.has(key)) return sessionChecks.get(key)!;
+    const pending = activity ? apiPost<import('./session-timeout').SessionStatus & BrowserSessionResponse>('/api/v1/session/activity', {}) : apiGet<import('./session-timeout').SessionStatus & BrowserSessionResponse>('/api/v1/session');
+    if(!activity) { sessionChecks.set(key,pending); void pending.finally(()=>{if(sessionChecks.get(key)===pending)sessionChecks.delete(key);}).catch(()=>{}); }
+    return pending;
+}
 export async function logoutCurrentUser(): Promise<void> {
-    const refreshToken = readRefreshToken();
+    const portal=currentPortal(); assertCurrentAccount(portal);
+    const marker=readPortalIdentity(portal)?.session_id ?? null;
+    const init: RequestInit={method:'POST',headers:{'Content-Type':'application/json'},body:'{}',keepalive:true,credentials:'same-origin',cache:'no-store'};
+    const csrf=savedCsrf(portal);
+    const headers=requestHeaders(portal,marker,init.headers);
+    if(csrf)headers.set('X-Qarevo-CSRF',csrf);
+    // Hide private UI immediately but keep this document alive until its queued
+    // revocation is launched and settled. A persistent nonsecret tombstone also
+    // prevents cookie-only restoration after an offline/interrupted sign-out.
+    if(marker)window.localStorage.setItem(portalKey('logout-pending',portal),marker);
+    const pending=marker ? withSessionLock(portal,()=>{const bounded={...init,signal:AbortSignal.timeout(10_000)};return csrf ? fetch(`${getBaseUrl()}/api/v1/auth/logout`,{...bounded,headers}) : send(`${getBaseUrl()}/api/v1/auth/logout`,bounded,portal,marker)}) : undefined;
+    clearPortalSession(portal);
     try {
-        if (refreshToken) {
-            await apiPost<{ message: string }, { refresh_token: string }>("/api/v1/auth/logout", {
-                refresh_token: refreshToken,
-            });
-        }
+        if(pending) { const response=await pending; if(!response.ok) throw new ApiError(response.status,'Server logout could not be confirmed.'); }
     } finally {
-        clearAuthTokens();
+        if(window.localStorage.getItem(portalKey('logout-pending',portal))===marker) {
+            window.localStorage.removeItem(portalKey('logout-pending',portal));
+            if(!readPortalIdentity(portal))accountChanged(portal);
+        }
     }
 }
 
@@ -1015,6 +1022,7 @@ export type DoctorAppointmentSummary = {
 export type DoctorAppointmentsResponse = {
     appointments: DoctorAppointmentSummary[];
     total_count: number;
+    upcoming_count: number;
     filtered_count: number;
     page: number;
     page_size: number;
@@ -1031,6 +1039,8 @@ export type DoctorAppointmentDetail = DoctorAppointmentSummary & {
     chief_complaint: string | null;
     intake_submitted_at: string | null;
     ai_draft_ready: boolean;
+    ai_available?: boolean;
+    clinical_context_available?: boolean;
     cancellation_reason: string | null;
     cancelled_at: string | null;
 };
@@ -1046,6 +1056,8 @@ export type DoctorConsultationInQueue = {
 };
 
 export type DoctorWorkspaceResponse = {
+    status_options?: { value: string; label: string }[];
+    active_consultation_count?: number;
     consultations: DoctorConsultationInQueue[];
     total_count: number;
     filtered_count: number;
@@ -1057,6 +1069,7 @@ export type DoctorWorkspaceResponse = {
 
 export type DoctorConsultationDetail = {
     consultation_id: string;
+    episode_id?: string | null;
     patient_id: string;
     patient_name: string;
     patient_email: string | null;
@@ -1180,12 +1193,25 @@ export async function getEpisodeTimeline(
   );
 }
 
+const doctorProfileRequests = new Map<string, Promise<DoctorProfileResponse>>();
+
 export async function getDoctorProfile(): Promise<DoctorProfileResponse> {
-    return apiGet<DoctorProfileResponse>("/api/v1/doctor/profile");
+    const scope = readAccountScope();
+    if (!scope) return apiGet<DoctorProfileResponse>("/api/v1/doctor/profile");
+    const key = JSON.stringify([scope, profileRevision("doctor")]);
+    const existing = doctorProfileRequests.get(key);
+    if (existing) return existing;
+    const pending = apiGet<DoctorProfileResponse>("/api/v1/doctor/profile").finally(() => {
+        if (doctorProfileRequests.get(key) === pending) doctorProfileRequests.delete(key);
+    });
+    doctorProfileRequests.set(key, pending);
+    return pending;
 }
 
 export async function updateDoctorProfile(body: DoctorProfileUpdate): Promise<DoctorProfileResponse> {
-    return apiPut<DoctorProfileResponse, DoctorProfileUpdate>("/api/v1/doctor/profile", body);
+    const result = await apiPut<DoctorProfileResponse, DoctorProfileUpdate>("/api/v1/doctor/profile", body);
+    notifyProfileChanged("doctor");
+    return result;
 }
 
 export async function getDoctorSettings(): Promise<DoctorSettingsResponse> {
@@ -1302,13 +1328,21 @@ export async function getDoctorPatients(
     status?: string,
     pagination: PaginationParams = {},
     query?: string,
+    patientId?: string,
+    signal?: AbortSignal,
 ): Promise<DoctorPatientsResponse> {
+    if (query?.trim()) {
+        const body: Record<string, string | number | boolean | null> = { q: query.trim(), page: pagination.page ?? 1, page_size: pagination.page_size ?? 25 };
+        if (status) body.status = status;
+        if (patientId) body.patient_id = patientId;
+        return apiReadPost<DoctorPatientsResponse>('/api/v1/doctor/patients/search', body, signal);
+    }
     const params = new URLSearchParams();
     if (status) params.set("status", status);
-    if (query?.trim()) params.set("q", query.trim());
+    if (patientId) params.set("patient_id", patientId);
     params.set("page", String(pagination.page ?? 1));
     params.set("page_size", String(pagination.page_size ?? 25));
-    return apiGet<DoctorPatientsResponse>(`/api/v1/doctor/patients?${params.toString()}`);
+    return apiGet<DoctorPatientsResponse>(`/api/v1/doctor/patients?${params.toString()}`, undefined, signal);
 }
 
 export async function verifyDoctorEmailCode(body: VerifyEmailCodeRequest): Promise<VerifyEmailCodeResponse> {
@@ -1345,10 +1379,8 @@ export async function getPatientDashboard(userId?: string | null): Promise<Patie
     return apiGet<PatientDashboardResponse>(`/api/v1/patient/dashboard${query ? `?${query}` : ""}`);
 }
 
-export async function markPatientMedicationTaken(medicationName: string): Promise<PatientDashboardResponse> {
-    return apiPost<PatientDashboardResponse>("/api/v1/patient/dashboard/medications/mark-taken", {
-        medication_name: medicationName,
-    });
+export async function markPatientMedicationTaken(medicationId: string, signal?: AbortSignal): Promise<PatientDashboardResponse> {
+    return apiPost<PatientDashboardResponse>("/api/v1/patient/dashboard/medications/mark-taken", { medication_id: medicationId }, undefined, signal);
 }
 
 export async function searchPatientDashboard(query: string): Promise<PatientDashboardSearchResponse> {
@@ -1416,17 +1448,10 @@ export async function markDoctorConversationRead(conversationId: string): Promis
 }
 
 export async function downloadAuthenticatedFile(path: string): Promise<Blob> {
-    const res = await fetch(`${getBaseUrl()}${path}`, {
-        headers: authHeaders(),
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new ApiError(res.status, text);
-    }
-
-    return res.blob();
+    const portal=currentPortal(),scope=readAccountScope(portal);
+    const response=await fetchWithAuthRetry(`${getBaseUrl()}${path}`,{cache:'no-store'},false,{portal,scope});
+    if(!response.ok) throw new ApiError(response.status,await response.text(),response.headers.get('X-Request-ID'));
+    const result=await response.blob(); checkScope(portal,scope); return result;
 }
 
 export async function createPatientEpisode(body: EpisodeCreateRequest): Promise<EpisodeResponse> {
@@ -1442,8 +1467,8 @@ export async function updatePatientEpisodeIntake(
   });
 }
 
-export async function submitPatientEpisodeIntake(episodeId: string): Promise<IntakeSubmitResponse> {
-  return apiPost<IntakeSubmitResponse>(`/api/v1/patient/episodes/${episodeId}/intake/submit`, {});
+export async function submitPatientEpisodeIntake(episodeId: string, fieldValues?: Record<string, unknown>): Promise<IntakeSubmitResponse> {
+  return apiPost<IntakeSubmitResponse>(`/api/v1/patient/episodes/${episodeId}/intake/submit`, fieldValues ? {field_values: fieldValues} : {});
 }
 
 export async function getPatientEpisode(episodeId: string): Promise<EpisodeResponse> {
@@ -1508,24 +1533,24 @@ export async function getMedicalRecords(): Promise<MedicalRecordsResponse> {
     return apiGet<MedicalRecordsResponse>("/api/v1/patient/medical-records");
 }
 
-export async function uploadMedicalRecord(formData: FormData): Promise<MedicalRecordUploadResponse> {
-    return apiUpload<MedicalRecordUploadResponse>("/api/v1/patient/medical-records/upload", formData);
+export async function uploadMedicalRecord(formData: FormData, signal?: AbortSignal): Promise<MedicalRecordUploadResponse> {
+    return apiUpload<MedicalRecordUploadResponse>("/api/v1/patient/medical-records/upload", formData, undefined, signal);
 }
 
 export async function downloadMedicalRecord(
     fileId: string,
-    options?: { disposition?: "attachment" | "inline" },
+    options?: { disposition?: "attachment" | "inline"; signal?: AbortSignal },
 ): Promise<MedicalRecordDownloadResponse> {
     const params = new URLSearchParams();
     if (options?.disposition) params.set("disposition", options.disposition);
     const query = params.toString();
     return apiGet<MedicalRecordDownloadResponse>(
-        `/api/v1/patient/medical-records/${fileId}/download${query ? `?${query}` : ""}`,
+        `/api/v1/patient/medical-records/${encodeURIComponent(fileId)}/download${query ? `?${query}` : ""}`, undefined, options?.signal,
     );
 }
 
-export async function deleteMedicalRecord(fileId: string): Promise<{ message: string }> {
-    return apiDelete<{ message: string }>(`/api/v1/patient/medical-records/${fileId}`);
+export async function deleteMedicalRecord(fileId: string, signal?: AbortSignal): Promise<{ message: string; file_id?: string; deleted?: boolean; replayed?: boolean }> {
+    return apiDelete<{ message: string; file_id?: string; deleted?: boolean; replayed?: boolean }>(`/api/v1/patient/medical-records/${encodeURIComponent(fileId)}`, undefined, signal);
 }
 
 // Approval Workflow API Functions
@@ -1609,7 +1634,11 @@ export type LabPartner = {
     directions_url?: string;
 };
 
+export type LabResultUploadReceipt = import('./lab-upload-attempt').LabUploadReceipt;
+
 export type PatientLabRequest = {
+    /** Doctor projection only; patient responses omit this field. */
+    write_version?: string | null;
     id: string;
     patient_id: string;
     provider_id?: string | null;
@@ -1635,6 +1664,11 @@ export type PatientLabRequest = {
     selected_lab_name?: string | null;
     selected_lab_address?: string | null;
     home_collection?: boolean;
+    can_upload_result?: boolean;
+    can_edit?: boolean;
+    can_delete?: boolean;
+    can_review_result?: boolean;
+    result_review?: unknown;
     result_file_id?: string | null;
     result_uploaded_at?: string | null;
     result_filename?: string | null;
@@ -1643,6 +1677,7 @@ export type PatientLabRequest = {
 };
 
 export type PatientLabRequestsResponse = {
+    upload_receipt?: LabResultUploadReceipt;
     test_requests: PatientLabRequest[];
     partner_labs: LabPartner[];
     preparation: Array<Record<string, unknown>>;
@@ -1662,6 +1697,7 @@ export type PatientLabRequestsResponse = {
 };
 
 export type DoctorLabOrderPayload = {
+    creation_id?: string;
     patient_id: string;
     episode_id?: string;
     title: string;
@@ -1679,12 +1715,15 @@ export type DoctorLabOrderPayload = {
     preparation_instructions?: string;
 };
 
-export type DoctorLabOrderUpdatePayload = Partial<DoctorLabOrderPayload> & {
+export type DoctorLabOrderUpdatePayload = Partial<Omit<DoctorLabOrderPayload, 'creation_id'>> & {
     patient_id: string;
     test_id: string;
 };
 
 export type DoctorLabOrdersResponse = {
+    creation_receipt?: import('./clinical-create-intent').ClinicalCreationReceipt;
+    review_receipt?: unknown;
+    upload_receipt?: LabResultUploadReceipt;
     test_requests: PatientLabRequest[];
     provider_id?: string;
     lab_test?: PatientLabRequest;
@@ -1711,12 +1750,12 @@ export async function createDoctorLabOrder(body: DoctorLabOrderPayload): Promise
     return apiPost<DoctorLabOrdersResponse, DoctorLabOrderPayload>("/api/v1/doctor/lab-orders", body);
 }
 
-export async function updateDoctorLabOrder(body: DoctorLabOrderUpdatePayload): Promise<DoctorLabOrdersResponse> {
-    return apiPut<DoctorLabOrdersResponse, DoctorLabOrderUpdatePayload>("/api/v1/doctor/lab-orders", body);
+export async function updateDoctorLabOrder(body: DoctorLabOrderUpdatePayload, version: string): Promise<DoctorLabOrdersResponse> {
+    return apiPut<DoctorLabOrdersResponse, DoctorLabOrderUpdatePayload>("/api/v1/doctor/lab-orders", body, clinicalWriteHeaders(version));
 }
 
-export async function deleteDoctorLabOrder(patientId: string, testId: string): Promise<DoctorLabOrdersResponse> {
-    return apiDelete<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${patientId}/${testId}`);
+export async function deleteDoctorLabOrder(patientId: string, testId: string, version: string): Promise<DoctorLabOrdersResponse> {
+    return apiDelete<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${patientId}/${testId}`, clinicalWriteHeaders(version));
 }
 
 export async function uploadDoctorLabResult(
@@ -1725,6 +1764,16 @@ export async function uploadDoctorLabResult(
     formData: FormData,
 ): Promise<DoctorLabOrdersResponse> {
     return apiUpload<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${patientId}/${testId}/upload-result`, formData);
+}
+
+export type DoctorLabResultAccess = import('./secure-document-access').SecureDocumentMetadata;
+
+export async function getDoctorLabResultAccess(patientId: string, testId: string): Promise<DoctorLabResultAccess> {
+    return apiGet<DoctorLabResultAccess>(`/api/v1/doctor/lab-orders/${encodeURIComponent(patientId)}/${encodeURIComponent(testId)}/result`);
+}
+
+export async function recordDoctorLabResultReview(patientId: string, testId: string, fileId: string, signal?: AbortSignal): Promise<DoctorLabOrdersResponse> {
+    return apiPost<DoctorLabOrdersResponse>(`/api/v1/doctor/lab-orders/${encodeURIComponent(patientId)}/${encodeURIComponent(testId)}/result/review`, { file_id: fileId, reviewed: true }, undefined, signal);
 }
 
 export type PatientBillingPaymentMethod = {
@@ -1756,6 +1805,7 @@ export type PatientBillingHistoryItem = {
 };
 
 export type PatientBillingInsuranceSummary = {
+    insurance_type?: string;
     status: "not_added" | "incomplete" | "active" | string;
     provider_name?: string | null;
     member_number?: string | null;
@@ -1764,10 +1814,44 @@ export type PatientBillingInsuranceSummary = {
     authorizations?: Array<Record<string, unknown>>;
 };
 
+export type BillingPaymentMethodCode = 'CARD' | 'PAYPAL' | 'APPLE_PAY' | 'GOOGLE_PAY' | 'KLARNA';
+export type BillingPendingCapability = {
+    status: 'not_configured';
+    reason_code: string;
+    message: string;
+};
+export type PatientBillingReadiness = {
+    schema_version: 1;
+    checkout: { enabled: false; reason_code: string; message: string };
+    requested_methods: Array<BillingPendingCapability & { method: BillingPaymentMethodCode; label: string }>;
+    accepted_methods: BillingPaymentMethodCode[];
+    patient_payments: BillingPendingCapability;
+    medical_invoicing: BillingPendingCapability;
+    practice_fee_invoicing: BillingPendingCapability;
+    practice_settlement: BillingPendingCapability;
+    intended_model: {
+        medical_invoice_issuer: 'treating_practice';
+        patient_payment_recipient: 'connected_practice_account';
+        platform_usage_fee_payer: 'treating_practice';
+        configured_practice_id: null;
+    };
+    funding_rules: {
+        requires_case_funding_confirmation: true;
+        covered_gkv_patient_checkout: 'excluded';
+        insurance_declaration_confirms_coverage: false;
+        insurance_declaration_authorizes_self_pay: false;
+        self_pay_requires_explicit_cost_agreement: true;
+        unverified_funding_checkout: 'blocked';
+    };
+};
+
 export type PatientBillingResponse = {
-    current_balance: number;
-    insurance_coverage: number;
-    amount_due: number;
+    status?: 'not_configured' | 'ready';
+    capabilities?: { payments: string; invoicing: string; insurance_verification: string };
+    readiness?: PatientBillingReadiness;
+    current_balance: number | null;
+    insurance_coverage: number | null;
+    amount_due: number | null;
     currency?: string;
     payment_provider_enabled?: boolean;
     payment_methods: PatientBillingPaymentMethod[];
@@ -1854,6 +1938,9 @@ export type PatientSettings = {
     phone?: string;
     date_of_birth?: string;
     gender?: string;
+    preferred_name?: string | null;
+    nationality?: string | null;
+    marital_status?: string | null;
     email_notifications: boolean;
     sms_notifications: boolean;
     push_notifications: boolean;
@@ -1990,10 +2077,25 @@ export type ProfileUpdate = {
     date_of_birth?: string;
     gender?: string;
     phone?: string;
+    preferred_name?: string | null;
+    nationality?: string;
+    marital_status?: string;
+    language?: 'German' | 'English';
 };
 
+// Coalesce only concurrent reads within the same account/session. No response cache.
+const patientSettingsReads = new Map<string, Promise<PatientSettings>>();
 export async function getPatientSettings(): Promise<PatientSettings> {
-    return apiGet<PatientSettings>("/api/v1/patient/settings");
+    assertCurrentAccount();
+    const scope = readAccountScope();
+    if (!scope) return apiGet<PatientSettings>("/api/v1/patient/settings");
+    const existing = patientSettingsReads.get(scope);
+    if (existing) return existing;
+    const request = apiGet<PatientSettings>("/api/v1/patient/settings").finally(() => {
+        if (patientSettingsReads.get(scope) === request) patientSettingsReads.delete(scope);
+    });
+    patientSettingsReads.set(scope, request);
+    return request;
 }
 
 export async function updatePatientSettings(body: PatientSettingsUpdate): Promise<PatientSettings> {
@@ -2021,10 +2123,8 @@ export async function getPatientLoginHistory(): Promise<PatientLoginHistoryRespo
 }
 
 export async function getPatientActiveDevices(): Promise<PatientActiveDevicesResponse> {
-    const refreshToken = readRefreshToken();
     return apiGet<PatientActiveDevicesResponse>(
         "/api/v1/patient/settings/active-devices",
-        refreshToken ? { "X-Qarevo-Refresh-Token": refreshToken } : undefined,
     );
 }
 
@@ -2033,11 +2133,9 @@ export async function revokePatientActiveDevice(deviceId: string): Promise<{ mes
 }
 
 export async function revokeOtherPatientActiveDevices(): Promise<{ message: string }> {
-    const refreshToken = readRefreshToken();
     return apiPost<{ message: string }>(
         "/api/v1/patient/settings/active-devices/revoke-others",
         {},
-        refreshToken ? { "X-Qarevo-Refresh-Token": refreshToken } : undefined,
     );
 }
 
@@ -2339,9 +2437,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
 // Admin API Functions
 export function readAdminRole(): 'ADMIN' | null {
-    if (typeof window === "undefined") return null;
-    const role = window.localStorage.getItem("qarevo_role");
-    return role === 'ADMIN' ? 'ADMIN' : null;
+    return readPortalIdentity('admin')?.role === 'ADMIN' ? 'ADMIN' : null;
 }
 
 export function isAdmin(): boolean {
@@ -2389,14 +2485,11 @@ export type AdminDashboardDoctorsSummary = {
     verified: number;
     pending: number;
     by_specialty: Record<string, number>;
-    by_region: Record<string, number>;
 };
 
 export type AdminDashboardPatientsSummary = {
     total: number;
-    active: number;
-    inactive: number;
-    new_this_month: number;
+    new_last_7_days: number;
 };
 
 // Admin Dashboard API Functions
@@ -2421,51 +2514,63 @@ export async function getAdminDashboardPatientsSummary(): Promise<AdminDashboard
 }
 
 // Admin Doctors Types
+export type ClinicalAccess = { status: 'enabled' | 'blocked'; reason: string; message: string };
+
 export type AdminDoctor = {
+    id: string;
     provider_id: string;
     user_id: string;
     full_name: string;
     email: string;
-    phone: string;
-    specialty: string;
-    experience_years: number;
-    license_number: string;
+    email_verified: boolean;
+    phone: string | null;
+    specialty: string | null;
+    license_number: string | null;
     license_verified: boolean;
-    is_independent: boolean;
+    clinical_access?: ClinicalAccess;
+    verification_status: string;
     status: string;
-    region?: string;
-    avatar_url?: string;
-    created_at: string;
-    updated_at?: string;
+    region?: string | null;
+    created_at: string | null;
 };
 
 export type AdminDoctorVerification = {
+    id: string;
     provider_id: string;
+    user_id: string;
     full_name: string;
     email: string;
-    phone: string;
-    specialty: string;
-    license_number: string;
-    license_document_url?: string;
-    medical_license_document_url?: string;
-    id_document_url?: string;
-    submission_date: string;
+    email_verified: boolean;
+    phone: string | null;
+    specialty: string | null;
+    license_number: string | null;
+    submitted_at: string | null;
+    verification_status: string;
     status: string;
+    clinical_access?: ClinicalAccess;
+    can_review?: boolean;
 };
 
 export type AdminDoctorsListResponse = {
     doctors: AdminDoctor[];
-    total_count: number;
-    filtered_count: number;
-    page: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
+    total: number;
+    limit: number;
+    offset: number;
+    has_next?: boolean;
+    has_previous?: boolean;
+    can_review?: boolean;
+    status_options?: { value: string; label: string }[];
+};
+
+export type AdminPendingDoctorsPageResponse = Omit<AdminDoctorsListResponse, 'doctors'> & {
+    doctors: AdminDoctorVerification[];
 };
 
 export type AdminVerifyDoctorRequest = {
     approve: boolean;
     rejection_reason?: string;
+    review_reference?: string;
+    review_confirmed?: boolean;
 };
 
 export type AdminUpdateDoctorStatusRequest = {
@@ -2512,46 +2617,19 @@ export type AdminUpdatePatientRequest = {
 };
 
 // Admin Users Types
+export type AdminRole = 'super_admin' | 'operations_admin' | 'compliance_admin' | 'support_admin';
+export type AdminStatus = 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
 export type AdminUser = {
-    admin_id: string;
-    user_id: string;
-    full_name: string;
-    email: string;
-    role: string;
-    status: string;
-    permissions?: Record<string, unknown>;
-    created_at: string;
-    updated_at?: string;
+    id: string; user_id: string; full_name: string; email: string;
+    role: AdminRole; status: AdminStatus; created_at: string | null; last_login_at: string | null;
 };
-
 export type AdminUsersListResponse = {
-    admin_users: AdminUser[];
-    total_count: number;
-    filtered_count: number;
-    page: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
+    admin_users: AdminUser[]; total: number; limit: number; offset: number;
+    can_manage: boolean; current_admin_id: string;
 };
-
-export type AdminCreateAdminUserRequest = {
-    email: string;
-    full_name: string;
-    role: string;
-    permissions?: Record<string, unknown>;
-    password?: string;
-};
-
-export type AdminUpdateAdminUserRequest = {
-    full_name?: string;
-    role?: string;
-    permissions?: Record<string, unknown>;
-};
-
-export type AdminUpdateAdminStatusRequest = {
-    status: string;
-    reason?: string;
-};
+export type AdminCreateAdminUserRequest = { email: string; full_name: string; role: AdminRole };
+export type AdminUpdateAdminUserRequest = { full_name?: string; role?: AdminRole };
+export type AdminUpdateAdminStatusRequest = { status: Exclude<AdminStatus, 'INVITED'>; reason: string };
 
 // Admin Doctors API Functions
 export async function getAdminDoctors(
@@ -2583,16 +2661,22 @@ export async function getPendingDoctors(limit: number = 50, offset: number = 0):
     return apiGet<AdminDoctorVerification[]>(`/api/v1/admin/doctors/pending?${params.toString()}`);
 }
 
+export async function getPendingDoctorsPage(limit: number = 25, offset: number = 0, search?: string): Promise<AdminPendingDoctorsPageResponse> {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (search?.trim()) params.set('search', search.trim());
+    return apiGet<AdminPendingDoctorsPageResponse>(`/api/v1/admin/doctors/pending/page?${params.toString()}`);
+}
+
 export async function getDoctorVerificationDetails(providerId: string): Promise<AdminDoctorVerification> {
     return apiGet<AdminDoctorVerification>(`/api/v1/admin/doctors/${providerId}/verification`);
 }
 
-export async function verifyDoctor(providerId: string, body: AdminVerifyDoctorRequest): Promise<{ message: string }> {
-    return apiPut<{ message: string }, AdminVerifyDoctorRequest>(`/api/v1/admin/doctors/${providerId}/verify`, body);
+export async function verifyDoctor(providerId: string, body: AdminVerifyDoctorRequest, signal?: AbortSignal): Promise<{ message: string }> {
+    return apiPut<{ message: string }, AdminVerifyDoctorRequest>(`/api/v1/admin/doctors/${encodeURIComponent(providerId)}/verify`, body, undefined, signal);
 }
 
-export async function updateDoctorStatus(providerId: string, body: AdminUpdateDoctorStatusRequest): Promise<{ message: string }> {
-    return apiPut<{ message: string }, AdminUpdateDoctorStatusRequest>(`/api/v1/admin/doctors/${providerId}/status`, body);
+export async function updateDoctorStatus(providerId: string, body: AdminUpdateDoctorStatusRequest, signal?: AbortSignal): Promise<{ message: string }> {
+    return apiPut<{ message: string }, AdminUpdateDoctorStatusRequest>(`/api/v1/admin/doctors/${encodeURIComponent(providerId)}/status`, body, undefined, signal);
 }
 
 // Admin Patients API Functions
@@ -2655,17 +2739,17 @@ export async function updateAdminUser(adminId: string, body: AdminUpdateAdminUse
     return apiPut<AdminUser, AdminUpdateAdminUserRequest>(`/api/v1/admin/admin-users/${adminId}`, body);
 }
 
-export async function updateAdminUserStatus(adminId: string, body: AdminUpdateAdminStatusRequest): Promise<{ message: string }> {
-    return apiPut<{ message: string }, AdminUpdateAdminStatusRequest>(`/api/v1/admin/admin-users/${adminId}/status`, body);
+export async function updateAdminUserStatus(adminId: string, body: AdminUpdateAdminStatusRequest): Promise<AdminUser> {
+    return apiPut<AdminUser, AdminUpdateAdminStatusRequest>(`/api/v1/admin/admin-users/${adminId}/status`, body);
 }
 
-export async function deleteAdminUser(adminId: string): Promise<{ message: string }> {
-    return apiDelete<{ message: string }>(`/api/v1/admin/admin-users/${adminId}`);
+export async function deleteAdminUser(adminId: string): Promise<AdminUser> {
+    return apiDelete<AdminUser>(`/api/v1/admin/admin-users/${adminId}`);
 }
 
 // Admin Exceptions Types
 export type AdminException = {
-    exception_id: string;
+    id: string;
     type: string;
     severity: string;
     source: string;
@@ -2689,12 +2773,9 @@ export type AdminExceptionStats = {
 
 export type AdminExceptionsListResponse = {
     exceptions: AdminException[];
-    total_count: number;
-    filtered_count: number;
-    page: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
+    total: number;
+    limit: number;
+    offset: number;
 };
 
 export type AdminCreateExceptionRequest = {
@@ -2757,13 +2838,13 @@ export type AdminBulkUpdateConfigsRequest = {
 
 // Admin Audit Types
 export type AdminAuditLog = {
-    log_id: string;
+    id: string;
     admin_user_id: string;
     admin_user_name?: string;
     action: string;
     target_type: string;
     target_id?: string;
-    changes?: Record<string, { old: unknown; new: unknown }>;
+    changes?: Record<string, unknown>;
     ip_address?: string;
     user_agent?: string;
     created_at: string;
@@ -2771,12 +2852,9 @@ export type AdminAuditLog = {
 
 export type AdminAuditLogsListResponse = {
     logs: AdminAuditLog[];
-    total_count: number;
-    filtered_count: number;
-    page: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
+    total: number;
+    limit: number;
+    offset: number;
 };
 
 export type AdminActionSummary = {
@@ -2929,11 +3007,11 @@ export async function exportAdminAuditLogs(dateFrom?: string, dateTo?: string, f
     return apiGet<Record<string, unknown>>(`/api/v1/admin/audit-logs/export/data?${params.toString()}`);
 }
 
-export async function getActionSummary(dateFrom?: string, dateTo?: string): Promise<AdminActionSummary[]> {
+export async function getActionSummary(dateFrom?: string, dateTo?: string): Promise<{ actions: AdminActionSummary[] }> {
     const params = new URLSearchParams();
     if (dateFrom) params.set("date_from", dateFrom);
     if (dateTo) params.set("date_to", dateTo);
-    return apiGet<AdminActionSummary[]>(`/api/v1/admin/audit-logs/summary/actions?${params.toString()}`);
+    return apiGet<{ actions: AdminActionSummary[] }>(`/api/v1/admin/audit-logs/summary/actions?${params.toString()}`);
 }
 
 export async function getAuditLog(logId: string): Promise<AdminAuditLog> {
@@ -2979,4 +3057,16 @@ export async function getActionTrends(
     if (dateTo) params.set("date_to", dateTo);
     params.set("granularity", granularity);
     return apiGet<AdminActionTrend[]>(`/api/v1/admin/audit-logs/trends?${params.toString()}`);
+}
+
+export async function resendAdminInvitation(adminId: string): Promise<AdminUser> {
+    return apiPost<AdminUser>(`/api/v1/admin/admin-users/${adminId}/invitation`);
+}
+export async function acceptAdminInvitation(token: string, new_password: string): Promise<{ message: string }> {
+    return apiPost<{ message: string }>('/api/v1/auth/admin/invitations/accept', { token, new_password });
+}
+
+export type AdminInvitationStatus = { valid: false } | { valid: true; expires_at: string };
+export async function validateAdminInvitation(token: string): Promise<AdminInvitationStatus> {
+    return apiPost<AdminInvitationStatus>('/api/v1/auth/admin/invitations/validate', { token });
 }

@@ -1,8 +1,13 @@
 'use client'
 
+import Link from 'next/link'
+import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import SidebarToggle from '@/components/layout/SidebarToggle'
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import PatientMobileNavigation from '@/components/patient/PatientMobileNavigation'
+import PatientAccountMenu from '@/components/patient/PatientAccountMenu'
 import { useRouter } from 'next/navigation'
-import { isPatient, readAccessToken, clearAuthTokens } from '@/lib/api'
+import { isPatient, readSessionMarker, clearPortalSession } from '@/lib/api'
 import { useEffect, useState } from 'react'
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
@@ -12,8 +17,8 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     const mountedTimer = window.setTimeout(() => setMounted(true), 0)
 
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/sign-in')
       return () => window.clearTimeout(mountedTimer)
     }
@@ -29,7 +34,10 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
   return (
     <>
       <PatientMobileNavigation />
-      {mounted ? children : null}
+      <nav aria-label="Patient appearance" className="patient-appearance-navigation">
+        <Link href='/patient/dashboard' aria-label='Qarevo Health patient dashboard' className='portal-navbar-brand'><AuthenticatedLogo width={156} /></Link><SidebarToggle role='patient' /><span className='patient-portal-label'>Patient portal</span><ThemeToggle /><SidebarToggle role='patient' side='right' /><PatientAccountMenu />
+      </nav>
+      {mounted ? <div className='patient-application'>{children}</div> : null}
     </>
   )
 }

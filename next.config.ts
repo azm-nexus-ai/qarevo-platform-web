@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
+import { portalHostRedirects } from './lib/server/portal-host-routing';
+import { selectBuildRevision } from './lib/server/build-revision';
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Next substitutes this value into the built server bundle. A later runtime
+  // environment change must not relabel an already-built release.
+  env: { QAREVO_BUILD_REVISION: selectBuildRevision(process.env) ?? '' },
+  redirects: () => portalHostRedirects(process.env),
 
   images: {
     remotePatterns: [
@@ -12,15 +18,6 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  async rewrites() {
-    const apiUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${apiUrl}/api/:path*`,
-      },
-    ]
-  },
 };
 
 export default nextConfig;

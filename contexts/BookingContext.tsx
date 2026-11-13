@@ -1,6 +1,11 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
+import { currentPortal, isPortalEvent, portalKey, type Portal } from '@/lib/portal-scope'
+import {
+  ACCOUNT_CHANGED, assertCurrentAccount, clearPrivateBrowserState,
+  createAccountDraftStorage, readAccountScope,
+} from '@/lib/account-storage'
 
 export interface BookingState {
   physicianId?: string
@@ -21,48 +26,113 @@ export interface BookingContextType {
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined)
+const initialState: BookingState = { step: 'discovery' }
+const STORAGE_KEY = 'qarevo_booking_state'
 
-const initialState: BookingState = {
-  step: 'discovery',
+function returnToSignIn(portal: Portal) {
+  const destination = portal === 'doctor'
+    ? '/auth/doctor/login'
+    : portal === 'admin'
+      ? '/auth/admin/login'
+      : '/auth/sign-in'
+  window.location.replace(destination)
 }
 
-export function BookingProvider({ children }: { children: ReactNode }) {
-  const [bookingState, setBookingState] = useState<BookingState>(() => {
-    // Load from localStorage if available
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('qarevo_booking_state')
-      if (saved) {
-        try {
-          return JSON.parse(saved)
-        } catch {
-          return initialState
+export function BookingProvider({ children, portal: selectedPortal }: { children: ReactNode; portal?: Portal }) {
+  // PortalSessionBoundary remounts this provider when the active portal changes.
+  const [portal] = useState(() => selectedPortal ?? currentPortal())
+  const [bookingState, setBookingState] = useState<BookingState>(initialState)
+  const [draftStorage, setDraftStorage] = useState(() => createAccountDraftStorage(portal))
+  const [blocked, setBlocked] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
+  const logoutSeen = useRef(false)
+
+  useEffect(() => {
+    try {
+      const saved = draftStorage.getItem(STORAGE_KEY)
+      if (saved) setBookingState({ ...initialState, ...JSON.parse(saved) })
+    } catch {
+      setBookingState(initialState)
+    } finally {
+      setHydrated(true)
+    }
+  }, [draftStorage])
+
+  useEffect(() => {
+    const logoutPending = () => {
+      try { return Boolean(window.localStorage.getItem(portalKey('logout-pending', portal))) } catch { return false }
+    }
+    const reset = (event: Event) => {
+      if (!isPortalEvent(event, portal)) return
+      if (logoutPending()) { logoutSeen.current = true; setSigningOut(true); setBlocked(true); return }
+      if (logoutSeen.current && !readAccountScope(portal)) { returnToSignIn(portal); return }
+      const path = window.location.pathname
+      if (!readAccountScope(portal) && (
+        path.startsWith('/patient') || path.startsWith('/doctor') ||
+        path.startsWith('/admin') || path.startsWith('/auth/profile-setup')
+      )) {
+        setBlocked(true)
+        returnToSignIn(portal)
+        return
+      }
+      logoutSeen.current = false
+      setSigningOut(false)
+      setBlocked(false)
+      setHydrated(false)
+      setBookingState(initialState)
+      setDraftStorage(createAccountDraftStorage(portal))
+    }
+    const check = (event?: Event) => {
+      if (event && !isPortalEvent(event, portal)) return
+      if (logoutPending()) { logoutSeen.current = true; setSigningOut(true); setBlocked(true); return }
+      if (logoutSeen.current && !readAccountScope(portal)) { returnToSignIn(portal); return }
+      try {
+        assertCurrentAccount(portal)
+      } catch {
+        setBlocked(true)
+        try { clearPrivateBrowserState(portal) } finally {
+          returnToSignIn(portal)
         }
       }
     }
-    return initialState
-  })
+    window.addEventListener(ACCOUNT_CHANGED, reset)
+    window.addEventListener('storage', check)
+    window.addEventListener('focus', check)
+    window.addEventListener('pageshow', check)
+    check()
+    return () => {
+      window.removeEventListener(ACCOUNT_CHANGED, reset)
+      window.removeEventListener('storage', check)
+      window.removeEventListener('focus', check)
+      window.removeEventListener('pageshow', check)
+    }
+  }, [portal])
 
   const updateBookingState = useCallback((updates: Partial<BookingState>) => {
-    setBookingState((prev) => {
-      const newState = { ...prev, ...updates }
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('qarevo_booking_state', JSON.stringify(newState))
-      }
-      return newState
-    })
-  }, [])
+    assertCurrentAccount(portal)
+    setBookingState(previous => ({ ...previous, ...updates }))
+  }, [portal])
+
+  useEffect(() => {
+    if (!hydrated || !readAccountScope(portal)) return
+    try {
+      draftStorage.setItem(STORAGE_KEY, JSON.stringify(bookingState))
+    } catch {
+      // Keep the current in-memory draft; never fall back to shared storage.
+    }
+  }, [bookingState, draftStorage, hydrated, portal])
 
   const resetBookingState = useCallback(() => {
     setBookingState(initialState)
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('qarevo_booking_state')
-    }
-  }, [])
+    draftStorage.removeItem(STORAGE_KEY)
+  }, [draftStorage])
 
   const setBookingStep = useCallback((step: BookingState['step']) => {
     updateBookingState({ step })
   }, [updateBookingState])
+
+  if (blocked) return <p role="status">{signingOut ? 'Signing out securely…' : 'Your session changed. Returning to sign in…'}</p>
 
   return (
     <BookingContext.Provider value={{ bookingState, updateBookingState, resetBookingState, setBookingStep }}>
@@ -73,8 +143,6 @@ export function BookingProvider({ children }: { children: ReactNode }) {
 
 export function useBookingContext() {
   const context = useContext(BookingContext)
-  if (context === undefined) {
-    throw new Error('useBookingContext must be used within a BookingProvider')
-  }
+  if (context === undefined) throw new Error('useBookingContext must be used within a BookingProvider')
   return context
 }
