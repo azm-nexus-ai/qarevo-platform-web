@@ -9,7 +9,7 @@ function loadServer(name) {
   const mod = { exports: {} };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../lib/server', name + '.ts'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText, { module: mod, exports: mod.exports, require: dependency => dependency.startsWith('./') ? loadServer(dependency.slice(2)) : dependency === '../clinical-write-version' ? loadServer('../clinical-write-version') : require(dependency), Request, Response, Headers, URL, Buffer, TextDecoder, AbortSignal, Date, process });
+  }).outputText, { module: mod, exports: mod.exports, require: dependency => dependency.startsWith('.') ? loadServer(path.join(path.dirname(name), dependency)) : require(dependency), Request, Response, Headers, URL, Buffer, TextDecoder, AbortSignal, Date, process });
   return mod.exports;
 }
 const { handlePortalRequest } = loadServer('portal-bff');
@@ -492,3 +492,61 @@ test('If-Match is not a generic browser header override and legacy missing value
   const legacy = await run(req('/api/v1/doctor/prescriptions', { portal: 'doctor', method: 'PUT', body: {} }), 'doctor', async (_url, init) => { assert.equal(init.headers.get('If-Match'), null); return Response.json({}) })
   assert.equal(legacy.status, 200)
 })
+
+for (const endpoint of ['/api/v1/auth/practice/verify', '/api/v1/auth/practice/invitations/accept-owner']) test('practice identity entry verifies its separate purpose before cookies: ' + endpoint, async () => {
+  const paths = [], adminCookie = cookie('admin');
+  const response = await run(req(endpoint, { portal: 'practice', method: 'POST', cookies: `qarevo_practice_csrf=${csrf}; ${adminCookie}`, body: { challenge_id: 'synthetic-challenge', code: '123456' } }), 'practice', async (url, init) => {
+    paths.push(new URL(url).pathname);
+    if (paths.length === 1) { assert.equal(new Headers(init.headers).get('Authorization'), null); return authResponse(); }
+    assert.equal(new URL(url).pathname, '/api/v1/practice/session'); assert.equal(new Headers(init.headers).get('Authorization'), 'Bearer private-access');
+    return Response.json(identity('admin', { role: 'PRACTICE', provider_id: null, session_id: 'practice-family' }));
+  });
+  assert.equal(response.status, 200);
+  const body = await response.json(); assert.equal(body.browser_session.role, 'PRACTICE'); assert.equal(body.browser_session.user_id, 'admin-user');
+  assert.equal(body.access_token, undefined); assert.equal(body.refresh_token, undefined);
+  assert.match(response.headers.get('set-cookie'), /__Host-qarevo_practice_access=.*HttpOnly/); assert.doesNotMatch(response.headers.get('set-cookie'), /qarevo_admin_|qarevo_doctor_|qarevo_patient_|Domain=/);
+});
+
+test('practice cookies and generic session/refresh/logout map only to practice-purpose routes', async () => {
+  const calls = [];
+  const status = await run(req('/api/v1/session', { portal: 'practice' }), 'practice', async (url, init) => {
+    calls.push(new URL(url).pathname); assert.equal(new Headers(init.headers).get('Authorization'), `Bearer ${access('practice')}`);
+    return Response.json(identity('patient', { role: 'PRACTICE', provider_id: null, session_id: 'practice-family' }));
+  });
+  assert.equal(status.status, 200); assert.deepEqual(calls, ['/api/v1/practice/session']); assert.equal((await status.json()).browser_session.role, 'PRACTICE');
+  const logout = await run(req('/api/v1/auth/logout', { portal: 'practice', method: 'POST', body: {} }), 'practice', async (url, init) => {
+    assert.equal(new URL(url).pathname, '/api/v1/auth/practice/logout'); assert.equal(JSON.parse(init.body).refresh_token, 'practice-refresh'); return Response.json({ message: 'Signed out' });
+  });
+  assert.equal(logout.status, 200); assert.match(logout.headers.get('set-cookie'), /qarevo_practice_access=;/); assert.doesNotMatch(logout.headers.get('set-cookie'), /qarevo_patient_|qarevo_admin_|qarevo_doctor_/);
+  const refreshed = await run(req('/api/v1/auth/refresh', { portal: 'practice', method: 'POST', body: {} }), 'practice', async (url, init) => {
+    assert.equal(new URL(url).pathname, '/api/v1/auth/practice/refresh'); assert.equal(JSON.parse(init.body).refresh_token, 'practice-refresh'); return Response.json({ detail: 'Expired practice session.' }, { status: 401 });
+  });
+  assert.equal(refreshed.status, 401); assert.match(refreshed.headers.get('set-cookie'), /qarevo_practice_access=;/);
+});
+
+test('practice scope refuses clinical/admin namespaces, OAuth and other-portal cookies', async () => {
+  let calls = 0;
+  for (const endpoint of ['/api/v1/patient/medical-records', '/api/v1/doctor/workspace', '/api/v1/admin/practices', '/api/v1/consultations', '/api/v1/meetings', '/api/v1/security', '/api/v1/auth/social/providers', '/api/v1/auth/social/google/start', '/api/v1/auth/social/apple/start']) {
+    const response = await run(req(endpoint, { portal: 'practice' }), 'practice', async () => { calls++; return Response.json({}); }); assert.equal(response.status, 403, endpoint);
+  }
+  const forbidden = await run(req('/api/v1/practice/workspace', { portal: 'practice', cookies: cookie('admin') }), 'practice', async () => { calls++; return Response.json({}); });
+  assert.equal(forbidden.status, 401); assert.equal(calls, 0);
+});
+
+test('practice conditional writes retain saved versions and reject weak validators', async () => {
+  const endpoint = '/api/v1/practice/practices/11111111-1111-4111-8111-111111111111';
+  const response = await run(req(endpoint, { portal: 'practice', method: 'PATCH', body: { name: 'Synthetic Practice' }, headers: { 'If-Match': '"3"' } }), 'practice', async (_url, init) => { assert.equal(new Headers(init.headers).get('If-Match'), '"3"'); return Response.json({ ok: true }); });
+  assert.equal(response.status, 200);
+  assert.equal((await run(req(endpoint, { portal: 'practice', method: 'PATCH', body: {}, headers: { 'If-Match': 'W/"3"' } }), 'practice')).status, 400);
+});
+
+test('practice role verification rejects a global administrator session before setting cookies', async () => {
+  let calls = 0;
+  const response = await run(req('/api/v1/auth/practice/verify', { portal: 'practice', method: 'POST', body: {} }), 'practice', async () => ++calls === 1 ? authResponse() : Response.json(identity('admin')));
+  assert.equal(response.status, 403); assert.equal(response.headers.get('set-cookie'), null);
+});
+
+for (const [portal, endpoint] of [['practice', '/api/v1/auth/reset-password'], ['patient', '/api/v1/auth/reset-password'], ['admin', '/api/v1/auth/admin/login'], ['practice', '/api/v1/practice/security/password']]) test('identity422neverechoesvalidationinput/context in ' + portal + endpoint, async () => {
+  const response = await run(req(endpoint, { portal, method: 'POST', body: {} }), portal, async () => Response.json({ detail: [{ loc: ['body', 'new_password'], type: 'value_error', msg: 'Use a stronger password.', input: 'PRIVATE-PASSWORD', ctx: { token: 'PRIVATE-RESET-TOKEN' } }], secret: 'PRIVATE-SECRET' }, { status: 422 }));
+  assert.equal(response.status, 422); const body = await response.text(); assert.doesNotMatch(body, /PRIVATE|input|ctx|secret/); assert.deepEqual(JSON.parse(body), { detail: [{ loc: ['body', 'new_password'], type: 'value_error', msg: 'Use a stronger password.' }] });
+});

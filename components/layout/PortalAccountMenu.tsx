@@ -5,7 +5,7 @@ import Link from 'next/link'
 import styles from './PortalAccountMenu.module.css'
 
 export default function PortalAccountMenu({ portal, name, description, avatar, profileHref, settingsHref }: {
-  portal: 'patient' | 'doctor' | 'admin'
+  portal: import('@/lib/portal-scope').Portal
   name: string
   description?: string
   avatar: ReactNode

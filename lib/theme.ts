@@ -10,11 +10,12 @@ function bootstrapTheme(portal?: Portal, apply = true): Theme {
   const root = document.documentElement
   let resolved = portal
   if (!resolved) {
-    const portals = ['patient', 'doctor', 'admin']
+    const portals = ['patient', 'doctor', 'admin', 'practice']
     const host = window.location.hostname.split('.')[0]
     const path = window.location.pathname
     if (portals.includes(host)) resolved = host as Portal
     else if (/^\/(?:admin|auth\/admin)(?:\/|$)/.test(path)) resolved = 'admin'
+    else if (/^\/(?:practice|auth\/practice)(?:\/|$)/.test(path)) resolved = 'practice'
     else if (/^\/(?:doctor|auth\/doctor)(?:\/|$)|^\/auth\/doctor-(?:register|verify-email|verify-phone)(?:\/|$)/.test(path)) resolved = 'doctor'
     else if (/^\/(?:patient|auth\/(?:sign-in|sign-up|forgot-password|reset-password|profile-setup|otp|verify-email|account-created|welcome))(?:\/|$)/.test(path)) resolved = 'patient'
     else {
@@ -63,4 +64,4 @@ export function setPortalTheme(theme: Theme, portal = currentPortal()) {
 }
 
 // Appearance only: this script embeds no identity, credential or clinical data.
-export const THEME_BOOTSTRAP = `(${bootstrapTheme.toString()})();['patient','patient-right','doctor','admin'].forEach(function(r){try{document.documentElement.setAttribute('data-'+r+'-sidebar',localStorage.getItem('qarevo.sidebar.'+r)==='collapsed'?'collapsed':'expanded')}catch(e){}})`
+export const THEME_BOOTSTRAP = `(${bootstrapTheme.toString()})();['patient','patient-right','doctor','admin','practice'].forEach(function(r){try{document.documentElement.setAttribute('data-'+r+'-sidebar',localStorage.getItem('qarevo.sidebar.'+r)==='collapsed'?'collapsed':'expanded')}catch(e){}})`

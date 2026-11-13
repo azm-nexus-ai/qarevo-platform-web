@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
-import { currentPortal, isPortalEvent, portalKey, type Portal } from '@/lib/portal-scope'
+import { currentPortal, isPortalEvent, portalKey, protectedPortalPath, PORTAL_DEFINITIONS, type Portal } from '@/lib/portal-scope'
 import {
   ACCOUNT_CHANGED, assertCurrentAccount, clearPrivateBrowserState,
   createAccountDraftStorage, readAccountScope,
@@ -30,11 +30,7 @@ const initialState: BookingState = { step: 'discovery' }
 const STORAGE_KEY = 'qarevo_booking_state'
 
 function returnToSignIn(portal: Portal) {
-  const destination = portal === 'doctor'
-    ? '/auth/doctor/login'
-    : portal === 'admin'
-      ? '/auth/admin/login'
-      : '/auth/sign-in'
+  const destination = PORTAL_DEFINITIONS[portal].signIn
   window.location.replace(destination)
 }
 
@@ -68,10 +64,7 @@ export function BookingProvider({ children, portal: selectedPortal }: { children
       if (logoutPending()) { logoutSeen.current = true; setSigningOut(true); setBlocked(true); return }
       if (logoutSeen.current && !readAccountScope(portal)) { returnToSignIn(portal); return }
       const path = window.location.pathname
-      if (!readAccountScope(portal) && (
-        path.startsWith('/patient') || path.startsWith('/doctor') ||
-        path.startsWith('/admin') || path.startsWith('/auth/profile-setup')
-      )) {
+      if (!readAccountScope(portal) && protectedPortalPath(path)) {
         setBlocked(true)
         returnToSignIn(portal)
         return

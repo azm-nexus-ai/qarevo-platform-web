@@ -3,8 +3,9 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { signProxyContext } from './proxy-context';
 import { clinicalConditionalRoute, strongClinicalIfMatch } from '../clinical-write-version';
+import { PORTALS, PORTAL_DEFINITIONS } from '../portal-scope';
 
-export type Portal = 'patient' | 'doctor' | 'admin';
+export type Portal = import('../portal-scope').Portal;
 type Environment = Record<string, string | undefined>;
 type BffDiagnostic = { event: 'bff_request_failed' | 'bff_request_slow'; request_id: string; status_code: number; duration_ms: number; portal: Portal | 'unknown'; method: string; route_template: '/api/v1/[...path]' };
 type BffOptions = { fetchImpl?: typeof fetch; env?: Environment; now?: () => number; diagnosticLogger?: (level: 'warn' | 'error', event: BffDiagnostic) => void | Promise<void> };
@@ -12,7 +13,14 @@ const BFF_SLOW_REQUEST_MS = 1000;
 type BrowserSession = { user_id: string; role: string; provider_id: string | null; session_id: string };
 type CookieContext = { secure: boolean; prefix: string; csrf: string; values: Map<string, string> };
 
-const ROLES: Record<Portal, string> = { patient: 'PATIENT', doctor: 'PROVIDER', admin: 'ADMIN' };
+const ROLES = Object.fromEntries(PORTALS.map(portal => [portal, PORTAL_DEFINITIONS[portal].role])) as Record<Portal, string>;
+const sessionPath = (portal: Portal) => portal === 'practice' ? '/api/v1/practice/session' : '/api/v1/session';
+function effectivePath(path: string, portal: Portal): string {
+  if (portal !== 'practice') return path;
+  if (path === '/api/v1/session' || path === '/api/v1/session/activity') return path.replace('/api/v1/session', '/api/v1/practice/session');
+  if (path === '/api/v1/auth/refresh' || path === '/api/v1/auth/logout') return path.replace('/api/v1/auth/', '/api/v1/auth/practice/');
+  return path;
+}
 const SAFE_METHODS = new Set(['GET', 'HEAD']);
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 const SECRET_FIELDS = new Set(['access_token', 'refresh_token', 'temp_token']);
@@ -130,15 +138,27 @@ function validatePath(path: string[]): string {
 function routeAccess(path: string[], portal: Portal): 'public' | 'access' | 'mfa' | 'refresh' {
   const namespace = path[2];
   const suffix = path.slice(3).join('/');
-  if (['patient', 'doctor', 'admin'].includes(namespace)) {
+  if (namespace === 'practice' && suffix === 'capabilities') return 'public';
+  if (PORTALS.includes(namespace as Portal)) {
     if (namespace !== portal) throw new BoundaryError(403, 'This operation belongs to a different portal.');
     if ((portal === 'patient' && suffix === 'register') ||
       (portal === 'doctor' && ['register', 'username-availability'].includes(suffix))) return 'public';
     return 'access';
   }
-  if (SHARED_NAMESPACES.has(namespace)) return 'access';
+  if (SHARED_NAMESPACES.has(namespace)) {
+    if (portal === 'practice' && namespace !== 'session') throw new BoundaryError(403, 'Practice administration does not grant clinical or platform security access.');
+    return 'access';
+  }
   if (namespace !== 'auth') throw new BoundaryError(404, 'The requested application service is unavailable.');
   if (['refresh', 'logout'].includes(suffix)) return 'refresh';
+  if (suffix === 'practice/invitations/inspect' && ['practice', 'doctor'].includes(portal)) return 'public';
+  if (suffix === 'practice/invitations/accept-owner' && portal === 'practice') return 'public';
+  if (portal === 'practice') {
+    if (['practice/login', 'practice/verify', 'practice/resend'].includes(suffix)) return 'public';
+    if (['forgot-password', 'resend-password-reset', 'reset-password'].includes(suffix)) return 'public';
+    if (['practice/refresh', 'practice/logout'].includes(suffix)) return 'refresh';
+    throw new BoundaryError(403, 'This identity operation is unavailable in the practice portal.');
+  }
   if (MFA_PATHS.has(suffix)) {
     if (portal !== 'doctor') throw new BoundaryError(403, 'This verification belongs to the physician portal.');
     return 'mfa';
@@ -151,7 +171,7 @@ function routeAccess(path: string[], portal: Portal): 'public' | 'access' | 'mfa
   if (suffix.startsWith('admin/invitations/') && portal === 'admin' && ['admin/invitations/accept', 'admin/invitations/validate'].includes(suffix)) return 'public';
   if (['register/doctor'].includes(suffix) && portal === 'doctor') return 'public';
   if (['passkeys/authenticate', 'passkeys/authentication-options'].includes(suffix) && portal === 'patient') return 'public';
-  if (/^social\/(providers|(google|apple)\/(start|finish|link\/(start|finish)))$/.test(suffix) && portal !== 'admin') {
+  if (/^social\/(providers|(google|apple)\/(start|finish|link\/(start|finish)))$/.test(suffix) && ['patient', 'doctor'].includes(portal)) {
     return suffix.includes('/link/') ? 'access' : 'public';
   }
   throw new BoundaryError(403, 'This identity operation is unavailable in this portal.');
@@ -161,6 +181,17 @@ function cleanJson(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(cleanJson);
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(Object.entries(value).filter(([key]) => !SECRET_FIELDS.has(key.toLowerCase())).map(([key, item]) => [key, cleanJson(item)]));
+}
+
+/** Framework validation input/context can echo passwords and fragment tokens. */
+function safeIdentityValidation(value: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(value.detail)) return { detail: 'The supplied identity details could not be validated.' };
+  const detail = value.detail.slice(0, 30).filter(item => item && typeof item === 'object' && !Array.isArray(item)).map(item => {
+    const error = item as Record<string, unknown>;
+    return { loc: Array.isArray(error.loc) ? error.loc.filter(part => typeof part === 'string' || Number.isInteger(part)).slice(0, 10) : [],
+      type: typeof error.type === 'string' ? error.type : 'validation_error', msg: typeof error.msg === 'string' ? error.msg : 'Check this field.' };
+  });
+  return { detail };
 }
 
 /** A concurrency marker only: the upstream still verifies signature and claims. */
@@ -237,6 +268,7 @@ export async function handlePortalRequest(request: Request, params: { portal: st
 async function proxyPortalRequest(request: Request, params: { portal: string; path: string[] }, options: BffOptions, requestId: string): Promise<Response> {
   let context: CookieContext | undefined;
   let upstreamPath = '';
+  let logicalPath = '';
   let forwardingStarted = false;
   try {
     if (!Object.hasOwn(ROLES, params.portal)) throw new BoundaryError(404, 'This portal is unavailable.');
@@ -253,7 +285,8 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
       setCookie(response, context.csrf, token, context, new Date(Date.now() + 24 * 60 * 60 * 1000), false);
       return response;
     }
-    upstreamPath = validatePath(params.path);
+    logicalPath = validatePath(params.path);
+    upstreamPath = effectivePath(logicalPath, portal);
     if (!['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) throw new BoundaryError(405, 'This HTTP method is unavailable.');
     if (!SAFE_METHODS.has(request.method)) verifyCsrf(request, context, env);
     const mode = routeAccess(params.path, portal);
@@ -266,7 +299,7 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
       acceptedSession = sessionMarker(cookieValue(context, 'access'));
       if (!acceptedSession) throw new BoundaryError(401, 'Please sign in to this portal.');
       const marker = request.headers.get('X-Qarevo-Session');
-      if (!(request.method === 'GET' && upstreamPath === '/api/v1/session' && !marker) && marker !== acceptedSession) {
+      if (!(request.method === 'GET' && upstreamPath === sessionPath(portal) && !marker) && marker !== acceptedSession) {
         throw new BoundaryError(409, 'Your session changed. Reload this portal before continuing.', 'SESSION_CHANGED');
       }
     }
@@ -279,15 +312,17 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
     for (const name of ['content-type', 'accept', 'range', 'user-agent']) {
       const value = request.headers.get(name); if (value) headers.set(name, value);
     }
-    if (clinicalConditionalRoute(portal, request.method, upstreamPath) && request.headers.has('If-Match')) {
-      const version = strongClinicalIfMatch(request.headers.get('If-Match'));
-      if (!version) throw new BoundaryError(400, 'Supply one strong clinical record version.');
+    const practiceWrite = ['POST', 'PATCH', 'PUT'].includes(request.method) && /^\/api\/v1\/(?:admin|practice)\/practices\//.test(upstreamPath);
+    if (((portal !== 'practice' && clinicalConditionalRoute(portal, request.method, upstreamPath)) || practiceWrite) && request.headers.has('If-Match')) {
+      const supplied = request.headers.get('If-Match');
+      const version = practiceWrite ? supplied && /^"[1-9]\d{0,15}"$/.test(supplied) && Number.isSafeInteger(Number(supplied.slice(1, -1))) ? supplied : null : strongClinicalIfMatch(supplied);
+      if (!version) throw new BoundaryError(400, practiceWrite ? 'Supply one strong saved practice version.' : 'Supply one strong clinical record version.');
       headers.set('If-Match', version);
     }
     for (const [name,value] of Object.entries(signProxyContext(request,target,env))) headers.set(name,value);
     // Never accept browser-supplied Authorization, Cookie, proxy context or refresh headers.
     if (credential && mode !== 'public') headers.set('Authorization', `Bearer ${credential}`);
-    if (refresh && (upstreamPath.includes('/settings/active-devices') || upstreamPath.startsWith('/api/v1/security'))) headers.set('X-Qarevo-Refresh-Token', refresh);
+    if (refresh && (upstreamPath.includes('/settings/active-devices') || upstreamPath.startsWith('/api/v1/security') || upstreamPath.startsWith('/api/v1/practice/security'))) headers.set('X-Qarevo-Refresh-Token', refresh);
     let body: BodyInit | undefined;
     if (!SAFE_METHODS.has(request.method)) {
       const raw = await boundedBody(request);
@@ -313,17 +348,18 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
     if (/\bapplication\/(?:[\w.-]+\+)?json\b/i.test(upstream.headers.get('content-type') ?? '') && ![204, 205].includes(upstream.status) && request.method !== 'HEAD') {
       const decoded = await upstream.json() as unknown;
       if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) {
-        if (upstreamPath.startsWith('/api/v1/auth/') || upstreamPath === '/api/v1/session') throw new BoundaryError(502, 'The application service returned an invalid session response.');
+        if (upstreamPath.startsWith('/api/v1/auth/') || upstreamPath === sessionPath(portal)) throw new BoundaryError(502, 'The application service returned an invalid session response.');
         return new Response(JSON.stringify(cleanJson(decoded)), { status: upstream.status, headers: responseHeaders });
       }
       const original = decoded as Record<string, unknown>;
-      let payload = cleanJson(original) as Record<string, unknown>;
+      const identityValidation = upstream.status === 422 && (upstreamPath.startsWith('/api/v1/auth/') || ['/api/v1/security/password', '/api/v1/practice/security/password'].includes(upstreamPath));
+      let payload = cleanJson(identityValidation ? safeIdentityValidation(original) : original) as Record<string, unknown>;
       if (upstream.ok && (Object.hasOwn(original, 'access_token') || Object.hasOwn(original, 'refresh_token')) &&
         (typeof original.access_token !== 'string' || !original.access_token || typeof original.refresh_token !== 'string' || !original.refresh_token)) {
         throw new BoundaryError(502, 'The application service returned an incomplete session response.');
       }
       if (upstream.ok && typeof original.access_token === 'string' && typeof original.refresh_token === 'string') {
-        const verified = await fetchImpl(new URL('/api/v1/session', base), { headers: { Authorization: `Bearer ${original.access_token}`, 'X-Request-ID': requestId }, cache: 'no-store', redirect: 'manual', signal: AbortSignal.timeout(15_000) });
+        const verified = await fetchImpl(new URL(sessionPath(portal), base), { headers: { Authorization: `Bearer ${original.access_token}`, 'X-Request-ID': requestId }, cache: 'no-store', redirect: 'manual', signal: AbortSignal.timeout(15_000) });
         if (!verified.ok) throw new BoundaryError(verified.status === 401 || verified.status === 403 ? verified.status : 502, 'The authenticated session could not be verified. Please sign in again.');
         const identity = await verified.json() as Record<string, unknown>;
         const metadata = sessionMetadata(identity, portal);
@@ -342,19 +378,20 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
         clearSession(response, context);
         setCookie(response, `${context.prefix}mfa`, original.temp_token, context, new Date(Date.now() + seconds * 1000));
       } else {
-        if (upstream.ok && upstreamPath === '/api/v1/session') payload = { ...payload, browser_session: sessionMetadata(original, portal) };
+        if (upstream.ok && upstreamPath === sessionPath(portal)) payload = { ...payload, browser_session: sessionMetadata(original, portal) };
         response = new Response(JSON.stringify(payload), { status: upstream.status, headers: responseHeaders });
       }
     } else {
       if (upstreamPath.startsWith('/api/v1/auth/') && ![204, 205].includes(upstream.status) && request.method !== 'HEAD') throw new BoundaryError(502, 'The application service returned an invalid identity response.');
       response = new Response(request.method === 'HEAD' || [204, 205, 304].includes(upstream.status) ? null : upstream.body, { status: upstream.status, headers: responseHeaders });
     }
-    if (upstreamPath === '/api/v1/auth/logout' || (upstreamPath === '/api/v1/auth/refresh' && [401, 403].includes(upstream.status)) ||
-      (upstream.ok && ['/api/v1/security/password', '/api/v1/security/sessions/revoke-all'].includes(upstreamPath))) clearSession(response, context);
+    if ([logicalPath, upstreamPath].some(path => ['/api/v1/auth/logout', '/api/v1/auth/practice/logout'].includes(path)) ||
+      (['/api/v1/auth/refresh', '/api/v1/auth/practice/refresh'].includes(upstreamPath) && [401, 403].includes(upstream.status)) ||
+      (upstream.ok && ['/api/v1/security/password', '/api/v1/security/sessions/revoke-all', '/api/v1/practice/security/password', '/api/v1/practice/security/sessions/revoke-all'].includes(upstreamPath))) clearSession(response, context);
     return response;
   } catch (error) {
     const response = error instanceof BoundaryError ? json({ detail: error.errorCode ? { error_code: error.errorCode, message: error.message } : error.message }, error.status) : json({ detail: 'The application service could not be reached. Please try again.' }, 502);
-    if (context && forwardingStarted && upstreamPath === '/api/v1/auth/logout') clearSession(response, context);
+    if (context && forwardingStarted && ['/api/v1/auth/logout', '/api/v1/auth/practice/logout'].includes(upstreamPath)) clearSession(response, context);
     return response;
   }
 }

@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 
-export function profileInitials(name: string, kind: 'patient' | 'doctor' | 'admin' = 'patient') {
+export function profileInitials(name: string, kind: 'patient' | 'doctor' | 'admin' | 'practice' = 'patient') {
   const value = name.trim().replace(/^Dr\.?\s+/i, '')
-  return value ? value.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() : kind === 'doctor' ? 'DR' : kind === 'admin' ? 'AD' : 'P'
+  return value ? value.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() : kind === 'doctor' ? 'DR' : kind === 'admin' ? 'AD' : kind === 'practice' ? 'PR' : 'P'
 }
 
 /** Never use another person's portrait when an owned image is absent or fails. */
@@ -26,7 +26,7 @@ export default function ProfileAvatar({ name, src, size = 42, kind = 'patient' }
   name: string
   src?: string | null
   size?: number
-  kind?: 'patient' | 'doctor' | 'admin'
+  kind?: 'patient' | 'doctor' | 'admin' | 'practice'
 }) {
   const [failedSource, setFailedSource] = useState<string | null>(null)
   const source = profileImageSource(src)
