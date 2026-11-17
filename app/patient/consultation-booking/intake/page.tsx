@@ -223,7 +223,7 @@ function IntakePageContent() {
                 maxLength={2000}
                 value={chiefComplaint}
                 onChange={(e) => setChiefComplaint(e.target.value)}
-                placeholder="What is the main reason for your visit? (e.g., persistent headache, fever, chest pain)"
+                placeholder="What is the main reason for your visit? (e.g., a sore throat, a lingering cough, a question about your medication)"
                 required
                 style={{ width: '100%', minHeight: '100px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
