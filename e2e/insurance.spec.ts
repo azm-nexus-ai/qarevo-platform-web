@@ -51,9 +51,9 @@ test('onboarding distinguishes declared funding from coverage and payment approv
   await patientApiFixture(context)
   await context.route('**/api/v1/patient/settings/onboarding',route=>route.fulfill({json:{complete:false,next_step:'coverage',completed_steps:['personal','contact','health'],personal:{},coverage:{insurance_type:'GKV',provider:'Synthetic insurer',insurance_number:'A123456789'},coverage_verified:false,legal_ready:false,consent_version:'dev-test-20261101'}}))
   await page.goto('/auth/profile-setup/insurance-privacy-consent')
-  await expect(page.locator('#coverage-type')).toHaveValue('GKV')
+  await expect(page.getByRole('radio', { name: /Statutory insurance \(GKV\)/ })).toBeChecked()
   await expect(page.getByText(/Coverage has not been verified/)).toBeVisible()
-  await page.locator('#coverage-type').selectOption('SELF_PAY')
+  await page.getByRole('radio', { name: /^Self-pay/ }).check()
   await expect(page.getByText(/A self-pay preference does not confirm a consultation price or a payment agreement/)).toBeVisible()
 })
 

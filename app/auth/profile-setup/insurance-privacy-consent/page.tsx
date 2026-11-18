@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PAGE_BG, T } from '@/lib/tokens'
@@ -7,21 +7,47 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
-import { getApiErrorDetail } from '@/lib/api'
+import { ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
+import { ApiError, getApiErrorDetail } from '@/lib/api'
 import { createAccountDraftStorage } from '@/lib/account-storage'
 import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
-import { getOnboarding, saveCoverageInformation, onboardingPath, type CoverageInformation } from '@/lib/patient-onboarding'
+import { getOnboarding, saveCoverageInformation, onboardingPath, type CoverageInformation, type OnboardingStatus } from '@/lib/patient-onboarding'
 import { INSURANCE_VERIFICATION_NOTICE, SELF_PAY_NOTICE } from '@/lib/insurance-presentation'
 const LEFT_BG = `radial-gradient(ellipse at top left, rgba(32,181,223,.3), transparent 60%), ${T.brandNavy}`
 const STORAGE_KEY = 'qarevo.onboarding.insurance-privacy-consent.v2'
-type CoverageForm = Omit<CoverageInformation, 'insurance_type'> & { insurance_type: CoverageInformation['insurance_type'] | '' }
+type FundingType = CoverageInformation['insurance_type']
+type CoverageForm = Omit<CoverageInformation, 'insurance_type'> & { insurance_type: FundingType | '' }
 const INITIAL_FORM: CoverageForm = { insurance_type: '', provider: '', insurance_number: '', consents: { terms: false, privacy: false, health: false, telemedicine: false, marketing: false } }
+const FUNDING_OPTIONS: { value: FundingType; label: string; body: string }[] = [
+  { value: 'GKV', label: 'Statutory insurance (GKV)', body: 'Gesetzliche Krankenversicherung, with your KVNR from the health card.' },
+  { value: 'PKV', label: 'Private insurance (PKV)', body: 'Private health insurance, with the policy number from your insurer.' },
+  { value: 'SELF_PAY', label: 'Self-pay', body: 'You pay the practice directly. You can add insurance later.' },
+]
 const TEST_ACKNOWLEDGEMENTS = [
   ['terms', 'I understand that the patient terms are still awaiting approval.'],
   ['privacy', 'I understand that the privacy notice is still awaiting approval.'],
   ['health', 'I am using synthetic test information only.'],
   ['telemedicine', 'I understand that this development flow does not authorise real medical care.'],
 ] as const
+const STEP_LABELS: Record<NonNullable<OnboardingStatus['next_step']>, string> = {
+  personal: 'personal information', contact: 'contact information', health: 'medical history', coverage: 'coverage',
+}
+
+/** Only the fields the API accepts, so a stale draft or saved record can never add unknown keys. */
+function toForm(data: Partial<CoverageForm>): CoverageForm {
+  const type = FUNDING_OPTIONS.some(option => option.value === data.insurance_type) ? data.insurance_type as FundingType : ''
+  const consents = data.consents || INITIAL_FORM.consents
+  return {
+    insurance_type: type,
+    provider: typeof data.provider === 'string' ? data.provider : '',
+    insurance_number: typeof data.insurance_number === 'string' ? data.insurance_number : '',
+    consents: {
+      terms: consents.terms === true, privacy: consents.privacy === true, health: consents.health === true,
+      telemedicine: consents.telemedicine === true, marketing: consents.marketing === true,
+    },
+  }
+}
+
 function validate(form: CoverageForm) {
   const errors: Record<string, string> = {}
   if (!form.insurance_type) errors.insurance_type = 'Select a funding type.'
@@ -119,64 +145,57 @@ function LeftPanel() {
   )
 }
 
-function TextField({ label, value, onChange, placeholder, error, optional, hint }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; optional?: boolean; hint?: string }) {
+function SectionHeader({ title, body }: { title: string; body: string }) {
+  return <div className='cv-section-head'><h2>{title}</h2><p>{body}</p></div>
+}
+
+function TextField({ label, value, onChange, placeholder, error, hint }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; hint?: string }) {
   const id = useId()
-  const [focused, setFocused] = useState(false)
-
-  const border = error ? 'var(--danger)' : focused ? 'var(--link)' : 'var(--border)'
-  const background = error ? 'var(--danger-soft)' : 'var(--surface)'
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span> : <span>(Required)</span>}
-      </label>
-      <input
-        id={id}
-        required={!optional}
-        aria-invalid={!!error}
+    <div className='cv-field'>
+      <label htmlFor={id}>{label} <span className='cv-required'>(Required)</span></label>
+      <input id={id} required aria-invalid={!!error} autoComplete='off' value={value} placeholder={placeholder}
         aria-describedby={[hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined}
-        autoComplete="off"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          padding: '11px 12px',
-          borderRadius: '11px',
-          border: `1.5px solid ${border}`,
-          background,
-          color: T.navy,
-          fontSize: '14px',
-          fontFamily: 'inherit',
-          outline: 'none',
-          transition: 'all 0.15s ease',
-        }}
-      />
-      {hint && <p id={`${id}-hint`} className="field-hint">{hint}</p>}
-      {error ? <p id={`${id}-error`} role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.45 }}>{error}</p> : null}
+        onChange={event => onChange(event.target.value)} />
+      {hint && <p id={`${id}-hint`} className='field-hint'>{hint}</p>}
+      {error && <p id={`${id}-error`} role='alert' className='field-error'>{error}</p>}
     </div>
   )
 }
 
-
 export default function InsurancePrivacyConsentPage() {
   const router = useRouter()
+  const formRef = useRef<HTMLFormElement>(null)
   const [draftStorage] = useState(createAccountDraftStorage)
   const [form, setForm] = useState<CoverageForm>(INITIAL_FORM)
+  const [status, setStatus] = useState<OnboardingStatus | null>(null)
   const [ready, setReady] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [loadError, setLoadError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [conflict, setConflict] = useState(false)
+  const [savedNotice, setSavedNotice] = useState('')
   const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
   const [submitted, setSubmitted] = useState(false)
   const errors = validate(form)
-  useEffect(() => hydrateAccountDraft<CoverageForm>(draftStorage, STORAGE_KEY, async () => (await getOnboarding()).coverage || {},
-    data => setForm({ ...INITIAL_FORM, ...data, consents: { ...INITIAL_FORM.consents, ...data.consents } }),
-    error => setSubmitError(getApiErrorDetail(error) || 'Could not load your coverage information. Reload to try again.'),
-    () => setReady(true)), [draftStorage])
+  const shown = submitted ? errors : {}
+  // A completed profile already holds every mandatory acknowledgement, so leaving without changes bypasses nothing.
+  const returning = !!status?.complete
+  const earlierStep = status?.next_step && status.next_step !== 'coverage' ? status.next_step : null
+
+  useEffect(() => {
+    setReady(false); setLoadError('')
+    let live = true
+    const request = getOnboarding()
+    request.then(value => { if (live) setStatus(value) }).catch(() => { /* reported by the hydration below */ })
+    const stop = hydrateAccountDraft<CoverageForm>(draftStorage, STORAGE_KEY, async () => (await request).coverage || {},
+      data => setForm(toForm(data)),
+      error => setLoadError(getApiErrorDetail(error) || 'Your saved coverage could not be loaded.'),
+      () => setReady(true))
+    return () => { live = false; stop() }
+  }, [draftStorage, reloadKey])
+
   useEffect(() => {
     if (!ready) return
     setSaveMessage('Saving draft in this tab…')
@@ -189,63 +208,188 @@ export default function InsurancePrivacyConsentPage() {
     window.addEventListener('pagehide', persist)
     return () => { window.clearTimeout(timer); window.removeEventListener('pagehide', persist) }
   }, [form, draftStorage, ready])
-  const update = <K extends keyof CoverageForm>(key: K, value: CoverageForm[K]) => setForm(previous => ({ ...previous, [key]: value }))
+
+  const update = <K extends keyof CoverageForm>(key: K, value: CoverageForm[K]) => { setSavedNotice(''); setForm(previous => ({ ...previous, [key]: value })) }
+  const reloadSaved = () => {
+    try { draftStorage.removeItem(STORAGE_KEY) } catch { /* the server copy is reloaded either way */ }
+    setSubmitted(false); setSubmitError(''); setConflict(false); setSavedNotice('')
+    setReloadKey(n => n + 1)
+  }
+
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    setSubmitted(true)
-    if (Object.keys(errors).length) return
-    setSubmitError('')
-    setSubmitting(true)
+    setSubmitted(true); setSavedNotice('')
+    if (Object.keys(errors).length) { if (formRef.current) focusValidation(formRef.current); return }
+    setSubmitError(''); setConflict(false); setSubmitting(true)
     try {
-      const saved = await saveCoverageInformation({ ...form, insurance_type: form.insurance_type as CoverageInformation['insurance_type'] })
-      if (!saved.complete) {
-        setSubmitError('An earlier profile step still needs to be saved. Use “Continue profile” below to return to it.')
-        setMissingStep(saved.next_step)
-        return
-      }
-      draftStorage.removeItem(STORAGE_KEY)
+      const saved = await saveCoverageInformation({ ...form, insurance_type: form.insurance_type as FundingType })
+      setStatus(saved)
+      try { draftStorage.removeItem(STORAGE_KEY) } catch { /* nothing left to clear */ }
+      if (!saved.complete) { setSubmitError('Your coverage is saved. An earlier profile step still needs to be completed before you can continue.'); return }
+      if (returning) { setSubmitted(false); setSavedNotice('Your coverage and acknowledgements are up to date.'); return }
       setOnboardingStage('profile-completed')
       router.push('/auth/profile-setup/profile-completed')
-    } catch (error) { setSubmitError(getApiErrorDetail(error) || 'Could not save your coverage information. Please try again.') }
-    finally { setSubmitting(false) }
+    } catch (error) {
+      const isConflict = error instanceof ApiError && error.status === 409
+      setConflict(isConflict)
+      setSubmitError(isConflict
+        ? 'Your saved details changed since this page was opened, for example in another tab. Reload them, check your choices and save again.'
+        : getApiErrorDetail(error) || 'Could not save your coverage information. Please try again.')
+    } finally { setSubmitting(false) }
   }
-  const [missingStep, setMissingStep] = useState<Parameters<typeof onboardingPath>[0]>(null)
+
+  const pill = !ready ? 'Loading your saved coverage…' : savedNotice ? 'Saved to your account' : saveMessage
   return <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-    <style>{`.coverage-left { display: block; } .coverage-main { padding: clamp(20px, 4vw, 48px); flex: 1; min-width: 0; } .coverage-field:focus-visible { outline: 3px solid #348CEA; outline-offset: 3px; } @media(max-width:1000px){.coverage-left{display:none}.coverage-main{padding:20px}}`}</style>
-    <div className='coverage-left'><LeftPanel /></div>
-    <section className='coverage-main'>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <ProfileSetupLogo />
-        <p style={{ color: T.slate, margin: '24px 0 8px' }}>Profile setup · Coverage & privacy</p>
-        <h1 style={{ color: T.navy, fontSize: 'clamp(26px, 4vw, 36px)', lineHeight: 1.2, letterSpacing: '-0.03em', margin: '0 0 12px' }}>Your coverage, clearly recorded</h1>
-        <p style={{ color: T.slate, lineHeight: 1.7 }}>Choose how you intend to fund care. {form.insurance_type === 'SELF_PAY' ? SELF_PAY_NOTICE : INSURANCE_VERIFICATION_NOTICE}</p>
-        <form onSubmit={submit} noValidate style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, padding: 'clamp(18px, 4vw, 32px)', boxShadow: 'var(--shadow-card)' }}>
-          <p role='status' style={{ color: T.slate2, fontSize: 13 }}>{ready ? saveMessage : 'Loading your saved coverage…'}</p>
-          {submitError && <p role='alert' style={{ color: T.red }}>{submitError}</p>}
-          {missingStep && <Link href={onboardingPath(missingStep)}>Continue profile</Link>}
-          <fieldset aria-label='Coverage and acknowledgements' disabled={!ready || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-            <label htmlFor='coverage-type' style={{ display: 'block', color: T.navy, fontWeight: 700, marginBottom: 8 }}>Funding type (Required)</label>
-            <select id='coverage-type' className='coverage-field' aria-invalid={submitted && !!errors.insurance_type} aria-describedby={submitted && errors.insurance_type ? 'coverage-type-error' : undefined} required value={form.insurance_type} onChange={event => update('insurance_type', event.target.value as CoverageForm['insurance_type'])} style={{ width: '100%', minHeight: 48, padding: 12, border: '1px solid var(--border)', borderRadius: 12, color: T.navy, background: "var(--surface)" }}>
-              <option value=''>Select a funding type</option><option value='SELF_PAY'>Self-pay</option><option value='GKV'>Statutory insurance (GKV)</option><option value='PKV'>Private insurance (PKV)</option>
-            </select>
-            {submitted && errors.insurance_type && <p id='coverage-type-error' className='field-error' role='alert'>{errors.insurance_type}</p>}
-            {form.insurance_type && form.insurance_type !== 'SELF_PAY' && <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
-              <TextField label='Insurance provider' value={form.provider} onChange={value => update('provider', value)} placeholder='Insurer name' hint='Enter the full insurer name (at least 2 characters).' error={submitted ? errors.provider : undefined} />
-              <TextField label={form.insurance_type === 'GKV' ? 'Insurance number (KVNR)' : 'Private policy number'} value={form.insurance_number} onChange={value => update('insurance_number', value)} hint={form.insurance_type === 'GKV' ? 'Format: one capital letter followed by exactly 9 digits. Format checking does not verify coverage.' : '3–50 characters: letters, numbers, spaces, slash, full stop or hyphen.'} placeholder={form.insurance_type === 'GKV' ? 'One capital letter and nine digits' : 'As shown on your policy'} error={submitted ? errors.insurance_number : undefined} />
-              <p style={{ color: T.slate, fontSize: 13, lineHeight: 1.6 }}>These checks validate the format of your entry only.</p>
+    <style>{`
+      .cv-left { display: block; }
+      .cv-wrap { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 44px 24px; min-height: 100vh; }
+      .cv-card { background: var(--surface-glass); backdrop-filter: blur(34px) saturate(200%); -webkit-backdrop-filter: blur(34px) saturate(200%); border: 1px solid var(--border); border-radius: 24px; box-shadow: 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1); padding: 36px 32px; animation: cvFade .3s ease; }
+      @keyframes cvFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+      .cv-card fieldset.cv-root { border: 0; padding: 0; margin: 0; min-width: 0; }
+      .cv-progress { padding: 12px 14px; border-radius: 12px; background: var(--surface-hover); border: 1px solid var(--border); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+      .cv-progress p { margin: 0; font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
+      .cv-progress p.cv-eyebrow { margin: 0 0 3px; color: var(--text-muted); letter-spacing: .06em; text-transform: uppercase; }
+      .cv-card h1 { margin: 0 0 8px; font-family: var(--font-inter), Inter, system-ui, sans-serif; font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -.035em; line-height: 1.2; }
+      .cv-lede { margin: 0 0 14px; font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+      .cv-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 100px; background: var(--surface-hover); border: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 14px; }
+      .cv-pill.saved { background: var(--success-soft, var(--surface-hover)); color: var(--success, var(--text)); }
+      .cv-note { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-subtle); margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: var(--text); }
+      .cv-note.warn { border-color: var(--warning, var(--border)); }
+      .cv-note.danger { border-color: var(--danger); background: var(--danger-soft); }
+      .cv-note p { margin: 0 0 8px; } .cv-note p:last-child { margin: 0; }
+      .cv-note a, .cv-link { color: var(--link); font-weight: 700; }
+      .cv-inline-button { min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+      .cv-section { margin: 22px 0 0; }
+      .cv-section-head h2 { margin: 0 0 4px; font-family: var(--font-inter), Inter, system-ui, sans-serif; font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -.025em; }
+      .cv-section-head p { margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+      .cv-options { border: 0; padding: 0; margin: 0; min-width: 0; }
+      .cv-options legend { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; padding: 0; }
+      .cv-option-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+      .cv-option { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 14px 44px; min-height: 92px; border: 1.5px solid var(--border); border-radius: 14px; background: var(--surface); cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+      .cv-option input { position: absolute; left: 14px; top: 16px; width: 18px; height: 18px; margin: 0; accent-color: var(--action-primary); }
+      .cv-option strong { font-size: 14px; color: var(--text); letter-spacing: -.01em; }
+      .cv-option span { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+      .cv-option.chosen { border-color: var(--action-primary); box-shadow: 0 0 0 1px var(--action-primary); }
+      .cv-options[aria-invalid="true"] .cv-option { border-color: var(--danger); }
+      .cv-option:has(input:focus-visible) { outline: 3px solid var(--action-primary); outline-offset: 2px; }
+      .cv-notice { margin: 12px 0 0; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+      .cv-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+      .cv-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+      .cv-field label { font-size: 13px; font-weight: 600; color: var(--text); }
+      .cv-required { font-weight: 500; color: var(--text-muted); }
+      .cv-field input { width: 100%; min-height: 46px; padding: 11px 12px; border-radius: 11px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; }
+      .cv-field input:focus-visible { outline: none; border-color: var(--link); box-shadow: 0 0 0 3px var(--focus-ring, rgba(52,140,234,.25)); }
+      .cv-field input[aria-invalid="true"] { border-color: var(--danger); background: var(--danger-soft); }
+      .cv-acks { padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-subtle); }
+      .cv-acks > p { margin: 0 0 6px; font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+      .cv-check { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-subtle, var(--border)); color: var(--text); font-size: 14px; line-height: 1.55; cursor: pointer; }
+      .cv-check:first-of-type { border-top: 0; }
+      .cv-check input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--action-primary); }
+      .cv-check .field-error { display: block; margin-top: 4px; }
+      .cv-optional { margin-top: 14px; }
+      .cv-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
+      .cv-actions .cv-secondary-links { display: flex; gap: 16px; flex-wrap: wrap; }
+      .cv-submit { min-height: 50px; padding: 0 28px; border: 0; border-radius: 12px; background: var(--action-primary); color: var(--surface); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+      .cv-submit:disabled { opacity: .6; cursor: progress; }
+      .cv-card :focus-visible { outline: 3px solid var(--action-primary); outline-offset: 2px; }
+      @media (max-width: 1000px) { .cv-left { display: none; } }
+      @media (max-width: 720px) {
+        .cv-wrap { padding: 20px 16px; align-items: flex-start; }
+        .cv-card { padding: 24px 18px; border-radius: 20px; }
+        .cv-option-grid, .cv-fields { grid-template-columns: 1fr; }
+        .cv-option { min-height: 0; }
+        .cv-actions { flex-direction: column-reverse; align-items: stretch; }
+        .cv-submit { width: 100%; }
+      }
+    `}</style>
+    <div className='cv-left'><LeftPanel /></div>
+    <div className='cv-wrap'>
+      <div style={{ width: '100%', maxWidth: 760 }}>
+        <form ref={formRef} className='cv-card' onSubmit={submit} noValidate aria-busy={submitting || !ready}>
+          <fieldset className='cv-root' disabled={!ready || submitting}>
+            <div className='cv-progress'>
+              <div><p className='cv-eyebrow'>Profile Setup</p><p>{returning ? 'Profile complete' : 'Step 5 of 6'}</p></div>
+              <div><p className='cv-eyebrow'>{returning ? 'Up to date' : '83% Complete'}</p><p>{returning ? 'Review or correct at any time' : 'Approximately 1 Minute'}</p></div>
+            </div>
+            <header>
+              <h1>Coverage & Privacy</h1>
+              <p className='cv-lede'>Tell us how you intend to fund care and confirm the required acknowledgements. You can correct these details later.</p>
+            </header>
+            <div role='status' className={`cv-pill${savedNotice ? ' saved' : ''}`}>
+              <Ico p={savedNotice ? ICONS.check : ICONS.activity} size={11} sw={2} color='currentColor' />{pill}
+            </div>
+
+            {loadError && <div role='alert' className='cv-note danger'>
+              <p>{loadError}</p>
+              <button type='button' className='cv-inline-button' onClick={() => setReloadKey(n => n + 1)}>Try again</button>
             </div>}
-            <fieldset style={{ marginTop: 24, minWidth: 0, padding: 18, background: 'var(--surface-subtle)', border: '1px solid var(--border)', borderRadius: 14 }}>
-              <legend style={{ fontSize: 18, fontWeight: 700, padding: '0 6px', color: T.navy }}>Development test acknowledgements</legend>
-              <p style={{ color: T.slate, lineHeight: 1.7 }}>The supplied legal documents are drafts awaiting company details, technical alignment, and legal approval. These test acknowledgements are not consent for processing real patient information. Do not enter real medical or insurance details.</p>
-              {TEST_ACKNOWLEDGEMENTS.map(([key, label]) => <label key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 14, color: T.navy, lineHeight: 1.6 }}><input type='checkbox' required aria-invalid={submitted && !form.consents[key]} aria-describedby={submitted && !form.consents[key] ? `ack-${key}-error` : undefined} checked={form.consents[key]} onChange={event => update('consents', { ...form.consents, [key]: event.target.checked })} style={{ marginTop: 6 }} /><span>{label} <strong>(Required)</strong>{submitted && !form.consents[key] && <span id={`ack-${key}-error`} role='alert' className='field-error' style={{ display: 'block' }}>Confirm this acknowledgement to continue.</span>}</span></label>)}
-              {submitted && errors.consents && <p role='alert' style={{ color: T.red }}>{errors.consents}</p>}
-            </fieldset>
-            <label style={{ display: 'flex', gap: 10, margin: '20px 0', color: T.slate, lineHeight: 1.6 }}><input type='checkbox' checked={form.consents.marketing} onChange={event => update('consents', { ...form.consents, marketing: event.target.checked })} /><span>Test the optional marketing preference. This stores a preference for this test account. (Optional)</span></label>
-            <button type='submit' disabled={submitting || !ready} style={{ width: '100%', minHeight: 48, border: 0, borderRadius: 12, background: T.blue, color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>{submitting ? 'Saving profile…' : 'Complete Profile'}</button>
-            <Link href='/auth/profile-setup/medical-history-allergies' style={{ display: 'block', textAlign: 'center', marginTop: 18, color: T.slate }}>Back</Link>
+            {returning && !savedNotice && <div className='cv-note'>
+              <p><strong>Your profile is complete.</strong> Update your coverage or acknowledgements below and save. The required acknowledgements stay required.</p>
+              <p><Link href='/patient/dashboard'>Continue to your dashboard</Link> without changes.</p>
+            </div>}
+            {savedNotice && <div role='status' className='cv-note'><p><strong>{savedNotice}</strong></p><p><Link href='/patient/dashboard'>Continue to your dashboard</Link></p></div>}
+            {earlierStep && <div role='note' className='cv-note warn'>
+              <p>Your {STEP_LABELS[earlierStep]} is not saved yet. You can fill in this step now, but your profile completes only after every step is saved.</p>
+              <p><Link href={onboardingPath(earlierStep)}>Continue with {STEP_LABELS[earlierStep]}</Link></p>
+            </div>}
+
+            <ValidationSummary errors={shown} />
+            {submitError && <div role='alert' className='cv-note danger'>
+              <p>{submitError}</p>
+              {conflict && <button type='button' className='cv-inline-button' onClick={reloadSaved}>Reload saved details</button>}
+            </div>}
+
+            <section className='cv-section' aria-labelledby='cv-funding-title'>
+              <SectionHeader title='Funding' body='Choose how you intend to fund consultations. This records your preference; it is not an eligibility check.' />
+              <fieldset className='cv-options' aria-invalid={!!shown.insurance_type || undefined} aria-describedby={shown.insurance_type ? 'coverage-type-error' : undefined}>
+                <legend id='cv-funding-title'>Funding type (Required)</legend>
+                <div className='cv-option-grid'>
+                  {FUNDING_OPTIONS.map(option => <label key={option.value} className={`cv-option${form.insurance_type === option.value ? ' chosen' : ''}`}>
+                    <input type='radio' name='funding-type' value={option.value} checked={form.insurance_type === option.value} onChange={() => update('insurance_type', option.value)} />
+                    <strong>{option.label}</strong><span>{option.body}</span>
+                  </label>)}
+                </div>
+                {shown.insurance_type && <p id='coverage-type-error' className='field-error' role='alert'>{shown.insurance_type}</p>}
+              </fieldset>
+              {form.insurance_type && <p className='cv-notice'>{form.insurance_type === 'SELF_PAY' ? SELF_PAY_NOTICE : INSURANCE_VERIFICATION_NOTICE}</p>}
+              {form.insurance_type && form.insurance_type !== 'SELF_PAY' && <div className='cv-fields'>
+                <TextField label='Insurance provider' value={form.provider} onChange={value => update('provider', value)} placeholder='Insurer name' hint='The full insurer name, at least 2 characters.' error={shown.provider} />
+                <TextField label={form.insurance_type === 'GKV' ? 'Insurance number (KVNR)' : 'Private policy number'} value={form.insurance_number} onChange={value => update('insurance_number', value)}
+                  hint={form.insurance_type === 'GKV' ? 'One capital letter followed by 9 digits. Only the format is checked, not your coverage.' : '3–50 characters: letters, numbers, spaces, slash, full stop or hyphen.'}
+                  placeholder={form.insurance_type === 'GKV' ? 'A123456789' : 'As shown on your policy'} error={shown.insurance_number} />
+              </div>}
+            </section>
+
+            <section className='cv-section' aria-labelledby='cv-acks-title'>
+              <SectionHeader title='Acknowledgements' body='Required before you can use the platform, and kept on record with the date you gave them.' />
+              <fieldset className='cv-acks' style={{ margin: 0, minWidth: 0 }}>
+                <legend id='cv-acks-title' style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', padding: '0 4px' }}>Development test acknowledgements</legend>
+                <p>The legal documents are drafts awaiting company details, technical alignment and legal approval. These acknowledgements are not consent to process real patient information. Do not enter real medical or insurance details.</p>
+                {TEST_ACKNOWLEDGEMENTS.map(([key, label]) => {
+                  const missing = submitted && !form.consents[key]
+                  return <label key={key} className='cv-check'>
+                    <input type='checkbox' required aria-invalid={missing} aria-describedby={missing ? `ack-${key}-error` : undefined} checked={form.consents[key]}
+                      onChange={event => update('consents', { ...form.consents, [key]: event.target.checked })} />
+                    <span>{label} <strong>(Required)</strong>{missing && <span id={`ack-${key}-error`} role='alert' className='field-error'>Confirm this acknowledgement to continue.</span>}</span>
+                  </label>
+                })}
+              </fieldset>
+              <label className='cv-check cv-optional'>
+                <input type='checkbox' checked={form.consents.marketing} onChange={event => update('consents', { ...form.consents, marketing: event.target.checked })} />
+                <span>Test the optional marketing preference. This stores a preference for this test account. (Optional)</span>
+              </label>
+            </section>
+
+            <div className='cv-actions'>
+              <div className='cv-secondary-links'>
+                <Link className='cv-link' href='/auth/profile-setup/medical-history-allergies'>Back</Link>
+                {ready && !loadError && <button type='button' className='cv-link' style={{ background: 'none', border: 0, padding: 0, font: 'inherit', cursor: 'pointer', minHeight: 44 }} onClick={reloadSaved}>Discard changes</button>}
+              </div>
+              <button type='submit' className='cv-submit' disabled={submitting || !ready}>{submitting ? 'Saving…' : returning ? 'Save changes' : 'Complete Profile'}</button>
+            </div>
           </fieldset>
         </form>
       </div>
-    </section>
+    </div>
   </main>
 }

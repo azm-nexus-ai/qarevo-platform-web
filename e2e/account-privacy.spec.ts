@@ -543,7 +543,7 @@ test('all profile steps save, survive a fresh sign-in and keep funding distinct'
   await expect(page.getByRole('button', { name: 'None', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.locator('button[type="submit"]').click()
   await expect(page).toHaveURL(/insurance-privacy-consent$/)
-  await page.getByLabel('Funding type (Required)').selectOption('GKV')
+  await page.getByRole('radio', { name: /Statutory insurance \(GKV\)/ }).check()
   await page.getByLabel('Insurance provider (Required)', { exact: true }).fill('Synthetic Insurer')
   await page.getByLabel('Insurance number (KVNR) (Required)', { exact: true }).fill('A123456789')
   for (const checkbox of await page.locator('input[type="checkbox"][required]').all()) await checkbox.check()
@@ -558,7 +558,7 @@ test('all profile steps save, survive a fresh sign-in and keep funding distinct'
   await page.goto('/auth/profile-setup/medical-history-allergies')
   await expect(page.getByRole('button', { name: 'None', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.goto('/auth/profile-setup/insurance-privacy-consent')
-  await expect(page.locator('#coverage-type')).toHaveValue('GKV')
+  await expect(page.getByRole('radio', { name: /Statutory insurance \(GKV\)/ })).toBeChecked()
 })
 
 test('an unsaved account cannot claim a completed profile through a direct URL', async ({ page }) => {
@@ -1175,7 +1175,7 @@ for (const width of [320, 820, 1440]) {
     await submit.click()
     await expect(page.locator('#coverage-type-error')).toHaveText('Select a funding type.')
     await expect(page.locator('input[type=checkbox][required][aria-invalid=true]')).toHaveCount(4)
-    await page.getByLabel('Funding type (Required)').selectOption('GKV')
+    await page.getByRole('radio', { name: /Statutory insurance \(GKV\)/ }).check()
     await page.getByLabel('Insurance number (KVNR) (Required)', { exact: true }).fill('garbage')
     await submit.click()
     const number = page.getByLabel('Insurance number (KVNR) (Required)', { exact: true })
@@ -1472,4 +1472,55 @@ test('a saved profile photo replaces initials in the account menu without a relo
   await editor.getByRole('group',{name:'Confirm removal'}).getByRole('button',{name:'Remove photo',exact:true}).click()
   await expect(editor.getByRole('status').filter({hasText:'Profile image removed.'})).toBeVisible()
   await expect(menuAvatar.locator('img')).toHaveCount(0)
+test('a returning patient corrects coverage in place without dropping a required acknowledgement', async ({ page, context }) => {
+  await signIn(page, alpha)
+  scenarios.get(context)!.onboardingComplete = true
+  const saves: Record<string, unknown>[] = []
+  page.on('request', request => { if (request.method() === 'PUT' && request.url().endsWith('/onboarding/coverage')) saves.push(request.postDataJSON()) })
+  await page.goto('/auth/profile-setup/insurance-privacy-consent')
+  await expect(page.getByText('Your profile is complete.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Continue to your dashboard', exact: true })).toHaveAttribute('href', '/patient/dashboard')
+  await page.getByRole('radio', { name: /^Self-pay/ }).check()
+  const required = page.locator('input[type="checkbox"][required]')
+  for (const checkbox of await required.all()) await checkbox.check()
+  await required.first().uncheck()
+  const save = page.getByRole('button', { name: 'Save changes', exact: true })
+  await save.click()
+  await expect(page.locator('input[type=checkbox][required][aria-invalid=true]')).toHaveCount(1)
+  expect(saves).toHaveLength(0)
+  await required.first().check()
+  await save.click()
+  await expect(page.getByText('Your coverage and acknowledgements are up to date.', { exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/insurance-privacy-consent$/)
+  expect(saves).toHaveLength(1)
+  expect(saves[0]).toMatchObject({ insurance_type: 'SELF_PAY', provider: '', consents: { terms: true, privacy: true, health: true, telemedicine: true } })
+  expect(Object.keys(saves[0]).sort()).toEqual(['consent_version', 'consents', 'insurance_number', 'insurance_type', 'provider'])
+})
+
+test('a conflicting coverage save explains itself and reloads the saved details', async ({ page, context }) => {
+  await signIn(page, alpha)
+  scenarios.get(context)!.onboardingComplete = true
+  let conflicts = 1
+  await page.route('**/api/v1/patient/settings/onboarding/coverage', route => {
+    if (route.request().method() === 'PUT' && conflicts-- > 0) return route.fulfill({ status: 409, json: { detail: 'These details conflict with an existing record. Reload and try again.' } })
+    return route.fallback()
+  })
+  await page.goto('/auth/profile-setup/insurance-privacy-consent')
+  await page.getByRole('radio', { name: /Private insurance \(PKV\)/ }).check()
+  await page.getByLabel('Insurance provider (Required)', { exact: true }).fill('Synthetic Insurer')
+  await page.getByLabel('Private policy number (Required)', { exact: true }).fill('POL-12345')
+  for (const checkbox of await page.locator('input[type="checkbox"][required]').all()) await checkbox.check()
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Your saved details changed since this page was opened' })).toBeVisible()
+  await page.getByRole('button', { name: 'Reload saved details', exact: true }).click()
+  await expect(page.getByRole('radio', { name: /Private insurance \(PKV\)/ })).not.toBeChecked()
+  await expect(page.getByRole('alert').filter({ hasText: 'Your saved details changed' })).toHaveCount(0)
+})
+
+test('coverage names an earlier unsaved step and links straight to it', async ({ page }) => {
+  await signIn(page, alpha)
+  await page.goto('/auth/profile-setup/insurance-privacy-consent')
+  await expect(page.getByText(/Your personal information is not saved yet/)).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Continue with personal information', exact: true })).toHaveAttribute('href', personal)
+  await expect(page.getByRole('button', { name: 'Complete Profile', exact: true })).toBeEnabled()
 })
