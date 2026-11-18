@@ -1182,7 +1182,11 @@ for (const width of [320, 820, 1440]) {
     await expect(number).toHaveAttribute('aria-invalid', 'true')
     const describedBy = await number.getAttribute('aria-describedby')
     expect(describedBy).toBeTruthy()
-    await expect(page.getByRole('alert').filter({ hasText: 'Use one capital letter and nine digits.' })).toBeVisible()
+    // The summary repeats the message; the field's own error must be announced and linked.
+    const numberError = page.locator('p.field-error[role="alert"]', { hasText: 'Use one capital letter and nine digits.' })
+    await expect(numberError).toBeVisible()
+    expect(describedBy).toContain(await numberError.getAttribute('id'))
+    await expect(page.locator('[data-validation-summary]')).toContainText('Use one capital letter and nine digits.')
     await expect(submit).toBeEnabled()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
     await page.reload()
@@ -1472,6 +1476,8 @@ test('a saved profile photo replaces initials in the account menu without a relo
   await editor.getByRole('group',{name:'Confirm removal'}).getByRole('button',{name:'Remove photo',exact:true}).click()
   await expect(editor.getByRole('status').filter({hasText:'Profile image removed.'})).toBeVisible()
   await expect(menuAvatar.locator('img')).toHaveCount(0)
+})
+
 test('a returning patient corrects coverage in place without dropping a required acknowledgement', async ({ page, context }) => {
   await signIn(page, alpha)
   scenarios.get(context)!.onboardingComplete = true
