@@ -39,6 +39,8 @@ for (const [width,height] of [[1440,600],[1440,1000],[921,700],[390,844]]) {
 // they never contact a database, storage provider or email service.
 const portraitBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64')
 const uploadedPortrait = `data:image/png;base64,${portraitBytes.toString('base64')}`
+// The patient editor prepares photos on the device, so its upload must be at least 16×16 pixels.
+const patientUploadBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGMw6XlFEmIY1TCqYfhqAADDNaoQCVDyBwAAAABJRU5ErkJggg==', 'base64')
 
 async function profileFixtures(context: import('@playwright/test').BrowserContext, portal: 'patient' | 'doctor') {
   const { seedPortalSession, testSessionTiming } = await import('./helpers/portal-session')
@@ -56,8 +58,9 @@ async function profileFixtures(context: import('@playwright/test').BrowserContex
       if(request.method()==='GET')await state.patientImageReadDelay
       if(request.method()==='POST'){
         const body=request.postDataJSON()
-        expect(body.content_type).toBe('image/png')
-        expect(body.content_base64).toBe(portraitBytes.toString('base64'))
+        // Re-encoded in the browser: a JPEG, never the original file or its metadata.
+        expect(body.content_type).toBe('image/jpeg')
+        expect(body.content_base64.startsWith('/9j/')).toBe(true)
         state.mutations++;state.image=uploadedPortrait
       }else if(request.method()==='DELETE'){state.mutations++;state.image=null}
       return route.fulfill({json:{image:state.image}})
@@ -118,9 +121,9 @@ test('patient owned image propagates through account menus, settings, dashboard,
   const editor=page.getByRole('region',{name:'Profile image',exact:true})
   const upload=editor.locator('input[type=file]')
   await upload.setInputFiles({name:'unsafe.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')})
-  await expect(editor.getByRole('alert')).toHaveText('Choose a JPEG, PNG or WebP image, up to 2 MB.')
+  await expect(editor.getByRole('alert')).toHaveText('Choose a JPEG, PNG, WebP or HEIC photo.')
   expect(state.mutations).toBe(0)
-  await upload.setInputFiles({name:'portrait.png',mimeType:'image/png',buffer:portraitBytes})
+  await upload.setInputFiles({name:'portrait.png',mimeType:'image/png',buffer:patientUploadBytes})
   await expect(editor.getByRole('img',{name:'Selected profile image preview',exact:true})).toBeVisible()
   await editor.getByRole('button',{name:'Save image',exact:true}).click()
   await expect(editor.getByRole('status')).toHaveText('Profile image updated.')
@@ -137,6 +140,7 @@ test('patient owned image propagates through account menus, settings, dashboard,
   await expectPortrait(mobile.locator('summary'),'Synthetic Patient',uploadedPortrait)
   await page.goto('/patient/settings')
   await page.getByRole('region',{name:'Profile image',exact:true}).getByRole('button',{name:'Remove image',exact:true}).click()
+  await page.getByRole('group',{name:'Confirm removal'}).getByRole('button',{name:'Remove photo',exact:true}).click()
   await expect(page.getByText('Profile image removed.',{exact:true})).toBeVisible()
   await expect(mobile.locator('summary img')).toHaveCount(0)
   await expect(mobile.locator('summary').getByRole('img',{name:'Synthetic Patient profile image',exact:true})).toHaveText('SP')
