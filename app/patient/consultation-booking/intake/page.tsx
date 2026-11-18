@@ -1,10 +1,12 @@
 'use client'
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
-import { getPatientDoctor, createPatientEpisode, submitPatientEpisodeIntake, getApiErrorDetail, type PatientDoctor } from '@/lib/api'
+import { getPatientDoctor, getPatientSettings, createPatientEpisode, authorizeBilling, submitPatientEpisodeIntake, getApiErrorDetail, type PatientDoctor, type Insurance } from '@/lib/api'
+import { bookingFunding, selfPayPricingBasis } from '@/lib/booking-funding'
 import { PHYSICIANS } from '@/constants/physicians'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
@@ -36,7 +38,11 @@ function IntakePageContent() {
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
 
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
-  const insurance = searchParams.get('insurance') ?? physicianData.insurance[0] ?? 'Self pay'
+  // The patient's own saved insurance decides the billing route, not the doctor's accepted options.
+  const [savedInsurance, setSavedInsurance] = useState<Insurance | null | undefined>(undefined)
+  const [insuranceLoadFailed, setInsuranceLoadFailed] = useState(false)
+  const funding = useMemo(() => bookingFunding(savedInsurance), [savedInsurance])
+  const [selfPayConfirmed, setSelfPayConfirmed] = useState(false)
 
   const [chiefComplaint, setChiefComplaint] = useState('')
   const [symptoms, setSymptoms] = useState('')
@@ -53,6 +59,7 @@ function IntakePageContent() {
   const errors = {
     complaint: !chiefComplaint.trim() ? 'Describe the main reason for your visit.' : chiefComplaint.length > 2000 ? 'Use no more than 2,000 characters for the main concern.' : undefined,
     processing: !processingConsent ? 'Confirm the required data-processing choice before submitting this intake.' : undefined,
+    selfPay: funding.needsSelfPayConfirmation && !selfPayConfirmed ? 'Confirm that this consultation is self-pay, or add your insurance first.' : undefined,
   }
   const submitting = useRef(false)
   const episodeRef = useRef(searchParams.get('episode_id') || '')
@@ -83,6 +90,17 @@ function IntakePageContent() {
     }
   }, [physicianId, physician])
 
+  useEffect(() => {
+    let cancelled = false
+    const load = () => getPatientSettings()
+      .then(settings => { if (!cancelled) { setSavedInsurance(settings.insurance ?? null); setInsuranceLoadFailed(false) } })
+      .catch(() => { if (!cancelled) { setSavedInsurance(null); setInsuranceLoadFailed(true) } })
+    load()
+    // Insurance added in another tab is picked up when the patient returns here.
+    window.addEventListener('focus', load)
+    return () => { cancelled = true; window.removeEventListener('focus', load) }
+  }, [])
+
   const handleBack = () => {
     const params = buildBookingQueryParams(searchParams, physicianData, service)
     router.push(`/patient/consultation-booking/date-time?${params.toString()}`)
@@ -110,10 +128,10 @@ function IntakePageContent() {
         pack_id: 'patient-booking-intake',
         pack_version: '1.0.0',
         bundesland: 'general',
-        insurance_type: insurance === 'Self pay' ? 'self_pay' : 'private',
+        insurance_type: funding.episodeInsuranceType,
         flow_type: 'consultation',
         matching_mode: 'patient_selects',
-        insurance_provider: insurance !== 'Self pay' ? insurance : undefined,
+        insurance_provider: funding.insurer || undefined,
         insurance_number: '',
         consent_data_processing: processingConsent,
         consent_ai_assistance: aiConsent,
@@ -127,6 +145,11 @@ function IntakePageContent() {
       const recoveryUrl = new URL(window.location.href)
       recoveryUrl.searchParams.set('episode_id', newEpisodeId)
       window.history.replaceState(window.history.state, '', recoveryUrl.pathname + recoveryUrl.search)
+      if (funding.needsSelfPayConfirmation) {
+        setSubmitStage('Recording your self-pay confirmation…')
+        // Audited consent intent in the clinical service; repeating it is a no-op.
+        await authorizeBilling(newEpisodeId, { insurance_type: 'SELF_PAY', currency: 'EUR' })
+      }
       setSubmitStage('Saving and submitting your intake…')
       const serializationStarted = performance.now()
 
@@ -338,6 +361,34 @@ function IntakePageContent() {
                 style={{ width: '100%', minHeight: '60px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
             </div>
+
+            <fieldset aria-describedby="funding-summary" style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 18px', margin: 0, background: 'var(--surface-subtle)' }}>
+              <legend style={{ fontWeight: 700, fontSize: '15px', padding: '0 6px' }}>How this consultation is paid</legend>
+              {savedInsurance === undefined ? (
+                <p role="status" style={{ margin: 0, fontSize: '14px', color: 'var(--text-muted)' }}>Checking your saved insurance…</p>
+              ) : funding.needsSelfPayConfirmation ? (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <p id="funding-summary" style={{ margin: 0, fontSize: '14px', lineHeight: 1.6 }}>
+                    {insuranceLoadFailed ? 'We could not load your saved insurance. ' : 'You have not added a health insurer. '}
+                    This consultation will be billed to you as <strong>self-pay</strong>.
+                  </p>
+                  <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--text-muted)' }}>{selfPayPricingBasis(physicianData.consultationFee)}</p>
+                  <p style={{ margin: 0, fontSize: '13px' }}>
+                    <Link href="/patient/settings" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--link, var(--action-primary))', fontWeight: 600 }}>Add your insurance</Link>
+                    <span style={{ color: 'var(--text-muted)' }}> (opens in a new tab; this page updates when you come back)</span>
+                  </p>
+                  <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <input type="checkbox" checked={selfPayConfirmed} onChange={e => setSelfPayConfirmed(e.target.checked)} aria-invalid={attempted && Boolean(errors.selfPay)} aria-describedby="selfPay-hint selfPay-error" />
+                    <span>I understand this consultation is self-pay and accept the pricing basis above. (Required)</span>
+                  </label>
+                  <FieldFeedback name="selfPay" error={attempted ? errors.selfPay : undefined} hint="You can still add insurance before you continue." />
+                </div>
+              ) : (
+                <p id="funding-summary" style={{ margin: 0, fontSize: '14px', lineHeight: 1.6 }}>
+                  {funding.label} · {funding.insurer}. Saved details are not yet verified; the practice confirms coverage before your consultation.
+                </p>
+              )}
+            </fieldset>
 
             <div>
               <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>

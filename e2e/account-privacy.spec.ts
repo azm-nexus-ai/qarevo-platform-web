@@ -803,6 +803,7 @@ test('intake requires visible consent and keeps clinical text out of navigation 
   await expect(page.locator('[data-validation-summary]')).toContainText('Confirm the required data-processing choice')
   expect(created).toHaveLength(0)
   await page.getByLabel('Chief Complaint (Required)').fill('Synthetic private concern')
+  await page.getByLabel('I understand this consultation is self-pay').check()
   await page.getByLabel('I agree to processing this synthetic intake').check()
   await expect(page.getByLabel('Allow optional AI assistance')).not.toBeChecked()
   await page.getByRole('button', { name: 'Continue to Review' }).click()

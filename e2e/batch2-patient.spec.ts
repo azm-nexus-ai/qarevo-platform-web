@@ -4,7 +4,7 @@ import type {PatientDoctor} from '../lib/api'
 const episode='77777777-7777-4777-8777-777777777777'
 async function prepare(context:BrowserContext, now=Date.now()){
  const identity = await seedPortalSession(context, 'patient', {user_id:'synthetic-patient'})
- const state={created:0,saved:0,fail:true,finish:()=>{}}
+ const state={created:0,saved:0,authorized:0,fail:true,finish:()=>{}}
  await context.route('**/api/v1/**',async route=>{
   const path=new URL(route.request().url()).pathname
   if(path.endsWith('/browser-csrf'))return route.fulfill({json:{csrf_token:'synthetic-csrf'}})
@@ -20,6 +20,7 @@ async function prepare(context:BrowserContext, now=Date.now()){
    await new Promise<void>(resolve=>{state.finish=resolve})
    return route.fulfill({headers,json:{submitted_at:new Date(now).toISOString(),ai_draft:{status:'queued'}}})
   }
+  if(path.endsWith(`/episodes/${episode}/billing/authorize`)){state.authorized++;expect(route.request().postDataJSON()).toEqual({insurance_type:'SELF_PAY',currency:'EUR'});return route.fulfill({headers,json:{id:'synthetic-billing',episode_id:episode,patient_id:'synthetic-patient',status:'AUTHORIZED',currency:'EUR',insurance_type:'SELF_PAY'}})}
   if(path.includes('/patient/doctors/'))return route.fulfill({headers,json:{id:'synthetic-doctor',name:'Assigned Clinician',insurance:['Self pay'],languages:['English'],services:[{type:'video',duration:'30 min',price:50}]}})
   if(path.endsWith('/patient/appointments'))return route.fulfill({headers,json:{time_zone:'Europe/Berlin',appointments:[{id:'photo-a',provider_id:'doctor-a',provider_name:'Assigned Doctor Alpha',provider_image_url:'/synthetic-alpha.png',start_at:new Date(now+600000).toISOString(),end_at:new Date(now+2400000).toISOString(),status:'BOOKED'},{id:'photo-b',provider_id:'doctor-b',provider_name:'Assigned Doctor Beta',provider_image_url:'/synthetic-beta.png',start_at:new Date(now+4200000).toISOString(),end_at:new Date(now+6000000).toISOString(),status:'BOOKED'},{id:'photo-c',provider_id:'doctor-c',provider_name:'Assigned Doctor Gamma',provider_image_url:null,start_at:new Date(now+6600000).toISOString(),end_at:new Date(now+8400000).toISOString(),status:'BOOKED'}]}})
   return route.fulfill({headers,status:404,json:{detail:'No synthetic fixture'}})
@@ -31,7 +32,9 @@ test('intake sends fields once, reuses the episode after failure, and blocks dup
  const state=await prepare(context)
  await page.goto('/patient/consultation-booking/intake?physicianId=synthetic-doctor&service=video')
  await page.locator('textarea').first().fill('Synthetic concern for clinical review')
- await page.locator('input[type=checkbox]').first().check()
+ await expect(page.getByText('This consultation will be billed to you as',{exact:false})).toBeVisible()
+ await page.getByLabel('I understand this consultation is self-pay').check()
+ await page.getByLabel('I agree to processing this synthetic intake').check()
  await page.getByRole('button',{name:'Continue to Review',exact:true}).click()
  await expect(page.getByText('Synthetic clinical persistence unavailable. Please retry.',{exact:true})).toBeVisible()
  expect(state.created).toBe(1);expect(state.saved).toBe(1)
