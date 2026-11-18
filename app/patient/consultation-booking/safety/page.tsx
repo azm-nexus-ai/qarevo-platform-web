@@ -23,6 +23,8 @@ function SafetyScreenContent() {
   const [submitError, setSubmitError] = useState('')
   const [result, setResult] = useState<SafetyScreenResult | null>(null)
   const [revision, setRevision] = useState(0)
+  // Bumped on each incomplete submit; focus moves once the summary has rendered.
+  const [summaryRequest, setSummaryRequest] = useState(0)
   const outcomeHeading = useRef<HTMLHeadingElement>(null)
   const summary = useRef<HTMLDivElement>(null)
 
@@ -36,6 +38,7 @@ function SafetyScreenContent() {
   }, [revision])
 
   useEffect(() => { if (result && !result.allows_booking) outcomeHeading.current?.focus() }, [result])
+  useEffect(() => { if (summaryRequest) summary.current?.focus() }, [summaryRequest])
 
   const questions = screen?.available ? screen.questions : []
   const unanswered = questions.filter(question => !answers[question.id])
@@ -44,7 +47,7 @@ function SafetyScreenContent() {
     event.preventDefault()
     if (!screen?.available || submitting) return
     setAttempted(true)
-    if (unanswered.length) { summary.current?.focus(); return }
+    if (unanswered.length) { setSummaryRequest(n => n + 1); return }
     setSubmitting(true); setSubmitError('')
     try {
       const payload = Object.fromEntries(questions.map(question => [question.id, answers[question.id] === 'yes']))

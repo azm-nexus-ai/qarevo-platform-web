@@ -31,6 +31,8 @@ async function preparePatient(context: BrowserContext, overrides: Partial<Patien
       expect(body.version_id).toBe(versionId)
       state.answers.push(body.answers)
       const stop = state.outcome === 'EMERGENCY'
+      // Like the API, a passing response makes the status report a recent pass.
+      if (!stop) state.status = { ...state.status, passed: true, valid_until: new Date(Date.now() + 7_200_000).toISOString() }
       return route.fulfill({ status: 201, json: { response_id: 'synthetic-response', outcome: state.outcome, allows_booking: !stop, guidance: stop ? emergency : null, continue_message: null, valid_until: stop ? null : new Date(Date.now() + 7_200_000).toISOString() } })
     }
     if (path.endsWith('/patient/settings')) return route.fulfill({ json: { first_name: 'Synthetic', last_name: 'Patient', emergency_contacts: [] } })
