@@ -15,6 +15,7 @@ export const ADMIN_ROUTES = {
   exceptions: '/admin/exceptions',
   systemConfig: '/admin/system-config',
   audit: '/admin/audit',
+  clinicalSafety: '/admin/clinical-safety',
   settings: '/admin/settings',
   logout: '/auth/admin/login',
 } as const
@@ -27,6 +28,7 @@ export const ADMIN_SIDEBAR_ITEMS: AdminNavItem[] = [
   { label: 'Admin Users', icon: ICONS.shield, href: ADMIN_ROUTES.adminUsers },
   { label: 'Exceptions', icon: ICONS.zap, href: ADMIN_ROUTES.exceptions },
   { label: 'System Config', icon: ICONS.cpu, href: ADMIN_ROUTES.systemConfig },
+  { label: 'Clinical Safety', icon: ICONS.heart, href: ADMIN_ROUTES.clinicalSafety },
   { label: 'Audit Logs', icon: ICONS.info, href: ADMIN_ROUTES.audit },
   { label: 'Settings', icon: ICONS.info, href: ADMIN_ROUTES.settings },
   { label: 'Logout', icon: ICONS.logout, href: ADMIN_ROUTES.logout },
@@ -40,6 +42,7 @@ export function isAdminNavActive(pathname: string, href: string) {
   if (href === ADMIN_ROUTES.exceptions) return pathname.startsWith('/admin/exceptions')
   if (href === ADMIN_ROUTES.systemConfig) return pathname.startsWith('/admin/system-config')
   if (href === ADMIN_ROUTES.audit) return pathname.startsWith('/admin/audit')
+  if (href === ADMIN_ROUTES.clinicalSafety) return pathname.startsWith('/admin/clinical-safety')
   if (href === ADMIN_ROUTES.settings) return pathname.startsWith('/admin/settings')
   return pathname === href
 }

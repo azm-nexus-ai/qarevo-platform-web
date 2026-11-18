@@ -10,6 +10,7 @@ import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import { useBookingContext } from '@/contexts/BookingContext'
+import { useSafetyScreenGate } from '@/components/patient/useSafetyScreenGate'
 import {
   getPatientDoctor,
   getPatientBookingAvailability,
@@ -119,6 +120,7 @@ function doctorToBookingFallback(doctor: PatientDoctor | null) {
 function DateTimeSelectionPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  useSafetyScreenGate()
   const { bookingState, updateBookingState } = useBookingContext()
 
   const physicianId = readBookingProviderId(searchParams)
