@@ -86,11 +86,6 @@ function isPhysicianProfileContent(value: unknown): value is PhysicianProfileCon
   return Array.isArray(profile.services) && Array.isArray(profile.availabilitySlots)
 }
 
-function profileText(profile: Record<string, unknown> | undefined, key: string): string {
-  const value = profile?.[key]
-  return typeof value === 'string' ? value : ''
-}
-
 function toPhysician(doctor: PatientDoctor): Physician {
   return {
     id: doctor.id,

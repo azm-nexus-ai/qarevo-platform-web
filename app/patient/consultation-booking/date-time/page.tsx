@@ -11,8 +11,8 @@ import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import { useBookingContext } from '@/contexts/BookingContext'
 import { useSafetyScreenGate } from '@/components/patient/useSafetyScreenGate'
-import {
 import { physicianPath } from '@/lib/physician-slug'
+import {
   getPatientDoctor,
   getPatientBookingAvailability,
   getPatientBookingSlots,

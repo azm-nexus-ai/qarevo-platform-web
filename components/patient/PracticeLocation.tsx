@@ -1,6 +1,6 @@
 'use client'
 import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import 'leaflet/dist/leaflet.css'
 
 // Leaflet touches `window`, so it is only loaded in the browser, and only after consent.
@@ -27,8 +27,9 @@ export function validCoordinates(latitude?: number | null, longitude?: number | 
 export default function PracticeLocation({ name, practice, address, latitude, longitude }: {
   name: string; practice?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null
 }) {
-  const [consented, setConsented] = useState(false)
-  useEffect(() => { setConsented(readConsent()) }, [])
+  // Coordinates arrive only after the client-side profile fetch, so reading the
+  // stored choice up front cannot change the server-rendered markup.
+  const [consented, setConsented] = useState(() => typeof window !== 'undefined' && readConsent())
   const coordinates = validCoordinates(latitude, longitude)
   const cleanAddress = (address || '').replace(/^[\s,]+|[\s,]+$/g, '').replace(/(,\s*){2,}/g, ', ')
   const query = [practice, cleanAddress].filter(Boolean).join(', ')
