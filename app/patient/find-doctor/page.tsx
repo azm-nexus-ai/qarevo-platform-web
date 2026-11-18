@@ -20,6 +20,7 @@ import { doctorVerification } from '@/lib/doctor-verification'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
 import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuthError, clearPortalSession, type PatientSettings, type PatientDoctor } from '@/lib/api'
+import ProfileImage from '@/components/patient/ProfileImage'
 
 function getQuickBookServiceType(
   consultationType: string,
@@ -337,7 +338,7 @@ function FindDoctorPageContent() {
             <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>
-                  {userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'P'}
+                  <ProfileImage name={userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : ''} />
                 </div>
                 <div>
                   <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>

@@ -1427,7 +1427,7 @@ test('patient profile image previews, validates, saves and removes without chang
   await page.goto('/patient/settings')
   const editor=page.getByRole('region',{name:'Profile image',exact:true})
   await editor.getByLabel('Profile image',{exact:true}).setInputFiles({name:'unsafe.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg/>')})
-  await expect(editor.getByRole('alert').filter({hasText:'Choose a JPEG, PNG or WebP image, up to 2 MB.'})).toBeVisible()
+  await expect(editor.getByRole('alert').filter({hasText:'Choose a JPEG, PNG, WebP or HEIC photo.'})).toBeVisible()
   expect(saves).toBe(0)
   await editor.getByLabel('Profile image',{exact:true}).setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAfElEQVR4nNXOQREAMAjAsK7KkT4RPLhGQR4MZRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncRIncV4Htj5g3AEAi5NIywAAAABJRU5ErkJggg==','base64')})
   await expect(editor.getByAltText('Selected profile image preview')).toBeVisible()
@@ -1437,6 +1437,39 @@ test('patient profile image previews, validates, saves and removes without chang
   await page.reload()
   await expect(editor.getByRole('button',{name:'Remove image',exact:true})).toBeVisible()
   await editor.getByRole('button',{name:'Remove image',exact:true}).click()
+  await editor.getByRole('group',{name:'Confirm removal'}).getByRole('button',{name:'Remove photo',exact:true}).click()
   await expect(editor.getByRole('status').filter({hasText:'Profile image removed.'})).toBeVisible()
   await expect(editor.getByRole('button',{name:'Remove image',exact:true})).toHaveCount(0)
+})
+
+test('a saved profile photo replaces initials in the account menu without a reload, and removal restores them',async({page,context})=>{
+  let image:string|null=null
+  const uploads:{content_type:string;content_base64:string}[]=[]
+  await context.route('**/api/v1/patient/profile-image',route=>{
+    const request=route.request()
+    if(request.method()==='POST'){const body=request.postDataJSON();uploads.push(body);image='data:image/jpeg;base64,'+body.content_base64}
+    if(request.method()==='DELETE')image=null
+    return route.fulfill({json:{image}})
+  })
+  await signIn(page,alpha)
+  await page.goto('/patient/settings')
+  const menuAvatar=page.getByRole('navigation',{name:'Patient appearance'}).getByRole('img',{name:/profile image$/}).first()
+  await expect(menuAvatar.locator('img')).toHaveCount(0)
+  const editor=page.getByRole('region',{name:'Profile image',exact:true})
+  // A 4000×3000 PNG stands in for a phone photo: far over 2 MB as pixels, prepared on the device.
+  const big=await page.evaluate(async()=>{const c=document.createElement('canvas');c.width=4000;c.height=3000;const x=c.getContext('2d')!;x.fillStyle='#348cea';x.fillRect(0,0,4000,3000);const blob:Blob=await new Promise(r=>c.toBlob(b=>r(b!),'image/png'));return Array.from(new Uint8Array(await blob.arrayBuffer()))})
+  await editor.getByLabel('Profile image',{exact:true}).setInputFiles({name:'phone.png',mimeType:'image/png',buffer:Buffer.from(big)})
+  await expect(editor.getByAltText('Selected profile image preview')).toBeVisible()
+  await editor.getByRole('button',{name:'Save image',exact:true}).click()
+  await expect(editor.getByRole('status').filter({hasText:'Profile image updated.'})).toBeVisible()
+  expect(uploads).toHaveLength(1)
+  expect(uploads[0].content_type).toBe('image/jpeg')
+  expect(Buffer.from(uploads[0].content_base64,'base64').length).toBeLessThan(2*1024*1024)
+  await expect(menuAvatar.locator('img')).toHaveCount(1)
+  const size=await page.evaluate(src=>new Promise<[number,number]>(r=>{const i=new Image();i.onload=()=>r([i.naturalWidth,i.naturalHeight]);i.src=src}),'data:image/jpeg;base64,'+uploads[0].content_base64)
+  expect(Math.max(...size)).toBeLessThanOrEqual(768)
+  await editor.getByRole('button',{name:'Remove image',exact:true}).click()
+  await editor.getByRole('group',{name:'Confirm removal'}).getByRole('button',{name:'Remove photo',exact:true}).click()
+  await expect(editor.getByRole('status').filter({hasText:'Profile image removed.'})).toBeVisible()
+  await expect(menuAvatar.locator('img')).toHaveCount(0)
 })
