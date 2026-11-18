@@ -203,30 +203,61 @@ function insightIcon(value: unknown) {
   return ICONS.info
 }
 
-function SectionCard({ title, sub, action, children }: { title: string; sub?: string; action?: React.ReactNode; children: React.ReactNode }) {
+const SECTION_CARD_STYLE: React.CSSProperties = {
+  background: "var(--surface-glass)",
+  backdropFilter: 'blur(22px) saturate(175%)',
+  WebkitBackdropFilter: 'blur(22px) saturate(175%)',
+  borderRadius: '20px',
+  border: "1px solid var(--border)",
+  boxShadow: Sh.card,
+  padding: '20px',
+}
+
+/**
+ * A dashboard card. Essential cards are always open. Secondary cards pass
+ * `collapsible`: they show their title and a one-line status, and open on
+ * request. `defaultOpen` opens one when it has something to show; the key
+ * remounts it when that changes, so arriving content opens it once without
+ * overriding a choice made later.
+ */
+function SectionCard({ title, sub, action, children, collapsible = false, defaultOpen = true, status }: {
+  title: string; sub?: string; action?: React.ReactNode; children: React.ReactNode
+  collapsible?: boolean; defaultOpen?: boolean; status?: string
+}) {
+  const heading = (
+    <div className='pd-section-copy'>
+      <h2 className='portal-h2 pd-section-title'>{title}</h2>
+      {sub && <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>{sub}</p>}
+    </div>
+  )
+  if (collapsible) {
+    return (
+      <section className='pd-collapsible' style={{ ...SECTION_CARD_STYLE, padding: 0 }}>
+        <details key={defaultOpen ? 'open' : 'closed'} open={defaultOpen}>
+          <summary className='pd-section-header pd-collapsible-summary'>
+            {heading}
+            <span className='pd-collapsible-meta'>{status && <span className='pd-collapsible-status'>{status}</span>}<span aria-hidden='true' className='pd-chevron'>▾</span></span>
+          </summary>
+          <div className='pd-collapsible-body'>
+            {action ? <div className='pd-section-action' style={{ marginBottom: '12px' }}>{action}</div> : null}
+            {children}
+          </div>
+        </details>
+      </section>
+    )
+  }
   return (
-    <section
-      style={{
-        background: "var(--surface-glass)",
-        backdropFilter: 'blur(22px) saturate(175%)',
-        WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-        borderRadius: '20px',
-        border: "1px solid var(--border)",
-        boxShadow: Sh.card,
-        padding: '20px',
-      }}
-    >
+    <section style={SECTION_CARD_STYLE}>
       <header className='pd-section-header' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
-        <div className='pd-section-copy'>
-          <h2 className='portal-h2 pd-section-title'>{title}</h2>
-          {sub && <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>{sub}</p>}
-        </div>
+        {heading}
         {action ? <div className='pd-section-action'>{action}</div> : null}
       </header>
       {children}
     </section>
   )
 }
+
+const countLabel = (count: number, noun: string) => count === 0 ? 'Nothing recorded yet' : `${count} ${noun}${count === 1 ? '' : 's'}`
 
 function EmptyState({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
@@ -767,6 +798,15 @@ export default function PatientDashboardPage() {
         .pd-greeting-kicker, .pd-greeting-name { display: block; }
         .pd-greeting-name { overflow-wrap: anywhere; }
         .pd-section-header, .pd-section-copy { min-width: 0; }
+        .pd-collapsible-summary { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 20px; cursor: pointer; list-style: none; border-radius: 20px; min-height: 48px; }
+        .pd-collapsible-summary::-webkit-details-marker { display: none; }
+        .pd-collapsible-summary:focus-visible { outline: 3px solid var(--action-primary); outline-offset: -3px; }
+        .pd-collapsible-meta { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .pd-collapsible-status { font-size: 13px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+        .pd-chevron { display: inline-block; font-size: 14px; color: var(--text-secondary); transition: transform .18s ease; }
+        .pd-collapsible details[open] .pd-chevron { transform: rotate(180deg); }
+        .pd-collapsible-body { padding: 0 20px 20px; }
+        @media (prefers-reduced-motion: reduce) { .pd-chevron { transition: none; } }
         .pd-section-action { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: flex-end; }
         .pd-section-action a { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; border-radius: 11px; padding: 0 10px; background: var(--surface); border: 1px solid var(--border); box-shadow: inset 0 1px 0 rgba(255,255,255,0.9); line-height: 1.2; white-space: nowrap; }
         .pd-toolbar { display: grid; grid-template-columns: minmax(170px, 1fr) 38px 38px 42px; justify-content: flex-end; min-width: 0; width: 100%; max-width: 560px; margin-left: auto; }
@@ -1225,7 +1265,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Today’s Health Snapshot' sub='A live read of your care journey, focus areas, and next steps.'>
+          <SectionCard collapsible defaultOpen={false} title='Today’s Health Snapshot' sub='A live read of your care journey, focus areas, and next steps.'>
             <div className='pd-snapshot-grid'>
               {snapshotCards.map((item) => (
                 <div key={item.label} className='pd-snapshot-card'>
@@ -1271,7 +1311,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Care Plans' sub='Care plans and recorded progress.'>
+          <SectionCard collapsible defaultOpen={displayCarePlans.length > 0} status={countLabel(displayCarePlans.length, 'plan')} title='Care Plans' sub='Care plans and recorded progress.'>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayCarePlans.length === 0 && (
                 <EmptyState>No active care plans yet. They will appear here after a consultation or clinical workflow assignment.</EmptyState>
@@ -1303,7 +1343,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Lab Results & Diagnostics' sub='Latest lab information shared with your care team.'>
+          <SectionCard collapsible defaultOpen={displayLabData.length > 0} status={countLabel(displayLabData.length, 'result')} title='Lab Results & Diagnostics' sub='Latest lab information shared with your care team.'>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayLabData.length === 0 && (
                 <EmptyState>No lab requests or results are available yet.</EmptyState>
@@ -1326,7 +1366,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Referrals & Specialist Care' sub='Track ongoing specialist recommendations and bookings.'>
+          <SectionCard collapsible defaultOpen={displayReferrals.length > 0} status={countLabel(displayReferrals.length, 'referral')} title='Referrals & Specialist Care' sub='Track ongoing specialist recommendations and bookings.'>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayReferrals.length === 0 && (
                 <EmptyState>No referrals have been created yet.</EmptyState>
@@ -1347,7 +1387,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Health Metrics' sub='Recorded measurements; no clinical interpretation is inferred.'>
+          <SectionCard collapsible defaultOpen={displayMetrics.length > 0} status={countLabel(displayMetrics.length, 'measurement')} title='Health Metrics' sub='Recorded measurements; no clinical interpretation is inferred.'>
             {healthError && <p role='alert'>Health measurements could not be loaded. <button onClick={() => setReload(value => value + 1)}>Try again</button></p>}
             <div style={{ display: 'grid', gap: '10px' }}>
               {!healthError && displayMetrics.length === 0 && (
@@ -1413,7 +1453,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Health Timeline' sub='A visual story of your care journey from onboarding to recovery.'>
+          <SectionCard collapsible defaultOpen={displayTimelineItems.length > 0} status={countLabel(displayTimelineItems.length, 'event')} title='Health Timeline' sub='A visual story of your care journey from onboarding to recovery.'>
             <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '10px' }}>
               {displayTimelineItems.length === 0 && (
                 <EmptyState>Your care timeline will start after your first appointment, document, or clinical update.</EmptyState>
@@ -1435,7 +1475,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Health Information' sub='Your vital signs and medical details from your profile.' action={<Link href='/patient/settings' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 600, textDecoration: 'none' }}>Update in Settings →</Link>}>
+          <SectionCard collapsible defaultOpen={false} title='Health Information' sub='Your vital signs and medical details from your profile.' action={<Link href='/patient/settings' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 600, textDecoration: 'none' }}>Update in Settings →</Link>}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
               {[
                 { label: 'Blood Pressure', value: healthInfo.blood_pressure || 'Not set' },
@@ -1453,7 +1493,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Personal Wellness' sub='Daily habits that shape your long-term health.'>
+          <SectionCard collapsible defaultOpen={false} title='Personal Wellness' sub='Daily habits that shape your long-term health.'>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
               {displayWellnessCards.length === 0 && (
                 <EmptyState>No wellness check-ins have been recorded yet.</EmptyState>
@@ -1470,7 +1510,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Optional AI assistance' sub='Drafting support remains subject to clinician review.'>
+          <SectionCard collapsible defaultOpen={false} title='Optional AI assistance' sub='Drafting support remains subject to clinician review.'>
             <div style={{ borderRadius: '16px', overflow: 'hidden', border: "1px solid var(--border)", background: "var(--surface-glass)" }}>
               {displayAIInsights.length === 0 && (
                 <EmptyState>{text(dashboardData?.ai_insights_message, 'Optional AI drafting supports clinician review. Care recommendations are shared through your clinician-approved care record.')}</EmptyState>
@@ -1492,7 +1532,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Quick Re-Booking' sub='Book with doctors you have seen before for faster care.' action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>Find new doctor →</Link>}>
+          <SectionCard collapsible defaultOpen={(recentDoctors ?? []).length > 0} status={countLabel((recentDoctors ?? []).length, 'doctor')} title='Quick Re-Booking' sub='Book with doctors you have seen before for faster care.' action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>Find new doctor →</Link>}>
             <div style={{ display: 'grid', gap: '10px' }}>
               <div className='pd-doctor-carousel'>
                 {(recentDoctors ?? []).length === 0 && (
@@ -1545,7 +1585,7 @@ export default function PatientDashboardPage() {
 
         {!dashboardLoading && !dashboardError && <aside id='patient-secondary-sidebar' className='pd-right'>
           <div className='portal-sidebar-content portal-sidebar-stack'>
-            <SectionCard title='Today’s Schedule' sub='The key moments and commitments for the day.'>
+            <SectionCard collapsible defaultOpen={todayScheduleItems.length > 0} status={todayScheduleItems.length ? `${todayScheduleItems.length} today` : 'Nothing scheduled today'} title='Today’s Schedule' sub='The key moments and commitments for the day.'>
               {todayScheduleItems.length ? (
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {todayScheduleItems.map((item) => (
@@ -1565,7 +1605,7 @@ export default function PatientDashboardPage() {
               <PatientNotifications compact />
             </SectionCard>
 
-            <SectionCard title='Care Progress' sub='How your current plan is tracking.'>
+            <SectionCard collapsible defaultOpen={false} title='Care Progress' sub='How your current plan is tracking.'>
               {careProgress !== null ? (
                 <div style={{ borderRadius: '14px', padding: '14px', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.22) 100%)', border: "1px solid var(--border)" }}>
                   <div style={{ marginBottom: '8px', height: '8px', borderRadius: '999px', background: "var(--surface-hover)", overflow: 'hidden' }}>
@@ -1578,14 +1618,14 @@ export default function PatientDashboardPage() {
               )}
             </SectionCard>
 
-            <SectionCard title='Contact your care team' sub='Use your messages to contact your care team.'>
+            <SectionCard collapsible defaultOpen={false} title='Contact your care team' sub='Use your messages to contact your care team.'>
               <div style={{ borderRadius: '14px', padding: '14px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
                 <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 700, color: T.navy }}>Messages</p>
                 <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>Responses depend on your care team’s availability.</p>
               </div>
             </SectionCard>
 
-            <SectionCard title='Primary Actions' sub='Jump directly into the services you use most.'>
+            <SectionCard collapsible defaultOpen={false} title='Primary Actions' sub='Jump directly into the services you use most.'>
               <div style={{ display: 'grid', gap: '8px' }}>
                 <Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.28)' }}>Book New Appointment</Link>
                 <Link href={PATIENT_ROUTES.messages} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: "var(--surface-glass)", color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: "1px solid var(--border)" }}>Contact Care Team</Link>

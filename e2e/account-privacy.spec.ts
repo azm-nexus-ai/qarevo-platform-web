@@ -435,6 +435,11 @@ test('dashboard distinguishes slow and failed requests from an empty account', a
   scenario.dashboardStatus = 200
   await page.getByRole('button', { name: 'Try again', exact: true }).click()
   await expect(page.getByText('Loading your dashboard…')).toHaveCount(0)
+  // An empty secondary card stays collapsed with a one-line status and opens on request.
+  const metrics = page.getByRole('heading', { name: 'Health Metrics', exact: true }).locator('xpath=ancestor::section[1]')
+  await expect(metrics.getByText('Nothing recorded yet', { exact: true })).toBeVisible()
+  await expect(page.getByText('No health metrics have been added yet.', { exact: true })).toBeHidden()
+  await page.getByRole('heading', { name: 'Health Metrics', exact: true }).click()
   await expect(page.getByText('No health metrics have been added yet.', { exact: true })).toBeVisible()
   await expect(page.getByText('Medication plan available', { exact: true })).toHaveCount(0)
 })
@@ -1529,4 +1534,24 @@ test('coverage names an earlier unsaved step and links straight to it', async ({
   await expect(page.getByText(/Your personal information is not saved yet/)).toBeVisible()
   await expect(page.getByRole('link', { name: 'Continue with personal information', exact: true })).toHaveAttribute('href', personal)
   await expect(page.getByRole('button', { name: 'Complete Profile', exact: true })).toBeEnabled()
+})
+
+test('the first dashboard view keeps essentials open and secondary cards collapsed until asked', async ({ page, context }) => {
+  await signIn(page, alpha)
+  scenarios.get(context)!.onboardingComplete = true
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('/patient/dashboard')
+  await expect(page.getByText('Loading your dashboard…')).toHaveCount(0)
+  for (const title of ['Quick Actions', 'Upcoming Appointments', 'Medications', 'Messages']) {
+    await expect(page.getByRole('heading', { name: title, exact: true }).first()).toBeVisible()
+  }
+  for (const title of ['Personal Wellness', 'Optional AI assistance', 'Health Metrics']) {
+    const card = page.getByRole('heading', { name: title, exact: true }).locator('xpath=ancestor::details[1]')
+    await expect(card).not.toHaveAttribute('open', '')
+  }
+  const wellness = page.getByRole('heading', { name: 'Personal Wellness', exact: true })
+  await wellness.locator('xpath=ancestor::summary[1]').focus()
+  await page.keyboard.press('Enter')
+  await expect(wellness.locator('xpath=ancestor::details[1]')).toHaveAttribute('open', '')
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
 })
