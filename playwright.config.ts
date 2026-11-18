@@ -12,6 +12,9 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
     serviceWorkers: 'block',
     trace: 'on-first-retry',
+    // Smooth scrolling keeps moving the page after Playwright has aimed a click,
+    // so every test runs with the reduced-motion preference the app honours.
+    reducedMotion: 'reduce',
   },
   projects: [
     {

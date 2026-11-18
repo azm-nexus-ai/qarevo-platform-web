@@ -5,8 +5,13 @@ export function focusValidation(form: Element) {
   requestAnimationFrame(() => {
     const target = form.querySelector<HTMLElement>('[aria-invalid="true"]')
       || form.querySelector<HTMLElement>('[data-validation-summary]')
-    target?.focus()
-    target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    if (!target) return
+    // One scroll, not two: focus() would jump first and the smooth scroll would
+    // then keep moving the page under the next click or tap. Visitors who ask
+    // for reduced motion get an instant scroll.
+    const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    target.focus({ preventScroll: true })
+    target.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' })
   })
 }
 
