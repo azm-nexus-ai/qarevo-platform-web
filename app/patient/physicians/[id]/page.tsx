@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, CONSULTATION_PRICING_PENDING } from '@/lib/booking'
@@ -160,7 +160,6 @@ function loadingPhysician(id: string): Physician {
 function PhysicianProfilePageContent() {
   const params = useParams<{ id: string }>()
   const searchParams = useSearchParams()
-  const router = useRouter()
   // A readable slug (or a bare UUID from an older link) resolves to the provider UUID.
   const physicianId = physicianIdFromParam(params.id)
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
@@ -204,8 +203,8 @@ function PhysicianProfilePageContent() {
           // Keep one stable, readable address for this physician.
           const canonical = physicianSlug(doctor.id, doctor.name)
           if (params.id !== canonical) {
-            const query = searchParams.toString()
-            router.replace(physicianPath(doctor.id, doctor.name, query), { scroll: false })
+            // A history replace, not a router navigation: the profile is already loaded and must not refetch.
+            window.history.replaceState(window.history.state, '', physicianPath(doctor.id, doctor.name, searchParams.toString()))
           }
         }
       })
