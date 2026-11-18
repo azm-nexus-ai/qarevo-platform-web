@@ -55,6 +55,9 @@ export interface PhysicianProfileContent {
     directions: string
     parking: string
     accessibility: string
+    practiceName?: string | null
+    latitude?: number | null
+    longitude?: number | null
   }
 }
 

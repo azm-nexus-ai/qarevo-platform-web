@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, CONSULTATION_PRICING_PENDING } from '@/lib/booking'
@@ -13,44 +13,10 @@ import Ico from '@/components/ui/Ico'
 import DoctorCard from '@/components/cards/DoctorCard'
 import DoctorAvatar from '@/components/cards/DoctorAvatar'
 import { doctorVerification } from '@/lib/doctor-verification'
-import dynamic from 'next/dynamic'
-
-// Dynamically import Leaflet to avoid SSR issues
-const MapContainer = dynamic(
-  () => import('react-leaflet').then((mod) => mod.MapContainer),
-  { ssr: false }
-)
-const TileLayer = dynamic(
-  () => import('react-leaflet').then((mod) => mod.TileLayer),
-  { ssr: false }
-)
-const Marker = dynamic(
-  () => import('react-leaflet').then((mod) => mod.Marker),
-  { ssr: false }
-)
-const Popup = dynamic(
-  () => import('react-leaflet').then((mod) => mod.Popup),
-  { ssr: false }
-)
+import { physicianIdFromParam, physicianPath, physicianSlug } from '@/lib/physician-slug'
+import PracticeLocation from '@/components/patient/PracticeLocation'
 
 type ReviewSort = 'recent' | 'highest' | 'helpful'
-
-// Geocoding function to convert address to coordinates
-async function geocodeAddress(address: string): Promise<[number, number] | null> {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
-      { headers: { 'User-Agent': 'Qarevo-Platform' } }
-    )
-    const data = await response.json()
-    if (data && data.length > 0) {
-      return [parseFloat(data[0].lat), parseFloat(data[0].lon)]
-    }
-  } catch (error) {
-    console.error('Geocoding error:', error)
-  }
-  return null
-}
 
 // Helper functions for physician profile logic
 function getEffectiveSelectedService(services: PhysicianProfileContent['services'], selectedService: string): string {
@@ -159,6 +125,7 @@ function toProfile(doctor: PatientDoctor): PhysicianProfileContent {
     faq: profile.faq?.length ? profile.faq : DEFAULT_PROFILE.faq,
     subSpecialties: profile.subSpecialties?.length ? profile.subSpecialties : [doctor.specialty],
     specializations: profile.specializations?.length ? profile.specializations : doctor.conditions,
+    location: { ...DEFAULT_PROFILE.location, ...(profile.location || {}) },
   }
 }
 
@@ -198,7 +165,9 @@ function loadingPhysician(id: string): Physician {
 function PhysicianProfilePageContent() {
   const params = useParams<{ id: string }>()
   const searchParams = useSearchParams()
-  const physicianId = params.id
+  const router = useRouter()
+  // A readable slug (or a bare UUID from an older link) resolves to the provider UUID.
+  const physicianId = physicianIdFromParam(params.id)
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
   const [loadingRemoteDoctor, setLoadingRemoteDoctor] = useState(true)
   const [remoteDoctorError, setRemoteDoctorError] = useState('')
@@ -207,8 +176,6 @@ function PhysicianProfilePageContent() {
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [expandedReviewId, setExpandedReviewId] = useState<string>('')
   const [openFaq, setOpenFaq] = useState<string>('')
-  const [mapLoading, setMapLoading] = useState(true)
-  const [mapCoordinates, setMapCoordinates] = useState<[number, number] | null>(null)
   const [expandedBiography, setExpandedBiography] = useState(false)
   const [expandedEducation, setExpandedEducation] = useState(false)
   const [expandedExperience, setExpandedExperience] = useState(false)
@@ -217,6 +184,11 @@ function PhysicianProfilePageContent() {
 
   useEffect(() => {
     let cancelled = false
+    if (!physicianId) {
+      setRemoteDoctorError('This physician link is not valid. Find the physician again from the search.')
+      setLoadingRemoteDoctor(false)
+      return () => { cancelled = true }
+    }
 
     getPatientDoctor(physicianId)
       .then(async (doctor) => {
@@ -234,36 +206,11 @@ function PhysicianProfilePageContent() {
           setExpandedReviewId(loadedProfile.reviews[0]?.id ?? '')
           setOpenFaq(loadedProfile.faq[0]?.q ?? '')
 
-          const profileRecord = doctor.profile
-          const location = profileRecord?.location
-          const locationAddress = location && typeof location === 'object' && !Array.isArray(location)
-            ? profileText(location as Record<string, unknown>, 'address')
-            : ''
-          const profileAddress = profileText(profileRecord, 'address')
-          const profileCity = profileText(profileRecord, 'city')
-          const profileCountry = profileText(profileRecord, 'country')
-
-          const address = locationAddress ||
-            `${profileAddress || ''}, ${profileCity || ''}, ${profileCountry || ''}`
-
-          if (address && address.trim()) {
-            try {
-              const coords = await geocodeAddress(address)
-              if (!cancelled && coords) {
-                setMapCoordinates(coords)
-                setMapLoading(false)
-              } else {
-                // Geocoding failed, show placeholder
-                setMapCoordinates(null)
-                setMapLoading(false)
-              }
-            } catch (error) {
-              console.error('Geocoding error:', error)
-              setMapCoordinates(null)
-              setMapLoading(false)
-            }
-          } else {
-            setMapLoading(false)
+          // Keep one stable, readable address for this physician.
+          const canonical = physicianSlug(doctor.id, doctor.name)
+          if (params.id !== canonical) {
+            const query = searchParams.toString()
+            router.replace(physicianPath(doctor.id, doctor.name, query), { scroll: false })
           }
         }
       })
@@ -278,9 +225,11 @@ function PhysicianProfilePageContent() {
     return () => {
       cancelled = true
     }
+    // The canonical replace only changes the name part; it must not refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [physicianId, preselectedService, preselectedSlot])
 
-  const physician = remoteDoctor ? toPhysician(remoteDoctor) : loadingPhysician(physicianId)
+  const physician = remoteDoctor ? toPhysician(remoteDoctor) : loadingPhysician(physicianId ?? "")
   const profile = remoteDoctor ? toProfile(remoteDoctor) : DEFAULT_PROFILE
 
   const [reviewSort, setReviewSort] = useState<ReviewSort>('recent')
@@ -377,7 +326,7 @@ function PhysicianProfilePageContent() {
 
       <div className='pp-shell'>
         <section className='pp-main'>
-          <header style={{ ...Glass.nav, borderRadius: '20px', border: "1px solid var(--border)", padding: '14px', position: 'sticky', top: '16px', zIndex: 10, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+          <header style={{ ...Glass.nav, borderRadius: '20px', border: "1px solid var(--border)", padding: '14px', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
               <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: "var(--link)", fontSize: '13px', fontWeight: 700 }}>
                 <Ico p={ICONS.arrowBack} size={14} sw={1.8} color='#348CEA' />
@@ -604,37 +553,8 @@ function PhysicianProfilePageContent() {
 
             <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
               <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Location</h3>
-              {mapLoading ? (
-                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: "13px", marginBottom: '10px' }}>
-                  Loading map...
-                </div>
-              ) : mapCoordinates ? (
-                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", overflow: 'hidden', marginBottom: '10px', height: '200px' }}>
-                  <MapContainer
-                    center={mapCoordinates as [number, number]}
-                    zoom={15}
-                    style={{ height: '100%', width: '100%' }}
-                  >
-                    <TileLayer
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    />
-                    <Marker position={mapCoordinates as [number, number]}>
-                      <Popup>
-                        <div style={{ fontSize: "13px", fontWeight: 600 }}>
-                          {physician.name}<br />
-                          {profile.location.address}
-                        </div>
-                      </Popup>
-                    </Marker>
-                  </MapContainer>
-                </div>
-              ) : (
-                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.18) 100%)', minHeight: '160px', display: 'grid', placeItems: 'center', color: T.slate2, fontSize: "13px", marginBottom: '10px' }}>
-                  Map unavailable
-                </div>
-              )}
-              <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Address:</strong> {profile.location.address}</p>
+              <PracticeLocation name={physician.name} practice={profile.location.practiceName || physician.hospital} address={profile.location.address}
+                latitude={profile.location.latitude} longitude={profile.location.longitude} />
             </article>
           </section>
 
@@ -746,7 +666,7 @@ function PhysicianProfilePageContent() {
                   <DoctorCard name={item.name} specialty={item.specialty} verification={item.verification} tags={item.tags} imageUrl={item.imageUrl} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 	                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{formatPhysicianRating(item)} · {item.experienceYears} yrs</p>
-                    <Link href={`/patient/physicians/${item.id}${preservedQuery.toString() ? `?${preservedQuery.toString()}` : ''}`} style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>
+                    <Link href={physicianPath(item.id, item.name, preservedQuery)} style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>
                       View Profile
                     </Link>
                   </div>

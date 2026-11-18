@@ -11,6 +11,7 @@ import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import {
+import { physicianPath } from '@/lib/physician-slug'
   downloadAuthenticatedFile,
   getPatientMessageContacts,
   getPatientMessages,
@@ -338,7 +339,7 @@ function MessagesPageInner() {
   const activeContactProviderId = activeConversation?.contactId.startsWith('provider:')
     ? activeConversation.contactId.replace('provider:', '')
     : null
-  const activeContactProfileHref = activeContactProviderId ? `/patient/physicians/${activeContactProviderId}` : null
+  const activeContactProfileHref = activeContactProviderId ? physicianPath(activeContactProviderId, activeConversation?.contactName) : null
   const modalContacts = useMemo(() => {
     const contacts = new Map<string, MessageContact>()
     doctorContacts.forEach((contact) => contacts.set(contact.id, contact))

@@ -21,6 +21,7 @@ import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
 import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuthError, clearPortalSession, type PatientSettings, type PatientDoctor } from '@/lib/api'
 import ProfileImage from '@/components/patient/ProfileImage'
+import { physicianPath } from '@/lib/physician-slug'
 
 function getQuickBookServiceType(
   consultationType: string,
@@ -81,7 +82,7 @@ function buildProfileHref(
 
   for (const [key, value] of buildBookingQueryParams(bookingParams, null, preferredService)) params.set(key, value)
   params.set('from', 'find-doctor')
-  return `/patient/physicians/${physician.id}?${params.toString()}`
+  return physicianPath(physician.id, physician.name, params)
 }
 
 function buildBookingHref(

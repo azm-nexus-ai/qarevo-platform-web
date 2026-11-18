@@ -12,6 +12,7 @@ import HoverBtn from '@/components/buttons/HoverBtn'
 import { useBookingContext } from '@/contexts/BookingContext'
 import { useSafetyScreenGate } from '@/components/patient/useSafetyScreenGate'
 import {
+import { physicianPath } from '@/lib/physician-slug'
   getPatientDoctor,
   getPatientBookingAvailability,
   getPatientBookingSlots,
@@ -170,7 +171,7 @@ function DateTimeSelectionPageContent() {
 
   const discoveryHref = buildDoctorDiscoveryHref(searchParams, selectedServiceType)
   const summaryHref = physicianData.id
-    ? `/patient/physicians/${physicianData.id}${preservedParams ? `?${preservedParams}` : ''}`
+    ? physicianPath(physicianData.id, physicianData.name, preservedParams || undefined)
     : discoveryHref
   const backDestination = searchParams.get('from') === 'find-doctor' ? discoveryHref : summaryHref
 

@@ -20,6 +20,7 @@ import HoverBtn from '@/components/buttons/HoverBtn'
 import DoctorCard from '@/components/cards/DoctorCard'
 import AIItem from '@/components/cards/AIItem'
 import LogoutModal from '@/components/ui/LogoutModal'
+import { physicianPath } from '@/lib/physician-slug'
 
 type NavItem = {
   label: string
@@ -368,7 +369,7 @@ export default function PatientDashboardPage() {
         router.push(PATIENT_ROUTES.findDoctor)
         return
       }
-      router.push(`/patient/physicians/${doctorId}?from=dashboard&intent=book&slot=${encodeURIComponent(recommendedSlot)}`)
+      router.push(physicianPath(doctorId, text(data?.doctor?.name), new URLSearchParams({ from: 'dashboard', intent: 'book', slot: recommendedSlot })))
     } catch (error) {
       console.error('Error booking next available:', error)
       router.push(PATIENT_ROUTES.findDoctor)
@@ -1505,7 +1506,7 @@ export default function PatientDashboardPage() {
                     <div className='pd-doctor-footer'>
                       <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : 'No ratings'} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
                       <div className='pd-doctor-actions'>
-                        <Link className='pd-doctor-action-link' href={`/patient/physicians/${doc.id}?from=dashboard&intent=book`} style={{ color: "var(--link)" }}>Book Now</Link>
+                        <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>Book Now</Link>
                       </div>
                     </div>
                   </div>
@@ -1530,8 +1531,8 @@ export default function PatientDashboardPage() {
                     <div className='pd-doctor-footer'>
                       <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : 'No ratings'} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
                       <div className='pd-doctor-actions'>
-                        <Link className='pd-doctor-action-link' href={`/patient/physicians/${doc.id}?from=dashboard&intent=view`} style={{ color: T.navy }}>View Profile</Link>
-                        <Link className='pd-doctor-action-link' href={`/patient/physicians/${doc.id}?from=dashboard&intent=book`} style={{ color: "var(--link)" }}>Book</Link>
+                        <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=view')} style={{ color: T.navy }}>View Profile</Link>
+                        <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>Book</Link>
                       </div>
                     </div>
                   </div>
