@@ -362,7 +362,7 @@ export default function PatientDashboardPage() {
         return
       }
 
-      const data = await apiGet<{ doctor?: { id?: string; nextAvailable?: string }; booking?: { recommendedSlot?: string } }>('/api/v1/patient/doctors/next-available?consultation_type=video')
+      const data = await apiGet<{ doctor?: { id?: string; name?: string; nextAvailable?: string }; booking?: { recommendedSlot?: string } }>('/api/v1/patient/doctors/next-available?consultation_type=video')
       const doctorId = text(data?.doctor?.id)
       const recommendedSlot = text(data?.booking?.recommendedSlot ?? data?.doctor?.nextAvailable)
       if (!doctorId || !recommendedSlot || recommendedSlot.toLowerCase() === 'not available') {

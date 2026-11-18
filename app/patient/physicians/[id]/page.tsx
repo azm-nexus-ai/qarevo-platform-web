@@ -49,7 +49,7 @@ function sortReviews(reviews: PhysicianProfileContent['reviews'], sort: ReviewSo
   return sorted
 }
 
-const DEFAULT_PROFILE = {
+const DEFAULT_PROFILE: PhysicianProfileContent = {
   subSpecialties: ['Preventive Care', 'Chronic Care'],
   patientsTreated: '0',
   consultationsDone: '0',
