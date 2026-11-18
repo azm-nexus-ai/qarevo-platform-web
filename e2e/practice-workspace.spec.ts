@@ -98,6 +98,8 @@ test('clinician accepts affiliation using the existing doctor session without a 
 })
 
 test('practice creation validates structured inputs and reuses one creation identity after an uncertain response', async ({ page, context }) => {
+  // Validation scrolls to the first error; reduced motion makes that scroll instant, so later clicks hit their targets.
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   const state = await prepare(context, page, { empty: true }); state.firstCreateFailure = true; await page.goto('/admin/practices'); await page.getByRole('button', { name: 'Add independent practice' }).click()
   await page.getByRole('button', { name: 'Create draft practice' }).click(); await expect(page.locator('#practice-name-error')).toContainText('2–160'); expect(state.writes).toHaveLength(0); await expect(page.getByLabel('Practice name (Required)')).toBeFocused()
   await page.getByLabel('Practice name (Required)').fill('Synthetic Practice'); await page.getByLabel('Phone (Optional)', { exact: true }).fill('garbage'); await page.getByRole('button', { name: 'Create draft practice' }).click(); await expect(page.locator('#practice-phone-error')).toContainText('international')
