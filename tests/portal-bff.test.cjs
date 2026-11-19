@@ -599,3 +599,19 @@ test('admin verification decisions forward one strong submission version and ref
     assert.equal(refused.status, 400, weak)
   }
 })
+
+test('issuing a settlement invoice forwards one strong statement version and refuses weak ones', async () => {
+  const endpoint = '/api/v1/admin/settlement/statements/11111111-1111-4111-8111-111111111111/issue'
+  let forwarded = null
+  const response = await run(req(endpoint, { portal: 'admin', method: 'POST', headers: { 'If-Match': '"3"' }, body: {} }), 'admin', async (url, init) => {
+    forwarded = new Headers(init.headers).get('If-Match'); return Response.json({ id: 'statement' })
+  })
+  assert.equal(response.status, 200)
+  assert.equal(forwarded, '"3"')
+  for (const weak of ['W/"3"', '*', '"0"']) {
+    const refused = await run(req(endpoint, { portal: 'admin', method: 'POST', headers: { 'If-Match': weak }, body: {} }), 'admin', async () => { throw new Error('must not proxy') })
+    assert.equal(refused.status, 400, weak)
+  }
+  const other = await run(req('/api/v1/admin/settlement/statements/11111111-1111-4111-8111-111111111111/issue', { portal: 'practice', method: 'POST', headers: { 'If-Match': '"3"' }, body: {} }), 'practice', async () => { throw new Error('must not proxy') })
+  assert.equal(other.status, 403)
+})

@@ -317,7 +317,7 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
     for (const name of ['content-type', 'accept', 'range', 'user-agent']) {
       const value = request.headers.get(name); if (value) headers.set(name, value);
     }
-    const practiceWrite = ['POST', 'PATCH', 'PUT'].includes(request.method) && /^\/api\/v1\/(?:(?:admin|practice)\/practices|admin\/verifications)\//.test(upstreamPath);
+    const practiceWrite = ['POST', 'PATCH', 'PUT'].includes(request.method) && /^\/api\/v1\/(?:(?:admin|practice)\/practices|admin\/verifications|admin\/settlement\/statements)\//.test(upstreamPath);
     if (((portal !== 'practice' && clinicalConditionalRoute(portal, request.method, upstreamPath)) || practiceWrite) && request.headers.has('If-Match')) {
       const supplied = request.headers.get('If-Match');
       const version = practiceWrite ? supplied && /^"[1-9]\d{0,15}"$/.test(supplied) && Number.isSafeInteger(Number(supplied.slice(1, -1))) ? supplied : null : strongClinicalIfMatch(supplied);

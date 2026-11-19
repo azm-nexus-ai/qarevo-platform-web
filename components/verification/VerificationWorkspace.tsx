@@ -1,4 +1,5 @@
 'use client'
+import { openSignedDocument } from '@/lib/open-signed-document'
 import { useId, useMemo, useState, type FormEvent } from 'react'
 import { apiGet, apiPost, apiUpload, getApiErrorDetail } from '@/lib/api'
 import { usePortalResource } from '@/lib/use-portal-resource'
@@ -208,12 +209,7 @@ function EvidenceRow({ base, label, requirementKey, clinician, uploaded, require
 function UploadedFile({ base, item, refresh }: { base: string; item: Evidence; refresh: () => void }) {
   const action = usePracticeAction(base + ':evidence-file:' + item.id)
   const view = async () => {
-    const win = window.open('', '_blank', 'noopener')
-    try {
-      const result = await apiGet<unknown>(`${base}/verification/evidence/${item.id}/download`)
-      if (!object(result) || typeof result.url !== 'string' || !result.url.startsWith('https://')) throw new Error()
-      if (win) win.location.href = result.url; else window.location.assign(result.url)
-    } catch { win?.close() }
+    await openSignedDocument(`${base}/verification/evidence/${item.id}/download`)
   }
   return <li className='flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-subtle px-3 py-2 text-sm'>
     <span className='min-w-0 break-all text-ink'>{item.original_filename} · {formatBytes(item.size_bytes)} · {new Date(item.created_at).toLocaleDateString()}</span>

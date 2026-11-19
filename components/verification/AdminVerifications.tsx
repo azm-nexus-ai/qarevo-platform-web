@@ -1,7 +1,8 @@
 'use client'
+import { openSignedDocument } from '@/lib/open-signed-document'
 import Link from 'next/link'
 import { useMemo, useState, type FormEvent } from 'react'
-import { apiGet, apiPost } from '@/lib/api'
+import { apiPost } from '@/lib/api'
 import { usePortalResource } from '@/lib/use-portal-resource'
 import { usePracticeAction } from '@/lib/use-practice-action'
 import { object, practiceControl, practiceVersion } from '@/lib/practice'
@@ -143,12 +144,8 @@ function DetailView({ data, refresh }: { data: Detail; refresh: () => void }) {
 function EvidenceLine({ submissionId, item, label }: { submissionId: string; item: Evidence; label: string }) {
   const [error, setError] = useState('')
   const view = async () => {
-    setError(''); const win = window.open('', '_blank', 'noopener')
-    try {
-      const result = await apiGet<unknown>(`/api/v1/admin/verifications/${submissionId}/evidence/${item.id}/download`)
-      if (!object(result) || typeof result.url !== 'string' || !result.url.startsWith('https://')) throw new Error()
-      if (win) win.location.href = result.url; else window.location.assign(result.url)
-    } catch { win?.close(); setError('The document could not be opened. Your role may not allow it, or storage is unavailable.') }
+    setError('')
+    if (!await openSignedDocument(`/api/v1/admin/verifications/${submissionId}/evidence/${item.id}/download`)) setError('The document could not be opened. Your role may not allow it, or storage is unavailable.')
   }
   return <li className='flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-subtle px-3 py-2 text-sm'>
     <span className='min-w-0 break-words text-ink'><strong>{label}</strong> · {item.original_filename} · {formatBytes(item.size_bytes)}</span>

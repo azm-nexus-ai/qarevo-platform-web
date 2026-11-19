@@ -11,7 +11,7 @@ import SidebarToggle from '@/components/layout/SidebarToggle'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 
-const items = [['Practice workspace', '/practice/dashboard'], ['Verification', '/practice/verification'], ['Settings and security', '/practice/settings'], ['Help and support', '/support']] as const
+const items = [['Practice workspace', '/practice/dashboard'], ['Verification', '/practice/verification'], ['Invoices', '/practice/statements'], ['Settings and security', '/practice/settings'], ['Help and support', '/support']] as const
 export default function PracticeLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname(), router = useRouter(), [ending, setEnding] = useState(false), [error, setError] = useState('')
   const links = items.map(([label, href]) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined} className={'rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] ' + (pathname === href ? 'bg-surface-subtle text-ink' : 'text-secondary hover:bg-surface-subtle')}>{label}</Link>)
