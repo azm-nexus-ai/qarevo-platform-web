@@ -35,7 +35,8 @@ async function prepare(context: BrowserContext, options: { issued?: boolean } = 
   const draft = (): Row => ({ id: STATEMENT, practice_id: PRACTICE, practice_name: 'Synthetic Praxis Mitte', period: '2026-10', currency: 'EUR', status: 'DRAFT', line_count: 3, invoice_number: null, invoice_sha256: null, issued_at: null, version: 1, ...totals })
   if (options.issued) state.statements.push(issuedRow(draft()))
   const timing = (portal: Portal) => ({ ...identities[portal], browser_session: identities[portal], server_time: new Date().toISOString(), idle_expires_at: new Date(Date.now() + 900000).toISOString(), absolute_expires_at: new Date(Date.now() + 28800000).toISOString(), warning_seconds: 120, idle_timeout_seconds: 900 })
-  await context.route(INVOICE_URL, route => { state.invoiceOpened++; return route.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.4 synthetic' }) })
+  // Served as a small page: headless Chromium in CI turns a PDF response into an aborted download, and the test only needs the tab to arrive.
+  await context.route(INVOICE_URL, route => { state.invoiceOpened++; return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Synthetic invoice</title><p>Synthetic invoice</p>' }) })
   await context.route('**/api/v1/**', async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname, method = request.method(), portal = (request.headers()['x-qarevo-portal'] || 'patient') as Portal
     expect(request.headers()['authorization']).toBeUndefined()
