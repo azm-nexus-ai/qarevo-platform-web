@@ -291,6 +291,8 @@ export type PatientAppointmentCreateRequest = {
     intake?: Record<string, unknown>;
     episode_id?: string;
     episode?: Record<string, unknown>;
+    treating_entity_id?: string;
+    confirmed_self_pay_fee_minor?: number;
 };
 
 export type PatientAppointmentCreateResponse = {

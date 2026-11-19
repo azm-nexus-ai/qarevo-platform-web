@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
 import { declaredDoctorFundingOptions } from '@/lib/insurance-presentation'
+import TreatingEntityChoice, { type EntitySelection } from '@/components/booking/TreatingEntityChoice'
 import { createPatientAppointment, getPatientDoctor, getPatientBookingSlots, getPatientSettings, type PatientSettings, type PatientDoctor, type PatientBookingSlot } from '@/lib/api'
 import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
@@ -102,6 +103,7 @@ function ReviewPageContent() {
   }, [])
 
   const [agreed, setAgreed] = useState(false)
+  const [entitySelection, setEntitySelection] = useState<EntitySelection>({ ready: false, treatingEntityId: null, confirmedFeeMinor: null, reason: 'Checking who can treat you…' })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [showPolicy, setShowPolicy] = useState(false)
@@ -166,6 +168,7 @@ function ReviewPageContent() {
     if (isSubmitting) return
     if (!verifiedSlot) { setSubmitError(slotError || 'Wait for the appointment time to be verified.'); return }
     if (!allAgreed) { setSubmitError('Confirm the required booking review before continuing.'); return }
+    if (!entitySelection.ready) { setSubmitError(entitySelection.reason || 'Choose your treating practice before continuing.'); return }
     if (!episodeId || !intakeSubmitted) { setSubmitError('Complete and submit the required intake before confirming this booking.'); return }
     if (!patient || patientError || intake.error || intake.loading) { setSubmitError(patientError || intake.error || 'Wait for your saved information to load before continuing.'); return }
     setIsSubmitting(true)
@@ -178,7 +181,8 @@ function ReviewPageContent() {
         end_at: verifiedSlot.end_at,
         consultation_modality: service,
         episode_id: episodeId || undefined,
-
+        ...(entitySelection.treatingEntityId ? { treating_entity_id: entitySelection.treatingEntityId } : {}),
+        ...(entitySelection.confirmedFeeMinor != null ? { confirmed_self_pay_fee_minor: entitySelection.confirmedFeeMinor } : {}),
       })
       const next = new URLSearchParams(successHref.split('?')[1] ?? '')
       if (booking.episode_id) next.set('episodeId', booking.episode_id)
@@ -292,7 +296,7 @@ function ReviewPageContent() {
                 <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment Details</p>
                 <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your selected consultation details</h2>
               </div>
-              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' }}>
                 {[
                   ['Consultation Type', readLabel(service)],
                   ['Appointment Date', date],
@@ -303,7 +307,7 @@ function ReviewPageContent() {
                   ['Doctor’s declared billing options', insurance],
                   ['Expected End Time', appointmentEnd],
                 ].map(([label, value]) => (
-                  <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                  <div key={label} style={{ minWidth: 0, overflowWrap: 'anywhere', padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{value}</p>
                   </div>
@@ -316,7 +320,7 @@ function ReviewPageContent() {
                 <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Information</p>
                 <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your details are ready for review</h2>
               </div>
-              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' }}>
                 {[
                   ['Patient Name', patientName],
                   ['Email Address', email],
@@ -324,7 +328,7 @@ function ReviewPageContent() {
                   ['Emergency Contact', emergencyContact],
                   ['Primary Medical Concern', medicalConcern],
                 ].map(([label, value]) => (
-                  <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                  <div key={label} style={{ minWidth: 0, overflowWrap: 'anywhere', padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{value}</p>
                   </div>
@@ -394,6 +398,7 @@ function ReviewPageContent() {
                 </label>
               </div>
             </section>
+            <TreatingEntityChoice providerId={physicianData.id} onChange={setEntitySelection} />
           </section>
 
           <aside style={{ position: 'sticky', top: '18px', display: 'grid', gap: '12px' }}>
