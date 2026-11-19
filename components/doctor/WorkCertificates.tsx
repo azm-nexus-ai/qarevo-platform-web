@@ -50,7 +50,7 @@ export default function WorkCertificates({ consultationId, started }: { consulta
         <p className='mt-1 text-sm leading-7 text-secondary'>Issue an incapacity certificate after this video consultation. The patient receives the employer copy (no diagnosis) in their records.</p></div>
       <PortalBadge tone='warning'>Development document – not a valid eAU</PortalBadge>
     </div>
-    {!started ? <p role='status' className='mt-4 text-sm text-secondary'>Available once the video consultation has taken place.</p> : <form noValidate onSubmit={submit} aria-busy={action.busy} className='mt-4 grid gap-4'>
+    {!started ? <p className='mt-4 text-sm text-secondary'>Available once the video consultation has taken place.</p> : <form noValidate onSubmit={submit} aria-busy={action.busy} className='mt-4 grid gap-4'>
       <ValidationSummary errors={errors} />
       <fieldset className='grid gap-2'><legend className='mb-1 text-sm font-semibold text-ink'>Type (Required)</legend>
         {(['INITIAL', 'FOLLOW_UP'] as const).map(kind => <label key={kind} className='flex items-center gap-3 text-sm text-ink'>
@@ -69,7 +69,7 @@ export default function WorkCertificates({ consultationId, started }: { consulta
     </form>}
     <div className='mt-6'>
       <h3 className='mb-3 font-semibold text-ink'>Issued for this consultation</h3>
-      {!rows ? <p role='status' className='text-sm text-secondary'>{resource.error ? 'Certificates could not be loaded.' : 'Loading certificates…'}</p>
+      {!rows ? <p className='text-sm text-secondary'>{resource.error ? 'Certificates could not be loaded.' : 'Loading certificates…'}</p>
         : rows.length === 0 ? <PortalEmptyState title='None yet' description='Certificates you issue appear here and in the patient’s records.' />
         : <ul className='grid gap-2'>{rows.map(row => <li key={row.id} className='rounded-xl border border-theme bg-surface p-3 text-sm text-ink'>
             {row.kind === 'INITIAL' ? 'Initial' : 'Follow-up'}: {formatDate(row.start_date)} – {formatDate(row.end_date)}
