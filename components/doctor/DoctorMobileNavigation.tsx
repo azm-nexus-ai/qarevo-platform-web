@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 import { usePathname, useRouter } from 'next/navigation'
 import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
@@ -241,7 +242,7 @@ export default function DoctorMobileNavigation() {
 
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-          <ThemeToggle />
+          <ThemeToggle /><LanguageSwitch />
           <PortalAccountMenu portal='doctor' name={displayName} description={specialty} avatar={<ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={34} />} profileHref='/doctor/profile' settingsHref='/doctor/settings' />
 
         </div>

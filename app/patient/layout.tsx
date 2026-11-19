@@ -4,6 +4,7 @@ import Link from 'next/link'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import SidebarToggle from '@/components/layout/SidebarToggle'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 import PatientMobileNavigation from '@/components/patient/PatientMobileNavigation'
 import PatientAccountMenu from '@/components/patient/PatientAccountMenu'
 import { useRouter } from 'next/navigation'
@@ -35,7 +36,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
     <>
       <PatientMobileNavigation />
       <nav aria-label="Patient appearance" className="patient-appearance-navigation">
-        <Link href='/patient/dashboard' aria-label='Qarevo Health patient dashboard' className='portal-navbar-brand'><AuthenticatedLogo width={156} /></Link><SidebarToggle role='patient' /><span className='patient-portal-label'>Patient portal</span><ThemeToggle /><SidebarToggle role='patient' side='right' /><PatientAccountMenu />
+        <Link href='/patient/dashboard' aria-label='Qarevo Health patient dashboard' className='portal-navbar-brand'><AuthenticatedLogo width={156} /></Link><SidebarToggle role='patient' /><span className='patient-portal-label'>Patient portal</span><ThemeToggle /><LanguageSwitch /><SidebarToggle role='patient' side='right' /><PatientAccountMenu />
       </nav>
       {mounted ? <div className='patient-application'>{children}</div> : null}
     </>

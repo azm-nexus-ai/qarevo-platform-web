@@ -558,3 +558,9 @@ button:disabled { cursor: not-allowed; }
 .doctor-card-skeleton { display:block; width:56px; height:56px; flex-shrink:0; border-radius:50%; background:var(--surface-subtle); border:1px solid var(--border); }
 @media(max-width:430px) { .doctor-card { gap:12px; padding:14px; } .doctor-card-name { font-size:14px; } .doctor-card-meta { font-size:12px; margin-bottom:10px; } }
 @media(prefers-reduced-motion:reduce) { .doctor-card { transition:none; } }
+/* Language switch (ADR-0002): two compact buttons beside the theme toggle. */
+.language-switch { flex-shrink: 0; display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.language-switch button { min-width: 40px; min-height: 36px; padding: 0 8px; border: 0; border-radius: 9px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.language-switch button[aria-pressed='true'] { background: var(--surface-subtle); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.language-switch button:focus-visible { outline: 3px solid var(--focus-ring, var(--action-primary)); outline-offset: 2px; }
+.language-switch button:disabled { cursor: progress; }

@@ -1,0 +1,12 @@
+{
+  "common": {
+    "language": {
+      "label": "Sprache"
+    },
+    "theme": {
+      "light": "Helles Design",
+      "dark": "Dunkles Design",
+      "switchTo": "Wechseln zu: {mode}"
+    }
+  }
+}

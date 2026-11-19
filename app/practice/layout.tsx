@@ -9,6 +9,7 @@ import ProfileAvatar from '@/components/branding/ProfileAvatar'
 import PortalAccountMenu from '@/components/layout/PortalAccountMenu'
 import SidebarToggle from '@/components/layout/SidebarToggle'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 
 const items = [['Practice workspace', '/practice/dashboard'], ['Verification', '/practice/verification'], ['Invoices', '/practice/statements'], ['Settings and security', '/practice/settings'], ['Help and support', '/support']] as const
@@ -19,7 +20,7 @@ export default function PracticeLayout({ children }: { children: ReactNode }) {
     <style>{`.practice-header{position:sticky;top:0;z-index:20;background:var(--surface-glass);backdrop-filter:blur(22px);border-bottom:1px solid var(--border)}.practice-body{display:flex;gap:24px;max-width:1600px;margin:auto}.practice-sidebar{width:240px;flex-shrink:0;align-self:flex-start;position:sticky;top:104px;padding:24px 12px;max-height:calc(100dvh - 104px);overflow-y:auto}.practice-main{flex:1;min-width:0;padding:28px 24px 48px}.practice-mobile-nav{display:none}html[data-practice-sidebar=collapsed] .practice-sidebar{display:none}html:has(.practice-shell){scroll-padding-top:180px}@media(max-width:920px){.practice-sidebar,.practice-shell .sidebar-toggle{display:none}.practice-mobile-nav{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.practice-mobile-nav a{flex-shrink:0;white-space:nowrap}.practice-main{padding:24px 16px 40px}.practice-header .practice-account{display:none}}`}</style>
     <header className='practice-header' aria-label='Practice main navigation'><div className='mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-4 sm:px-6'>
       <RoleHomeLink aria-label='Qarevo Health practice dashboard' className='shrink-0'><AuthenticatedLogo width={156} /></RoleHomeLink><SidebarToggle role='practice' />
-      <span className='mr-auto text-sm font-semibold text-secondary'>Practice administration</span><ThemeToggle />
+      <span className='mr-auto text-sm font-semibold text-secondary'>Practice administration</span><ThemeToggle /><LanguageSwitch />
       <div className='practice-account'><PortalAccountMenu portal='practice' name='Practice account' description='Administrative access' avatar={<ProfileAvatar name='Practice account' kind='practice' size={36} />} profileHref='/practice/dashboard' settingsHref='/practice/settings' /></div>
       <PortalButton type='button' disabled={ending} onClick={async () => { if (ending) return; setEnding(true); setError(''); try { await logoutCurrentUser(); router.replace('/auth/practice/login') } catch { setError('Server sign-out could not be confirmed. This browser’s practice access is closed; sign in again if needed.'); router.replace('/auth/practice/login') } }}>{ending ? 'Signing out…' : 'Sign out'}</PortalButton>
     </div><nav aria-label='Practice mobile navigation' className='practice-mobile-nav gap-1 border-t border-theme px-2 py-2'>{links}</nav></header>

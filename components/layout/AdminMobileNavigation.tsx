@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import PortalAccessLinks from '@/components/layout/PortalAccessLinks'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 import { usePathname } from 'next/navigation'
 import { ADMIN_ROUTES, ADMIN_SIDEBAR_ITEMS, isAdminNavActive } from '@/constants/admin-navigation'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
@@ -11,7 +12,7 @@ export default function AdminMobileNavigation({ onSignOut }: { onSignOut: () => 
   const pathname = usePathname()
   return <div className="admin-mobile-navigation">
     <Link href={ADMIN_ROUTES.dashboard} aria-label="Admin dashboard"><AuthenticatedLogo width={100} /></Link>
-    <ThemeToggle />
+    <ThemeToggle /><LanguageSwitch />
     <details key={pathname} onKeyDown={event => {
       if (event.key === 'Escape') {
         event.currentTarget.open = false

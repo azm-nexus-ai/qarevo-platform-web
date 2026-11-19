@@ -6,6 +6,8 @@ import { THEME_BOOTSTRAP } from '@/lib/theme'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { PortalSessionBoundary } from '@/components/ui/PortalSessionBoundary'
 import { NavigationGuards } from '@/components/ui/NavigationGuards'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale } from 'next-intl/server'
 
 const publicSans = localFont({
   src: '../public/fonts/PublicSans-Variable.ttf',
@@ -34,12 +36,13 @@ export const viewport: Viewport = {
   maximumScale: 5,
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale()
   return (
-    <html suppressHydrationWarning lang="en" className={publicSans.variable}>
+    <html suppressHydrationWarning lang={locale} className={publicSans.variable}>
       <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body>
-        <NavigationGuards><ThemeProvider><PortalSessionBoundary>{children}<Footer /></PortalSessionBoundary></ThemeProvider></NavigationGuards>
+        <NextIntlClientProvider><NavigationGuards><ThemeProvider><PortalSessionBoundary>{children}<Footer /></PortalSessionBoundary></ThemeProvider></NavigationGuards></NextIntlClientProvider>
       </body>
     </html>
   )

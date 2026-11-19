@@ -4,6 +4,7 @@ import AdminMobileNavigation from '@/components/layout/AdminMobileNavigation'
 import PortalAccessLinks from '@/components/layout/PortalAccessLinks'
 import SidebarToggle from '@/components/layout/SidebarToggle'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
@@ -108,7 +109,7 @@ export default function AdminLayout({
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Platform administration and monitoring</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <PortalAccessLinks /><ThemeToggle />
+                <PortalAccessLinks /><ThemeToggle /><LanguageSwitch />
                 <button
                   onClick={handleLogoutClick}
                   disabled={loggingOut}

@@ -60,7 +60,7 @@ test('patient, doctor and admin themes remain independent across tabs, client ro
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme','light')
   const state=await context.storageState()
-  const fresh=await browser.newContext({storageState:{cookies:[],origins:state.origins.map(origin=>({...origin,localStorage:origin.localStorage.filter(item=>/^qarevo:(patient|doctor|admin):theme$/.test(item.name))}))}})
+  const fresh=await browser.newContext({storageState:{cookies:state.cookies.filter(cookie=>cookie.name==='qarevo_locale'),origins:state.origins.map(origin=>({...origin,localStorage:origin.localStorage.filter(item=>/^qarevo:(patient|doctor|admin):theme$/.test(item.name))}))}})
   await fresh.route('**/api/**',route=>route.fulfill({json:{google:{enabled:false},apple:{enabled:false}}}))
   const freshPage=await fresh.newPage()
   await freshPage.goto('/auth/doctor/login')

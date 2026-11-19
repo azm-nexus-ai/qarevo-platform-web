@@ -3,6 +3,7 @@
 import { currentPortal, isPortalEvent } from '@/lib/portal-scope'
 import { ACCOUNT_CHANGED } from '@/lib/account-storage'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
@@ -229,7 +230,7 @@ export default function NavigationBar() {
                   })}
                 </div>
 
-                <div style={{ margin: '0 12px', flexShrink: 0 }}><ThemeToggle /></div>
+                <div style={{ margin: '0 12px', flexShrink: 0 }}><ThemeToggle /><LanguageSwitch /></div>
                 {/* Desktop auth buttons */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginLeft: 'auto' }}>
                   {isAuthenticated ? (
@@ -350,7 +351,7 @@ export default function NavigationBar() {
                   <AuthenticatedLogo priority width={100} />
                 </Link>
 
-                <ThemeToggle />
+                <ThemeToggle /><LanguageSwitch />
                 {/* Mobile hamburger */}
                 <button
                   ref={hamburgerRef}

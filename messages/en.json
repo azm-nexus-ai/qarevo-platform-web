@@ -1,0 +1,12 @@
+{
+  "common": {
+    "language": {
+      "label": "Language"
+    },
+    "theme": {
+      "light": "Light mode",
+      "dark": "Dark mode",
+      "switchTo": "Switch to {mode}"
+    }
+  }
+}

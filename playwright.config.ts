@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const baseURL = process.env.E2E_BASE_URL || 'http://localhost:3000'
+// The product defaults to German (ADR-0002). The existing suite asserts English text, so every
+// context starts with the English choice; specs that test German or the default override it.
+export const ENGLISH = { cookies: [{ name: 'qarevo_locale', value: 'en', domain: new URL(baseURL).hostname, path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' as const }], origins: [] }
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -9,7 +14,8 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
+    baseURL,
+    storageState: ENGLISH,
     serviceWorkers: 'block',
     trace: 'on-first-retry',
   },

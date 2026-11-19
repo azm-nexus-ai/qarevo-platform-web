@@ -674,7 +674,7 @@ test('patient theme survives refresh, route changes and a fresh browser session'
   await expect(second.locator('html')).toHaveAttribute('data-theme', 'light')
   await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
   const state = await context.storageState()
-  const fresh = await browser.newContext({ storageState: { cookies: [], origins: state.origins.map(origin => ({ ...origin, localStorage: origin.localStorage.filter(item => item.name === 'qarevo:patient:theme') })) } })
+  const fresh = await browser.newContext({ storageState: { cookies: state.cookies.filter(cookie => cookie.name === 'qarevo_locale'), origins: state.origins.map(origin => ({ ...origin, localStorage: origin.localStorage.filter(item => item.name === 'qarevo:patient:theme') })) } })
   const freshPage = await fresh.newPage()
   await freshPage.goto('/auth/sign-in')
   await expect(freshPage.locator('html')).toHaveAttribute('data-theme', 'dark')

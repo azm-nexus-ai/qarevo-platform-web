@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { createContext, useContext, useLayoutEffect, useSyncExternalStore, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { applyPortalTheme, setPortalTheme, themeKey, THEME_CHANGED, type Theme } from '@/lib/theme'
@@ -37,9 +38,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export const useTheme = () => useContext(ThemeContext)
 
 export function ThemeToggle() {
-  const { theme, setTheme, ready } = useTheme()
-  const action = ready && theme === 'dark' ? 'Light mode' : 'Dark mode'
-  return <button type="button" className="theme-toggle" aria-label={action} title={`Switch to ${action.toLowerCase()}`}
+  const { theme, setTheme, ready } = useTheme(), t = useTranslations('common.theme')
+  const action = ready && theme === 'dark' ? t('light') : t('dark')
+  return <button type="button" className="theme-toggle" aria-label={action} title={t('switchTo', { mode: action })}
     onClick={() => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')}>
     <span aria-hidden="true">{ready && theme === 'dark' ? '☀' : '☾'}</span>
     <span>{action}</span>

@@ -2,6 +2,7 @@
 
 import SidebarToggle from '@/components/layout/SidebarToggle'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
@@ -153,7 +154,7 @@ export default function DoctorLayout({
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Manage your consultations and patients</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <ThemeToggle />
+                <ThemeToggle /><LanguageSwitch />
                 <button
                   onClick={handleSettingsClick}
                   style={{

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from 'next-intl/plugin';
 import { portalHostRedirects } from './lib/server/portal-host-routing';
 import { selectBuildRevision } from './lib/server/build-revision';
 
@@ -20,4 +21,5 @@ const nextConfig: NextConfig = {
 
 };
 
-export default nextConfig;
+// German first, English parity (ADR-0002); the locale is resolved per request in i18n/request.ts.
+export default createNextIntlPlugin('./i18n/request.ts')(nextConfig);
