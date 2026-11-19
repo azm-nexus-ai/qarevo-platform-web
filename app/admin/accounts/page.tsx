@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { getApiErrorDetail } from '@/lib/api'
+import AccountErasure from '@/components/admin/AccountErasure'
 import {
   ACTION_LABELS, STATUS_LABELS, cancelAccountDeletion, eventLabel, formatBerlin, getAccount, listAccounts, reactivateAccount,
   reasonProblem, requestAccountDeletion, suspendAccount,
@@ -38,7 +39,7 @@ function ActionDialog({ action, account, onClose, onDone }: { action: Action; ac
     return () => window.removeEventListener('keydown', onKey)
   }, [busy, onClose])
   const reasonError = reasonProblem(reason)
-  const emailError = action === 'delete' && email.trim().toLowerCase() !== account.email.toLowerCase() ? 'Type the account’s email address exactly.' : null
+  const emailError = action === 'delete' && email.trim().toLowerCase() !== (account.email ?? '').toLowerCase() ? 'Type the account’s email address exactly.' : null
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -60,12 +61,12 @@ function ActionDialog({ action, account, onClose, onDone }: { action: Action; ac
   return <div className='acc-overlay' onMouseDown={event => { if (event.target === event.currentTarget && !busy) onClose() }}>
     <form role='dialog' aria-modal='true' aria-labelledby={titleId} className='acc-dialog' onSubmit={submit} noValidate>
       <h2 id={titleId}>{copy.title}</h2>
-      <p><strong>{account.name || account.email}</strong> · {account.email}</p>
+      <p><strong>{account.name || account.email || 'Unnamed account'}</strong>{account.email ? ` · ${account.email}` : ''}</p>
       <p>{copy.body}</p>
       {action === 'delete' && <div className='acc-retention'>
         <h3>What happens to the data</h3>
         <ul>{account.retention_plan.map(item => <li key={item.category}><strong>{item.category}</strong>: {item.handling}{item.retention ? ` (${item.retention})` : ''}</li>)}</ul>
-        {!account.retention_confirmed && <p className='acc-warn'>Retention periods are awaiting legal confirmation. Automatic erasure is not enabled yet.</p>}
+        {!account.retention_confirmed && <p className='acc-warn'>Retention periods are awaiting legal confirmation. Erasure runs only after an administrator reviews the dry-run plan.</p>}
       </div>}
       <label htmlFor={`${titleId}-reason`}>Reason (Required)</label>
       <textarea id={`${titleId}-reason`} ref={reasonRef} value={reason} onChange={event => setReason(event.target.value)} rows={3} maxLength={600}
@@ -109,13 +110,14 @@ function AccountPanel({ id, onChanged }: { id: string; onChanged: () => void }) 
     <header className='acc-panel-head'>
       <div>
         <h2 id='acc-detail-title' ref={heading} tabIndex={-1}>{detail.name || 'Unnamed account'}</h2>
-        <p>{detail.email}</p>
+        <p>{detail.email ?? 'Contact data erased'}</p>
       </div>
       <StatusBadge status={detail.status} />
     </header>
     {notice && <p role='status' className='acc-notice'>{notice}</p>}
+    {detail.contact_data_erased_at && <div className='acc-banner' role='note'><strong>Contact data erased</strong> on {formatBerlin(detail.contact_data_erased_at)}. The identity kept with the medical documentation remains.</div>}
     {detail.deletion && <div className='acc-banner' role='note'>
-      <strong>Deletion requested</strong> on {formatBerlin(detail.deletion.requested_at)} by {detail.deletion.requested_by}. Contact data becomes eligible for erasure from {formatBerlin(detail.deletion.erase_contact_data_after, false)}. Automatic erasure is {detail.deletion.erasure_job}.
+      <strong>Deletion requested</strong> on {formatBerlin(detail.deletion.requested_at)} by {detail.deletion.requested_by}. Contact data becomes eligible for erasure from {formatBerlin(detail.deletion.erase_contact_data_after, false)}. {detail.deletion.erasure_job === 'enabled' ? 'A super or compliance administrator erases it from the erasure plan below the account list.' : 'Erasure is a dry run only on this deployment.'}
     </div>}
     <dl className='acc-facts'>
       <div><dt>Account type</dt><dd>{detail.role === 'doctor' ? 'Doctor' : 'Patient'}</dd></div>
@@ -203,8 +205,8 @@ function AccountsContent() {
         <p role='status' className='acc-help'>{list ? `${total} ${role === 'doctor' ? 'doctor' : 'patient'} account${total === 1 ? '' : 's'}` : 'Loading accounts…'}</p>
         {error && <p role='alert' className='acc-error'>{error} <button className='acc-button' onClick={() => setRevision(n => n + 1)}>Try again</button></p>}
         {list && <ul className='acc-rows'>{list.accounts.map(account => <li key={account.user_id} className={selected === account.user_id ? 'current' : ''}>
-          <button className='acc-row' aria-current={selected === account.user_id || undefined} aria-label={`Open account ${account.name || account.email}`} onClick={() => navigate({ account: account.user_id })}>
-            <span className='acc-row-main'><strong>{account.name || 'Unnamed account'}</strong><span>{account.email}</span></span>
+          <button className='acc-row' aria-current={selected === account.user_id || undefined} aria-label={`Open account ${account.name || account.email || account.user_id}`} onClick={() => navigate({ account: account.user_id })}>
+            <span className='acc-row-main'><strong>{account.name || 'Unnamed account'}</strong><span>{account.email ?? 'Contact data erased'}</span></span>
             <span className='acc-row-meta'><StatusBadge status={account.status} />{account.deletion_pending && <span className='acc-badge deactivated'>Deletion pending</span>}
               <span>Registered {formatBerlin(account.registered_at, false)} · last sign-in {formatBerlin(account.last_login_at, false)}</span></span>
           </button>
@@ -217,6 +219,7 @@ function AccountsContent() {
       </div>
       {selected && <AccountPanel key={selected} id={selected} onChanged={() => setRevision(n => n + 1)} />}
     </div>
+    <AccountErasure onErased={() => setRevision(n => n + 1)} />
     <style jsx global>{`
       .accounts {display:grid;gap:20px;color:var(--text);min-width:0}
       .accounts h1 {font-size:28px;line-height:1.2;letter-spacing:-.03em;margin:0 0 6px}

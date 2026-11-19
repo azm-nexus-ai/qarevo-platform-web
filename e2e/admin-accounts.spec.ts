@@ -81,7 +81,7 @@ test('deletion shows the retention plan and requires the account email typed exa
   await page.getByRole('button', { name: 'Request deletion', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Request account deletion' })
   await expect(dialog.getByText(/630f Abs\. 3 BGB/)).toBeVisible()
-  await expect(dialog.getByText('Retention periods are awaiting legal confirmation. Automatic erasure is not enabled yet.')).toBeVisible()
+  await expect(dialog.getByText('Retention periods are awaiting legal confirmation. Erasure runs only after an administrator reviews the dry-run plan.')).toBeVisible()
   await dialog.getByLabel('Reason (Required)').fill('Synthetic erasure request received in writing')
   await dialog.getByLabel(/Type the account’s email address/).fill('someone-else@example.test')
   await dialog.getByRole('button', { name: 'Request deletion' }).click()

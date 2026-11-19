@@ -7,7 +7,7 @@ import { apiGet, apiPost } from '@/lib/api'
 export type AccountRole = 'patient' | 'doctor'
 export type AccountStatus = 'PENDING_VERIFICATION' | 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED'
 export type AccountSummary = {
-  user_id: string; role: AccountRole; name: string | null; email: string; status: AccountStatus
+  user_id: string; role: AccountRole; name: string | null; email: string | null; status: AccountStatus
   registered_at: string | null; last_login_at: string | null; email_verified: boolean
   verification: 'verified' | 'pending' | 'unverified'; active_sessions: number; deletion_pending: boolean
 }
@@ -19,6 +19,7 @@ export type AccountDetail = Omit<AccountSummary, 'active_sessions' | 'deletion_p
   activity: { event: string; category: string; success: boolean; at: string | null }[]
   admin_history: { action: string; by: string; reason: string | null; at: string | null }[]
   deletion: null | { state: 'PENDING'; requested_at: string; requested_by: string; reason: string; erase_contact_data_after: string; erasure_job: string }
+  contact_data_erased_at?: string | null
   retention_plan: RetentionItem[]; retention_confirmed: boolean
   can: { suspend: boolean; reactivate: boolean; request_deletion: boolean; cancel_deletion: boolean }
 }
