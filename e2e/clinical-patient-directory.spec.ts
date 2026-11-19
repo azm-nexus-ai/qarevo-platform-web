@@ -60,6 +60,8 @@ for (const [route, add, placeholder] of [['/doctor/prescriptions', 'Add Medicati
 test('search is submitted once, resets pagination and never changes the current selected patient', async ({ page, context }) => {
   const state = await prepare(context); await page.goto('/doctor/prescriptions'); await select(page).selectOption(ids[0]); await expect(page.getByRole('heading', { name: 'Synthetic Patient 01 medication', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Next patients', exact: true }).click(); await expect(page.getByText('Page 2 · Up to 25 patients per page', { exact: true })).toBeVisible()
+  // The page label can update before the page-2 request reaches the mock; count only after it has.
+  await expect.poll(() => state.requests.some(request => request.page === 2 && !request.id)).toBe(true)
   const before = state.requests.length; await page.getByLabel('Find an assigned patient', { exact: true }).fill('Patient 30'); expect(state.requests).toHaveLength(before)
   await page.getByRole('button', { name: 'Search patients', exact: true }).click(); await expect(select(page).locator(`option[value="${ids[29]}"]`)).toHaveText('Synthetic Patient 30'); await expect(select(page)).toHaveValue(ids[0]); await expect(page.getByText('Page 1 · Up to 25 patients per page', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Synthetic Patient 01 medication', exact: true })).toBeVisible(); expect(state.requests.filter(request => request.query === 'Patient 30')).toHaveLength(1)

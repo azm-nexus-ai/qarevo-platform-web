@@ -154,7 +154,7 @@ export default function AdminLoginPage() {
                 aria-describedby={emailErr ? "admin-email-error" : undefined}
                 type="email"
                 value={email}
-                placeholder="admin@qarevo-health.de"
+                placeholder="name@example.com"
                 autoComplete="email"
                 onChange={e => setEmail(e.target.value)}
                 onFocus={() => setTouched(p => ({ ...p, email: true }))}

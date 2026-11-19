@@ -524,7 +524,7 @@ export default function DesignFoundationPage() {
           <DocSection num="11" label="Form Controls" id="forms" title="Input component system" desc="Form controls use a soft background at rest, white on focus, with a blue border and glow ring. All follow the landing page depth treatment.">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', maxWidth: '840px', marginBottom: '24px' }}>
               <Field label="Full Name"     placeholder="Dr. Sarah Jenkins"  hint="Min 2 characters" />
-              <Field label="Email"         placeholder="sarah@clinic.eu"    type="email" />
+              <Field label="Email"         placeholder="name@example.com"    type="email" />
               <Field label="Password"      placeholder="••••••••••••"       type="password" hint="Min 12 characters" />
               <Field label="Search"        placeholder="Search physicians…" />
               <Field label="Date of Birth" placeholder="DD / MM / YYYY" />
