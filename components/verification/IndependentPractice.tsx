@@ -9,7 +9,7 @@ import { PortalButton, PortalCard } from '@/components/patient/PatientPortalPrim
 import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
 import { ActionFeedback, PracticeGate, PracticeReadState, PracticeScope } from '@/components/practice/PracticeShared'
 import VerificationWorkspace from './VerificationWorkspace'
-import { EntityStatements } from '@/components/settlement/Settlement'
+import { EntityStatements, InvoicesHeading, InvoicesIntro } from '@/components/settlement/Settlement'
 
 const BASE = '/api/v1/doctor/independent-practice'
 
@@ -32,8 +32,8 @@ function Content() {
   return <>
     <VerificationWorkspace base={`${BASE}/${parsed.id}`} entityLabel='independent practice' />
     <section aria-labelledby='independent-invoices' className='mt-10'>
-      <h2 id='independent-invoices' className='mb-2 text-2xl font-bold text-ink'>Invoices</h2>
-      <p className='mb-4 max-w-3xl text-sm leading-7 text-secondary'>Monthly invoices for Qarevo’s platform fee on consultations completed through the platform.</p>
+      <h2 id='independent-invoices' className='mb-2 text-2xl font-bold text-ink'><InvoicesHeading /></h2>
+      <p className='mb-4 max-w-3xl text-sm leading-7 text-secondary'><InvoicesIntro /></p>
       <EntityStatements base={`${BASE}/${parsed.id}/statements`} />
     </section>
   </>

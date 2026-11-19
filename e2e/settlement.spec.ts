@@ -111,10 +111,10 @@ test('an admin creates a draft, reads the exact lines and issues the invoice wit
 
   const card = page.getByRole('heading', { name: 'Synthetic Praxis Mitte · 2026-10' }).locator('xpath=ancestor::*[.//dl][1]')
   await expect(card.getByText('Draft', { exact: true })).toBeVisible()
-  await expect(card.getByText('21,8292 €')).toBeVisible()
-  await expect(card.getByText('21,83 €')).toBeVisible()
-  await expect(card.getByText('4,15 €')).toBeVisible()
-  await expect(card.getByText('25,98 €')).toBeVisible()
+  await expect(card.getByText('€21.8292')).toBeVisible()
+  await expect(card.getByText('€21.83')).toBeVisible()
+  await expect(card.getByText('€4.15')).toBeVisible()
+  await expect(card.getByText('€25.98')).toBeVisible()
   await expect(card.getByRole('button', { name: 'Open invoice PDF' })).toHaveCount(0)
 
   await card.getByRole('button', { name: 'Show lines' }).click()
@@ -122,9 +122,9 @@ test('an admin creates a draft, reads the exact lines and issues the invoice wit
   await expect(table.getByRole('row')).toHaveCount(4)
   await expect(table.getByRole('row').nth(1)).toContainText('GKV, known patient')
   await expect(table.getByRole('row').nth(1)).toContainText('6 min 52 s')
-  await expect(table.getByRole('row').nth(1)).toContainText('5,0952 €')
-  // 22:30 UTC on 28 October is still 28 October in Berlin (CET, UTC+1).
-  await expect(table.getByRole('row').nth(3)).toContainText('28.10.2026')
+  await expect(table.getByRole('row').nth(1)).toContainText('€5.0952')
+  // 22:30 UTC on 28 October is still 28 October in Berlin (CET, UTC+1). English uses en-GB formats.
+  await expect(table.getByRole('row').nth(3)).toContainText('28/10/2026')
   await expect(table.getByRole('row').nth(3)).toContainText('PKV / self-pay')
 
   await card.getByRole('button', { name: 'Issue invoice' }).click()
@@ -173,7 +173,7 @@ test('the practice owner sees issued invoices only and opens the PDF', async ({ 
   await expect(page.getByRole('link', { name: 'Invoices' }).first()).toHaveAttribute('aria-current', 'page')
   await expect(page.getByText('Synthetic Praxis Mitte · 2026-10')).toBeVisible()
   await expect(page.getByText('2026-11')).toHaveCount(0)
-  await expect(page.getByText('25,98 €')).toBeVisible()
+  await expect(page.getByText('€25.98')).toBeVisible()
   await page.getByRole('button', { name: 'Show consultations' }).click()
   await expect(page.getByRole('region', { name: 'Statement lines' }).getByRole('row')).toHaveCount(4)
   const popup = page.waitForEvent('popup')
@@ -197,3 +197,23 @@ for (const width of [320, 1440]) for (const scheme of ['light', 'dark'] as const
     await noHorizontalOverflow(page)
   })
 }
+
+test.describe('in German', () => {
+  test.use({ storageState: { cookies: [{ name: 'qarevo_locale', value: 'de', domain: 'localhost', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }], origins: [] } })
+
+  test('the practice owner reads the invoice in German with German formats', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: 'qarevo_locale', value: 'de', url: baseURL! }])
+    await prepare(context, { issued: true })
+    await page.goto('/practice/statements')
+    await expect(page.getByRole('heading', { name: 'Rechnungen', exact: true })).toBeVisible()
+    await expect(page.getByText('3 abrechenbare Sprechstunden · Rechnung QH-2026-000001')).toBeVisible()
+    await expect(page.getByText('In Rechnung gestellt')).toBeVisible()
+    await expect(page.getByText('25,98 €')).toBeVisible()
+    await page.getByRole('button', { name: 'Sprechstunden anzeigen' }).click()
+    const table = page.getByRole('region', { name: 'Abrechnungspositionen' })
+    await expect(table.getByRole('row').nth(1)).toContainText('GKV, bereits bekannt')
+    await expect(table.getByRole('row').nth(1)).toContainText('6 Min. 52 Sek.')
+    await expect(table.getByRole('row').nth(3)).toContainText('28.10.2026')
+    await expect(page.getByRole('button', { name: 'Rechnung (PDF) öffnen' })).toBeVisible()
+  })
+})

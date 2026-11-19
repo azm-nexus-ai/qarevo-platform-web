@@ -67,5 +67,65 @@
       "settingsAndSecurity": "Settings and security",
       "helpAndSupport": "Help and support"
     }
+  },
+  "settlement": {
+    "statement": {
+      "billable": "{count, plural, one {# billable consultation} other {# billable consultations}}",
+      "invoiceNumber": "Invoice {number}",
+      "issued": "Invoiced",
+      "draft": "Draft",
+      "netExact": "Net (exact)",
+      "netRounded": "Net (rounded)",
+      "vat": "VAT {rate} %",
+      "total": "Total",
+      "roundingNote": "Fees are summed exactly and rounded once, on the total. VAT treatment is pending tax review.",
+      "linesLabel": "Statement lines",
+      "completed": "Completed",
+      "segment": "Segment",
+      "band": "Band",
+      "jointTime": "Joint time",
+      "fee": "Fee",
+      "duration": "{minutes} min {seconds} s",
+      "segments": {
+        "gkvKnown": "GKV, known patient",
+        "gkvUnknown": "GKV, new patient",
+        "private": "PKV / self-pay"
+      },
+      "openInvoice": "Open invoice PDF",
+      "openFailed": "The invoice could not be opened. Retry, or contact support."
+    },
+    "admin": {
+      "title": "Settlement",
+      "intro": "Monthly platform-fee statements per practice and independent practitioner. Lines come only from consultations whose attendance the video provider has reported as final. The fee schedule is price list v2 until another is confirmed.",
+      "month": "Month",
+      "emptyTitle": "No statements for this month",
+      "emptyText": "Create a draft for a practice or independent practitioner above.",
+      "chooseEntityError": "Choose a practice or independent practitioner.",
+      "notConfirmed": "The statement could not be confirmed. Refresh before trying again.",
+      "alreadyIssued": "This month is already invoiced; the issued statement is unchanged.",
+      "draftUpdated": "Draft updated: {count, plural, one {# billable consultation} other {# billable consultations}}.",
+      "entity": "Treating entity (Required)",
+      "choose": "Choose…",
+      "calculating": "Calculating…",
+      "generate": "Create or refresh draft",
+      "linesFailed": "The statement lines could not be loaded.",
+      "showLines": "Show lines",
+      "issue": "Issue invoice",
+      "issueConfirm": "I checked this statement. Issuing freezes it, assigns the next invoice number and stores the PDF.",
+      "issueConfirmError": "Confirm that you checked the statement.",
+      "issueNotConfirmed": "The invoice could not be confirmed. Refresh before trying again.",
+      "issued": "Invoice {number} issued for {period}.",
+      "issuing": "Issuing…",
+      "confirmIssue": "Confirm and issue",
+      "cancel": "Cancel"
+    },
+    "entity": {
+      "title": "Invoices",
+      "intro": "Monthly invoices for Qarevo’s platform fee. You bill your patients yourself: GKV through your KV, PKV and self-pay under the GOÄ.",
+      "emptyTitle": "No invoices yet",
+      "emptyText": "Qarevo invoices the platform fee monthly for consultations completed through the platform. Issued invoices appear here.",
+      "showLines": "Show consultations",
+      "independentIntro": "Monthly invoices for Qarevo’s platform fee on consultations completed through the platform."
+    }
   }
 }

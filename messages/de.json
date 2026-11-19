@@ -67,5 +67,65 @@
       "settingsAndSecurity": "Einstellungen und Sicherheit",
       "helpAndSupport": "Hilfe und Support"
     }
+  },
+  "settlement": {
+    "statement": {
+      "billable": "{count, plural, one {# abrechenbare Sprechstunde} other {# abrechenbare Sprechstunden}}",
+      "invoiceNumber": "Rechnung {number}",
+      "issued": "In Rechnung gestellt",
+      "draft": "Entwurf",
+      "netExact": "Netto (exakt)",
+      "netRounded": "Netto (gerundet)",
+      "vat": "USt. {rate} %",
+      "total": "Gesamt",
+      "roundingNote": "Die Gebühren werden exakt summiert und nur einmal, auf die Summe, gerundet. Die umsatzsteuerliche Behandlung wird noch steuerlich geprüft.",
+      "linesLabel": "Abrechnungspositionen",
+      "completed": "Abgeschlossen",
+      "segment": "Segment",
+      "band": "Stufe",
+      "jointTime": "Gemeinsame Zeit",
+      "fee": "Gebühr",
+      "duration": "{minutes} Min. {seconds} Sek.",
+      "segments": {
+        "gkvKnown": "GKV, bereits bekannt",
+        "gkvUnknown": "GKV, neu",
+        "private": "PKV / Selbstzahlende"
+      },
+      "openInvoice": "Rechnung (PDF) öffnen",
+      "openFailed": "Die Rechnung konnte nicht geöffnet werden. Bitte erneut versuchen oder den Support kontaktieren."
+    },
+    "admin": {
+      "title": "Abrechnung",
+      "intro": "Monatliche Abrechnungen der Plattformgebühr je Praxis und eigenständig tätiger Ärztin bzw. eigenständig tätigem Arzt. Positionen entstehen nur aus Sprechstunden, deren Teilnahme der Videoanbieter als abgeschlossen gemeldet hat. Bis zur Bestätigung eines anderen Tarifs gilt die Preisliste v2.",
+      "month": "Monat",
+      "emptyTitle": "Keine Abrechnungen für diesen Monat",
+      "emptyText": "Erstellen Sie oben einen Entwurf für eine Praxis oder eine eigenständige Praxis.",
+      "chooseEntityError": "Wählen Sie eine Praxis oder eine eigenständige Praxis.",
+      "notConfirmed": "Die Abrechnung konnte nicht bestätigt werden. Bitte vor einem neuen Versuch aktualisieren.",
+      "alreadyIssued": "Dieser Monat ist bereits abgerechnet; die gestellte Rechnung bleibt unverändert.",
+      "draftUpdated": "Entwurf aktualisiert: {count, plural, one {# abrechenbare Sprechstunde} other {# abrechenbare Sprechstunden}}.",
+      "entity": "Behandelnde Einrichtung (Pflichtfeld)",
+      "choose": "Bitte wählen…",
+      "calculating": "Wird berechnet…",
+      "generate": "Entwurf erstellen oder aktualisieren",
+      "linesFailed": "Die Abrechnungspositionen konnten nicht geladen werden.",
+      "showLines": "Positionen anzeigen",
+      "issue": "Rechnung stellen",
+      "issueConfirm": "Ich habe diese Abrechnung geprüft. Mit der Rechnungsstellung wird sie festgeschrieben, erhält die nächste Rechnungsnummer und das PDF wird gespeichert.",
+      "issueConfirmError": "Bestätigen Sie, dass Sie die Abrechnung geprüft haben.",
+      "issueNotConfirmed": "Die Rechnung konnte nicht bestätigt werden. Bitte vor einem neuen Versuch aktualisieren.",
+      "issued": "Rechnung {number} für {period} gestellt.",
+      "issuing": "Rechnung wird gestellt…",
+      "confirmIssue": "Bestätigen und Rechnung stellen",
+      "cancel": "Abbrechen"
+    },
+    "entity": {
+      "title": "Rechnungen",
+      "intro": "Monatliche Rechnungen über die Plattformgebühr von Qarevo. Ihre Patientinnen und Patienten rechnen Sie selbst ab: GKV über Ihre KV, PKV und Selbstzahlende nach der GOÄ.",
+      "emptyTitle": "Noch keine Rechnungen",
+      "emptyText": "Qarevo stellt die Plattformgebühr monatlich für über die Plattform abgeschlossene Sprechstunden in Rechnung. Gestellte Rechnungen erscheinen hier.",
+      "showLines": "Sprechstunden anzeigen",
+      "independentIntro": "Monatliche Rechnungen über die Plattformgebühr von Qarevo für über die Plattform abgeschlossene Sprechstunden."
+    }
   }
 }

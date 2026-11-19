@@ -7,7 +7,6 @@ export type Statement = {
   net_e4: number; net_minor: number; vat_rate_percent: string; vat_minor: number; gross_minor: number; invoice_number: string | null; issued_at: string | null; version: number
   lines?: SettlementLine[]
 }
-export const SEGMENT_LABELS: Record<string, string> = { GKV_KNOWN: 'GKV, known patient', GKV_UNKNOWN: 'GKV, new patient', PRIVATE: 'PKV / self-pay' }
 
 const int = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
 function line(value: unknown): SettlementLine | null {
@@ -31,6 +30,4 @@ export function statements(value: unknown): Statement[] | null {
   const rows = value.statements.map(statement)
   return rows.every(Boolean) ? rows as Statement[] : null
 }
-export const money = (minor: number, currency: string) => new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(minor / 100)
-export const preciseMoney = (e4: number, currency: string) => new Intl.NumberFormat('de-DE', { style: 'currency', currency, minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(e4 / 10000)
 export const previousMonth = () => { const now = new Date(); const date = new Date(now.getFullYear(), now.getMonth() - 1, 1); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` }

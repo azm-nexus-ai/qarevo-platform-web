@@ -8,7 +8,7 @@ const NATIVE: Record<Locale, string> = { de: 'Deutsch', en: 'English' }
 
 /** Language choice for every portal header. Stored in a cookie for a year; the server renders from it (ADR-0002). */
 export function LanguageSwitch() {
-  const locale = useLocale(), t = useTranslations('common.language'), router = useRouter(), [pending, startTransition] = useTransition()
+  const locale = useLocale().slice(0, 2), t = useTranslations('common.language'), router = useRouter(), [pending, startTransition] = useTransition()
   const choose = (next: Locale) => {
     if (next === locale || pending) return
     document.cookie = `${LOCALE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
