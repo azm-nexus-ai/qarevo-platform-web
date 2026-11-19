@@ -1,0 +1,19 @@
+.root { margin-top: var(--space-5, 20px); }
+.buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: var(--space-3, 12px); }
+.provider { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-3, 12px); min-height: 48px; width: 100%; padding: 11px 16px; border: 1px solid var(--border); border-radius: var(--radius-md, 12px); font-family: var(--font-body, inherit); font-size: 14px; font-weight: 600; line-height: 1.4; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+.google { background: var(--surface-glass); color: var(--text); box-shadow: var(--shadow-sm); }
+.google:hover:not(:disabled) { background: var(--surface-subtle); border-color: var(--primary-border); }
+.apple { background: var(--brand-ink, #0e151a); color: var(--brand-paper, #f7fafc); border-color: var(--brand-ink, #0e151a); }
+.apple:hover:not(:disabled) { background: var(--brand-navy, #04354d); border-color: var(--brand-navy, #04354d); }
+:global(html[data-theme='dark']) .apple { background: var(--surface-subtle); color: var(--text); border-color: var(--border); }
+:global(html[data-theme='dark']) .apple:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--primary-border); }
+.provider:focus-visible { outline: var(--focus-ring, 3px solid var(--link)); outline-offset: 3px; }
+.provider:active:not(:disabled) { transform: translateY(1px); }
+.provider:disabled { opacity: .62; cursor: not-allowed; box-shadow: none; }
+.provider svg { flex: 0 0 20px; width: 20px; height: 20px; }
+.spinner { display: block; width: 18px; height: 18px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: provider-spin 700ms linear infinite; }
+.status, .error { margin: 12px 0 0; font-size: 13px; line-height: 1.65; color: var(--text-secondary); }
+.error { color: var(--danger); }
+.connect { margin-top: var(--space-3, 12px); }
+@keyframes provider-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .provider { transition: none; } .spinner { animation: none; } }

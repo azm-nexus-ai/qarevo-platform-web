@@ -5,11 +5,12 @@ import { getHealthMetrics, createHealthMetric, updateHealthMetric, deleteHealthM
 import { ICONS } from "@/constants/icons"
 
 const T = {
-  blue: "#348CEA",
-  green: "#10B981",
-  red: "#EF4444",
-  gray: "#6B7280",
-  lightGray: "#F3F4F6",
+  link: 'var(--link)',
+  blue: "var(--primary)",
+  green: "var(--success)",
+  red: "var(--danger)",
+  gray: "var(--text-muted)",
+  lightGray: "var(--surface-subtle)",
 }
 
 export default function HealthMetricsPage() {
@@ -157,7 +158,7 @@ export default function HealthMetricsPage() {
               key={metric.id}
               style={{
                 padding: "20px",
-                background: "#fff",
+                background: "var(--surface)",
                 border: "1px solid #E5E7EB",
                 borderRadius: "12px",
                 display: "flex",
@@ -170,11 +171,11 @@ export default function HealthMetricsPage() {
                   <h3 style={{ fontSize: "16px", fontWeight: 600, margin: 0, textTransform: "capitalize" }}>
                     {metric.metric_type.replace(/_/g, " ")}
                   </h3>
-                  <span style={{ padding: "4px 12px", background: T.lightGray, borderRadius: "20px", fontSize: "12px", fontWeight: 500 }}>
+                  <span style={{ padding: "4px 12px", background: T.lightGray, borderRadius: "20px", fontSize: "13px", fontWeight: 500 }}>
                     {new Date(metric.recorded_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p style={{ fontSize: "24px", fontWeight: 700, color: T.blue, margin: 0 }}>
+                <p style={{ fontSize: "24px", fontWeight: 700, color: T.link, margin: 0 }}>
                   {metric.value} {metric.unit}
                 </p>
                 {metric.notes && (
@@ -220,7 +221,7 @@ export default function HealthMetricsPage() {
 
       {showAddModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ background: "#fff", padding: "32px", borderRadius: "16px", width: "100%", maxWidth: "480px" }}>
+          <div style={{ background: "var(--surface)", padding: "32px", borderRadius: "16px", width: "100%", maxWidth: "480px" }}>
             <h2 style={{ fontSize: "24px", fontWeight: 700, margin: 0, marginBottom: "24px" }}>
               {editingMetric ? "Edit Health Metric" : "Add Health Metric"}
             </h2>

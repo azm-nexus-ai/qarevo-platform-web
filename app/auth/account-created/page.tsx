@@ -16,7 +16,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 function JourneyIllustration() {
@@ -170,7 +170,7 @@ function LeftPanel() {
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontSize: '24px',
               fontWeight: 800,
               color: '#fff',
@@ -182,7 +182,7 @@ function LeftPanel() {
             A healthier future starts now.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Welcome to your care journey.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.52)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Every next step is designed to be secure, personal, and effortless as you begin your Qarevo Health experience.
           </p>
         </div>
@@ -222,7 +222,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -259,8 +259,8 @@ function StepTimeline() {
               gap: '12px',
               padding: '12px 13px',
               borderRadius: '12px',
-              background: 'rgba(4,53,77,0.024)',
-              border: '1px solid rgba(4,53,77,0.06)',
+              background: "var(--surface-hover)",
+              border: "1px solid var(--border)",
             }}
           >
             <div
@@ -281,7 +281,7 @@ function StepTimeline() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em', marginBottom: '2px' }}>{step.title}</div>
-              <div style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.005em' }}>{step.sub}</div>
+              <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.005em' }}>{step.sub}</div>
             </div>
             <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
           </div>
@@ -352,11 +352,11 @@ export default function AccountCreatedPage() {
             className='created-card'
             aria-live='polite'
             style={{
-              background: 'rgba(255,255,255,0.9)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(34px) saturate(200%)',
               WebkitBackdropFilter: 'blur(34px) saturate(200%)',
               borderRadius: '24px',
-              border: '1px solid rgba(255,255,255,0.92)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)',
               padding: '38px 38px 30px',
               animation: 'fadeUp 0.38s ease both',
@@ -368,7 +368,7 @@ export default function AccountCreatedPage() {
                   width: '54px',
                   height: '54px',
                   borderRadius: '16px',
-                  background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                  background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                   boxShadow: '0 4px 16px rgba(32,181,223,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
                   display: 'flex',
                   alignItems: 'center',
@@ -383,7 +383,7 @@ export default function AccountCreatedPage() {
             <header style={{ textAlign: 'center', marginBottom: '16px' }}>
               <h1
                 style={{
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                   fontSize: '25px',
                   fontWeight: 800,
                   color: T.navy,
@@ -415,13 +415,13 @@ export default function AccountCreatedPage() {
               }}
             >
               <Ico p={ICONS.check} size={10} sw={3} color={T.green} />
-              <span style={{ fontSize: '11.5px', fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                 Account Created Successfully
               </span>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <p style={{ fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
+              <p style={{ fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
                 Next steps
               </p>
               <StepTimeline />
@@ -431,7 +431,7 @@ export default function AccountCreatedPage() {
               style={{
                 padding: '14px 14px 12px',
                 borderRadius: '12px',
-                background: 'rgba(4,53,77,0.025)',
+                background: "var(--surface-hover)",
                 border: `1px solid ${T.borderFaint}`,
                 marginBottom: '16px',
               }}
@@ -457,7 +457,7 @@ export default function AccountCreatedPage() {
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                  background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',
@@ -491,7 +491,7 @@ export default function AccountCreatedPage() {
                   onMouseEnter={() => setExploreHover(true)}
                   onMouseLeave={() => setExploreHover(false)}
                   style={{
-                    color: exploreHover ? T.blue : T.slate2,
+                    color: exploreHover ? T.link : T.slate2,
                     fontSize: '13px',
                     fontWeight: 600,
                     textDecoration: 'none',
@@ -508,33 +508,33 @@ export default function AccountCreatedPage() {
               </div>
             </div>
 
-            <div style={{ marginTop: '20px', paddingTop: '18px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+            <div style={{ marginTop: '20px', paddingTop: '18px', borderTop: "1px solid var(--border)" }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
                 {[
                   { icon: ICONS.shield, label: 'Secure verification' },
                   { icon: ICONS.lock, label: 'End-to-end encrypted' },
-                  { icon: ICONS.activity, label: 'HIPAA · GDPR compliant' },
+                  { icon: ICONS.activity, label: 'Email verification · Protected access' },
                   { icon: ICONS.brain, label: 'Medical-grade privacy' },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
-                    <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          <p style={{ textAlign: 'center', fontSize: '12px', color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-            <Link href='/terms' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
+          <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
+            <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
               Terms
             </Link>
             {' · '}
-            <Link href='/privacy' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
+            <Link href='/privacy' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
               Privacy Policy
             </Link>
             {' · '}
-            <Link href='/support' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
+            <Link href='/support' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
               Support
             </Link>
           </p>

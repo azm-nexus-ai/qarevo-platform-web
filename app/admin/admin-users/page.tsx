@@ -1,499 +1,165 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { T, Sh } from '@/lib/tokens'
-import { ICONS } from '@/constants/icons'
-import Ico from '@/components/ui/Ico'
-import {
-  clearAuthTokens,
-  getAdminUsers,
-  createAdminUser,
-  updateAdminUser,
-  updateAdminUserStatus,
-  deleteAdminUser,
-  isAuthError,
-  readAccessToken,
-  isAdmin,
-  type AdminUser,
-  type AdminCreateAdminUserRequest,
-  type AdminUpdateAdminUserRequest,
-  type AdminUpdateAdminStatusRequest,
-} from '@/lib/api'
+import { useEffect, useRef, useState } from 'react'
+import { FieldFeedback, ValidationSummary } from '@/components/ui/ValidationFeedback'
+import { getAdminUsers, createAdminUser, updateAdminUser, updateAdminUserStatus, resendAdminInvitation,
+  getApiErrorDetail, type AdminUser, type AdminRole, type AdminStatus } from '@/lib/api'
 
-function StatusBadge({ status }: { status: string }) {
-  const getStatusStyle = (s: string) => {
-    switch (s.toLowerCase()) {
-      case 'active':
-        return { bg: 'rgba(15,158,119,0.12)', color: T.green }
-      case 'inactive':
-      case 'suspended':
-        return { bg: 'rgba(220,38,38,0.12)', color: T.red }
-      case 'pending':
-        return { bg: 'rgba(217,119,6,0.12)', color: T.amber }
-      default:
-        return { bg: 'rgba(32,181,223,0.12)', color: T.blue }
-    }
-  }
-
-  const style = getStatusStyle(status)
-
-  return (
-    <span style={{
-      padding: '4px 10px',
-      borderRadius: '999px',
-      fontSize: '11px',
-      fontWeight: 700,
-      background: style.bg,
-      color: style.color
-    }}>
-      {status.toUpperCase()}
-    </span>
-  )
+const ROLES: Record<AdminRole, string> = {
+  super_admin: 'Super administrator', operations_admin: 'Operations administrator',
+  compliance_admin: 'Compliance administrator', support_admin: 'Support administrator',
 }
-
-function AdminUserCard({ user, onEdit, onDeactivate, onDelete }: { 
-  user: AdminUser
-  onEdit: (id: string) => void
-  onDeactivate: (id: string) => void
-  onDelete: (id: string) => void
-}) {
-  return (
-    <div style={{
-      background: 'rgba(255,255,255,0.88)',
-      backdropFilter: 'blur(22px) saturate(175%)',
-      WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-      borderRadius: '16px',
-      border: '1px solid rgba(255,255,255,0.88)',
-      boxShadow: Sh.card,
-      padding: '20px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '16px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-        <div style={{ 
-          width: '48px', 
-          height: '48px', 
-          borderRadius: '12px', 
-          background: 'rgba(165,224,218,0.2)', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          color: T.purple,
-          fontSize: '16px',
-          fontWeight: 700
-        }}>
-          {user.full_name.split(' ').map((n: string) => n[0]).join('')}
-        </div>
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{user.full_name}</p>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.slate2 }}>{user.email}</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <span style={{ fontSize: '12px', color: T.slate }}>{user.role}</span>
-            <span style={{ fontSize: '12px', color: T.slate2 }}>•</span>
-            <span style={{ fontSize: '12px', color: T.slate }}>
-              {new Date(user.created_at).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <StatusBadge status={user.status} />
-        <button
-          type="button"
-          onClick={() => onEdit(user.admin_id)}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: '#fff',
-            color: T.navy,
-            fontSize: '13px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-        >
-          Edit
-        </button>
-        {user.status === 'active' ? (
-          <button
-            type="button"
-            onClick={() => onDeactivate(user.admin_id)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '10px',
-              border: 'none',
-              background: T.amber,
-              color: '#fff',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            Deactivate
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onDelete(user.admin_id)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '10px',
-              border: 'none',
-              background: T.red,
-              color: '#fff',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            Delete
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
+const STATUSES: AdminStatus[] = ['INVITED', 'ACTIVE', 'SUSPENDED', 'DISABLED']
+type Action = { kind: 'invite' | 'edit' | 'status' | 'resend'; user?: AdminUser; status?: Exclude<AdminStatus, 'INVITED'> }
 
 export default function AdminUsersPage() {
-  const router = useRouter()
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [canManage, setCanManage] = useState(false)
+  const [currentId, setCurrentId] = useState('')
+  const [total, setTotal] = useState(0)
+  const [offset, setOffset] = useState(0)
+  const [search, setSearch] = useState('')
+  const [role, setRole] = useState('')
+  const [status, setStatus] = useState('')
+  const [revision, setRevision] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [createForm, setCreateForm] = useState<AdminCreateAdminUserRequest>({
-    email: '',
-    full_name: '',
-    role: 'ADMIN',
-  })
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [action, setAction] = useState<Action | null>(null)
+  const [form, setForm] = useState({ full_name: '', email: '', role: 'support_admin' as AdminRole, reason: '' })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const dialog = useRef<HTMLDialogElement>(null)
+  const trigger = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
-      router.replace('/auth/sign-in')
-      return
-    }
-
-    if (!isAdmin()) {
-      router.replace('/auth/sign-in')
-      return
-    }
-
     let cancelled = false
-
-    async function fetchData() {
+    const timer = setTimeout(async () => {
+      setLoading(true); setError('')
       try {
-        const data = await getAdminUsers(roleFilter, statusFilter, searchQuery)
+        const data = await getAdminUsers(role, status, search, 50, offset)
         if (!cancelled) {
-          setAdminUsers(data.admin_users)
-          setError(null)
+          setUsers(data.admin_users); setTotal(data.total); setCanManage(data.can_manage); setCurrentId(data.current_admin_id)
         }
-      } catch (err) {
-        if (isAuthError(err)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
-          return
-        }
-        console.error('Failed to load admin users', err)
-        if (!cancelled) setError('Unable to load admin users right now.')
-      } finally {
-        if (!cancelled) setLoading(false)
+      } catch (err) { if (!cancelled) { setError(getApiErrorDetail(err) || 'Unable to load administrators. Please retry.'); setCanManage(false) } }
+      finally { if (!cancelled) setLoading(false) }
+    }, 200)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [search, role, status, offset, revision])
+
+  function open(next: Action) {
+    trigger.current = document.activeElement as HTMLElement
+    setAction(next); setErrors({}); setNotice('')
+    setForm({ full_name: next.user?.full_name || '', email: next.user?.email || '', role: next.user?.role || 'support_admin', reason: '' })
+    dialog.current?.showModal()
+  }
+  function close() { if (!saving) dialog.current?.close() }
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!action || saving) return
+    const issues: Record<string, string> = {}
+    if (action.kind === 'invite' || action.kind === 'edit') {
+      if (!form.full_name.trim()) issues.full_name = 'Full name is required.'
+      else if (form.full_name.trim().split(/\s+/).length < 2) issues.full_name = 'Enter your first and last name.'
+      if (!(form.role in ROLES)) issues.role = 'Select an administrator role.'
+    }
+    if (action.kind === 'invite' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) issues.email = 'Enter a valid email address.'
+    if (action.kind === 'status' && form.reason.trim().length < 10) issues.reason = 'Explain this access change in at least 10 characters.'
+    setErrors(issues)
+    if (Object.keys(issues).length) return
+    setSaving(true)
+    try {
+      if (action.kind === 'invite') {
+        await createAdminUser({ email: form.email.trim(), full_name: form.full_name.trim(), role: form.role })
+        setNotice('Invitation accepted for email delivery. Access stays pending until the recipient sets their password.')
+      } else if (action.kind === 'edit' && action.user) {
+        await updateAdminUser(action.user.id, { full_name: form.full_name.trim(), role: form.role })
+        setNotice('Administrator updated. A role change requires a fresh sign-in.')
+      } else if (action.kind === 'status' && action.user && action.status) {
+        await updateAdminUserStatus(action.user.id, { status: action.status, reason: form.reason.trim() })
+        setNotice('Access updated. Existing sessions have been revoked; restoring access requires a fresh sign-in.')
+      } else if (action.kind === 'resend' && action.user) {
+        await resendAdminInvitation(action.user.id)
+        setNotice('New invitation accepted for email delivery. The previous link is invalid.')
       }
-    }
-
-    fetchData()
-
-    return () => {
-      cancelled = true
-    }
-  }, [router, roleFilter, statusFilter, searchQuery])
-
-  const handleCreateAdmin = async () => {
-    try {
-      await createAdminUser(createForm)
-      setShowCreateModal(false)
-      setCreateForm({ email: '', full_name: '', role: 'ADMIN' })
-      const data = await getAdminUsers(roleFilter, statusFilter, searchQuery)
-      setAdminUsers(data.admin_users)
-    } catch (err) {
-      console.error('Failed to create admin user', err)
-      alert('Failed to create admin user')
-    }
+      dialog.current?.close(); setRevision(n => n + 1)
+    } catch (err) { setErrors({ server: getApiErrorDetail(err) || 'This change could not be completed. Please retry.' }) }
+    finally { setSaving(false) }
   }
-
-  const handleDeactivate = async (adminId: string) => {
-    if (!confirm('Are you sure you want to deactivate this admin user?')) return
-    
-    try {
-      await updateAdminUserStatus(adminId, { status: 'inactive', reason: 'Deactivated by admin' })
-      const data = await getAdminUsers(roleFilter, statusFilter, searchQuery)
-      setAdminUsers(data.admin_users)
-    } catch (err) {
-      console.error('Failed to deactivate admin user', err)
-      alert('Failed to deactivate admin user')
-    }
-  }
-
-  const handleDelete = async (adminId: string) => {
-    if (!confirm('Are you sure you want to delete this admin user? This action cannot be undone.')) return
-    
-    try {
-      await deleteAdminUser(adminId)
-      const data = await getAdminUsers(roleFilter, statusFilter, searchQuery)
-      setAdminUsers(data.admin_users)
-    } catch (err) {
-      console.error('Failed to delete admin user', err)
-      alert('Failed to delete admin user')
-    }
-  }
-
-  const handleEdit = (adminId: string) => {
-    router.push(`/admin/admin-users/${adminId}`)
-  }
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '280px', color: T.slate2 }}>
-        Loading admin users...
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
-        {error}
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
-            Admin Users
-          </h1>
-          <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate2 }}>
-            Manage admin accounts and permissions
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '10px',
-            border: 'none',
-            background: T.blue,
-            color: '#fff',
-            fontSize: '14px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-        >
-          Add Admin User
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Ico p={ICONS.search} size={16} sw={1.6} color={T.slate2} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            type="text"
-            placeholder="Search admin users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px 10px 40px',
-              borderRadius: '10px',
-              border: '1px solid rgba(4,53,77,0.12)',
-              background: 'rgba(255,255,255,0.9)',
-              fontSize: '14px',
-              color: T.navy,
-              outline: 'none',
-            }}
-          />
-        </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          style={{
-            padding: '10px 16px',
-            borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
-            fontSize: '14px',
-            color: T.navy,
-            cursor: 'pointer',
-          }}
-        >
-          <option value="">All Roles</option>
-          <option value="ADMIN">Admin</option>
-          <option value="SUPER_ADMIN">Super Admin</option>
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          style={{
-            padding: '10px 16px',
-            borderRadius: '10px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.9)',
-            fontSize: '14px',
-            color: T.navy,
-            cursor: 'pointer',
-          }}
-        >
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {adminUsers.length === 0 ? (
-          <div style={{ padding: '48px', textAlign: 'center', color: T.slate2, fontSize: '14px' }}>
-            No admin users found
-          </div>
-        ) : (
-          adminUsers.map((user) => (
-            <AdminUserCard
-              key={user.admin_id}
-              user={user}
-              onEdit={handleEdit}
-              onDeactivate={handleDeactivate}
-              onDelete={handleDelete}
-            />
-          ))
-        )}
-      </div>
-
-      {showCreateModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            background: 'rgba(4,53,77,0.32)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-          }}
-        >
-          <div style={{
-            width: '100%',
-            maxWidth: '480px',
-            borderRadius: '18px',
-            border: '1px solid rgba(255,255,255,0.88)',
-            background: 'rgba(255,255,255,0.96)',
-            boxShadow: '0 24px 64px rgba(4,53,77,0.2)',
-            padding: '24px',
-          }}>
-            <h2 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 800, color: T.navy }}>
-              Add Admin User
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={createForm.full_name}
-                  onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
-                    fontSize: '14px',
-                    color: T.navy,
-                    outline: 'none',
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
-                    fontSize: '14px',
-                    color: T.navy,
-                    outline: 'none',
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Role
-                </label>
-                <select
-                  value={createForm.role}
-                  onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(4,53,77,0.12)',
-                    background: 'rgba(255,255,255,0.9)',
-                    fontSize: '14px',
-                    color: T.navy,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="ADMIN">Admin</option>
-                  <option value="SUPER_ADMIN">Super Admin</option>
-                </select>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '24px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreateModal(false)
-                  setCreateForm({ email: '', full_name: '', role: 'ADMIN' })
-                }}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.12)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateAdmin}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Create Admin
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+  const title = action?.kind === 'invite' ? 'Invite administrator' : action?.kind === 'edit' ? 'Edit administrator' : action?.kind === 'resend' ? 'Send a new invitation' : 'Change administrator access'
+  return <section className='admin-management'>
+    <header className='management-heading'>
+      <div><h1>Admin Users</h1><p>Invite trusted colleagues, assign roles and control administrative access.</p></div>
+      {canManage && <button className='primary' onClick={() => open({ kind: 'invite' })}>Invite administrator</button>}
+    </header>
+    <div className='management-guide'>
+      <h2>Owner & administrator setup</h2>
+      <p>A super administrator can manage other administrators. Invitations expire after 24 hours and require mailbox verification and a personal password. Keep at least one active super administrator.</p>
+      <p>Suspend or revoke access to stop existing sessions. Restore access when appropriate. These controls preserve account and audit records; they do not permanently delete people or clinical data.</p>
+      {!canManage && !loading && !error && <p>You can view this directory. Only a super administrator can change access.</p>}
     </div>
-  )
+    <div className='management-filters'>
+      <label>Search administrators<input type='search' value={search} onChange={e => { setSearch(e.target.value); setOffset(0) }} maxLength={200} /></label>
+      <label>Role<select value={role} onChange={e => { setRole(e.target.value); setOffset(0) }}><option value=''>All roles</option>{Object.entries(ROLES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label>Status<select value={status} onChange={e => { setStatus(e.target.value); setOffset(0) }}><option value=''>All statuses</option>{STATUSES.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+    </div>
+    {notice && <p role='status' className='management-guide'>{notice}</p>}
+    {error ? <div role='alert'><p>{error}</p><button onClick={() => setRevision(n => n + 1)}>Retry</button></div> : loading ? <p role='status'>Loading administrators…</p> : <>
+      {!users.length && <p>No administrators match these filters.</p>}
+      {users.map(user => <article className='management-card' key={user.id}>
+        <div><h2>{user.full_name}{user.id === currentId ? ' (you)' : ''}</h2><p>{user.email}</p><p>{ROLES[user.role]} · <strong>{user.status}</strong></p></div>
+        {canManage && <div className='management-actions'>
+          <button onClick={() => open({kind:'edit',user})}>Edit</button>
+          {user.status === 'INVITED' && <button onClick={() => open({kind:'resend',user})}>Resend invitation</button>}
+          {user.status === 'ACTIVE' && <button onClick={() => open({kind:'status',user,status:'SUSPENDED'})}>Suspend access</button>}
+          {(user.status === 'SUSPENDED' || user.status === 'DISABLED') && <button onClick={() => open({kind:'status',user,status:'ACTIVE'})}>Restore access</button>}
+          {user.status === 'DISABLED' && <button onClick={() => open({kind:'resend',user})}>Reinvite unactivated account</button>}
+          {user.status !== 'DISABLED' && <button className='danger' onClick={() => open({kind:'status',user,status:'DISABLED'})}>{user.status === 'INVITED' ? 'Revoke invitation' : 'Revoke access'}</button>}
+        </div>}
+      </article>)}
+      <nav aria-label='Administrator directory pages' className='management-actions'>
+        <button disabled={offset === 0} onClick={() => setOffset(n => Math.max(0,n-50))}>Previous</button>
+        <span>{total ? `${offset+1}–${Math.min(offset+50,total)} of ${total}` : '0 administrators'}</span>
+        <button disabled={offset+50 >= total} onClick={() => setOffset(n => n+50)}>Next</button>
+      </nav>
+    </>}
+    <dialog ref={dialog} className='preferences-dialog' aria-labelledby='admin-action-title' onCancel={event => { if (saving) event.preventDefault() }} onClose={() => { setAction(null); trigger.current?.focus() }}>
+      <h2 id='admin-action-title'>{title}</h2>
+      <form noValidate onSubmit={submit}>
+        <ValidationSummary errors={errors} />
+        {(action?.kind === 'invite' || action?.kind === 'edit') && <>
+          <label htmlFor='admin-full_name'>Full Name (Required)</label>
+          <input id='admin-full_name' autoComplete='name' required maxLength={200} value={form.full_name} onChange={e => setForm({...form,full_name:e.target.value})} aria-invalid={!!errors.full_name} aria-describedby={errors.full_name ? 'admin-full_name-error' : undefined} />
+          <FieldFeedback name='admin-full_name' error={errors.full_name} />
+          {action.kind === 'invite' && <><label htmlFor='admin-email'>Email (Required)</label>
+            <input id='admin-email' type='email' autoComplete='email' required value={form.email} onChange={e => setForm({...form,email:e.target.value})} aria-invalid={!!errors.email} aria-describedby={errors.email ? 'admin-email-error' : 'admin-email-hint'} />
+            <small id='admin-email-hint'>Use a dedicated mailbox the recipient controls, separate from patient or clinician accounts.</small><FieldFeedback name='admin-email' error={errors.email} /></>}
+          <label htmlFor='admin-role'>Role (Required)</label>
+          <select id='admin-role' required value={form.role} onChange={e => setForm({...form,role:e.target.value as AdminRole})} aria-invalid={!!errors.role} aria-describedby={errors.role?'admin-role-hint admin-role-error':'admin-role-hint'}>
+            {Object.entries(ROLES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+          </select><small id='admin-role-hint'>Super administrators can grant and revoke administrative access. Operations administrators can review clinicians.</small>
+          <FieldFeedback name='admin-role' error={errors.role} />
+        </>}
+        {action?.kind === 'status' && <><p>Set {action.user?.email} to <strong>{action.status}</strong>. Current sessions will be revoked. Records will be preserved.</p>
+          <label htmlFor='admin-reason'>Reason (Required)</label><textarea id='admin-reason' required minLength={10} maxLength={500} value={form.reason} onChange={e => setForm({...form,reason:e.target.value})} aria-invalid={!!errors.reason} aria-describedby='admin-reason-error' /><FieldFeedback name='admin-reason' error={errors.reason} /></>}
+        {action?.kind === 'resend' && <p>Send a replacement invitation to {action.user?.email}. The previous link will stop working. This applies only to an invitation that has not been accepted.</p>}
+        <div className='management-actions'><button type='button' disabled={saving} onClick={close}>Cancel</button><button className='primary' type='submit' disabled={saving}>{saving ? 'Saving…' : action?.kind === 'invite' ? 'Send invitation' : action?.kind === 'resend' ? 'Resend invitation' : 'Save changes'}</button></div>
+      </form>
+    </dialog>
+    <style jsx>{`
+      .admin-management {display:grid;gap:24px;color:var(--text);min-width:0}
+      h1 {font-size:28px;line-height:1.2;letter-spacing:-.035em;margin:0 0 8px} h2 {font-size:18px;line-height:1.4;margin:0 0 8px}
+      p {font-size:14px;line-height:1.7;margin:6px 0;color:var(--text-secondary);overflow-wrap:anywhere}
+      .management-heading,.management-card {display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+      .management-guide,.management-card {padding:22px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+      .management-filters {display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px}
+      label {display:block;font-size:13px;font-weight:600;margin:12px 0 6px}
+      input,select,textarea {width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:16px}
+      small {display:block;font-size:13px;line-height:1.6;color:var(--text-secondary);margin:6px 0 12px}
+      .management-actions {display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px}
+      button {min-height:44px;padding:10px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:14px;cursor:pointer}
+      button:disabled {opacity:.5;cursor:not-allowed} button.primary {background:var(--link);color:var(--surface);font-weight:700} button.danger {color:var(--danger);background:var(--danger-soft)}
+      @media(max-width:700px) {.management-filters{grid-template-columns:1fr}.management-card{align-items:stretch}.management-actions{width:100%}}
+    `}</style>
+  </section>
 }

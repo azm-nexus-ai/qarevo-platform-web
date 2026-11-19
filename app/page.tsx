@@ -5,7 +5,7 @@ const LandingPage = dynamic(() => import('@/components/marketing/LandingPage'))
 
 export const metadata: Metadata = {
   title: 'Qarevo Health — European Healthcare Platform',
-  description: 'Discover verified physicians, orchestrate continuous care, and experience the highest standard of clinical intelligence and data governance.',
+  description: 'Qarevo Health connects patients and independent practices through a clinician-led digital care journey. Development preview.',
 }
 
 export default function Page() {

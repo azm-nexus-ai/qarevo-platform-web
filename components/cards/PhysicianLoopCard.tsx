@@ -9,8 +9,8 @@ export default function PhysicianLoopCard() {
   return (
     <div
       style={{
-        background: '#FFFFFF',
-        border: '1px solid rgba(4,53,77,0.06)',
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: '20px',
         boxShadow: Sh.float,
         display: 'flex',
@@ -20,7 +20,7 @@ export default function PhysicianLoopCard() {
       <div style={{ padding: '24px 24px 20px', flex: 1 }}>
         <span
           style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
             fontSize: '15px',
             fontWeight: 700,
             color: T.navy,
@@ -46,7 +46,7 @@ export default function PhysicianLoopCard() {
               boxShadow: '0 2px 16px rgba(32,181,223,0.14)',
             }}
           >
-            <Ico p={ICONS.user} size={32} sw={1.25} style={{ color: T.blue }} />
+            <Ico p={ICONS.user} size={32} sw={1.25} style={{ color: T.link }} />
             <span
               style={{
                 position: 'absolute',
@@ -58,12 +58,12 @@ export default function PhysicianLoopCard() {
                 background: 'rgba(255,248,225,0.9)',
                 backdropFilter: 'blur(6px)',
                 WebkitBackdropFilter: 'blur(6px)',
-                border: '2px solid rgba(255,255,255,0.88)',
+                border: "2px solid var(--border)",
                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '11px',
+                fontSize: "13px",
               }}
             >
               ⏳
@@ -71,7 +71,7 @@ export default function PhysicianLoopCard() {
           </div>
           <div
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontSize: '14px',
               fontWeight: 700,
               color: T.navy,
@@ -83,7 +83,7 @@ export default function PhysicianLoopCard() {
           </div>
           <p
             style={{
-              fontSize: '12.5px',
+              fontSize: "13px",
               color: T.slate,
               lineHeight: 1.65,
               maxWidth: '210px',
@@ -100,7 +100,7 @@ export default function PhysicianLoopCard() {
             width: '100%',
             padding: '11px 20px',
             borderRadius: '10px',
-            background: 'rgba(4,53,77,0.04)',
+            background: "var(--surface-hover)",
             border: `1px solid ${T.border}`,
             cursor: 'pointer',
             fontSize: '13.5px',
@@ -108,7 +108,7 @@ export default function PhysicianLoopCard() {
             color: T.navy,
             letterSpacing: '-0.015em',
           }}
-          on={{ background: 'rgba(4,53,77,0.07)', border: '1px solid rgba(4,53,77,0.13)' }}
+          on={{ background: "var(--surface-hover)", border: "1px solid var(--border)" }}
         >
           Review Case
         </HoverBtn>

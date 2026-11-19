@@ -1,27 +1,19 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { getApiErrorDetail, resendVerificationEmail, storeAuthTokens, verifyEmailCode } from '@/lib/api'
+import { getApiErrorDetail, resendVerificationEmail, verifyEmailCode } from '@/lib/api'
 import { setOnboardingStage } from '@/lib/auth-flow'
+import { readSignupEmail } from '@/lib/signup-context'
+import { usePortalAction } from '@/lib/portal-action'
 
-const SIGNUP_STORAGE_KEY = 'qarevo.auth.signup.v1'
 const masked = (e: string) => e.replace(/(.{2}).+(@.+)/, '$1•••$2')
-
-function readSignupEmail() {
-  if (typeof window === 'undefined') return ''
-  try {
-    const raw = window.localStorage.getItem(SIGNUP_STORAGE_KEY)
-    const stored = raw ? (JSON.parse(raw) as { email?: string }) : null
-    return stored?.email?.trim().toLowerCase() || ''
-  } catch {
-    return ''
-  }
-}
+const subscribeSignupEmail = () => () => {}
+const serverSignupEmail = () => ''
 
 // ─── Countdown ─────────────────────────────────────────────────────────────────
 function useCountdown(initial: number) {
@@ -174,7 +166,8 @@ function EnvelopeScene({ verified }: { verified: boolean }) {
 }
 
 // ─── OTP input ─────────────────────────────────────────────────────────────────
-function OtpInput({ email, onComplete }: { email: string; onComplete: () => void }) {
+function OtpInput({ email, onStart, onComplete }: { email: string; onStart: () => void; onComplete: () => void }) {
+  const captureAction = usePortalAction()
   const [values, setValues] = useState(['', '', '', '', '', ''])
   const refs = useRef<(HTMLInputElement | null)[]>([])
   const [error, setError] = useState('')
@@ -182,29 +175,23 @@ function OtpInput({ email, onComplete }: { email: string; onComplete: () => void
   const [loading, setLoading] = useState(false)
 
   const verifyCode = async (code: string) => {
+    onStart()
+    const action = captureAction()
     setLoading(true)
     setError('')
     try {
       const response = await verifyEmailCode({ email, code })
-      if (response.access_token && response.refresh_token) {
-        storeAuthTokens({
-          access_token: response.access_token,
-          refresh_token: response.refresh_token,
-          token_type: response.token_type,
-          expires_in: response.expires_in,
-          user_id: response.user_id,
-          role: response.role || 'PATIENT',
-        })
-      }
+      if (!action.isCurrent({ completedSession: response.browser_session })) return
       setSuccess(true)
       setOnboardingStage('account-created')
-      setTimeout(onComplete, 900)
+      action.after(900, onComplete, { completedSession: response.browser_session })
     } catch (error) {
+      if (!action.isCurrent()) return
       setValues(['', '', '', '', '', ''])
       refs.current[0]?.focus()
       setError(getApiErrorDetail(error) || 'Incorrect code. Please check your email and try again.')
     } finally {
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
@@ -250,6 +237,7 @@ function OtpInput({ email, onComplete }: { email: string; onComplete: () => void
             <input
               key={i}
               ref={el => { refs.current[i] = el }}
+              aria-label={`Verification code digit ${i + 1}`}
               maxLength={1}
               inputMode="numeric"
               value={v}
@@ -260,10 +248,10 @@ function OtpInput({ email, onComplete }: { email: string; onComplete: () => void
               style={{
                 width: '48px', height: '56px', textAlign: 'center',
                 fontSize: '22px', fontWeight: 700, color: T.navy,
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                 borderRadius: '12px',
-                border: `2px solid ${error ? 'rgba(220,38,38,0.4)' : success ? 'rgba(9,173,112,0.5)' : filled ? 'rgba(32,181,223,0.4)' : 'rgba(4,53,77,0.1)'}`,
-                background: error ? '#FFF5F5' : success ? '#F0FDF8' : filled ? T.blueLight : 'rgba(255,255,255,0.75)',
+                border: `2px solid ${error ? 'rgba(220,38,38,0.4)' : success ? 'rgba(9,173,112,0.5)' : filled ? 'rgba(32,181,223,0.4)' : "var(--border)"}`,
+                background: error ? "var(--danger-soft)" : success ? "var(--success-soft)" : filled ? T.blueLight : "var(--surface-glass)",
                 outline: 'none',
                 boxShadow: filled ? `0 0 0 3px rgba(32,181,223,0.06)` : 'none',
                 transition: 'all 0.15s ease',
@@ -277,17 +265,17 @@ function OtpInput({ email, onComplete }: { email: string; onComplete: () => void
       {error && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
           <Ico p={ICONS.info} size={12} sw={1.75} color={T.red} />
-          <span style={{ fontSize: '12.5px', color: T.red, letterSpacing: '-0.005em' }}>{error}</span>
+          <span style={{ fontSize: "13px", color: T.red, letterSpacing: '-0.005em' }}>{error}</span>
         </div>
       )}
       {success && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
           <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
-          <span style={{ fontSize: '12.5px', color: T.teal, fontWeight: 600, letterSpacing: '-0.005em' }}>Code verified — activating your account…</span>
+          <span style={{ fontSize: "13px", color: T.teal, fontWeight: 600, letterSpacing: '-0.005em' }}>Code verified — activating your account…</span>
         </div>
       )}
       {loading && (
-        <p style={{ textAlign: 'center', fontSize: '11.5px', color: T.slate2, margin: '8px 0 0', letterSpacing: '-0.005em' }}>
+        <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, margin: '8px 0 0', letterSpacing: '-0.005em' }}>
           Verifying code...
         </p>
       )}
@@ -307,20 +295,20 @@ function StepBar({ step }: { step: 0 | 1 | 2 }) {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
               <div style={{
                 width: '28px', height: '28px', borderRadius: '50%',
-                background: done ? T.green : active ? T.blue : 'rgba(4,53,77,0.05)',
-                border: `2px solid ${done ? T.green : active ? T.blue : 'rgba(4,53,77,0.1)'}`,
+                background: done ? T.green : active ? T.blue : "var(--surface-hover)",
+                border: `2px solid ${done ? T.green : active ? T.blue : "var(--border)"}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: active ? `0 0 0 4px rgba(32,181,223,0.1)` : done ? `0 0 0 3px rgba(9,173,112,0.1)` : 'none',
                 transition: 'all 0.35s ease', flexShrink: 0,
               }}>
                 {done
                   ? <Ico p={ICONS.check} size={11} sw={3} color="#fff" />
-                  : <span style={{ fontSize: '11px', fontWeight: 700, color: active ? '#fff' : T.slate2 }}>{i + 1}</span>}
+                  : <span style={{ fontSize: "13px", fontWeight: 700, color: active ? '#fff' : T.slate2 }}>{i + 1}</span>}
               </div>
-              <span style={{ fontSize: '10.5px', fontWeight: done || active ? 600 : 400, color: done ? T.green : active ? T.blue : T.slate2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>{label}</span>
+              <span style={{ fontSize: "13px", fontWeight: done || active ? 600 : 400, color: done ? T.green : active ? T.link : T.slate2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>{label}</span>
             </div>
             {i < steps.length - 1 && (
-              <div style={{ width: '52px', height: '2px', margin: '13px 6px 0', borderRadius: '2px', background: done ? T.green : 'rgba(4,53,77,0.07)', transition: 'background 0.4s ease', flexShrink: 0 }} />
+              <div style={{ width: '52px', height: '2px', margin: '13px 6px 0', borderRadius: '2px', background: done ? T.green : "var(--surface-hover)", transition: 'background 0.4s ease', flexShrink: 0 }} />
             )}
           </div>
         )
@@ -333,12 +321,12 @@ function StepBar({ step }: { step: 0 | 1 | 2 }) {
 function TipRow({ icon, title, body }: { icon: string | readonly string[]; title: string; body: string }) {
   const [open, setOpen] = useState(false)
   return (
-    <div style={{ borderRadius: '12px', border: `1px solid ${open ? 'rgba(32,181,223,0.18)' : 'rgba(4,53,77,0.07)'}`, background: open ? 'rgba(234,241,255,0.55)' : 'rgba(255,255,255,0.6)', overflow: 'hidden', transition: 'all 0.2s ease', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
+    <div style={{ borderRadius: '12px', border: `1px solid ${open ? 'rgba(32,181,223,0.18)' : "var(--border)"}`, background: open ? 'rgba(234,241,255,0.55)' : "var(--surface-glass)", overflow: 'hidden', transition: 'all 0.2s ease', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{ width: '100%', padding: '13px 14px', display: 'flex', alignItems: 'center', gap: '11px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
       >
-        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: open ? 'rgba(32,181,223,0.1)' : 'rgba(4,53,77,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s ease' }}>
+        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: open ? 'rgba(32,181,223,0.1)' : "var(--surface-hover)", display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s ease' }}>
           <Ico p={icon} size={13} sw={1.75} color={open ? T.blue : T.slate} />
         </div>
         <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.015em' }}>{title}</span>
@@ -358,29 +346,46 @@ function TipRow({ icon, title, body }: { icon: string | readonly string[]; title
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function VerifyEmailPage() {
   const router = useRouter()
+  const captureAction = usePortalAction()
   const { secs, done: canResend, restart } = useCountdown(60)
   const [verified,   setVerified]   = useState(false)
   const [resendOk,   setResendOk]   = useState(false)
+  const [resendPending, setResendPending] = useState(false)
+  const resendInFlight = useRef(false)
   const [resendError, setResendError] = useState('')
   const [emailModal, setEmailModal] = useState(false)
   const [tab,        setTab]        = useState<'link' | 'code'>('link')
-  const [email] = useState(readSignupEmail)
+  // The server and first hydration render use the same anonymous snapshot.
+  // Only the mounted browser can read this tab's verification destination.
+  const signupEmail = useSyncExternalStore(subscribeSignupEmail, readSignupEmail, serverSignupEmail)
+  // Session publication retires signup storage. Keep the user-started attempt
+  // mounted through its confirmation; this snapshot ends with this page.
+  const [verificationEmail, setVerificationEmail] = useState('')
+  const email = verificationEmail || signupEmail
 
   const handleResend = async () => {
-    if (!canResend) return
+    if (!canResend || resendInFlight.current) return
     setResendOk(false)
     setResendError('')
     if (!email) {
       setResendError('Enter your email again to resend the verification code.')
       return
     }
+    const action = captureAction()
+    resendInFlight.current = true
+    setResendPending(true)
     try {
       await resendVerificationEmail({ email })
+      if (!action.isCurrent()) return
       setResendOk(true)
       restart(90)
-      setTimeout(() => setResendOk(false), 4000)
+      action.after(4000, () => setResendOk(false))
     } catch (error) {
+      if (!action.isCurrent()) return
       setResendError(getApiErrorDetail(error) || 'We could not resend the verification email right now.')
+    } finally {
+      resendInFlight.current = false
+      if (action.isCurrent()) setResendPending(false)
     }
   }
 
@@ -408,10 +413,10 @@ export default function VerifyEmailPage() {
       {/* Logo */}
       <div style={{ marginBottom: '28px', animation: 'fadeUp 0.45s ease both' }}>
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.3), inset 0 1px 0 rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.3), inset 0 1px 0 rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Ico p={ICONS.heart} size={16} sw={1.25} color="#fff" />
           </div>
-          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '16px', color: T.navy, letterSpacing: '-0.035em' }}>Qarevo Health</span>
+          <span style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontWeight: 800, fontSize: '16px', color: T.navy, letterSpacing: '-0.035em' }}>Qarevo Health</span>
         </Link>
       </div>
 
@@ -420,11 +425,11 @@ export default function VerifyEmailPage() {
 
           {/* Main card */}
           <div style={{
-            background: 'rgba(255,255,255,0.88)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(36px) saturate(200%)',
             WebkitBackdropFilter: 'blur(36px) saturate(200%)',
             borderRadius: '28px',
-            border: '1px solid rgba(255,255,255,0.92)',
+            border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 2px 8px rgba(4,53,77,0.04), 0 16px 40px rgba(4,53,77,0.09), 0 48px 96px rgba(4,53,77,0.06)',
             padding: '44px 44px 40px',
             marginBottom: '14px',
@@ -438,7 +443,7 @@ export default function VerifyEmailPage() {
 
             {/* Headline */}
             <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
+              <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
                 Verify Your Email Address
               </h1>
               <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.72, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
@@ -446,7 +451,7 @@ export default function VerifyEmailPage() {
               </p>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '7px 16px', borderRadius: '100px', background: T.blueLight, border: `1px solid ${T.blueMid}` }}>
                 <Ico p={ICONS.ema} size={12} sw={1.75} color={T.blue} />
-                <span style={{ fontSize: '13.5px', fontWeight: 700, color: T.blue, letterSpacing: '-0.015em' }}>{m}</span>
+                <span style={{ fontSize: '13.5px', fontWeight: 700, color: T.link, letterSpacing: '-0.015em' }}>{m}</span>
               </div>
             </div>
 
@@ -457,11 +462,11 @@ export default function VerifyEmailPage() {
             )}
 
             {/* Tab switcher: link vs code */}
-            <div style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '13px', background: 'rgba(4,53,77,0.05)', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '13px', background: "var(--surface-hover)", marginBottom: '24px' }}>
               {(['link', 'code'] as const).map(t => (
                 <button key={t} className="tab-btn" onClick={() => setTab(t)} style={{
                   flex: 1, padding: '9px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                  background: tab === t ? '#fff' : 'transparent',
+                  background: tab === t ? "var(--surface)" : 'transparent',
                   boxShadow: tab === t ? '0 1px 6px rgba(4,53,77,0.1), inset 0 1px 0 rgba(255,255,255,0.9)' : 'none',
                   fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
                   color: tab === t ? T.navy : T.slate2, letterSpacing: '-0.01em',
@@ -481,7 +486,7 @@ export default function VerifyEmailPage() {
                 {/* Open Email App */}
                 <button className="pri-btn" onClick={() => setEmailModal(true)} style={{
                   width: '100%', padding: '14px 20px', borderRadius: '13px', border: 'none',
-                  background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                  background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                   color: '#fff', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700,
                   letterSpacing: '-0.02em', cursor: 'pointer', marginBottom: '10px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px',
@@ -497,7 +502,7 @@ export default function VerifyEmailPage() {
                 <button type="button" onClick={() => setTab('code')} style={{
                   width: '100%', padding: '12px 20px', borderRadius: '13px',
                   border: `1.5px solid ${T.border}`,
-                  background: 'rgba(4,53,77,0.03)',
+                  background: "var(--surface-hover)",
                   color: T.navy, fontFamily: 'inherit', fontSize: '14px', fontWeight: 600,
                   letterSpacing: '-0.015em', cursor: 'pointer', marginBottom: '16px', textDecoration: 'none',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -515,12 +520,12 @@ export default function VerifyEmailPage() {
                   Enter the 6-digit code from your verification email.
                 </p>
                 {email ? (
-                  <OtpInput email={email} onComplete={() => setVerified(true)} />
+                  <OtpInput email={email} onStart={() => setVerificationEmail(email)} onComplete={() => setVerified(true)} />
                 ) : (
                   <Link href="/auth/sign-up" style={{
                     width: '100%', padding: '12px 20px', borderRadius: '13px',
                     border: `1.5px solid ${T.border}`,
-                    background: 'rgba(4,53,77,0.03)',
+                    background: "var(--surface-hover)",
                     color: T.navy, fontFamily: 'inherit', fontSize: '14px', fontWeight: 600,
                     letterSpacing: '-0.015em', cursor: 'pointer', textDecoration: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -535,7 +540,7 @@ export default function VerifyEmailPage() {
             {resendOk && (
               <div style={{ padding: '10px 14px', borderRadius: '10px', background: T.greenLight, border: `1px solid rgba(9,173,112,0.25)`, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', animation: 'slideToast 0.28s ease both', overflow: 'hidden' }}>
                 <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
-                <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>New verification email sent. Check your inbox.</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>Verification email requested. Check your inbox and spam folder.</span>
               </div>
             )}
 
@@ -548,15 +553,15 @@ export default function VerifyEmailPage() {
 
             {/* Resend + Change row */}
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button className="ghost" onClick={handleResend} disabled={!canResend} style={{
+              <button className="ghost" onClick={handleResend} disabled={!canResend || resendPending} aria-busy={resendPending} style={{
                 flex: 1, padding: '10px 14px', borderRadius: '11px',
-                border: `1.5px solid ${canResend ? T.border : 'rgba(4,53,77,0.06)'}`,
+                border: `1.5px solid ${canResend ? T.border : "var(--border)"}`,
                 background: 'transparent', fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
-                color: canResend ? T.blue : T.slate2, cursor: canResend ? 'pointer' : 'not-allowed',
+                color: canResend ? T.link : T.slate2, cursor: canResend ? 'pointer' : 'not-allowed',
                 letterSpacing: '-0.01em', transition: 'all 0.14s ease',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}>
-                {!canResend
+                {resendPending ? 'Requesting verification email…' : !canResend
                   ? <><span style={{ width: '11px', height: '11px', border: `1.5px solid ${T.slate2}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block', flexShrink: 0 }} />Resend in {secs}s</>
                   : <><Ico p={ICONS.arrowFwd} size={12} sw={2} />Resend Email</>}
               </button>
@@ -576,7 +581,7 @@ export default function VerifyEmailPage() {
 
           {/* Help accordion */}
           <div style={{ marginBottom: '18px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 9px 4px' }}>Need help?</p>
+            <p style={{ fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 9px 4px' }}>Need help?</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <TipRow
                 icon={ICONS.search}
@@ -601,12 +606,12 @@ export default function VerifyEmailPage() {
             {[
               { icon: ICONS.shield,   label: 'Secure verification'    },
               { icon: ICONS.lock,     label: 'End-to-end encrypted'   },
-              { icon: ICONS.activity, label: 'HIPAA · GDPR compliant' },
+              { icon: ICONS.activity, label: 'Email verification · Protected access' },
               { icon: ICONS.brain,    label: 'Medical-grade privacy'  },
             ].map(({ icon, label }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
-                <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
+                <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
               </div>
             ))}
           </div>
@@ -616,11 +621,11 @@ export default function VerifyEmailPage() {
         /* ── Verified ────────────────────────────────────────── */
         <div style={{ width: '100%', maxWidth: '480px', animation: 'fadeUp 0.45s ease both' }}>
           <div style={{
-            background: 'rgba(255,255,255,0.9)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(36px) saturate(200%)',
             WebkitBackdropFilter: 'blur(36px) saturate(200%)',
             borderRadius: '28px',
-            border: '1px solid rgba(255,255,255,0.94)',
+            border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 32px 72px rgba(4,53,77,0.1)',
             padding: '44px 44px 40px',
             textAlign: 'center',
@@ -635,10 +640,10 @@ export default function VerifyEmailPage() {
             {/* Confirmed badge */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 14px', borderRadius: '100px', background: T.greenLight, border: '1px solid rgba(9,173,112,0.25)', marginBottom: '18px', animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both' }}>
               <Ico p={ICONS.check} size={10} sw={3} color={T.green} />
-              <span style={{ fontSize: '11.5px', fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>Email Verified</span>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>Email Verified</span>
             </div>
 
-            <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 10px' }}>
+            <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 10px' }}>
               Your account is now active
             </h1>
             <p style={{ fontSize: '14.5px', color: T.slate, lineHeight: 1.72, margin: '0 0 28px', letterSpacing: '-0.01em' }}>
@@ -659,25 +664,70 @@ export default function VerifyEmailPage() {
             </button>
 
             {/* What's next */}
-            <div style={{ paddingTop: '22px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
-              <p style={{ fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px', textAlign: 'left' }}>{"What's next"}</p>
+            <div style={{ paddingTop: '22px', borderTop: "1px solid var(--border)" }}>
+              <h2 style={{ fontSize: '13px', color: T.navy, textAlign: 'left', margin: '0 0 12px' }}>
+                {"What's next"}
+              </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {[
-                  { icon: ICONS.steth,    label: 'Book a consultation',     sub: 'Connect with a verified specialist'     },
-                  { icon: ICONS.activity, label: 'Review your health summary', sub: 'AI-powered clinical insights'         },
-                  { icon: ICONS.shield,   label: 'Complete your profile',    sub: 'Secure your personal health information' },
-                ].map(({ icon, label, sub }) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 13px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.14s ease' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Ico p={icon} size={14} sw={1.75} color={T.blue} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-                      <div style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.005em' }}>{sub}</div>
-                    </div>
-                    <Ico p={ICONS.arrowFwd} size={12} sw={2} color={T.slate2} />
-                  </div>
-                ))}
+                  {
+                    icon: ICONS.shield,
+                    label: 'Complete your profile',
+                    sub: 'Add your personal, contact and health information',
+                    href: '/auth/profile-setup/personal-information',
+                  },
+                  {
+                    icon: ICONS.steth,
+                    label: 'Book a consultation',
+                    sub: 'Available in your portal after completing profile setup',
+                    href: null,
+                  },
+                  {
+                    icon: ICONS.activity,
+                    label: 'View medical records',
+                    sub: 'Review documents already added to your account',
+                    href: '/patient/medical-records',
+                  },
+                ].map(({ icon, label, sub, href }) => {
+                  const rowStyle: React.CSSProperties = {
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    padding: '12px 13px', borderRadius: '12px',
+                    background: "var(--surface-hover)",
+                    border: "1px solid var(--border)",
+                    textAlign: 'left', textDecoration: 'none', color: T.navy,
+                  }
+                  const content = (
+                      <>
+                        <Ico p={icon} size={18} sw={1.75} color={T.blue} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 700 }}>{label}</div>
+                          <div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>{sub}</div>
+                        </div>
+                      </>
+                  )
+
+                  return href ? (
+                      <Link
+                          key={label}
+                          href={href}
+                          className="ghost"
+                          onClick={() => {
+                            if (href === '/auth/profile-setup/personal-information') {
+                              setOnboardingStage('personal-information')
+                            }
+                          }}
+                          style={rowStyle}
+                      >
+                        {content}
+                        <Ico p={ICONS.arrowFwd} size={12} sw={2} color={T.slate2} />
+                      </Link>
+                  ) : (
+                      <div key={label} style={rowStyle}>
+                        {content}
+                        <Ico p={ICONS.lock} size={12} sw={2} color={T.slate2} />
+                      </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -685,31 +735,31 @@ export default function VerifyEmailPage() {
       )}
 
       {/* Footer */}
-      <p style={{ textAlign: 'center', fontSize: '12px', color: T.slate2, marginTop: '22px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-        <Link href="/terms"   style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
+      <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '22px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
+        <Link href="/terms"   style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
         {' · '}
-        <Link href="/privacy" style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
+        <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
         {' · '}
-        <Link href="/support" style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Support</Link>
+        <Link href="/support" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Support</Link>
       </p>
 
       {/* Email modal */}
       {emailModal && (
-        <div onClick={() => setEmailModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(4,53,77,0.42)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '20px' }}>
+        <div onClick={() => setEmailModal(false)} style={{ position: 'fixed', inset: 0, background: "var(--surface-hover)", backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '20px' }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)',
-            borderRadius: '22px', border: '1px solid rgba(255,255,255,0.9)',
+            background: "var(--surface-glass)", backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)',
+            borderRadius: '22px', border: "1px solid var(--border)",
             boxShadow: '0 8px 32px rgba(4,53,77,0.16), 0 40px 90px rgba(4,53,77,0.12)',
             padding: '36px 32px 28px', maxWidth: '348px', width: '100%', textAlign: 'center',
             animation: 'popIn 0.32s cubic-bezier(0.34,1.56,0.64,1) both',
           }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '15px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 4px 18px rgba(32,181,223,0.34)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+            <div style={{ width: '52px', height: '52px', borderRadius: '15px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 4px 18px rgba(32,181,223,0.34)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
               <svg width="24" height="22" viewBox="0 0 24 22" fill="none" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="1" y="1" width="22" height="18" rx="3.5"/>
                 <path d="M1 5.5l11 8 11-8"/>
               </svg>
             </div>
-            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em', margin: '0 0 8px' }}>Open your inbox</h2>
+            <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em', margin: '0 0 8px' }}>Open your inbox</h2>
             <p style={{ fontSize: '13.5px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
               {'Look for an email from '}
               <strong style={{ color: T.navy }}>noreply@qarevo.health</strong>
@@ -722,7 +772,7 @@ export default function VerifyEmailPage() {
               <a key={label} href={href} target="_blank" rel="noreferrer noopener" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
                 padding: '11px 16px', borderRadius: '11px', marginBottom: '8px',
-                background: '#fff', border: `1.5px solid rgba(4,53,77,0.09)`,
+                background: "var(--surface)", border: `1.5px solid rgba(4,53,77,0.09)`,
                 color: T.navy, textDecoration: 'none', fontSize: '13.5px', fontWeight: 600,
                 letterSpacing: '-0.01em', boxShadow: Sh.inner,
               }}>

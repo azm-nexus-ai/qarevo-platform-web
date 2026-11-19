@@ -1,12 +1,15 @@
 'use client'
 
-import { Suspense, useId, useState } from 'react'
+import { Suspense, useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { recoveryPortal } from '@/lib/auth-recovery'
+import RecoverySignInLinks from '@/components/auth/RecoverySignInLinks'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { resetPassword, ApiError, getApiErrorDetail } from '@/lib/api'
+import { resetPassword, ApiError, getApiErrorDetail, clearPortalSession, getLoginThrottleMessage } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 type ErrorKind = 'weak' | 'mismatch' | 'expiredToken' | 'invalidToken' | 'server' | 'network' | null
 
@@ -15,7 +18,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 function isLowercase(char: string) {
@@ -217,7 +220,7 @@ function LeftPanel() {
           </div>
           <span
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontWeight: 800,
               fontSize: '15.5px',
               color: '#fff',
@@ -234,7 +237,7 @@ function LeftPanel() {
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontSize: '24px',
               fontWeight: 800,
               color: '#fff',
@@ -246,7 +249,7 @@ function LeftPanel() {
             Security first.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your records stay protected.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Protecting your medical information is Qarevo Health&apos;s highest priority. Create a strong password to safely restore account access.
           </p>
         </div>
@@ -254,9 +257,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'End-to-End Encryption', sub: 'Password updates are securely processed' },
-          { icon: ICONS.shield, label: 'Identity Verified', sub: 'Only authenticated users can reset credentials' },
-          { icon: ICONS.check, label: 'HIPAA · GDPR Ready', sub: 'Healthcare-grade compliance and safety' },
+          { icon: ICONS.lock, label: 'Single-use Link', sub: 'A completed reset invalidates this link' },
+          { icon: ICONS.shield, label: 'Mailbox Access', sub: 'Use the link sent to your email address' },
+          { icon: ICONS.check, label: 'Session Protection', sub: 'Existing refresh sessions are revoked after reset' },
         ].map(({ icon, label, sub }, i) => (
           <div
             key={label}
@@ -288,7 +291,7 @@ function LeftPanel() {
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>
                 {label}
               </div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -324,7 +327,7 @@ function AlertBanner({ kind }: { kind: Exclude<ErrorKind, 'mismatch' | 'weak' | 
       style={{
         padding: '12px 16px',
         borderRadius: '11px',
-        background: '#FFF5F5',
+        background: "var(--danger-soft)",
         border: '1px solid rgba(220,38,38,0.24)',
         display: 'flex',
         gap: '10px',
@@ -335,7 +338,7 @@ function AlertBanner({ kind }: { kind: Exclude<ErrorKind, 'mismatch' | 'weak' | 
       <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} style={{ marginTop: '1px', flexShrink: 0 }} />
       <div>
         <div style={{ fontSize: '13px', fontWeight: 700, color: T.red, lineHeight: 1.4, letterSpacing: '-0.005em' }}>{content.title}</div>
-        <div style={{ fontSize: '12.5px', color: '#B93434', lineHeight: 1.5, letterSpacing: '-0.005em' }}>{content.body}</div>
+        <div style={{ fontSize: "13px", color: T.red, lineHeight: 1.5, letterSpacing: '-0.005em' }}>{content.body}</div>
       </div>
     </div>
   )
@@ -382,12 +385,12 @@ function PasswordField({
       : '0 0 0 3px rgba(32,181,223,0.09)'
     : 'none'
 
-  const bg = error ? '#FFF5F5' : success ? '#F0FDF8' : focused ? '#fff' : 'rgba(255,255,255,0.7)'
+  const bg = error ? 'var(--danger-soft)' : success ? 'var(--success-soft)' : 'var(--surface)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label}
+        {label} <span aria-hidden="true">(Required)</span>
       </label>
       <div style={{ position: 'relative' }}>
         <span
@@ -396,7 +399,7 @@ function PasswordField({
             left: '13px',
             top: '50%',
             transform: 'translateY(-50%)',
-            color: focused ? T.blue : T.slate2,
+            color: focused ? T.link : T.slate2,
             display: 'flex',
             transition: 'color 0.15s',
             pointerEvents: 'none',
@@ -406,6 +409,9 @@ function PasswordField({
         </span>
         <input
           id={id}
+          required
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
           type={show ? 'text' : 'password'}
           value={value}
           placeholder='••••••••••••'
@@ -456,7 +462,7 @@ function PasswordField({
           {success ? <Ico p={ICONS.check} size={14} sw={2.5} color={T.green} /> : error ? <Ico p={ICONS.info} size={14} sw={1.75} color={T.red} /> : null}
         </div>
       </div>
-      {error ? <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{error}</p> : null}
+      {error ? <p id={`${id}-error`} role="alert" style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p> : null}
     </div>
   )
 }
@@ -470,15 +476,15 @@ function RuleItem({ met, label }: { met: boolean; label: string }) {
         gap: '5px',
         padding: '4px 10px',
         borderRadius: '100px',
-        fontSize: '11px',
+        fontSize: "13px",
         fontWeight: 600,
-        background: met ? 'rgba(9,173,112,0.1)' : 'rgba(4,53,77,0.05)',
+        background: met ? 'rgba(9,173,112,0.1)' : "var(--surface-hover)",
         color: met ? T.green : T.slate2,
         transition: 'all 0.18s ease',
         letterSpacing: '-0.005em',
       }}
     >
-      {met ? <Ico p={ICONS.check} size={9} sw={3} color={T.green} /> : <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(4,53,77,0.2)' }} />}
+      {met ? <Ico p={ICONS.check} size={9} sw={3} color={T.green} /> : <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: "var(--surface-hover)" }} />}
       {label}
     </div>
   )
@@ -489,10 +495,10 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
   const match = password.length > 0 && confirmPassword.length > 0 && password === confirmPassword
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px 14px 12px', borderRadius: '12px', background: 'rgba(4,53,77,0.025)', border: `1px solid ${T.borderFaint}` }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px 14px 12px', borderRadius: '12px', background: "var(--surface-hover)", border: `1px solid ${T.borderFaint}` }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-        <span style={{ fontSize: '12.5px', fontWeight: 600, color: T.slate, letterSpacing: '-0.01em' }}>Password Strength</span>
-        <span style={{ fontSize: '12px', fontWeight: 700, color, letterSpacing: '-0.005em' }}>{label}</span>
+        <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate, letterSpacing: '-0.01em' }}>Password Strength</span>
+        <span style={{ fontSize: "13px", fontWeight: 700, color, letterSpacing: '-0.005em' }}>{label}</span>
       </div>
 
       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
@@ -503,7 +509,7 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
               flex: 1,
               height: '4px',
               borderRadius: '100px',
-              background: idx <= score ? color : 'rgba(4,53,77,0.09)',
+              background: idx <= score ? color : "var(--surface-hover)",
               transition: 'background 0.2s ease',
             }}
           />
@@ -519,7 +525,7 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
       </div>
 
       {confirmPassword.length > 0 ? (
-        <div style={{ fontSize: '12px', color: match ? T.green : T.red, fontWeight: 600, letterSpacing: '-0.005em' }}>
+        <div style={{ fontSize: "13px", color: match ? T.green : T.red, fontWeight: 600, letterSpacing: '-0.005em' }}>
           {match ? 'Passwords match.' : 'Passwords do not match.'}
         </div>
       ) : null}
@@ -528,9 +534,34 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
 }
 
 function ResetPasswordPageContent() {
-  const searchParams = useSearchParams()
-  const token = searchParams.get('token') || ''
-  
+  const captureAction = usePortalAction()
+  const portal = recoveryPortal(usePathname())
+  const [token, setToken] = useState<string | null>(null)
+  const activeLink = useRef<string | null>(null)
+  useEffect(() => {
+    const captureLink = () => {
+      const url = new URL(window.location.href)
+      const fragment = new URLSearchParams(url.hash.slice(1))
+      const incoming = fragment.get('token') || url.searchParams.get('token')
+      if (!incoming) { setToken(value => value === null ? '' : value); return }
+      activeLink.current = incoming
+      setToken(incoming)
+      setUpdated(false); setLoading(false); setNewPassword(''); setConfirmPassword(''); setErrorKind(null); setServerError('')
+      setTouched({ newPassword: false, confirmPassword: false })
+      url.searchParams.delete('token')
+      fragment.delete('token')
+      url.hash = fragment.toString()
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+    }
+    captureLink()
+    window.addEventListener('hashchange', captureLink)
+    window.addEventListener('popstate', captureLink)
+    return () => {
+      window.removeEventListener('hashchange', captureLink)
+      window.removeEventListener('popstate', captureLink)
+    }
+  }, [])
+
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showNew, setShowNew] = useState(false)
@@ -539,6 +570,7 @@ function ResetPasswordPageContent() {
   const [loading, setLoading] = useState(false)
   const [updated, setUpdated] = useState(false)
   const [errorKind, setErrorKind] = useState<ErrorKind>(null)
+  const [serverError, setServerError] = useState('')
 
   const newId = useId()
   const confirmId = useId()
@@ -583,17 +615,27 @@ function ResetPasswordPageContent() {
     }
 
     setErrorKind(null)
+    setServerError('')
     setLoading(true)
+    const action = captureAction()
+    const submittedToken = token
 
     try {
-      await resetPassword(token, newPassword)
+      await resetPassword(submittedToken, newPassword)
+      if (!action.isCurrent() || activeLink.current !== submittedToken) return
+      clearPortalSession(action.portal); activeLink.current = ''; setToken(''); setNewPassword(''); setConfirmPassword('')
       setUpdated(true)
       setErrorKind(null)
     } catch (error) {
+      if (!action.isCurrent() || activeLink.current !== submittedToken) return
       setLoading(false)
       const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
-      
-      if (detail.includes('expired') || detail.includes('expir')) {
+
+      if (error instanceof ApiError && error.status === 429) {
+        setServerError(getLoginThrottleMessage(error) || 'Too many requests. Please wait before trying again.')
+      } else if (error instanceof ApiError && error.status === 422) {
+        setServerError(getApiErrorDetail(error) || 'Check the password requirements and try again.')
+      } else if (detail.includes('expired') || detail.includes('expir')) {
         setErrorKind('expiredToken')
       } else if (detail.includes('invalid') || detail.includes('used')) {
         setErrorKind('invalidToken')
@@ -613,7 +655,7 @@ function ResetPasswordPageContent() {
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
       <style>{`
         * { box-sizing: border-box; }
-        input::placeholder { color: rgba(4,53,77,0.3); }
+        input::placeholder { color: var(--text-muted); }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(8px); }
@@ -629,7 +671,7 @@ function ResetPasswordPageContent() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
         <div style={{ width: '100%', maxWidth: '460px' }}>
           <Link
-            href='/auth/sign-in'
+            href={portal.signIn}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -649,11 +691,11 @@ function ResetPasswordPageContent() {
           <section
             aria-live='polite'
             style={{
-              background: 'rgba(255,255,255,0.88)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(28px) saturate(200%)',
               WebkitBackdropFilter: 'blur(28px) saturate(200%)',
               borderRadius: '22px',
-              border: '1px solid rgba(255,255,255,0.9)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
               padding: '40px 40px 36px',
               animation: 'fadeUp 0.3s ease',
@@ -661,7 +703,7 @@ function ResetPasswordPageContent() {
           >
             {!updated ? (
               <>
-                {errorKind === 'invalidToken' && !token ? (
+                {token === null ? <p role='status'>Opening your recovery link…</p> : !token ? (
                   <div style={{ textAlign: 'center', padding: '20px 0' }}>
                     <div
                       style={{
@@ -680,7 +722,7 @@ function ResetPasswordPageContent() {
                     </div>
                     <h1
                       style={{
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                        fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                         fontSize: '24px',
                         fontWeight: 800,
                         color: T.navy,
@@ -692,16 +734,16 @@ function ResetPasswordPageContent() {
                       Invalid Reset Link
                     </h1>
                     <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
-                      The password reset link is missing or invalid. Please request a new password reset link to continue.
+                      The password reset link is missing or invalid. Reopen the full link from your newest reset email. Refreshing this page removes the link from memory; request a new email only if the original link has expired.
                     </p>
                     <Link
-                      href='/auth/forgot-password'
+                      href={portal.forgot}
                       style={{
                         width: '100%',
                         padding: '14px 20px',
                         borderRadius: '13px',
                         border: 'none',
-                        background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                        background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                         color: '#fff',
                         fontFamily: 'inherit',
                         fontSize: '15px',
@@ -726,7 +768,7 @@ function ResetPasswordPageContent() {
                       <div>
                         <h1
                           style={{
-                            fontFamily: "'Plus Jakarta Sans', sans-serif",
+                            fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                             fontSize: '24px',
                             fontWeight: 800,
                             color: T.navy,
@@ -735,7 +777,7 @@ function ResetPasswordPageContent() {
                             margin: '0 0 7px',
                           }}
                         >
-                          Reset Your Password
+                          {portal.resetTitle}
                         </h1>
                         <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: 0, letterSpacing: '-0.01em' }}>
                           Enter a secure new password for your Qarevo Health account.
@@ -747,7 +789,7 @@ function ResetPasswordPageContent() {
                           width: '44px',
                           height: '44px',
                           borderRadius: '13px',
-                          background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                          background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                           boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)',
                           display: 'flex',
                           alignItems: 'center',
@@ -759,6 +801,7 @@ function ResetPasswordPageContent() {
                       </div>
                     </header>
 
+                    {serverError && <p role='alert' style={{ color: 'var(--danger)' }}>{serverError}</p>}
                     {showAlert ? <AlertBanner kind={errorKind as Exclude<ErrorKind, 'mismatch' | 'weak' | null>} /> : null}
 
                     <form onSubmit={onSubmit} noValidate>
@@ -793,7 +836,7 @@ function ResetPasswordPageContent() {
 
                         <button
                           type='submit'
-                          disabled={loading || !newPassword || !confirmPassword}
+                          disabled={loading}
                           style={{
                             width: '100%',
                             padding: '14px 20px',
@@ -802,7 +845,7 @@ function ResetPasswordPageContent() {
                             background:
                               loading || !newPassword || !confirmPassword
                                 ? 'rgba(32,181,223,0.5)'
-                                : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                                : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                             color: '#fff',
                             fontFamily: 'inherit',
                             fontSize: '15px',
@@ -844,10 +887,10 @@ function ResetPasswordPageContent() {
                         </button>
 
                         <div style={{ textAlign: 'center', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <Link href='/auth/sign-in' style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
+                          <Link href={portal.signIn} style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
                             Back to Sign In
                           </Link>
-                          <Link href='/' style={{ color: T.blue, fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', letterSpacing: '-0.01em' }}>
+                          <Link href='/' style={{ color: T.link, fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', letterSpacing: '-0.01em' }}>
                             Return to Home
                           </Link>
                         </div>
@@ -877,7 +920,7 @@ function ResetPasswordPageContent() {
 
                 <h1
                   style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                     fontSize: '24px',
                     fontWeight: 800,
                     color: T.navy,
@@ -890,17 +933,17 @@ function ResetPasswordPageContent() {
                 </h1>
 
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
-                  Your password has been successfully updated. You can now securely sign in to your Qarevo Health account.
+                  Your password has been successfully updated. Your previous sessions have been signed out and the password-attempt lockout has been cleared. Continue to your sign-in portal with your new password.
                 </p>
 
                 <Link
-                  href='/auth/sign-in'
+                  href={portal.signIn}
                   style={{
                     width: '100%',
                     padding: '14px 20px',
                     borderRadius: '13px',
                     border: 'none',
-                    background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                    background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                     color: '#fff',
                     fontFamily: 'inherit',
                     fontSize: '15px',
@@ -921,29 +964,30 @@ function ResetPasswordPageContent() {
               </div>
             )}
 
-            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
                 {[
                   { icon: ICONS.lock, label: 'Secure Credentials' },
-                  { icon: ICONS.shield, label: 'Encrypted Update' },
-                  { icon: ICONS.check, label: 'HIPAA · GDPR' },
+                  { icon: ICONS.shield, label: 'Session Protection' },
+                  { icon: ICONS.check, label: 'Protected account access' },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
-                    <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          <p style={{ textAlign: 'center', fontSize: '12px', color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-            By continuing you agree to our{' '}
-            <Link href='/terms' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
+          {portal.kind === 'patient' && <RecoverySignInLinks />}
+          <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
+            Review the status of our{' '}
+            <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
               Terms
             </Link>{' '}
             and{' '}
-            <Link href='/privacy' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
+            <Link href='/privacy' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
               Privacy Policy
             </Link>
           </p>

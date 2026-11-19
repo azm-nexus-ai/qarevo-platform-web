@@ -1,19 +1,33 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useSearchParams, usePathname } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES } from '@/constants/patient-navigation'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
-import { clearAuthTokens, deleteMedicalRecord, downloadMedicalRecord, getApiErrorDetail, getMedicalRecords, getPatientHealthInfo, isAuthError, uploadMedicalRecord, type PatientHealthInfo } from '@/lib/api'
+import { deleteMedicalRecord, downloadMedicalRecord, getApiErrorDetail, getApiErrorRequestId, uploadMedicalRecord, type PatientHealthInfo } from '@/lib/api'
+import { usePatientResource } from '@/lib/use-patient-resource'
+import LabResultReviewStatus from '@/components/clinical/LabResultReviewStatus'
+import { patientLabRequestHref } from '@/lib/lab-result-review'
+import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
+import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
+import SupportReference from '@/components/ui/SupportReference'
+import SecureDocumentAccessDialog from '@/components/ui/SecureDocumentAccessDialog'
+import { validateDocumentAccess, documentPreviewType, type SecureDocumentAccess } from '@/lib/secure-document-access'
+import { usePortalAction } from '@/lib/portal-action'
+import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
+import { currentPortal } from '@/lib/portal-scope'
+import { clinicalValidationErrors } from '@/lib/clinical-instructions'
+import { medicalUploadFields, medicalRecordUploadAttempt, medicalRecordUploadReceipt, medicalRecordDeleteReceipt, MEDICAL_DOCUMENT_TYPES, MEDICAL_FILE_ACCEPT, type MedicalUploadFields, type MedicalUploadAttempt } from '@/lib/medical-record-lifecycle'
+import { consultationSummaryHref, summaryPublicationTime } from '@/lib/patient-consultation-summary'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type RecordType = 'Consultation' | 'Prescription' | 'Lab Result' | 'Diagnosis' | 'Referral' | 'Medical Document'
+type RecordType = 'Consultation' | 'Prescription' | 'Lab Request' | 'Lab Result' | 'Diagnosis' | 'Referral' | 'Medical Document'
 type RecordStatus = 'Available' | 'Pending' | 'Archived'
 
 type MedicalRecord = {
@@ -33,6 +47,15 @@ type MedicalRecord = {
   canPreview: boolean
   canDownload: boolean
   canDelete: boolean // User-uploaded can be deleted, clinical cannot
+  clinicalStatus?: string
+  sourceType?: 'medication' | 'lab-request' | 'consultation-summary'
+  sourceId?: string
+  revision?: number
+  publishedAt?: string
+  sourceHref?: string
+  resultReview?: unknown
+  reviewFileId?: string
+  uploadedBy?: 'patient' | 'care_team' | 'unknown'
 }
 
 type TimelineEvent = {
@@ -45,24 +68,26 @@ type TimelineEvent = {
 
 type PreviewState = {
   record: MedicalRecord
-  url: string | null
-  contentType: string | null
+  access: SecureDocumentAccess | null
+  expired: boolean
+  unsupported: boolean
   loading: boolean
   error: string | null
+  requestId?: string | null
 }
 
-const CATEGORIES: RecordType[] = ['Consultation', 'Prescription', 'Lab Result', 'Diagnosis', 'Referral', 'Medical Document']
+const CATEGORIES: RecordType[] = ['Consultation', 'Prescription', 'Lab Request', 'Lab Result', 'Diagnosis', 'Referral', 'Medical Document']
 
 // ─── Modals ───────────────────────────────────────────────────────────────────
 
 function ModalOverlay({ onClose, children, width = '520px' }: { onClose: () => void; children: React.ReactNode; width?: string }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div aria-hidden onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(4,53,77,0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }} />
+      <div aria-hidden onClick={onClose} style={{ position: 'absolute', inset: 0, background: "var(--surface-hover)", backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }} />
       <div
         role="dialog"
         aria-modal="true"
-        style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: width, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.float, display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}
+        style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: width, background: "var(--surface-glass)", backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.float, display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}
       >
         {children}
       </div>
@@ -71,8 +96,10 @@ function ModalOverlay({ onClose, children, width = '520px' }: { onClose: () => v
 }
 
 function normalizeRecord(value: Record<string, unknown>): MedicalRecord {
+  const publishedSummary = value.sourceType === 'consultation-summary'
   return {
     id: String(value.id ?? ''),
+    uploadedBy: value.is_patient_uploaded === true && value.is_clinical === false && value.uploaded_by === 'patient' ? 'patient' : value.is_patient_uploaded === false && value.is_clinical === true && value.uploaded_by === 'care_team' ? 'care_team' : 'unknown',
     type: (value.type as RecordType) ?? 'Medical Document',
     title: String(value.title ?? 'Medical record'),
     provider: String(value.provider ?? 'Self-Uploaded'),
@@ -80,14 +107,24 @@ function normalizeRecord(value: Record<string, unknown>): MedicalRecord {
     date: String(value.date ?? ''),
     status: (value.status as RecordStatus) ?? 'Available',
     lastUpdated: String(value.lastUpdated ?? value.last_updated ?? ''),
-    fileType: value.fileType ? String(value.fileType) : undefined,
-    fileSize: value.fileSize ? String(value.fileSize) : undefined,
-    summary: value.summary ? String(value.summary) : undefined,
-    clinicalNotes: value.clinicalNotes ? String(value.clinicalNotes) : undefined,
-    recommendations: value.recommendations ? String(value.recommendations) : undefined,
-    canPreview: Boolean(value.canPreview),
-    canDownload: Boolean(value.canDownload),
-    canDelete: Boolean(value.canDelete),
+    fileType: !publishedSummary && value.fileType ? String(value.fileType) : undefined,
+    fileSize: !publishedSummary && value.fileSize ? String(value.fileSize) : undefined,
+    summary: !publishedSummary && value.summary ? String(value.summary) : undefined,
+    clinicalNotes: !publishedSummary && value.clinicalNotes ? String(value.clinicalNotes) : undefined,
+    recommendations: !publishedSummary && value.recommendations ? String(value.recommendations) : undefined,
+    canPreview: !publishedSummary && Boolean(value.canPreview),
+    canDownload: !publishedSummary && Boolean(value.canDownload),
+    canDelete: !publishedSummary && Boolean(value.canDelete),
+    clinicalStatus: typeof value.clinicalStatus === 'string' ? value.clinicalStatus : undefined,
+    sourceType: publishedSummary ? 'consultation-summary' : value.sourceType === 'medication' || value.sourceType === 'lab-request' ? value.sourceType : undefined,
+    sourceId: typeof value.sourceId === 'string' ? value.sourceId : undefined,
+    resultReview: value.result_review,
+    reviewFileId: value.type === 'Lab Result' ? String(value.id ?? '') : typeof value.result_file_id === 'string' ? value.result_file_id : undefined,
+    revision: publishedSummary && Number.isSafeInteger(value.revision) && Number(value.revision) > 0 ? Number(value.revision) : undefined,
+    publishedAt: publishedSummary && typeof value.publishedAt === 'string' ? value.publishedAt : undefined,
+    // Navigation comes from a finite set of clinical destinations, never an arbitrary payload URL.
+    sourceHref: publishedSummary ? consultationSummaryHref(value.sourceId) : value.sourceType === 'medication' ? '/patient/prescription-care-plan'
+      : value.sourceType === 'lab-request' ? patientLabRequestHref(value.sourceId) ?? '/patient/lab-requests' : value.type === 'Lab Result' ? patientLabRequestHref(value.lab_request_id) : undefined,
   }
 }
 
@@ -101,196 +138,99 @@ function normalizeTimeline(value: Record<string, unknown>): TimelineEvent {
   }
 }
 
-async function openRecordDownload(record: MedicalRecord) {
-  const response = await downloadMedicalRecord(record.id, { disposition: 'attachment' })
-  window.open(response.download_url, '_blank', 'noopener,noreferrer')
+function DownloadRecordPicker({ records, onChoose, onClose }: { records: MedicalRecord[]; onChoose: (record: MedicalRecord) => void; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    dialog.showModal()
+    return () => { if (dialog.open) dialog.close() }
+  }, [])
+  const close = () => { if (dialogRef.current?.open) dialogRef.current.close(); onClose() }
+  return <dialog ref={dialogRef} aria-label='Choose a record to download' onCancel={event => { event.preventDefault(); close() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
+    <h2 className='portal-h2'>Choose a record to download</h2><p className='mb-5 text-sm leading-6 text-muted'>Request access to one attachment at a time. Files are downloaded individually.</p>
+    <div className='grid gap-3'>{records.map(record => <PortalButton key={record.id} type='button' style={{ flexDirection: 'column', alignItems: 'flex-start', whiteSpace: 'normal', overflowWrap: 'anywhere', textAlign: 'left' }} onClick={() => { if (dialogRef.current?.open) dialogRef.current.close(); onChoose(record) }}><span className='font-semibold'>{record.title}</span><span className='mt-1 text-xs font-normal text-secondary'>{record.date} · {record.provider} · {record.fileType || 'Attachment'}{record.fileSize ? ` · ${record.fileSize}` : ''}</span></PortalButton>)}</div>
+    <div className='mt-5 flex justify-end'><PortalButton autoFocus type='button' onClick={close}>Close record selection</PortalButton></div>
+  </dialog>
 }
 
-function UploadRecordModal({ onClose, onUpload, onError }: { onClose: () => void; onUpload: (r: MedicalRecord) => void; onError: (message: string) => void }) {
-  const [docName, setDocName] = useState('')
-  const [docType, setDocType] = useState<RecordType>('Medical Document')
-  const [provider, setProvider] = useState('')
-  const [date, setDate] = useState('')
-  const [desc, setDesc] = useState('')
-  const [file, setFile] = useState<File | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
-  const [progress, setProgress] = useState(0)
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0]
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        onError('Please choose a file that is 5MB or smaller.')
-        e.target.value = ''
-        setFile(null)
-        return
-      }
-      setFile(selectedFile)
-    }
+function UploadRecordModal({ onClose, onResolved }: { onClose: () => void; onResolved: (message: string) => void }) {
+  const captureAction = usePortalAction(), scope = readAccountScope('patient'), path = usePathname(), query = useSearchParams().toString()
+  const dialog = useRef<HTMLDialogElement>(null), pending = useRef(false), attempt = useRef<MedicalUploadAttempt | null>(null), controller = useRef<AbortController | null>(null)
+  const [values, setValues] = useState<MedicalUploadFields>({ title: '', record_type: 'Medical Document', description: '', provider_name: '', record_date: '' })
+  const [file, setFile] = useState<File | null>(null), [busy, setBusy] = useState(false), [errors, setErrors] = useState<Record<string, string>>({}), [error, setError] = useState(''), [requestId, setRequestId] = useState<string | null>(null), [changed, setChanged] = useState(false)
+  const validContext = () => !!scope && scope === readAccountScope('patient') && currentPortal() === 'patient' && window.location.pathname === path && new URLSearchParams(window.location.search).toString() === query
+  useEffect(() => { const node = dialog.current; node?.showModal(); return () => { controller.current?.abort(); attempt.current = null; node?.close() } }, [])
+  const close = () => { if (!pending.current && validContext()) { dialog.current?.close(); onClose() } }
+  const update = (field: keyof MedicalUploadFields, value: string) => { if (!pending.current && validContext()) { setValues(previous => ({ ...previous, [field]: value })); setErrors(previous => ({ ...previous, [field]: '' })); setChanged(true) } }
+  const changeFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (pending.current || !validContext()) return
+    const selected = event.target.files?.[0]; if (!selected) return
+    const validation = medicalUploadFields(values, selected).errors.file
+    setErrors(previous => ({ ...previous, file: validation || '' })); setChanged(true)
+    if (validation) { event.target.value = ''; setFile(null) } else setFile(selected)
   }
-
-  const handleUpload = async () => {
-    if (!docName || !file || !date) return
-    setIsUploading(true)
-
+  const upload = async () => {
+    if (pending.current || !validContext()) return
+    const validation = medicalUploadFields(values, file); setErrors(validation.errors as Record<string, string>); setError(''); setRequestId(null)
+    if (Object.keys(validation.errors).length || !file) return
+    pending.current = true; setBusy(true); const action = captureAction(), cancel = new AbortController(); controller.current = cancel
+    const isCurrent = () => action.isCurrent() && validContext() && !cancel.signal.aborted
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('title', docName)
-      formData.append('record_type', docType)
-      formData.append('description', desc || '')
-      if (provider) formData.append('provider_name', provider)
-      formData.append('record_date', date)
-
-      const response = await uploadMedicalRecord(formData)
-
-      const uploadedRecord = response.record && typeof response.record === 'object'
-        ? normalizeRecord(response.record)
-        : {
-            id: response.id,
-            type: docType,
-            title: docName,
-            provider: provider || 'Self-Uploaded',
-            specialty: 'General',
-            date: new Date(response.uploaded_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-            status: 'Available' as const,
-            lastUpdated: 'Just now',
-            summary: desc,
-            fileType: file.name.split('.').pop()?.toUpperCase() || 'FILE',
-            fileSize: (response.file_size / 1024).toFixed(1) + ' KB',
-            canPreview: ['PDF', 'PNG', 'JPG', 'JPEG'].includes((file.name.split('.').pop() || '').toUpperCase()),
-            canDownload: true,
-            canDelete: true,
-          }
-
-      onUpload(uploadedRecord)
-
-      setProgress(100)
-      setTimeout(() => {
-        onClose()
-      }, 500)
-    } catch (error) {
-      console.error('Upload failed:', error)
-      onError(getApiErrorDetail(error) ?? 'Upload failed. Please try again.')
-      setProgress(0)
-    } finally {
-      setIsUploading(false)
-    }
+      const savedAttempt = await medicalRecordUploadAttempt(attempt.current, JSON.stringify([action.scope, path, query]), file, validation.fields)
+      if (!isCurrent()) return
+      attempt.current = savedAttempt; setChanged(false)
+      const body = new FormData(); body.set('file', file); body.set('upload_id', savedAttempt.uploadId)
+      for (const [field, value] of Object.entries(validation.fields)) body.set(field, value)
+      const response = await uploadMedicalRecord(body, cancel.signal)
+      if (!isCurrent()) return
+      const receipt = medicalRecordUploadReceipt(response.upload_receipt, savedAttempt.uploadId)
+      const record = response.record && typeof response.record === 'object' && !Array.isArray(response.record) ? response.record : null
+      if (!receipt || response.id !== receipt.fileId || (receipt.available ? record?.id !== receipt.fileId : response.record !== null)) throw new Error('The saved upload could not be confirmed. Retry this same file and details to recover the existing attempt.')
+      attempt.current = null
+      onResolved(!receipt.available ? 'The earlier upload was recorded but is no longer available. It has not been restored.' : receipt.replayed ? 'This record was already uploaded. No second file was created.' : 'Medical record uploaded and confirmed.')
+    } catch (failure) {
+      if (isCurrent()) { setErrors(clinicalValidationErrors(failure)); setError(getApiErrorDetail(failure) || 'The upload outcome could not be confirmed. Retry the same file and details safely.'); setRequestId(getApiErrorRequestId(failure)) }
+    } finally { pending.current = false; if (controller.current === cancel) controller.current = null; if (action.isCurrent() && validContext()) setBusy(false) }
   }
-
-  return (
-    <ModalOverlay onClose={onClose} width="600px">
-      <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(4,53,77,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Upload Medical Record</h2>
-        <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: '1px solid rgba(4,53,77,0.12)', borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
-      </div>
-
-      <div style={{ padding: '28px', overflowY: 'auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
-          <div>
-            <label style={{ display: 'block', margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: T.slate2 }}>Document Name *</label>
-            <input type="text" value={docName} onChange={e => setDocName(e.target.value)} placeholder="e.g. Past Medical History" style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: T.slate2 }}>Record Type</label>
-            <select value={docType} onChange={e => setDocType(e.target.value as RecordType)} style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none' }}>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: T.slate2 }}>Date of Record *</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: T.slate2 }}>Provider / Facility</label>
-            <input type="text" value={provider} onChange={e => setProvider(e.target.value)} placeholder="e.g. City Hospital" style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none' }} />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: T.slate2 }}>Description (Optional)</label>
-          <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '14px', outline: 'none', resize: 'none' }} />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: T.slate2 }}>File Upload *</label>
-          <div style={{ border: '2px dashed rgba(32,181,223,0.3)', borderRadius: '16px', padding: '30px', textAlign: 'center', background: 'rgba(32,181,223,0.04)' }}>
-            {!file ? (
-              <>
-                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(32,181,223,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', color: T.blue }}>
-                  <Ico p={ICONS.search} size={24} sw={1.5} />
-                </div>
-                <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Click or drag file to this area</p>
-                <p style={{ margin: '0 0 16px', fontSize: '12px', color: T.slate }}>Supported formats: PDF, DOC, DOCX, PNG, JPG (Max 5MB)</p>
-                <label style={{ display: 'inline-block', padding: '10px 20px', borderRadius: '10px', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
-                  Browse Files
-                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" onChange={handleFileChange} style={{ display: 'none' }} />
-                </label>
-              </>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#fff', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.1)', textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(32,181,223,0.1)', color: T.blue, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ico p={ICONS.shield} size={20} sw={1.5} />
-                  </div>
-                  <div>
-                    <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{file.name}</p>
-                    <p style={{ margin: 0, fontSize: '11px', color: T.slate }}>{(file.size / 1024 / 1024).toFixed(1)} MB</p>
-                  </div>
-                </div>
-                <button onClick={() => setFile(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.red, fontSize: '12px', fontWeight: 700 }}>Remove</button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {isUploading && (
-          <div style={{ marginTop: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: T.navy }}>Uploading...</span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: T.blue }}>{progress}%</span>
-            </div>
-            <div style={{ height: '6px', borderRadius: '999px', background: 'rgba(4,53,77,0.08)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${progress}%`, background: T.blue, transition: 'width 0.2s ease' }} />
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div style={{ padding: '20px 28px', borderTop: '1px solid rgba(4,53,77,0.08)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-        <HoverBtn onClick={onClose} base={{ padding: '0 20px', minHeight: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(4,53,77,0.14)', color: T.navy, fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }} on={{ background: 'rgba(255,255,255,0.98)', transform: 'translateY(-1px)' }}>Cancel</HoverBtn>
-        <HoverBtn onClick={handleUpload} base={{ padding: '0 24px', minHeight: '44px', borderRadius: '12px', background: (docName && file && date) ? `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(4,53,77,0.1)', border: 'none', color: (docName && file && date) ? '#fff' : T.slate2, fontSize: '13.5px', fontWeight: 700, cursor: (docName && file && date) ? 'pointer' : 'not-allowed', boxShadow: (docName && file && date) ? '0 5px 16px rgba(32,181,223,0.3)' : 'none' }} on={(docName && file && date && !isUploading) ? { transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.34)' } : {}}>
-          {isUploading ? 'Uploading...' : 'Upload Record'}
-        </HoverBtn>
-      </div>
-    </ModalOverlay>
-  )
+  const field = (key: keyof MedicalUploadFields, label: string, required: boolean, max: number, multiline = false) => <div><label htmlFor={'medical-upload-' + key} className='block text-sm font-semibold text-ink'>{label} ({required ? 'Required' : 'Optional'})</label>{multiline ? <textarea id={'medical-upload-' + key} className='mt-2 min-h-24 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' maxLength={max} rows={3} value={values[key]} onChange={event => update(key, event.target.value)} aria-required={required} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key] ? 'medical-upload-' + key + '-error' : undefined} /> : <input autoFocus={key === 'title'} type={key === 'record_date' ? 'date' : 'text'} id={'medical-upload-' + key} className='mt-2 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' maxLength={max} value={values[key]} onChange={event => update(key, event.target.value)} aria-required={required} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key] ? 'medical-upload-' + key + '-error' : undefined} />}{errors[key] && <p id={'medical-upload-' + key + '-error'} role='alert' className='mt-2 text-sm text-danger'>{errors[key]}</p>}</div>
+  return <dialog ref={dialog} aria-labelledby='medical-upload-heading' onCancel={event => { event.preventDefault(); close() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
+    <h2 id='medical-upload-heading' className='portal-h2'>Upload Medical Record</h2><p className='mb-5 text-sm leading-7 text-secondary'>Required fields are labelled. Supported formats: PDF, DOC, DOCX, PNG, JPEG and WEBP. Maximum 3 MB per file in this development environment.</p>
+    <form noValidate onSubmit={event => { event.preventDefault(); void upload() }} aria-busy={busy}><fieldset disabled={busy} className='grid min-w-0 gap-5'>
+      <div className='grid min-w-0 gap-5 sm:grid-cols-2'>{field('title', 'Document Name', true, 255)}<div><label htmlFor='medical-upload-record_type' className='block text-sm font-semibold text-ink'>Record Type (Required)</label><select aria-required='true' id='medical-upload-record_type' className='mt-2 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' value={values.record_type} onChange={event => update('record_type', event.target.value)}>{MEDICAL_DOCUMENT_TYPES.map(type => <option key={type}>{type}</option>)}</select>{errors.record_type && <p role='alert' className='mt-2 text-sm text-danger'>{errors.record_type}</p>}</div>{field('record_date', 'Date of Record', true, 10)}{field('provider_name', 'Provider / Facility', false, 255)}</div>{field('description', 'Description', false, 5000, true)}
+      <div><label className='block text-sm font-semibold text-ink' htmlFor='medical-upload-file'>File (Required)</label><input id='medical-upload-file' type='file' aria-required='true' accept={MEDICAL_FILE_ACCEPT} aria-label='Choose medical document' aria-invalid={Boolean(errors.file)} aria-describedby='medical-upload-help medical-upload-file-error' className='mt-2 block min-h-11 w-full min-w-0 rounded-xl border border-theme bg-surface px-3 py-2 text-sm text-ink' onChange={changeFile} /><p id='medical-upload-help' className='mt-2 break-all text-sm text-secondary'>{file ? file.name : 'Choose a file of 3 MB or smaller.'}</p>{errors.file && <p id='medical-upload-file-error' role='alert' className='mt-2 text-sm text-danger'>{errors.file}</p>}</div>
+      {error && <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='text-sm leading-7 text-danger'>{error}</p><p className='mt-2 text-sm leading-7 text-secondary'>Retry keeps the same attempt when the file and submitted details are unchanged. Changed content or details create a new upload intent. If you close this dialog, review saved records before uploading again.</p><SupportReference requestId={requestId} /></div>}
+      <div className='flex flex-wrap gap-3'><PortalButton type='submit' tone='primary'>{error && attempt.current && !changed ? 'Retry upload' : changed && attempt.current ? 'Upload changed record' : 'Upload Record'}</PortalButton><PortalButton type='button' onClick={close}>Cancel</PortalButton></div>
+    </fieldset>{busy && <p role='status' className='mt-4 text-sm leading-7 text-secondary'>Uploading and confirming your record… Keep this dialog open.</p>}</form>
+  </dialog>
 }
 
 function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRequest }: { record: MedicalRecord; onClose: () => void; onPreview: () => void; onDownload: () => void; onDeleteRequest: () => void }) {
   return (
     <ModalOverlay onClose={onClose} width="640px">
-      <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(4,53,77,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ padding: '24px 28px', borderBottom: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <span style={{ display: 'inline-block', padding: '4px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '11px', fontWeight: 700, marginBottom: '8px' }}>{record.type}</span>
-          <h2 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{record.title}</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>{record.date} • {record.provider} ({record.specialty})</p>
+          <span style={{ display: 'inline-block', padding: '4px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, marginBottom: '8px' }}>{record.type}</span>
+          <h2 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{record.title}</h2>
+          <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>{record.date} • {record.uploadedBy === 'patient' ? 'Reported provider: ' : ''}{record.provider} ({record.specialty})</p>
         </div>
-        <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: '1px solid rgba(4,53,77,0.12)', borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
+        <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: "1px solid var(--border)", borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
       </div>
 
       <div style={{ padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {(record.type === 'Lab Result' || record.sourceType === 'lab-request') && <LabResultReviewStatus review={record.resultReview} fileId={record.reviewFileId} />}
+        {record.sourceType === 'consultation-summary' && <div><h3 className='portal-h3'>Published consultation record</h3><p className='text-sm leading-7 text-secondary'>{record.revision ? `Last recorded revision ${record.revision}. ` : ''}{summaryPublicationTime(record.publishedAt) ? `Published ${summaryPublicationTime(record.publishedAt)}. ` : 'Publication time is available in the summary. '}Open the summary for the latest clinician-published version.</p>{!record.sourceHref && <p className='mt-3 text-sm text-secondary'>This summary link is unavailable. Refresh records or open the consultation in your appointments.</p>}</div>}
         {record.summary && (
           <div>
             <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Summary</h3>
-            <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(4,53,77,0.03)', border: '1px solid rgba(4,53,77,0.06)', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>{record.summary}</div>
+            <div style={{ padding: '16px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>{record.summary}</div>
           </div>
         )}
 
         {record.clinicalNotes && (
           <div>
             <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Clinical Notes</h3>
-            <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(4,53,77,0.03)', border: '1px solid rgba(4,53,77,0.06)', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>{record.clinicalNotes}</div>
+            <div style={{ padding: '16px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", fontSize: '14px', color: T.slate, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{record.clinicalNotes}</div>
           </div>
         )}
 
@@ -304,22 +244,22 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
         {record.fileType && (
           <div>
             <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Attachments</h3>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '12px', background: '#fff', border: '1px solid rgba(4,53,77,0.1)', boxShadow: '0 2px 8px rgba(4,53,77,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '12px', background: "var(--surface)", border: "1px solid var(--border)", boxShadow: '0 2px 8px rgba(4,53,77,0.04)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(32,181,223,0.1)', color: T.blue, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(32,181,223,0.1)', color: T.link, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Ico p={ICONS.shield} size={22} sw={1.5} />
                 </div>
                 <div>
                   <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{record.title}.{record.fileType.toLowerCase()}</p>
-                  <p style={{ margin: 0, fontSize: '12px', color: T.slate }}>{record.fileType} Document • {record.fileSize}</p>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{record.fileType} Document • {record.fileSize}</p>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {record.canPreview && (
-                  <HoverBtn onClick={onPreview} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.14)', background: '#fff', color: T.navy, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }} on={{ background: 'rgba(255,255,255,0.9)', transform: 'translateY(-1px)' }}>Preview</HoverBtn>
+                  <HoverBtn onClick={onPreview} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>Preview</HoverBtn>
                 )}
                 {record.canDownload && (
-                  <HoverBtn onClick={onDownload} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: 'none', background: T.blue, color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>Download</HoverBtn>
+                  <HoverBtn onClick={onDownload} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: 'none', background: T.blue, color: '#fff', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>Download</HoverBtn>
                 )}
               </div>
             </div>
@@ -327,144 +267,109 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
         )}
       </div>
 
-      <div style={{ padding: '20px 28px', borderTop: '1px solid rgba(4,53,77,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ padding: '20px 28px', borderTop: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           {record.canDelete && (
             <button onClick={onDeleteRequest} style={{ background: 'none', border: 'none', color: T.red, fontSize: '13px', fontWeight: 700, cursor: 'pointer', padding: '8px 0', textDecoration: 'underline' }}>Delete Record</button>
           )}
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <HoverBtn onClick={onClose} base={{ padding: '0 20px', minHeight: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(4,53,77,0.14)', color: T.navy, fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }} on={{ background: 'rgba(255,255,255,0.98)', transform: 'translateY(-1px)' }}>Close</HoverBtn>
+          {record.sourceHref && <Link href={record.sourceHref} className='inline-flex min-h-11 items-center rounded-xl border border-theme bg-surface px-4 py-2 text-sm font-semibold text-ink hover:bg-surface-subtle'>{record.sourceType === 'consultation-summary' ? 'View consultation summary' : record.sourceType === 'medication' ? 'View medication instructions' : 'View lab request'}</Link>}
+          <HoverBtn onClick={onClose} base={{ padding: '0 20px', minHeight: '44px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)", color: T.navy, fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>Close</HoverBtn>
         </div>
       </div>
     </ModalOverlay>
   )
 }
 
-function PreviewModal({ preview, onClose, onDownload }: { preview: PreviewState; onClose: () => void; onDownload: () => void }) {
-  const { record, url, contentType, loading, error } = preview
-  const fileLabel = record.fileType ? `${record.title}.${record.fileType.toLowerCase()}` : record.title
-  const isImage = Boolean(contentType?.startsWith('image/'))
-  const isPdf = contentType === 'application/pdf' || record.fileType === 'PDF'
-
+function PreviewModal({ preview, dialog, onClose, onDownload, onRetry, onEmbedError }: { preview: PreviewState; dialog: React.RefObject<HTMLDialogElement | null>; onClose: () => void; onDownload: () => void; onRetry: () => void; onEmbedError: (access: SecureDocumentAccess) => void }) {
+  const { record, access, loading, error } = preview
+  const format = access ? documentPreviewType(access.contentType) : null
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '22px', background: 'rgba(4,53,77,0.35)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-      <div aria-hidden onClick={onClose} style={{ position: 'absolute', inset: 0 }} />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${record.title} preview`}
-        style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '900px', maxHeight: '88vh', background: '#fff', borderRadius: '18px', boxShadow: '0 24px 60px rgba(4,53,77,0.28)', border: '1px solid rgba(255,255,255,0.9)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close preview"
-          style={{
-            position: 'absolute',
-            top: '14px',
-            right: '14px',
-            zIndex: 3,
-            width: '40px',
-            height: '40px',
-            borderRadius: '12px',
-            border: '1px solid rgba(4,53,77,0.12)',
-            background: 'rgba(255,255,255,0.96)',
-            color: T.navy,
-            fontSize: '24px',
-            lineHeight: 1,
-            cursor: 'pointer',
-            boxShadow: '0 8px 20px rgba(4,53,77,0.12)',
-          }}
-        >
-          ✕
-        </button>
-        <div style={{ padding: '20px 72px 18px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '14px', borderBottom: '1px solid rgba(4,53,77,0.08)', background: 'rgba(255,255,255,0.96)' }}>
-          <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 800, color: T.navy }}>{fileLabel}</h2>
-            <p style={{ margin: 0, fontSize: '12px', color: T.slate }}>{record.date} • {record.provider}</p>
-          </div>
-          {record.canDownload && (
-            <button
-              onClick={onDownload}
-              style={{ background: 'rgba(32,181,223,0.1)', border: '1px solid rgba(32,181,223,0.18)', borderRadius: '10px', color: T.blue, padding: '0 14px', minHeight: '36px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
-            >
-              Download
-            </button>
-          )}
-        </div>
-        <div style={{ minHeight: '420px', maxHeight: 'calc(88vh - 74px)', background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'auto' }}>
-          {loading ? (
-            <p style={{ margin: 0, fontSize: '14px', color: T.slate, fontWeight: 700 }}>Loading secure preview...</p>
-          ) : error ? (
-            <div style={{ padding: '28px', textAlign: 'center', maxWidth: '460px' }}>
-              <Ico p={ICONS.shield} size={48} sw={1.4} color="rgba(239,68,68,0.35)" />
-              <p style={{ margin: '16px 0 8px', fontSize: '15px', color: T.navy, fontWeight: 800 }}>Preview unavailable</p>
-              <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{error}</p>
-            </div>
-          ) : url && isImage ? (
-            <img src={url} alt={record.title} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#fff' }} />
-          ) : url && isPdf ? (
-            <iframe title={record.title} src={url} style={{ width: '100%', minHeight: '70vh', border: 0, background: '#fff' }} />
-          ) : (
-            <div style={{ padding: '32px', width: '100%', maxWidth: '700px' }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: '18px', fontWeight: 800, color: T.navy }}>{record.title}</h3>
-              <p style={{ margin: '0 0 16px', fontSize: '13px', color: T.slate }}>{record.provider} • {record.date}</p>
-              <div style={{ display: 'grid', gap: '14px' }}>
-                {[record.summary, record.clinicalNotes, record.recommendations].filter(Boolean).map((text, index) => (
-                  <p key={`${record.id}-preview-text-${index}`} style={{ margin: 0, padding: '14px', borderRadius: '12px', background: 'rgba(4,53,77,0.03)', border: '1px solid rgba(4,53,77,0.08)', color: T.slate, fontSize: '14px', lineHeight: 1.65 }}>{text}</p>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+    const node = dialog.current
+    node?.showModal()
+    // React autoFocus can run before a native dialog becomes focusable.
+    node?.querySelector<HTMLButtonElement>('[data-preview-close]')?.focus()
+    return () => { if (node?.open) node.close() }
+  }, [dialog])
+  return <dialog ref={dialog} aria-label={`${record.title} preview`} onCancel={event => { event.preventDefault(); onClose() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-4xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
+    <div className='flex flex-col gap-4 border-b border-theme pb-5 sm:flex-row sm:items-start sm:justify-between'><div data-preview-heading-panel className='w-full min-w-0 sm:w-auto sm:flex-1'><h2 className='portal-h2 break-words'>{access?.filename || record.title}</h2><p className='text-sm leading-6 text-secondary'>{record.date} · {record.uploadedBy === 'patient' ? 'Reported provider: ' : ''}{record.provider}</p></div><div className='flex w-full shrink-0 flex-wrap gap-3 sm:w-auto'>{record.canDownload && <PortalButton type='button' onClick={onDownload}>Download</PortalButton>}<PortalButton data-preview-close type='button' aria-label='Close preview' onClick={onClose}>Close</PortalButton></div></div>
+    <div className='min-w-0 pt-5' aria-busy={loading}>
+      {loading ? <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm text-secondary'>Loading secure preview…</p>
+        : preview.expired ? <div role='status' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-7'>This preview link has expired. Request fresh access to view this file again.</p><PortalButton type='button' onClick={onRetry}>Request fresh preview access</PortalButton></div>
+        : error ? <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-3 font-semibold'>Preview unavailable</p><p className='text-sm leading-7'>{error}</p><SupportReference requestId={preview.requestId} /><PortalButton type='button' onClick={onRetry}>Retry preview</PortalButton></div>
+        : preview.unsupported ? <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm leading-7 text-secondary'>This file format cannot be previewed safely here. Use Download to request an attachment link.</p>
+        : access && format ? <><p className='mb-4 text-sm leading-7 text-secondary'>Preview access expires at <time dateTime={new Date(access.expiresAt).toISOString()}>{new Date(access.expiresAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>. Use Download if your browser cannot display this file.</p>{format === 'image' ? <img src={access.downloadUrl} referrerPolicy='no-referrer' alt={record.title} onError={() => onEmbedError(access)} className='mx-auto max-h-[65dvh] max-w-full object-contain' /> : <iframe src={access.downloadUrl} referrerPolicy='no-referrer' title={record.title} onError={() => onEmbedError(access)} className='h-[65dvh] min-h-64 w-full rounded-xl border border-theme bg-surface' />}</>
+        : <div className='grid gap-4'><h3 className='portal-h3'>{record.title}</h3>{[record.summary, record.clinicalNotes, record.recommendations].filter(Boolean).map((text, index) => <p key={`${record.id}-preview-text-${index}`} className='break-words rounded-xl border border-theme bg-surface-subtle p-4 text-sm leading-7 text-ink'>{text}</p>)}</div>}
     </div>
-  )
+  </dialog>
 }
 
-function DeleteRecordModal({ record, onClose, onConfirm }: { record: MedicalRecord; onClose: () => void; onConfirm: () => void }) {
-  return (
-    <ModalOverlay onClose={onClose} width="460px">
-      <div style={{ padding: '24px 28px' }}>
-        <h2 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy }}>Delete medical record?</h2>
-        <p style={{ margin: '0 0 22px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>This will remove &quot;{record.title}&quot; from your medical records. This action cannot be undone.</p>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          <HoverBtn onClick={onClose} base={{ padding: '0 18px', minHeight: '42px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.14)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>Cancel</HoverBtn>
-          <HoverBtn onClick={onConfirm} base={{ padding: '0 18px', minHeight: '42px', borderRadius: '12px', border: 'none', background: T.red, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>Delete</HoverBtn>
-        </div>
-      </div>
-    </ModalOverlay>
-  )
+function DeleteRecordModal({ record, busy, error, requestId, onClose, onConfirm }: { record: MedicalRecord; busy: boolean; error: string; requestId: string | null; onClose: () => void; onConfirm: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  useEffect(() => { const node = dialog.current; node?.showModal(); return () => { node?.close() } }, [])
+  return <dialog ref={dialog} aria-labelledby='medical-delete-title' onCancel={event => { event.preventDefault(); if (!busy) onClose() }} className='m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'><h2 id='medical-delete-title' className='portal-h2'>Delete medical record?</h2><p className='mb-5 break-words text-sm leading-7 text-secondary'>Remove “{record.title}” from your record list. You cannot restore it here. This does not confirm permanent storage erasure. Previously issued file links may remain usable until their existing expiry (up to one hour).</p>{error && <div role='alert' className='mb-4 rounded-xl border border-theme bg-surface-subtle p-3'><p className='text-sm leading-7 text-danger'>{error}</p><p className='mt-2 text-sm leading-7 text-secondary'>Retry this same record to confirm its removal. Previously saved removal is safe to confirm again.</p><SupportReference requestId={requestId} /></div>}{busy && <p role='status' className='mb-4 text-sm text-secondary'>Confirming record removal…</p>}<div className='flex flex-wrap gap-3'><PortalButton autoFocus type='button' disabled={busy} onClick={onClose}>Cancel</PortalButton><PortalButton tone='danger' disabled={busy} onClick={onConfirm}>{busy ? 'Deleting…' : error ? 'Retry delete' : 'Delete'}</PortalButton></div></dialog>
 }
 
 // ─── Main Page Inner ───────────────────────────────────────────────────────────
 
 function MedicalRecordsPageInner() {
+  const captureAction = usePortalAction()
+  const accountScope = readAccountScope('patient'), renderedPath = usePathname(), renderedQuery = useSearchParams().toString()
+  const isCurrentRecordsPage = () => !!accountScope && accountScope === readAccountScope('patient') && currentPortal() === 'patient' && window.location.pathname === renderedPath && new URLSearchParams(window.location.search).toString() === renderedQuery
+  const [removedIds, setRemovedIds] = useState<string[]>([])
+  const deleting = useRef<AbortController | null>(null)
+  const [deleteBusy, setDeleteBusy] = useState(false), [deleteError, setDeleteError] = useState(''), [deleteRequestId, setDeleteRequestId] = useState<string | null>(null)
+  useEffect(() => () => { deleting.current?.abort(); deleting.current = null }, [])
+  const previewVersion = useRef(0)
+  const previewDialog = useRef<HTMLDialogElement>(null)
+  const previewRequest = useRef<{ version: number; fileId: string; action: ReturnType<typeof captureAction>; controller: AbortController; pending: boolean; path: string; query: string } | null>(null)
+  const previewRestoreTarget = useRef<HTMLButtonElement | null>(null)
+  const downloadNonce = useRef(0)
+  const handledRecordLink = useRef<string | null>(null)
+  const downloadRestoreTarget = useRef<HTMLButtonElement | null>(null)
+  const downloadScopeRef = useRef<string | null>(null)
+  const [downloadSelection, setDownloadSelection] = useState<{ recordId: string; scope: string | null; nonce: number } | null>(null)
+  const [downloadPickerScope, setDownloadPickerScope] = useState<string | null>(null)
+  const closeDownload = useCallback(() => {
+    setDownloadSelection(null)
+    const target = downloadRestoreTarget.current
+    if (target?.isConnected && readAccountScope('patient') === downloadScopeRef.current) target.focus()
+  }, [])
+  const loadDownload = useCallback(() => {
+    if (!downloadSelection || downloadSelection.scope !== accountScope || accountScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return Promise.reject(new Error('Your account or page changed. Reload the records before requesting access.'))
+    return downloadMedicalRecord(downloadSelection.recordId, { disposition: 'attachment' })
+  }, [downloadSelection, accountScope, renderedPath, renderedQuery])
   const searchParams = useSearchParams()
-  const router = useRouter()
   const recordId = searchParams.get('recordId')
-  const [records, setRecords] = useState<MedicalRecord[]>([])
-  const [timeline, setTimeline] = useState<TimelineEvent[]>([])
+  const resource = usePatientResource<{records?: Record<string, unknown>[]; timeline?: Record<string, unknown>[]}>(
+    '/api/v1/patient/medical-records', false, {refreshOnFocus: true, refreshIntervalMs: 30000},
+  )
+  const records = useMemo(() => (Array.isArray(resource.data?.records) ? resource.data.records : []).filter(value => value && typeof value === 'object' && !Array.isArray(value) && (value.sourceType !== 'consultation-summary' || String(value.clinicalStatus).toLowerCase() === 'published')).map(normalizeRecord).filter(record => !removedIds.includes(record.id)), [resource.data, removedIds])
+  const timeline = useMemo(() => (Array.isArray(resource.data?.timeline) ? resource.data.timeline : []).map(normalizeTimeline), [resource.data])
+  const loadingRecords = resource.loading
   const [activeTab, setActiveTab] = useState<RecordType | 'All Records'>('All Records')
   const [search, setSearch] = useState('')
-  const [loadingRecords, setLoadingRecords] = useState(true)
 
   // Modals
   const [isUploading, setIsUploading] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null)
   const [previewState, setPreviewState] = useState<PreviewState | null>(null)
+  const closePreview = useCallback(() => {
+    ++previewVersion.current; const request = previewRequest.current; request?.controller.abort(); previewRequest.current = null; if (previewDialog.current?.open) previewDialog.current.close(); setPreviewState(null)
+    if (request?.action.isCurrent() && currentPortal() === 'patient' && window.location.pathname === request.path && new URLSearchParams(window.location.search).toString() === request.query && previewRestoreTarget.current?.isConnected) previewRestoreTarget.current.focus()
+  }, [])
+  useEffect(() => () => { ++previewVersion.current; previewRequest.current?.controller.abort(); previewRequest.current = null }, [])
   const [deleteRecord, setDeleteRecord] = useState<MedicalRecord | null>(null)
   const [toast, setToast] = useState<string | null>(null)
-  const [healthInfo, setHealthInfo] = useState<PatientHealthInfo | null>(null)
+  const healthResource = usePatientResource<PatientHealthInfo>('/api/v1/patient/settings/health-info')
+  const healthInfo = healthResource.data
+  // Dialogs are resolved from the current account's current index on every render.
+  // A logout, account change or deleted order cannot leave an old patient's data open.
+  const activeRecord = selectedRecord ? records.find(record => record.id === selectedRecord.id) : null
+  const activePreviewRecord = previewState && !resource.error ? records.find(record => record.id === previewState.record.id && record.canPreview && record.canDownload === previewState.record.canDownload && record.fileType === previewState.record.fileType && record.reviewFileId === previewState.record.reviewFileId && record.status === previewState.record.status) : null
+  const activeDeleteRecord = isCurrentRecordsPage() && deleteRecord?.canDelete ? deleteRecord : null
+  const activeDownloadRecord = downloadSelection?.scope === accountScope ? records.find(record => record.id === downloadSelection.recordId && record.canDownload) : null
 
   // Filters
   const filteredRecords = useMemo(() => {
@@ -489,135 +394,126 @@ function MedicalRecordsPageInner() {
     [records],
   )
 
+  const pickerOpen = Boolean(downloadPickerScope && downloadPickerScope === accountScope && downloadableRecords.length > 0)
+  const documentAccessOpen = Boolean(activeDownloadRecord) || pickerOpen
+
   const showToast = useCallback((message: string) => {
     setToast(message)
     window.setTimeout(() => setToast(null), 4000)
   }, [])
 
-  const loadRecords = useCallback(async () => {
-    try {
-      const payload = await getMedicalRecords()
-      setRecords((payload.records ?? []).map((item) => normalizeRecord(item)))
-      setTimeline((payload.timeline ?? []).map((item) => normalizeTimeline(item)))
-    } catch (error) {
-      console.error('Failed to load medical records:', error)
-      if (isAuthError(error)) {
-        clearAuthTokens()
-        router.replace('/auth/sign-in')
-        return
-      }
-      setRecords([])
-      setTimeline([])
-      setToast(getApiErrorDetail(error) ?? 'Medical records could not be loaded.')
-    } finally {
-      setLoadingRecords(false)
-    }
-  }, [router])
-
-  const loadHealthInfo = useCallback(async () => {
-    try {
-      setHealthInfo(await getPatientHealthInfo())
-    } catch (error) {
-      console.error('Failed to load health info:', error)
-      if (isAuthError(error)) {
-        clearAuthTokens()
-        router.replace('/auth/sign-in')
-      }
-    }
-  }, [router])
-
-  const handleUploadComplete = (newRecord: MedicalRecord) => {
-    setRecords((current) => [newRecord, ...current.filter((item) => item.id !== newRecord.id)])
-    setIsUploading(false)
-    showToast('Medical record uploaded successfully.')
-    void loadRecords()
+  const handleUploadComplete = (message: string) => { if (!isCurrentRecordsPage()) return; setIsUploading(false); showToast(message); resource.retry() }
+  const openUpload = () => { if (!isCurrentRecordsPage() || deleting.current) return; closePreview(); setSelectedRecord(null); setDownloadSelection(null); setDownloadPickerScope(null); setIsUploading(true) }
+  const chooseDelete = (record: MedicalRecord) => {
+    if (!isCurrentRecordsPage() || isUploading || deleting.current || !records.some(item => item.id === record.id && item.canDelete)) return
+    closePreview(); setSelectedRecord(null); setDownloadSelection(null); setDownloadPickerScope(null); setDeleteError(''); setDeleteRequestId(null); setDeleteRecord(record)
   }
 
-  const handleDeleteRecord = (recordId: string) => {
-    setRecords((current) => current.filter(r => r.id !== recordId))
-    setTimeline((current) => current.filter((item) => item.recordId !== recordId))
-    showToast('Medical record deleted successfully.')
+  const handleDownloadRecord = (record: MedicalRecord) => {
+    if (!isCurrentRecordsPage()) return
+    if (isUploading || activeDeleteRecord) { showToast('Close the upload or delete dialog before downloading a record.'); return }
+    if (!record.canDownload || !accountScope || accountScope !== readAccountScope('patient') || !records.some(item => item.id === record.id && item.canDownload)) return
+    if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`
+    closePreview(); setSelectedRecord(null); setDownloadPickerScope(null)
+    const card = Array.from(document.querySelectorAll<HTMLElement>('[data-medical-record-id]')).find(element => element.dataset.medicalRecordId === record.id)
+    const target = card?.querySelector<HTMLButtonElement>('button.medical-record-download') ?? document.querySelector<HTMLButtonElement>('button.record-download-selector')
+    downloadRestoreTarget.current = target
+    downloadScopeRef.current = accountScope
+    target?.focus()
+    const next = { recordId: record.id, scope: accountScope, nonce: ++downloadNonce.current }
+    setDownloadSelection(current => current?.scope === accountScope && records.some(item => item.id === current.recordId && item.canDownload) ? current : next)
   }
 
-  const handleDownloadRecords = async () => {
-    if (downloadableRecords.length === 0) {
-      showToast('No downloadable file attachments are available yet.')
-      return
-    }
-
-    try {
-      for (const record of downloadableRecords) {
-        await openRecordDownload(record)
-      }
-    } catch (error) {
-      console.error('Download failed:', error)
-      showToast(getApiErrorDetail(error) ?? 'One or more downloads failed. Please try downloading the record individually.')
-    }
-  }
-
-  const handleDownloadRecord = async (record: MedicalRecord) => {
-    try {
-      await openRecordDownload(record)
-    } catch (error) {
-      console.error('Download failed:', error)
-      showToast(getApiErrorDetail(error) ?? 'Download failed. Please try again.')
+  const handleDownloadRecords = () => {
+    if (!isCurrentRecordsPage()) return
+    if (isUploading || activeDeleteRecord) { showToast('Close the upload or delete dialog before downloading a record.'); return }
+    if (downloadableRecords.length === 0) { showToast('No downloadable file attachments are available yet.'); return }
+    if (downloadableRecords.length === 1) { handleDownloadRecord(downloadableRecords[0]); return }
+    if (accountScope && accountScope === readAccountScope('patient')) {
+      if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`
+      closePreview(); setSelectedRecord(null); setDownloadPickerScope(accountScope)
     }
   }
 
   const handlePreviewRecord = async (record: MedicalRecord) => {
-    setPreviewState({ record, url: null, contentType: null, loading: Boolean(record.canDownload && record.fileType), error: null })
+    if (!isCurrentRecordsPage() || !record.canPreview || !records.some(item => item.id === record.id && item.canPreview)) return
+    if (previewRequest.current?.pending && previewRequest.current.fileId === record.id) return
+    previewRequest.current?.controller.abort()
+    const version = ++previewVersion.current, action = captureAction(), controller = new AbortController()
+    previewRequest.current = { version, fileId: record.id, action, controller, path: renderedPath, query: renderedQuery, pending: Boolean(record.canDownload && record.fileType) }
+    if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`
+    const card = Array.from(document.querySelectorAll<HTMLElement>('[data-medical-record-id]')).find(element => element.dataset.medicalRecordId === record.id)
+    previewRestoreTarget.current = card?.querySelector<HTMLButtonElement>('button.medical-record-preview') ?? null
+    previewRestoreTarget.current?.focus()
+    setPreviewState({ record, access: null, expired: false, unsupported: false, loading: Boolean(record.canDownload && record.fileType), error: null })
     if (!record.canDownload || !record.fileType) return
-
+    const isCurrent = () => version === previewVersion.current && action.isCurrent() && isCurrentRecordsPage() && !controller.signal.aborted
+    const requestedAt = Date.now()
     try {
-      const response = await downloadMedicalRecord(record.id, { disposition: 'inline' })
-      setPreviewState({ record, url: response.download_url, contentType: response.content_type, loading: false, error: null })
+      const response = await downloadMedicalRecord(record.id, { disposition: 'inline', signal: controller.signal })
+      if (!isCurrent()) return
+      const access = validateDocumentAccess(response, record.id, requestedAt, Date.now(), 3600)
+      const supported = Boolean(documentPreviewType(access.contentType))
+      setPreviewState({ record, access: supported ? access : null, expired: false, unsupported: !supported, loading: false, error: null })
     } catch (error) {
-      console.error('Preview failed:', error)
-      setPreviewState({
-        record,
-        url: null,
-        contentType: null,
-        loading: false,
-        error: getApiErrorDetail(error) ?? 'We could not open the secure preview for this record.',
-      })
+      if (!isCurrent()) return
+      setPreviewState({ record, access: null, expired: false, unsupported: false, loading: false,
+        error: getApiErrorDetail(error) ?? 'We could not open the secure preview for this record.', requestId: getApiErrorRequestId(error) })
+    } finally { if (previewRequest.current?.version === version) previewRequest.current.pending = false }
+  }
+
+  useEffect(() => {
+    if (!previewState) return
+    if (!activePreviewRecord) { closePreview(); return }
+    const access = previewState.access, request = previewRequest.current
+    const check = (event?: Event) => {
+      const expiredSession = event?.type === 'qarevo:auth-session-expired' && (event as CustomEvent<{ portal?: string }>).detail?.portal === 'patient'
+      if (!request?.action.isCurrent() || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery || expiredSession) { closePreview(); return }
+      if (access && Date.now() >= access.expiresAt) setPreviewState(current => current?.access === access ? { ...current, access: null, expired: true } : current)
     }
+    const timer = access ? window.setTimeout(check, Math.max(0, access.expiresAt - Date.now())) : null
+    window.addEventListener(ACCOUNT_CHANGED, check); window.addEventListener('storage', check); window.addEventListener('focus', check); window.addEventListener('qarevo:auth-session-expired', check); document.addEventListener('visibilitychange', check)
+    return () => { if (timer !== null) clearTimeout(timer); window.removeEventListener(ACCOUNT_CHANGED, check); window.removeEventListener('storage', check); window.removeEventListener('focus', check); window.removeEventListener('qarevo:auth-session-expired', check); document.removeEventListener('visibilitychange', check) }
+  }, [previewState, activePreviewRecord, closePreview, renderedPath, renderedQuery])
+
+  const previewEmbedError = (access: SecureDocumentAccess) => {
+    const request = previewRequest.current
+    if (!request?.action.isCurrent() || !isCurrentRecordsPage()) return
+    setPreviewState(current => current?.access === access ? { ...current, access: null, error: 'The file could not be displayed. Retry preview or use Download.', requestId: null } : current)
   }
 
   const handleDeleteConfirmed = async () => {
-    if (!deleteRecord) return
+    if (!deleteRecord?.canDelete || !isCurrentRecordsPage() || deleting.current) return
+    const targetId = deleteRecord.id, action = captureAction(), cancel = new AbortController(); deleting.current = cancel; setDeleteBusy(true); setDeleteError(''); setDeleteRequestId(null)
+    const isCurrent = () => action.isCurrent() && isCurrentRecordsPage() && !cancel.signal.aborted
     try {
-      await deleteMedicalRecord(deleteRecord.id)
-      handleDeleteRecord(deleteRecord.id)
-      setDeleteRecord(null)
-      setSelectedRecord(null)
-    } catch (error) {
-      console.error('Delete failed:', error)
-      showToast(getApiErrorDetail(error) ?? 'Delete failed. Please try again.')
-    }
+      const response = await deleteMedicalRecord(targetId, cancel.signal)
+      if (!isCurrent()) return
+      const receipt = medicalRecordDeleteReceipt(response, targetId)
+      if (!receipt) throw new Error('The removal outcome could not be confirmed. Retry this same record safely.')
+      setRemovedIds(previous => previous.includes(targetId) ? previous : [...previous, targetId]); closePreview(); setDeleteRecord(null); setSelectedRecord(null); setDownloadSelection(null); setDownloadPickerScope(null)
+      resource.retry(); showToast(receipt.replayed ? 'This record was already removed. No second removal was recorded.' : 'Medical record removed from your portal.')
+    } catch (failure) { if (isCurrent()) { setDeleteError(getApiErrorDetail(failure) || 'The removal outcome could not be confirmed. Retry this same record.'); setDeleteRequestId(getApiErrorRequestId(failure)) } }
+    finally { if (deleting.current === cancel) deleting.current = null; if (action.isCurrent() && isCurrentRecordsPage()) setDeleteBusy(false) }
   }
 
   useEffect(() => {
+    const linkKey = `${accountScope}:${recordId}`
+    if (!recordId || handledRecordLink.current === linkKey || activeDownloadRecord || downloadPickerScope === accountScope) return
+
+    const intent = previewVersion.current
     const timer = window.setTimeout(() => {
-      void loadRecords()
-      void loadHealthInfo()
-    }, 0)
-
-    return () => window.clearTimeout(timer)
-  }, [loadHealthInfo, loadRecords])
-
-  useEffect(() => {
-    if (!recordId) return
-
-    const timer = window.setTimeout(() => {
+      if (intent !== previewVersion.current || handledRecordLink.current === linkKey) return
       const record = records.find((item) => item.id === recordId)
       if (record) {
+        handledRecordLink.current = linkKey
         setActiveTab('All Records')
         setSelectedRecord(record)
       }
     }, 0)
 
     return () => window.clearTimeout(timer)
-  }, [recordId, records])
+  }, [recordId, records, accountScope, activeDownloadRecord, downloadPickerScope])
 
   return (
     <PatientPortalShell
@@ -626,16 +522,18 @@ function MedicalRecordsPageInner() {
       description="Securely access and manage your healthcare records, consultation history, and clinical documents in one place."
       headerActions={
         <>
+          <PortalButton disabled={resource.refreshing} onClick={resource.retry}>{resource.refreshing ? 'Refreshing records…' : 'Refresh records'}</PortalButton>
           <HoverBtn
             onClick={handleDownloadRecords}
-            base={{ minHeight: '44px', padding: '0 16px', borderRadius: '12px', border: '1px solid rgba(4,53,77,0.15)', background: 'rgba(255,255,255,0.9)', color: T.navy, fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(4,53,77,0.06)', whiteSpace: 'nowrap' }}
-            on={{ background: 'rgba(255,255,255,0.98)', transform: 'translateY(-1px)' }}
+            className='record-download-selector'
+            base={{ minHeight: '44px', padding: '0 16px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(4,53,77,0.06)', whiteSpace: 'nowrap' }}
+            on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
           >
-            Download Records
+            Choose a record to download
           </HoverBtn>
           <HoverBtn
-            onClick={() => setIsUploading(true)}
-            base={{ minHeight: '44px', padding: '0 18px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 16px rgba(32,181,223,0.3)', whiteSpace: 'nowrap' }}
+            onClick={openUpload}
+            base={{ minHeight: '44px', padding: '0 18px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 16px rgba(32,181,223,0.3)', whiteSpace: 'nowrap' }}
             on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.34)' }}
           >
             Upload Medical Record
@@ -645,38 +543,39 @@ function MedicalRecordsPageInner() {
       rightRail={
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Important Medical Info */}
-          <div style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', padding: '20px', boxShadow: Sh.card }}>
+          <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(20px)', borderRadius: '20px', border: "1px solid var(--border)", padding: '20px', boxShadow: Sh.card }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Important Medical Info</h3>
+            {healthResource.error && <div role='alert'><p>Medical profile could not be loaded.</p><PortalButton onClick={healthResource.retry}>Retry medical profile</PortalButton></div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(4,53,77,0.06)', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: "1px solid var(--border)", paddingBottom: '8px' }}>
                 <span style={{ fontSize: '13px', color: T.slate }}>Blood Group</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: healthInfo?.blood_type ? T.red : T.slate2 }}>{healthInfo?.blood_type || 'Not set'}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: healthInfo?.blood_type ? T.red : T.slate2 }}>{healthInfo?.blood_type || (healthResource.loading ? 'Loading…' : healthResource.error ? 'Unavailable' : 'Not set')}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(4,53,77,0.06)', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: "1px solid var(--border)", paddingBottom: '8px' }}>
                 <span style={{ fontSize: '13px', color: T.slate }}>Known Allergies</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.allergies || 'Not recorded'}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.allergies || (healthResource.loading ? 'Loading…' : healthResource.error ? 'Unavailable' : 'Not recorded')}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(4,53,77,0.06)', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: "1px solid var(--border)", paddingBottom: '8px' }}>
                 <span style={{ fontSize: '13px', color: T.slate }}>Conditions</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.medical_conditions || 'Not recorded'}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.medical_conditions || (healthResource.loading ? 'Loading…' : healthResource.error ? 'Unavailable' : 'Not recorded')}</span>
               </div>
             </div>
           </div>
 
           {/* Timeline */}
-          <div style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', padding: '20px', boxShadow: Sh.card }}>
+          <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(20px)', borderRadius: '20px', border: "1px solid var(--border)", padding: '20px', boxShadow: Sh.card }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Care Timeline</h3>
             {timeline.length === 0 ? (
               <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>Your uploaded records and clinical documents will build this timeline.</p>
             ) : (
               <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px', paddingLeft: '8px' }}>
-                <div style={{ position: 'absolute', left: '12px', top: '10px', bottom: '10px', width: '2px', background: 'rgba(4,53,77,0.08)' }} />
+                <div style={{ position: 'absolute', left: '12px', top: '10px', bottom: '10px', width: '2px', background: "var(--surface-hover)" }} />
                 {timeline.map((evt, idx) => (
                   <div key={evt.id} style={{ position: 'relative', paddingLeft: '24px' }}>
-                    <div style={{ position: 'absolute', left: '0', top: '4px', width: '10px', height: '10px', borderRadius: '50%', background: idx === 0 ? T.blue : 'rgba(255,255,255,1)', border: `2px solid ${idx === 0 ? T.blue : 'rgba(4,53,77,0.2)'}`, boxShadow: idx === 0 ? '0 0 0 3px rgba(32,181,223,0.2)' : 'none' }} />
-                    <p style={{ margin: '0 0 2px', fontSize: '11px', fontWeight: 700, color: T.slate2 }}>{evt.date}</p>
+                    <div style={{ position: 'absolute', left: '0', top: '4px', width: '10px', height: '10px', borderRadius: '50%', background: idx === 0 ? T.blue : 'rgba(255,255,255,1)', border: `2px solid ${idx === 0 ? T.blue : "var(--border)"}`, boxShadow: idx === 0 ? '0 0 0 3px rgba(32,181,223,0.2)' : 'none' }} />
+                    <p style={{ margin: '0 0 2px', fontSize: "13px", fontWeight: 700, color: T.slate2 }}>{evt.date}</p>
                     <p style={{ margin: '0 0 2px', fontSize: '13.5px', fontWeight: 700, color: T.navy }}>{evt.event}</p>
-                    <p style={{ margin: 0, fontSize: '12px', color: T.slate }}>{evt.provider}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{evt.provider}</p>
                   </div>
                 ))}
               </div>
@@ -689,8 +588,8 @@ function MedicalRecordsPageInner() {
               <Ico p={ICONS.lock} size={16} sw={2} color={T.green} />
               <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>Secure & Private</h4>
             </div>
-            <p style={{ margin: '0 0 12px', fontSize: '12px', color: T.slate, lineHeight: 1.6 }}>Your medical records are encrypted and stored securely. Only authorized professionals can access them.</p>
-            <Link href={PATIENT_ROUTES.settings} style={{ fontSize: '12px', fontWeight: 700, color: T.blue, textDecoration: 'none' }}>Privacy Settings →</Link>
+            <p style={{ margin: '0 0 12px', fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>Your medical records are encrypted and stored securely. Only authorized professionals can access them.</p>
+            <Link href={PATIENT_ROUTES.settings} style={{ fontSize: "13px", fontWeight: 700, color: T.link, textDecoration: 'none' }}>Privacy Settings →</Link>
           </div>
         </div>
       }
@@ -719,15 +618,15 @@ function MedicalRecordsPageInner() {
           <button
             key={item.label}
             onClick={() => setActiveTab(item.filter as RecordType | 'All Records')}
-            style={{ textAlign: 'left', padding: '16px', borderRadius: '16px', border: `1px solid ${activeTab === item.filter ? 'rgba(32,181,223,0.3)' : 'rgba(4,53,77,0.08)'}`, background: activeTab === item.filter ? 'rgba(32,181,223,0.06)' : 'rgba(255,255,255,0.85)', boxShadow: activeTab === item.filter ? '0 4px 12px rgba(32,181,223,0.1)' : '0 2px 8px rgba(4,53,77,0.04)', cursor: 'pointer', transition: 'all 0.15s ease' }}
+            style={{ textAlign: 'left', padding: '16px', borderRadius: '16px', border: `1px solid ${activeTab === item.filter ? 'rgba(32,181,223,0.3)' : "var(--border)"}`, background: activeTab === item.filter ? 'rgba(32,181,223,0.06)' : "var(--surface-glass)", boxShadow: activeTab === item.filter ? '0 4px 12px rgba(32,181,223,0.1)' : '0 2px 8px rgba(4,53,77,0.04)', cursor: 'pointer', transition: 'all 0.15s ease' }}
           >
-            <p style={{ margin: '0 0 6px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: activeTab === item.filter ? T.blue : T.slate2 }}>{item.label}</p>
+            <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, textTransform: 'uppercase', color: activeTab === item.filter ? T.link : T.slate2 }}>{item.label}</p>
             <p style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: T.navy }}>{item.value}</p>
           </button>
         ))}
       </div>
 
-      <div style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.9)', boxShadow: Sh.card, padding: '20px' }}>
+      <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(20px)', borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '20px' }}>
 
         {/* Search & Tabs */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
@@ -740,7 +639,7 @@ function MedicalRecordsPageInner() {
               placeholder="Search by document name, physician, or specialty..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', height: '46px', borderRadius: '14px', border: '1px solid rgba(4,53,77,0.12)', padding: '0 16px 0 42px', fontSize: '14px', color: T.navy, background: '#fff', outline: 'none' }}
+              style={{ width: '100%', height: '46px', borderRadius: '14px', border: "1px solid var(--border)", padding: '0 16px 0 42px', fontSize: '14px', color: T.navy, background: "var(--surface)", outline: 'none' }}
             />
           </div>
 
@@ -752,9 +651,9 @@ function MedicalRecordsPageInner() {
                 style={{
                   padding: '8px 16px',
                   borderRadius: '999px',
-                  border: `1px solid ${activeTab === cat ? T.blue : 'rgba(4,53,77,0.1)'}`,
+                  border: `1px solid ${activeTab === cat ? T.blue : "var(--border)"}`,
                   background: activeTab === cat ? 'rgba(32,181,223,0.1)' : 'transparent',
-                  color: activeTab === cat ? T.blue : T.slate,
+                  color: activeTab === cat ? T.link : T.slate,
                   fontSize: '13px',
                   fontWeight: activeTab === cat ? 700 : 500,
                   cursor: 'pointer',
@@ -768,14 +667,15 @@ function MedicalRecordsPageInner() {
         </div>
 
         {/* Record List */}
+        {resource.error && <div role='alert' className='mb-4 rounded-xl border border-theme bg-surface-subtle p-4 text-ink'><p>{resource.errorMessage}</p><SupportReference requestId={resource.errorRequestId} /><PortalButton onClick={resource.retry}>Retry medical records</PortalButton></div>}
         <div className="mr-card-grid">
           {loadingRecords ? (
-            <div style={{ padding: '48px 24px', textAlign: 'center', background: 'rgba(4,53,77,0.02)', borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.1)' }}>
-              <p style={{ margin: 0, fontSize: '14px', color: T.slate }}>Loading medical records...</p>
+            <div style={{ padding: '48px 24px', textAlign: 'center', background: "var(--surface-hover)", borderRadius: '16px', border: "1px dashed var(--border)" }}>
+              <p role='status' style={{ margin: 0, fontSize: '14px', color: T.slate }}>Loading medical records...</p>
             </div>
-          ) : filteredRecords.length === 0 ? (
-            <div style={{ padding: '48px 24px', textAlign: 'center', background: 'rgba(4,53,77,0.02)', borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.1)' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'rgba(32,181,223,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: T.blue }}>
+          ) : resource.error ? null : filteredRecords.length === 0 ? (
+            <div style={{ padding: '48px 24px', textAlign: 'center', background: "var(--surface-hover)", borderRadius: '16px', border: "1px dashed var(--border)" }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'rgba(32,181,223,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: T.link }}>
                 <Ico p={ICONS.search} size={24} sw={1.5} />
               </div>
               <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700, color: T.navy }}>{search ? 'No records match your search' : 'No medical records yet'}</h3>
@@ -783,36 +683,43 @@ function MedicalRecordsPageInner() {
                 {search ? 'Try adjusting your search terms or filters.' : 'Your consultation summaries, prescriptions, lab results, and other healthcare documents will appear here.'}
               </p>
               {search ? (
-                <HoverBtn onClick={() => { setSearch(''); setActiveTab('All Records') }} base={{ padding: '0 20px', minHeight: '40px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.15)', background: '#fff', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>Clear Filters</HoverBtn>
+                <HoverBtn onClick={() => { setSearch(''); setActiveTab('All Records') }} base={{ padding: '0 20px', minHeight: '40px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>Clear Filters</HoverBtn>
               ) : (
-                <HoverBtn onClick={() => setIsUploading(true)} base={{ padding: '0 20px', minHeight: '40px', borderRadius: '10px', border: 'none', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>Upload Medical Record</HoverBtn>
+                <HoverBtn onClick={openUpload} base={{ padding: '0 20px', minHeight: '40px', borderRadius: '10px', border: 'none', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>Upload Medical Record</HoverBtn>
               )}
             </div>
           ) : (
             filteredRecords.map(record => (
-              <div key={record.id} style={{ display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: '16px', border: '1px solid rgba(4,53,77,0.08)', background: '#fff', boxShadow: '0 2px 8px rgba(4,53,77,0.03)', transition: 'all 0.15s ease' }}>
+              <div key={record.id} data-medical-record-id={record.id} style={{ display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface)", boxShadow: '0 2px 8px rgba(4,53,77,0.03)', transition: 'all 0.15s ease' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.blue }}>{record.type}</span>
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: T.slate2 }}>{record.date}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, padding: '3px 8px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link }}>{record.type}</span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2 }}>{record.date}</span>
+                      <ClinicalStatusBadge status={record.clinicalStatus ?? record.status} domain={record.sourceType === 'medication' ? 'medication' : record.sourceType === 'lab-request' ? 'lab-request' : 'record'} />
                     </div>
                     <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 800, color: T.navy }}>{record.title}</h3>
-                    <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>{record.provider} <span style={{ color: T.slate2 }}>• {record.specialty}</span></p>
+                    <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>{record.uploadedBy === 'patient' ? 'Reported provider: ' : ''}{record.provider} <span style={{ color: T.slate2 }}>• {record.specialty}</span></p>
                   </div>
                 </div>
+                {!record.sourceType && (record.canDownload || record.canDelete || record.fileType) && <p className='mb-3 text-sm font-semibold text-secondary'>{record.uploadedBy === 'patient' ? 'Patient-supplied document' : record.uploadedBy === 'care_team' ? 'Care-team document' : 'Document source unavailable'}</p>}
+                {record.sourceType === 'consultation-summary' && <p className='mb-3 text-sm leading-6 text-secondary'>{record.revision ? `Last recorded revision ${record.revision}. ` : ''}{summaryPublicationTime(record.publishedAt) ? `Published ${summaryPublicationTime(record.publishedAt)}.` : 'Open the summary for its publication details.'}</p>}
+                {(record.type === 'Lab Result' || record.sourceType === 'lab-request') && <div className='mb-3'><LabResultReviewStatus review={record.resultReview} fileId={record.reviewFileId} /></div>}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 'auto' }}>
+                  {record.sourceType === 'consultation-summary' && record.sourceHref && <Link href={record.sourceHref} className='portal-button portal-button-primary q-button q-button-primary'>View consultation summary</Link>}
+                  {record.sourceType === 'consultation-summary' && !record.sourceHref && <p className='text-sm leading-6 text-secondary'>This summary link is unavailable. Refresh records or open your appointments.</p>}
                   <HoverBtn
-                    onClick={() => setSelectedRecord(record)}
-                    base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.15)', background: '#fff', color: T.navy, fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 4px rgba(4,53,77,0.02)' }}
-                    on={{ background: 'rgba(255,255,255,0.9)', transform: 'translateY(-1px)' }}
+                    onClick={() => { if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`; closePreview(); setSelectedRecord(record) }}
+                    base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 4px rgba(4,53,77,0.02)' }}
+                    on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
                   >
                     View Details
                   </HoverBtn>
                   {record.canPreview && (
                     <HoverBtn
                       onClick={() => void handlePreviewRecord(record)}
-                      base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: 'none', background: 'rgba(32,181,223,0.1)', color: T.blue, fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                      className='medical-record-preview'
+                      base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: 'none', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}
                       on={{ background: 'rgba(32,181,223,0.15)', transform: 'translateY(-1px)' }}
                     >
                       Preview {record.fileType ? `(${record.fileType})` : ''}
@@ -820,9 +727,11 @@ function MedicalRecordsPageInner() {
                   )}
                   {record.canDownload && (
                     <HoverBtn
-                      onClick={() => void handleDownloadRecord(record)}
-                      base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: '1px solid rgba(4,53,77,0.1)', background: 'transparent', color: T.slate, fontSize: '12.5px', fontWeight: 600, cursor: 'pointer' }}
-                      on={{ background: 'rgba(4,53,77,0.03)', color: T.navy, transform: 'translateY(-1px)' }}
+                      onClick={() => handleDownloadRecord(record)}
+                      className='medical-record-download'
+                      ariaLabel={`Download ${record.title}`}
+                      base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: 'transparent', color: T.slate, fontSize: "13px", fontWeight: 600, cursor: 'pointer' }}
+                      on={{ background: "var(--surface-hover)", color: T.navy, transform: 'translateY(-1px)' }}
                     >
                       Download
                     </HoverBtn>
@@ -834,22 +743,24 @@ function MedicalRecordsPageInner() {
         </div>
       </div>
 
-      {isUploading && <UploadRecordModal onClose={() => setIsUploading(false)} onUpload={handleUploadComplete} onError={showToast} />}
-      {selectedRecord && (
+      {downloadPickerScope && downloadPickerScope === accountScope && downloadableRecords.length > 0 && <DownloadRecordPicker records={downloadableRecords} onChoose={handleDownloadRecord} onClose={() => setDownloadPickerScope(null)} />}
+      {activeDownloadRecord && downloadSelection && <SecureDocumentAccessDialog key={`${downloadSelection.scope}:${downloadSelection.recordId}:${downloadSelection.nonce}`} documentTitle={activeDownloadRecord.title} documentKind='Medical record' expectedFileId={activeDownloadRecord.id} maxLifetimeSeconds={3600} loadDocument={loadDownload} onClose={closeDownload} />}
+      {isUploading && <UploadRecordModal onClose={() => { if (isCurrentRecordsPage()) setIsUploading(false) }} onResolved={handleUploadComplete} />}
+      {!documentAccessOpen && !isUploading && !activeDeleteRecord && activeRecord && (
         <RecordDetailsModal
-          record={selectedRecord}
+          record={activeRecord}
           onClose={() => setSelectedRecord(null)}
-          onPreview={() => { void handlePreviewRecord(selectedRecord); setSelectedRecord(null) }}
-          onDownload={() => void handleDownloadRecord(selectedRecord)}
-          onDeleteRequest={() => setDeleteRecord(selectedRecord)}
+          onPreview={() => { void handlePreviewRecord(activeRecord); setSelectedRecord(null) }}
+          onDownload={() => void handleDownloadRecord(activeRecord)}
+          onDeleteRequest={() => chooseDelete(activeRecord)}
         />
       )}
-      {previewState && <PreviewModal preview={previewState} onClose={() => setPreviewState(null)} onDownload={() => void handleDownloadRecord(previewState.record)} />}
-      {deleteRecord && <DeleteRecordModal record={deleteRecord} onClose={() => setDeleteRecord(null)} onConfirm={() => void handleDeleteConfirmed()} />}
+      {!documentAccessOpen && !isUploading && !activeDeleteRecord && previewState && activePreviewRecord && <PreviewModal dialog={previewDialog} preview={{...previewState, record: activePreviewRecord}} onClose={closePreview} onDownload={() => void handleDownloadRecord(activePreviewRecord)} onRetry={() => void handlePreviewRecord(activePreviewRecord)} onEmbedError={previewEmbedError} />}
+      {!isUploading && !documentAccessOpen && activeDeleteRecord && <DeleteRecordModal record={activeDeleteRecord} busy={deleteBusy} error={deleteError} requestId={deleteRequestId} onClose={() => { if (!deleting.current && isCurrentRecordsPage()) setDeleteRecord(null) }} onConfirm={() => void handleDeleteConfirmed()} />}
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(15,158,119,0.22)', boxShadow: '0 8px 28px rgba(4,53,77,0.14)', color: T.navy, fontSize: '13.5px', fontWeight: 600 }}>
+        <div role='status' aria-live='polite' style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', borderRadius: '14px', background: "var(--surface-glass)", backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(15,158,119,0.22)', boxShadow: '0 8px 28px rgba(4,53,77,0.14)', color: T.navy, fontSize: '13.5px', fontWeight: 600 }}>
           <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(15,158,119,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Ico p={ICONS.check} size={13} sw={2.2} color={T.green} />
           </span>
@@ -860,10 +771,9 @@ function MedicalRecordsPageInner() {
   )
 }
 
-export default function PatientMedicalRecordsPage() {
-  return (
-    <Suspense>
-      <MedicalRecordsPageInner />
-    </Suspense>
-  )
+const subscribeMedicalAccount = (changed: () => void) => { window.addEventListener(ACCOUNT_CHANGED, changed); window.addEventListener('storage', changed); return () => { window.removeEventListener(ACCOUNT_CHANGED, changed); window.removeEventListener('storage', changed) } }
+function MedicalRecordsRoute() {
+  const path = usePathname(), query = useSearchParams().toString(), scope = useSyncExternalStore(subscribeMedicalAccount, () => readAccountScope('patient'), () => null)
+  return <MedicalRecordsPageInner key={JSON.stringify([scope, path, query])} />
 }
+export default function PatientMedicalRecordsPage() { return <Suspense fallback={<p role='status'>Loading medical records…</p>}><MedicalRecordsRoute /></Suspense> }

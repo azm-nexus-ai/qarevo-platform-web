@@ -8,19 +8,21 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
-import { createEmergencyContact, getApiErrorDetail, getPatientSettings, updateProfile } from '@/lib/api'
+import { getApiErrorDetail, getPatientSettings } from '@/lib/api'
+import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
+import { getOnboarding, saveContactInformation, GERMAN_STATES, type ContactInformation } from '@/lib/patient-onboarding'
+import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
+import { createAccountDraftStorage } from '@/lib/account-storage'
 
 const LEFT_BG = [
   'radial-gradient(ellipse 80% 60% at 18% 12%,  rgba(32,181,223,0.32) 0%, transparent 52%)',
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 const STORAGE_KEY = 'qarevo.onboarding.contact-information.v1'
-const SIGNUP_STORAGE_KEY = 'qarevo.auth.signup.v1'
-const PERSONAL_INFO_STORAGE_KEY = 'qarevo.onboarding.personal-information.v1'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 type ContactMethod = 'Phone Call' | 'SMS' | 'Email' | 'WhatsApp' | ''
@@ -47,7 +49,7 @@ const INITIAL_FORM: ContactForm = {
   primaryPhone: '',
   alternativePhone: '',
   email: '',
-  country: '',
+  country: 'Germany',
   state: '',
   city: '',
   address: '',
@@ -60,43 +62,11 @@ const INITIAL_FORM: ContactForm = {
   emergencyEmail: '',
 }
 
-const COUNTRY_CODES: Record<string, string> = {
-  Nigeria: '+234',
-  Ghana: '+233',
-  Kenya: '+254',
-  'South Africa': '+27',
-  'United Kingdom': '+44',
-  'United States': '+1',
-  Canada: '+1',
-  France: '+33',
-  Germany: '+49',
-  India: '+91',
-}
-
-const COUNTRY_OPTIONS = ['Nigeria', 'Ghana', 'Kenya', 'South Africa', 'United Kingdom', 'United States', 'Canada', 'France', 'Germany', 'India', 'Other']
-
-const STATE_OPTIONS: Record<string, string[]> = {
-  Nigeria: ['Lagos', 'Abuja FCT', 'Oyo', 'Rivers', 'Kano'],
-  Ghana: ['Greater Accra', 'Ashanti', 'Western', 'Northern'],
-  Kenya: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru'],
-  'South Africa': ['Gauteng', 'Western Cape', 'KwaZulu-Natal'],
-  'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
-  'United States': ['California', 'Texas', 'New York', 'Florida'],
-  Canada: ['Ontario', 'British Columbia', 'Quebec', 'Alberta'],
-  France: ['Ile-de-France', 'Provence-Alpes-Cote d’Azur', 'Occitanie'],
-  Germany: ['Berlin', 'Bavaria', 'Hamburg', 'Hesse'],
-  India: ['Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu'],
-  Other: [],
-}
-
-function formatPhone(input: string, country: string) {
-  const prefix = COUNTRY_CODES[country] || ''
-  const digits = input.replace(/[^\d+]/g, '')
-
-  if (!digits) return prefix ? `${prefix} ` : ''
-  if (digits.startsWith('+')) return digits
-  if (prefix && !digits.startsWith(prefix.replace('+', ''))) return `${prefix} ${digits}`
-  return digits
+const COUNTRY_CODES: Record<string, string> = { Germany: '+49' }
+const COUNTRY_OPTIONS = ['Germany']
+const STATE_OPTIONS: Record<string, string[]> = { Germany: GERMAN_STATES }
+function formatPhone(input: string, _country: string) {
+  return input
 }
 
 function JourneyVisual() {
@@ -201,11 +171,11 @@ function LeftPanel() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         <JourneyVisual />
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
+          <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
             Care stays within reach.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>We’ll know how to support you.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Your contact details and emergency information help us communicate clearly and respond quickly when it matters most.
           </p>
         </div>
@@ -223,7 +193,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -235,7 +205,7 @@ function LeftPanel() {
 function SectionHeader({ title, body }: { title: string; body: string }) {
   return (
     <div style={{ marginBottom: '12px' }}>
-      <h2 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>{title}</h2>
+      <h2 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>{title}</h2>
       <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6, letterSpacing: '-0.01em' }}>{body}</p>
     </div>
   )
@@ -243,11 +213,13 @@ function SectionHeader({ title, body }: { title: string; body: string }) {
 
 export default function ContactInformationPage() {
   const router = useRouter()
+  const [draftStorage] = useState(createAccountDraftStorage)
+  const [draftReady, setDraftReady] = useState(false)
   const [form, setForm] = useState<ContactForm>(INITIAL_FORM)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [savedTick, setSavedTick] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('Progress autosaves as you type')
+  const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
@@ -255,43 +227,37 @@ export default function ContactInformationPage() {
   const [showOptionalEmergency, setShowOptionalEmergency] = useState(false)
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY)
-      const signupRaw = window.localStorage.getItem(SIGNUP_STORAGE_KEY)
-      const personalRaw = window.localStorage.getItem(PERSONAL_INFO_STORAGE_KEY)
-
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        queueMicrotask(() => setForm({ ...INITIAL_FORM, ...parsed }))
-        return
-      }
-
-      const signup = signupRaw ? (JSON.parse(signupRaw) as { email?: string; country?: string; phone?: string }) : null
-      const personal = personalRaw ? (JSON.parse(personalRaw) as { fullName?: string }) : null
-
-      queueMicrotask(() => {
-        setForm((prev) => ({
-          ...prev,
-          email: signup?.email || '',
-          country: signup?.country || '',
-          primaryPhone: signup?.phone || '',
-          emergencyName: personal?.fullName || '',
-        }))
-      })
-    } catch {
-      // Ignore storage parse issues in prototype mode.
-    }
-  }, [])
+    let current = true
+    const stop = hydrateAccountDraft<ContactForm>(draftStorage, STORAGE_KEY, async () => {
+      const saved = await getOnboarding()
+      const value = saved.contact
+      return value ? {
+        primaryPhone: value.primary_phone, alternativePhone: value.alternative_phone || '',
+        country: value.country, state: value.state, city: value.city, address: value.address,
+        postalCode: value.postal_code, preferredContactMethod: value.preferred_contact_method,
+        emergencyName: value.emergency_name, emergencyRelationship: value.emergency_relationship,
+        emergencyPhone: value.emergency_phone, emergencyAltPhone: value.emergency_alternative_phone || '',
+        emergencyEmail: value.emergency_email || '',
+      } : {}
+    }, data => setForm(previous => ({ ...INITIAL_FORM, ...data, email: previous.email, primaryPhone: data.primaryPhone || previous.primaryPhone })),
+    error => setSubmitError(getApiErrorDetail(error) || 'Could not load your saved contact information. Reload to try again.'),
+    () => setDraftReady(true))
+    getPatientSettings().then(settings => {
+      if (current) setForm(previous => ({ ...previous, email: settings.email, primaryPhone: previous.primaryPhone || settings.phone || '' }))
+    }).catch(error => { if (current) setSubmitError(getApiErrorDetail(error) || 'Could not load your account email. Reload to try again.') })
+    return () => { current = false; stop() }
+  }, [draftStorage])
 
   useEffect(() => {
+    if (!draftReady) return
     const id = window.setTimeout(() => {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
+        draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
         setSavedTick(true)
-        setSaveMessage('Changes Saved')
+        setSaveMessage('Draft saved in this tab')
         window.setTimeout(() => {
           setSavedTick(false)
-          setSaveMessage('Progress autosaves as you type')
+          setSaveMessage('Draft autosaves in this tab')
         }, 1400)
       } catch {
         setSaveMessage('Could not autosave right now')
@@ -299,7 +265,7 @@ export default function ContactInformationPage() {
     }, 320)
 
     return () => window.clearTimeout(id)
-  }, [form])
+  }, [form, draftStorage, draftReady])
 
   const helpText = useMemo(
     () =>
@@ -311,13 +277,13 @@ export default function ContactInformationPage() {
 
   const updateField = <K extends keyof ContactForm>(key: K, value: ContactForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
-    setErrors((prev) => ({ ...prev, [key]: '' }))
+    setErrors(collectErrors({ ...form, [key]: value }))
   }
 
   const validatePhone = (value: string, required: boolean) => {
     if (!value.trim()) return required ? 'This field is required' : ''
-    const digits = value.replace(/[^\d]/g, '')
-    return digits.length < 7 ? 'Enter a valid phone number' : ''
+    const normalized = value.replace(/[\s().-]/g, '')
+    return /^\+[1-9][0-9]{6,14}$/.test(normalized) ? '' : 'Use an international number beginning with +, for example +49.'
   }
 
   const collectErrors = (value: ContactForm) => {
@@ -326,23 +292,33 @@ export default function ContactInformationPage() {
     if (!value.primaryPhone.trim()) nextErrors.primaryPhone = 'Primary phone number is required'
     else if (validatePhone(value.primaryPhone, true)) nextErrors.primaryPhone = validatePhone(value.primaryPhone, true)
 
-    if (value.alternativePhone && validatePhone(value.alternativePhone, false)) nextErrors.alternativePhone = 'Enter a valid alternative phone number'
+    if (value.alternativePhone && validatePhone(value.alternativePhone, false)) nextErrors.alternativePhone = validatePhone(value.alternativePhone, false)
     if (!EMAIL_RE.test(value.email)) nextErrors.email = 'Enter a valid email address'
-    if (!value.country.trim()) nextErrors.country = 'Please select your country'
-    if (!value.state.trim()) nextErrors.state = 'Please select your state or province'
-    if (!value.city.trim()) nextErrors.city = 'City is required'
-    if (!value.address.trim()) nextErrors.address = 'Residential address is required'
+    if (value.country !== 'Germany') nextErrors.country = 'Please select your country'
+    if (!GERMAN_STATES.includes(value.state)) nextErrors.state = 'Please select your state or province'
+    if (value.city.trim().length < 2 || value.city.trim().length > 100 || !/\p{L}/u.test(value.city) || /[<>\x00-\x1f]/.test(value.city)) nextErrors.city = 'Enter a city name using 2–100 characters; HTML is not accepted.'
+    if (value.address.trim().length < 5 || value.address.trim().length > 250 || !/\p{L}/u.test(value.address) || !/[0-9]/.test(value.address) || /[<>\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value.address)) nextErrors.address = 'Enter street and house number, for example Musterstraße 12 (5–250 characters).'
+    if (!/^[0-9]{5}$/.test(value.postalCode)) nextErrors.postalCode = 'Enter a five-digit German postal code'
     if (!value.preferredContactMethod) nextErrors.preferredContactMethod = 'Please choose a preferred contact method'
 
-    if (!value.emergencyName.trim()) nextErrors.emergencyName = 'Emergency contact name is required'
+    if (value.emergencyName.trim().length < 2 || value.emergencyName.trim().length > 100 || !/\p{L}/u.test(value.emergencyName) || /[<>\x00-\x1f]/.test(value.emergencyName)) nextErrors.emergencyName = 'Enter the emergency contact’s name (2–100 characters).'
     if (!value.emergencyRelationship) nextErrors.emergencyRelationship = 'Please select a relationship'
     if (!value.emergencyPhone.trim()) nextErrors.emergencyPhone = 'Emergency contact phone number is required'
     else if (validatePhone(value.emergencyPhone, true)) nextErrors.emergencyPhone = validatePhone(value.emergencyPhone, true)
 
-    if (value.emergencyAltPhone && validatePhone(value.emergencyAltPhone, false)) nextErrors.emergencyAltPhone = 'Enter a valid alternative number'
+    if (value.primaryPhone.trim() && value.primaryPhone.replace(/\D/g, '') === value.emergencyPhone.replace(/\D/g, '')) nextErrors.emergencyPhone = 'Use a different phone number for your emergency contact'
+    if (value.emergencyAltPhone && validatePhone(value.emergencyAltPhone, false)) nextErrors.emergencyAltPhone = validatePhone(value.emergencyAltPhone, false)
     if (value.emergencyEmail && !EMAIL_RE.test(value.emergencyEmail)) nextErrors.emergencyEmail = 'Enter a valid emergency contact email'
 
     return nextErrors
+  }
+
+  const markTouched = (key: keyof ContactForm, nextTarget: EventTarget | null) => {
+    // Submitting validates every field. Avoid moving the button between pointer
+    // down and click when blur would insert additional error text above it.
+    if (nextTarget instanceof Element && nextTarget.closest('button[type="submit"]')) return
+    setTouched(previous => ({ ...previous, [key]: true }))
+    setErrors(collectErrors(form))
   }
 
   const validate = () => {
@@ -376,25 +352,26 @@ export default function ContactInformationPage() {
       emergencyAltPhone: true,
       emergencyEmail: true,
     })
-    if (!validate()) return
+    if (!validate()) {
+      if (form.alternativePhone) setShowOptionalPhones(true)
+      if (form.emergencyAltPhone || form.emergencyEmail) setShowOptionalEmergency(true)
+      focusValidation(e.currentTarget)
+      return
+    }
     setSubmitting(true)
     try {
-      await updateProfile({ phone: form.primaryPhone.trim() })
-
-      const settings = await getPatientSettings()
-      const contactExists = settings.emergency_contacts.some((contact) => (
-        contact.name.trim().toLowerCase() === form.emergencyName.trim().toLowerCase()
-        && contact.phone.replace(/\D/g, '') === form.emergencyPhone.replace(/\D/g, '')
-      ))
-      if (!contactExists) {
-        await createEmergencyContact({
-          name: form.emergencyName.trim(),
-          relationship: form.emergencyRelationship,
-          phone: form.emergencyPhone.trim(),
-        })
-      }
-
+      await saveContactInformation({
+        primary_phone: form.primaryPhone, alternative_phone: form.alternativePhone,
+        country: form.country as 'Germany', state: form.state, city: form.city,
+        address: form.address, postal_code: form.postalCode,
+        preferred_contact_method: form.preferredContactMethod as ContactInformation['preferred_contact_method'],
+        emergency_name: form.emergencyName,
+        emergency_relationship: form.emergencyRelationship as ContactInformation['emergency_relationship'],
+        emergency_phone: form.emergencyPhone, emergency_alternative_phone: form.emergencyAltPhone,
+        emergency_email: form.emergencyEmail || null,
+      })
       setSubmitting(false)
+      draftStorage.removeItem(STORAGE_KEY)
       setOnboardingStage('health-profile')
       router.push('/auth/profile-setup/medical-history-allergies')
     } catch (error) {
@@ -403,13 +380,13 @@ export default function ContactInformationPage() {
     }
   }
 
-  const canContinue = !submitting && Object.keys(collectErrors(form)).length === 0
+  const canContinue = draftReady && !submitting
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
       <style>{`
         * { box-sizing: border-box; }
-        input::placeholder, textarea::placeholder { color: rgba(4,53,77,0.3); }
+        input::placeholder, textarea::placeholder { color: var(--text-muted); }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
@@ -435,29 +412,30 @@ export default function ContactInformationPage() {
             onSubmit={onSubmit}
             noValidate
             style={{
-              background: 'rgba(255,255,255,0.9)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(34px) saturate(200%)',
               WebkitBackdropFilter: 'blur(34px) saturate(200%)',
               borderRadius: '24px',
-              border: '1px solid rgba(255,255,255,0.92)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)',
               padding: '36px 32px',
               animation: 'fadeUp 0.3s ease',
             }}
           >
-            <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <fieldset disabled={!draftReady || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+            <div style={{ padding: '12px 14px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 3 of 6</p>
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>50% Complete</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>50% Complete</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Approximately 2 Minutes</p>
               </div>
             </div>
 
             <header style={{ marginBottom: '16px' }}>
-              <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>
+              <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>
                 Stay Connected
               </h1>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>
@@ -465,11 +443,12 @@ export default function ContactInformationPage() {
               </p>
             </header>
 
-            <div style={{ marginBottom: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 11px', borderRadius: '100px', background: savedTick ? T.greenLight : 'rgba(4,53,77,0.03)', border: `1px solid ${savedTick ? 'rgba(9,173,112,0.25)' : 'rgba(4,53,77,0.08)'}` }}>
+            <div style={{ marginBottom: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 11px', borderRadius: '100px', background: savedTick ? T.greenLight : "var(--surface-hover)", border: `1px solid ${savedTick ? 'rgba(9,173,112,0.25)' : "var(--border)"}` }}>
               <Ico p={savedTick ? ICONS.check : ICONS.activity} size={11} sw={2} color={savedTick ? T.green : T.slate2} />
-              <span style={{ fontSize: '11.5px', fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
+              <span style={{ fontSize: "13px", fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
             </div>
 
+            <ValidationSummary errors={Object.fromEntries(Object.entries(errors).filter(([key]) => touched[key]))} />
             {submitError ? (
               <div role='alert' style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
                 {submitError}
@@ -481,19 +460,19 @@ export default function ContactInformationPage() {
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='primaryPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Primary Phone Number</label>
-                  <input id='primaryPhone' value={form.primaryPhone} autoComplete='tel' onChange={(e) => updateField('primaryPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, primaryPhone: true }))} placeholder={form.country && COUNTRY_CODES[form.country] ? `${COUNTRY_CODES[form.country]} 801 234 5678` : '+234 801 234 5678'} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('primaryPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.primaryPhone && errors.primaryPhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.primaryPhone}</p> : null}
+                  <label htmlFor='primaryPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Primary Phone Number (Required)</label>
+                  <input id='primaryPhone' type='tel' aria-invalid={!!(touched.primaryPhone && errors.primaryPhone)} aria-describedby={['primaryPhone-hint', touched.primaryPhone && errors.primaryPhone ? 'primaryPhone-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.primaryPhone} autoComplete='tel' onChange={(e) => updateField('primaryPhone', formatPhone(e.target.value, form.country))} onBlur={(event) => markTouched('primaryPhone', event.relatedTarget)} placeholder={form.country && COUNTRY_CODES[form.country] ? `${COUNTRY_CODES[form.country]} 801 234 5678` : '+234 801 234 5678'} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('primaryPhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='primaryPhone' error={touched.primaryPhone ? errors.primaryPhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='email' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Email Address</label>
-                  <input id='email' type='email' value={form.email} autoComplete='email' onChange={(e) => updateField('email', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, email: true }))} placeholder='you@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('email'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.email && errors.email ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.email}</p> : null}
+                  <label htmlFor='email' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Email Address (Required)</label>
+                  <input readOnly id='email' aria-invalid={!!(touched.email && errors.email)} aria-describedby={[null, touched.email && errors.email ? 'email-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' type='email' value={form.email} autoComplete='email' onChange={(e) => updateField('email', e.target.value)} onBlur={(event) => markTouched('email', event.relatedTarget)} placeholder='you@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('email'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='email' error={touched.email ? errors.email : undefined} />
                 </div>
               </div>
 
-              <button type='button' onClick={() => setShowOptionalPhones((prev) => !prev)} style={{ marginBottom: showOptionalPhones ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.blue, fontSize: '12.5px', fontWeight: 700, letterSpacing: '-0.01em' }}>
+              <button type='button' onClick={() => setShowOptionalPhones((prev) => !prev)} style={{ marginBottom: showOptionalPhones ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em' }}>
                 {showOptionalPhones ? 'Hide optional phone fields' : 'Add alternative phone number'}
               </button>
 
@@ -501,49 +480,48 @@ export default function ContactInformationPage() {
                 <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label htmlFor='alternativePhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Alternative Phone Number <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></label>
-                    <input id='alternativePhone' value={form.alternativePhone} autoComplete='tel' onChange={(e) => updateField('alternativePhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, alternativePhone: true }))} placeholder='Alternative number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('alternativePhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                    {touched.alternativePhone && errors.alternativePhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.alternativePhone}</p> : null}
+                    <input id='alternativePhone' type='tel' aria-invalid={!!(touched.alternativePhone && errors.alternativePhone)} aria-describedby={['alternativePhone-hint', touched.alternativePhone && errors.alternativePhone ? 'alternativePhone-error' : null].filter(Boolean).join(' ') || undefined} value={form.alternativePhone} autoComplete='tel' onChange={(e) => updateField('alternativePhone', formatPhone(e.target.value, form.country))} onBlur={(event) => markTouched('alternativePhone', event.relatedTarget)} placeholder='Alternative number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('alternativePhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                    <FieldFeedback name='alternativePhone' error={touched.alternativePhone ? errors.alternativePhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
                   </div>
                 </div>
               ) : null}
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='country' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Country</label>
-                  <input id='country' list='countries' value={form.country} autoComplete='country-name' onChange={(e) => updateField('country', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, country: true }))} placeholder='Start typing to search' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('country'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  <datalist id='countries'>{COUNTRY_OPTIONS.map((item) => <option key={item} value={item} />)}</datalist>
-                  {touched.country && errors.country ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.country}</p> : null}
+                  <label htmlFor='country' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Country (Required)</label>
+                  <select id='country' aria-invalid={!!(touched.country && errors.country)} aria-describedby={[null, touched.country && errors.country ? 'country-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.country} autoComplete='country-name' onChange={(e) => updateField('country', e.target.value)} onBlur={(event) => markTouched('country', event.relatedTarget)} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('country'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}><option value=''>Select</option>{COUNTRY_OPTIONS.map(item => <option key={item} value={item}>{item}</option>)}</select>
+                  <FieldFeedback name='country' error={touched.country ? errors.country : undefined} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='state' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>State / Province</label>
-                  <input id='state' list='states' value={form.state} onChange={(e) => updateField('state', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, state: true }))} placeholder='Select state or province' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('state'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  <datalist id='states'>{stateOptions.map((item) => <option key={item} value={item} />)}</datalist>
-                  {touched.state && errors.state ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.state}</p> : null}
+                  <label htmlFor='state' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>State / Province (Required)</label>
+                  <select id='state' aria-invalid={!!(touched.state && errors.state)} aria-describedby={[null, touched.state && errors.state ? 'state-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.state} onChange={(e) => updateField('state', e.target.value)} onBlur={(event) => markTouched('state', event.relatedTarget)} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('state'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}><option value=''>Select</option>{stateOptions.map(item => <option key={item} value={item}>{item}</option>)}</select>
+                  <FieldFeedback name='state' error={touched.state ? errors.state : undefined} />
                 </div>
               </div>
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='city' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>City</label>
-                  <input id='city' value={form.city} autoComplete='address-level2' onChange={(e) => updateField('city', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, city: true }))} placeholder='City' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('city'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.city && errors.city ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.city}</p> : null}
+                  <label htmlFor='city' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>City (Required)</label>
+                  <input id='city' aria-invalid={!!(touched.city && errors.city)} aria-describedby={['city-hint', touched.city && errors.city ? 'city-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.city} autoComplete='address-level2' onChange={(e) => updateField('city', e.target.value)} onBlur={(event) => markTouched('city', event.relatedTarget)} placeholder='City' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('city'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='city' error={touched.city ? errors.city : undefined} hint='City or municipality, 2–100 characters.' />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='postalCode' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Postal Code <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></label>
-                  <input id='postalCode' value={form.postalCode} autoComplete='postal-code' onChange={(e) => updateField('postalCode', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, postalCode: true }))} placeholder='Postal code' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('postalCode'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <label htmlFor='postalCode' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Postal Code (Required)</label>
+                  <input id='postalCode' aria-invalid={!!(touched.postalCode && errors.postalCode)} aria-describedby={['postalCode-hint', touched.postalCode && errors.postalCode ? 'postalCode-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.postalCode} autoComplete='postal-code' onChange={(e) => updateField('postalCode', e.target.value)} onBlur={(event) => markTouched('postalCode', event.relatedTarget)} inputMode='numeric' placeholder='10115' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('postalCode'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='postalCode' error={touched.postalCode ? errors.postalCode : undefined} hint='Germany: exactly 5 digits, for example 10115. Keep any leading zero.' />
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-                <label htmlFor='address' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Residential Address</label>
-                <textarea id='address' value={form.address} autoComplete='street-address' onChange={(e) => updateField('address', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, address: true }))} placeholder='Street address, area, and relevant location details' rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('address'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
-                {touched.address && errors.address ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.address}</p> : null}
+                <label htmlFor='address' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Residential Address (Required)</label>
+                <textarea id='address' aria-invalid={!!(touched.address && errors.address)} aria-describedby={['address-hint', touched.address && errors.address ? 'address-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.address} autoComplete='street-address' onChange={(e) => updateField('address', e.target.value)} onBlur={(event) => markTouched('address', event.relatedTarget)} placeholder='Musterstraße 12' rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('address'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
+                <FieldFeedback name='address' error={touched.address ? errors.address : undefined} hint='Street and house number, for example Musterstraße 12. Add apartment details if needed (maximum 250 characters).' />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Contact Method</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Contact Method (Required)</p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {(['Phone Call', 'SMS', 'Email', 'WhatsApp'] as const).map((option) => {
                     const active = form.preferredContactMethod === option
@@ -552,14 +530,14 @@ export default function ContactInformationPage() {
                         key={option}
                         type='button'
                         onClick={() => updateField('preferredContactMethod', option)}
-                        onBlur={() => setTouched((prev) => ({ ...prev, preferredContactMethod: true }))}
+                        onBlur={(event) => markTouched('preferredContactMethod', event.relatedTarget)}
                         style={{
                           padding: '8px 12px',
                           borderRadius: '100px',
-                          border: active ? `1px solid ${T.blueMid}` : '1px solid rgba(4,53,77,0.08)',
-                          background: active ? T.blueLight : 'rgba(255,255,255,0.78)',
-                          color: active ? T.blue : T.slate,
-                          fontSize: '12.5px',
+                          border: active ? `1px solid ${T.blueMid}` : "1px solid var(--border)",
+                          background: active ? T.blueLight : "var(--surface-glass)",
+                          color: active ? T.link : T.slate,
+                          fontSize: "13px",
                           fontWeight: 700,
                           letterSpacing: '-0.01em',
                           cursor: 'pointer',
@@ -570,23 +548,23 @@ export default function ContactInformationPage() {
                     )
                   })}
                 </div>
-                {touched.preferredContactMethod && errors.preferredContactMethod ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.preferredContactMethod}</p> : null}
+                {touched.preferredContactMethod && errors.preferredContactMethod ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.preferredContactMethod}</p> : null}
               </div>
             </div>
 
-            <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+            <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
               <SectionHeader title='Emergency Contact' body='Let us know who we should reach in case of an urgent medical situation.' />
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='emergencyName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Name</label>
-                  <input id='emergencyName' value={form.emergencyName} autoComplete='name' onChange={(e) => updateField('emergencyName', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyName: true }))} placeholder='Full name' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyName'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.emergencyName && errors.emergencyName ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyName}</p> : null}
+                  <label htmlFor='emergencyName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Name (Required)</label>
+                  <input id='emergencyName' aria-invalid={!!(touched.emergencyName && errors.emergencyName)} aria-describedby={['emergencyName-hint', touched.emergencyName && errors.emergencyName ? 'emergencyName-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.emergencyName} autoComplete='name' onChange={(e) => updateField('emergencyName', e.target.value)} onBlur={(event) => markTouched('emergencyName', event.relatedTarget)} placeholder='Full name' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyName'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='emergencyName' error={touched.emergencyName ? errors.emergencyName : undefined} hint='Full name of another person, 2–100 characters.' />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='relationship' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Relationship</label>
-                  <select id='relationship' value={form.emergencyRelationship} onChange={(e) => updateField('emergencyRelationship', e.target.value as Relationship)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyRelationship: true }))} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyRelationship'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}>
+                  <label htmlFor='relationship' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Relationship (Required)</label>
+                  <select required id='relationship' aria-invalid={!!(touched.emergencyRelationship && errors.emergencyRelationship)} aria-describedby={[null, touched.emergencyRelationship && errors.emergencyRelationship ? 'emergencyRelationship-error' : null].filter(Boolean).join(' ') || undefined} value={form.emergencyRelationship} onChange={(e) => updateField('emergencyRelationship', e.target.value as Relationship)} onBlur={(event) => markTouched('emergencyRelationship', event.relatedTarget)} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyRelationship'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}>
                     <option value=''>Select</option>
                     <option value='Parent'>Parent</option>
                     <option value='Spouse'>Spouse</option>
@@ -595,19 +573,19 @@ export default function ContactInformationPage() {
                     <option value='Friend'>Friend</option>
                     <option value='Other'>Other</option>
                   </select>
-                  {touched.emergencyRelationship && errors.emergencyRelationship ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyRelationship}</p> : null}
+                  <FieldFeedback name='emergencyRelationship' error={touched.emergencyRelationship ? errors.emergencyRelationship : undefined} />
                 </div>
               </div>
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor='emergencyPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Phone Number</label>
-                  <input id='emergencyPhone' value={form.emergencyPhone} autoComplete='tel' onChange={(e) => updateField('emergencyPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, emergencyPhone: true }))} placeholder='Primary emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  {touched.emergencyPhone && errors.emergencyPhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyPhone}</p> : null}
+                  <label htmlFor='emergencyPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Phone Number (Required)</label>
+                  <input id='emergencyPhone' type='tel' aria-invalid={!!(touched.emergencyPhone && errors.emergencyPhone)} aria-describedby={['emergencyPhone-hint', touched.emergencyPhone && errors.emergencyPhone ? 'emergencyPhone-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.emergencyPhone} autoComplete='tel' onChange={(e) => updateField('emergencyPhone', formatPhone(e.target.value, form.country))} onBlur={(event) => markTouched('emergencyPhone', event.relatedTarget)} placeholder='Primary emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyPhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                  <FieldFeedback name='emergencyPhone' error={touched.emergencyPhone ? errors.emergencyPhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
                 </div>
               </div>
 
-              <button type='button' onClick={() => setShowOptionalEmergency((prev) => !prev)} style={{ marginBottom: showOptionalEmergency ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.blue, fontSize: '12.5px', fontWeight: 700, letterSpacing: '-0.01em' }}>
+              <button type='button' onClick={() => setShowOptionalEmergency((prev) => !prev)} style={{ marginBottom: showOptionalEmergency ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em' }}>
                 {showOptionalEmergency ? 'Hide optional emergency fields' : 'Add optional emergency contact details'}
               </button>
 
@@ -615,26 +593,26 @@ export default function ContactInformationPage() {
                 <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label htmlFor='emergencyAltPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Alternative Number <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></label>
-                    <input id='emergencyAltPhone' value={form.emergencyAltPhone} autoComplete='tel' onChange={(e) => updateField('emergencyAltPhone', formatPhone(e.target.value, form.country))} onBlur={() => setTouched((prev) => ({ ...prev, emergencyAltPhone: true }))} placeholder='Alternative emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyAltPhone'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                    {touched.emergencyAltPhone && errors.emergencyAltPhone ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyAltPhone}</p> : null}
+                    <input id='emergencyAltPhone' type='tel' aria-invalid={!!(touched.emergencyAltPhone && errors.emergencyAltPhone)} aria-describedby={['emergencyAltPhone-hint', touched.emergencyAltPhone && errors.emergencyAltPhone ? 'emergencyAltPhone-error' : null].filter(Boolean).join(' ') || undefined} value={form.emergencyAltPhone} autoComplete='tel' onChange={(e) => updateField('emergencyAltPhone', formatPhone(e.target.value, form.country))} onBlur={(event) => markTouched('emergencyAltPhone', event.relatedTarget)} placeholder='Alternative emergency number' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyAltPhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                    <FieldFeedback name='emergencyAltPhone' error={touched.emergencyAltPhone ? errors.emergencyAltPhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label htmlFor='emergencyEmail' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Emergency Contact Email <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></label>
-                    <input id='emergencyEmail' type='email' value={form.emergencyEmail} autoComplete='email' onChange={(e) => updateField('emergencyEmail', e.target.value)} onBlur={() => setTouched((prev) => ({ ...prev, emergencyEmail: true }))} placeholder='email@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyEmail'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                    {touched.emergencyEmail && errors.emergencyEmail ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.emergencyEmail}</p> : null}
+                    <input id='emergencyEmail' aria-invalid={!!(touched.emergencyEmail && errors.emergencyEmail)} aria-describedby={[null, touched.emergencyEmail && errors.emergencyEmail ? 'emergencyEmail-error' : null].filter(Boolean).join(' ') || undefined} type='email' value={form.emergencyEmail} autoComplete='email' onChange={(e) => updateField('emergencyEmail', e.target.value)} onBlur={(event) => markTouched('emergencyEmail', event.relatedTarget)} placeholder='email@example.com' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyEmail'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
+                    <FieldFeedback name='emergencyEmail' error={touched.emergencyEmail ? errors.emergencyEmail : undefined} />
                   </div>
                 </div>
               ) : null}
             </div>
 
-            <div style={{ marginBottom: '16px', padding: '12px 13px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <div style={{ marginBottom: '16px', padding: '12px 13px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
               <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.info} size={13} sw={1.75} color={T.blue} />
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '12.5px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Why do we ask for an emergency contact?</p>
-                <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{helpText}</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Why do we ask for an emergency contact?</p>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{helpText}</p>
               </div>
             </div>
 
@@ -650,7 +628,7 @@ export default function ContactInformationPage() {
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: canContinue ? continueHover ? 'linear-gradient(135deg,#348CEA 0%,#0F47B8 100%)' : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(32,181,223,0.5)',
+                  background: canContinue ? continueHover ? 'linear-gradient(135deg,var(--primary-end) 0%,#0F47B8 100%)' : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : 'rgba(32,181,223,0.5)',
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',
@@ -675,7 +653,7 @@ export default function ContactInformationPage() {
                 Back
               </Link>
             </div>
-          </form>
+          </fieldset></form>
         </div>
       </div>
     </main>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
@@ -8,14 +8,17 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
-import { getApiErrorDetail, updateProfile } from '@/lib/api'
+import { getApiErrorDetail, getPatientSettings, updateProfile } from '@/lib/api'
+import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
+import { ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
+import { createAccountDraftStorage } from '@/lib/account-storage'
 
 const LEFT_BG = [
   'radial-gradient(ellipse 80% 60% at 18% 12%,  rgba(32,181,223,0.32) 0%, transparent 52%)',
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 const STORAGE_KEY = 'qarevo.onboarding.personal-information.v1'
@@ -65,23 +68,7 @@ const NATIONALITIES = [
   'Other',
 ]
 
-const LANGUAGES = [
-  'English',
-  'French',
-  'Spanish',
-  'Arabic',
-  'Portuguese',
-  'German',
-  'Italian',
-  'Hindi',
-  'Yoruba',
-  'Igbo',
-  'Hausa',
-  'Swahili',
-  'Mandarin',
-  'Japanese',
-  'Other',
-]
+const LANGUAGES = ['German', 'English']
 
 function JourneyVisual() {
   return (
@@ -220,7 +207,7 @@ function LeftPanel() {
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontSize: '24px',
               fontWeight: 800,
               color: '#fff',
@@ -232,7 +219,7 @@ function LeftPanel() {
             Your profile shapes your care.<br />
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>Just a few details to get started.</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             The information you share helps us personalize recommendations, match you to trusted physicians, and improve each consultation.
           </p>
         </div>
@@ -272,7 +259,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -298,49 +285,40 @@ function splitFullName(fullName: string) {
 
 export default function PersonalInformationPage() {
   const router = useRouter()
-  const filePickerRef = useRef<HTMLInputElement | null>(null)
-  const cameraPickerRef = useRef<HTMLInputElement | null>(null)
-  const [dragging, setDragging] = useState(false)
+  const [draftStorage] = useState(createAccountDraftStorage)
+  const [draftReady, setDraftReady] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [savedTick, setSavedTick] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('Progress autosaves as you type')
+  const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
   const [submitError, setSubmitError] = useState('')
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [form, setForm] = useState<PersonalInfoForm>(INITIAL_FORM)
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY)
-      const signupRaw = window.localStorage.getItem('qarevo.auth.signup.v1')
-      if (raw) {
-        const parsed = JSON.parse(raw) as PersonalInfoForm
-        queueMicrotask(() => setForm({ ...INITIAL_FORM, ...parsed }))
-        return
-      }
-
-      if (signupRaw) {
-        const signup = JSON.parse(signupRaw) as { fullName?: string }
-        if (signup.fullName) {
-          queueMicrotask(() => setForm((prev) => ({ ...prev, fullName: signup.fullName || '' })))
-        }
-      }
-    } catch {
-      // Ignore local storage parse failures in prototype mode.
+  useEffect(() => hydrateAccountDraft<PersonalInfoForm>(draftStorage, STORAGE_KEY, async () => {
+    const saved = await getPatientSettings()
+    return {
+      fullName: [saved.first_name, saved.last_name].filter(Boolean).join(' '),
+      preferredName: saved.preferred_name || '', dateOfBirth: saved.date_of_birth || '',
+      gender: (saved.gender || '') as Gender, nationality: saved.nationality || '',
+      preferredLanguage: saved.language || '', maritalStatus: (saved.marital_status || '') as MaritalStatus,
     }
-  }, [])
+  }, data => setForm({ ...INITIAL_FORM, ...data, photoDataUrl: '' }),
+  error => setSubmitError(getApiErrorDetail(error) || 'Could not load your saved profile. Reload to try again.'),
+  () => setDraftReady(true)), [draftStorage])
 
   useEffect(() => {
+    if (!draftReady) return
     const id = window.setTimeout(() => {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
+        draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
         setSavedTick(true)
-        setSaveMessage('Progress Saved')
+        setSaveMessage('Draft saved in this tab')
         window.setTimeout(() => {
           setSavedTick(false)
-          setSaveMessage('Progress autosaves as you type')
+          setSaveMessage('Draft autosaves in this tab')
         }, 1400)
       } catch {
         setSaveMessage('Could not autosave right now')
@@ -348,18 +326,9 @@ export default function PersonalInformationPage() {
     }, 320)
 
     return () => window.clearTimeout(id)
-  }, [form])
+  }, [form, draftStorage, draftReady])
 
-  const requiredFilled =
-    form.fullName.trim().length > 1 &&
-    !!form.dateOfBirth &&
-    !!form.gender &&
-    !!form.nationality &&
-    !!form.preferredLanguage &&
-    !!form.maritalStatus
-
-  const dateLooksValid = form.dateOfBirth ? isPastDate(form.dateOfBirth) : false
-  const canContinue = requiredFilled && dateLooksValid && !submitting
+  const canContinue = draftReady && !submitting
 
   const helperText = useMemo(
     () =>
@@ -369,21 +338,10 @@ export default function PersonalInformationPage() {
 
   const updateField = <K extends keyof PersonalInfoForm>(key: K, value: PersonalInfoForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
-    setErrors((prev) => ({ ...prev, [key]: '' }))
+    setErrors(collectErrors({ ...form, [key]: value }))
   }
 
-  const onFileSelect = (file?: File | null) => {
-    if (!file) return
-    if (!file.type.startsWith('image/')) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const data = String(reader.result || '')
-      updateField('photoDataUrl', data)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const validate = () => {
+  const collectErrors = (form: PersonalInfoForm) => {
     const nextErrors: Record<string, string> = {}
 
     if (form.fullName.trim().length < 2) nextErrors.fullName = 'Please enter your full name'
@@ -395,8 +353,18 @@ export default function PersonalInformationPage() {
     if (!form.preferredLanguage.trim()) nextErrors.preferredLanguage = 'Please select your preferred language'
     if (!form.maritalStatus) nextErrors.maritalStatus = 'Please select your marital status'
 
+    return nextErrors
+  }
+
+  const validate = () => {
+    const nextErrors = collectErrors(form)
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
+  }
+
+  const markTouched = (key: keyof PersonalInfoForm) => {
+    setTouched(previous => ({ ...previous, [key]: true }))
+    setErrors(collectErrors(form))
   }
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -412,18 +380,23 @@ export default function PersonalInformationPage() {
       maritalStatus: true,
     })
 
-    if (!validate()) return
+    if (!validate()) { focusValidation(e.currentTarget); return }
 
     setSubmitting(true)
     try {
       const { firstName, lastName } = splitFullName(form.fullName)
       await updateProfile({
         first_name: firstName,
-        last_name: lastName || undefined,
+        last_name: lastName,
         date_of_birth: form.dateOfBirth,
         gender: form.gender || undefined,
+        preferred_name: form.preferredName.trim() || null,
+        nationality: form.nationality,
+        marital_status: form.maritalStatus || undefined,
+        language: form.preferredLanguage as 'German' | 'English',
       })
       setSubmitting(false)
+      draftStorage.removeItem(STORAGE_KEY)
       setOnboardingStage('contact-information')
       router.push('/auth/profile-setup/contact-information')
     } catch (error) {
@@ -442,7 +415,7 @@ export default function PersonalInformationPage() {
     <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
       <style>{`
         * { box-sizing: border-box; }
-        input::placeholder { color: rgba(4,53,77,0.3); }
+        input::placeholder { color: var(--text-muted); }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
@@ -474,22 +447,23 @@ export default function PersonalInformationPage() {
             onSubmit={onSubmit}
             noValidate
             style={{
-              background: 'rgba(255,255,255,0.9)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(34px) saturate(200%)',
               WebkitBackdropFilter: 'blur(34px) saturate(200%)',
               borderRadius: '24px',
-              border: '1px solid rgba(255,255,255,0.92)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)',
               padding: '36px 32px',
               animation: 'fadeUp 0.3s ease',
             }}
           >
+            <fieldset disabled={!draftReady || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div
               style={{
                 padding: '12px 14px',
                 borderRadius: '12px',
-                background: 'rgba(4,53,77,0.024)',
-                border: '1px solid rgba(4,53,77,0.06)',
+                background: "var(--surface-hover)",
+                border: "1px solid var(--border)",
                 display: 'flex',
                 justifyContent: 'space-between',
                 gap: '12px',
@@ -498,11 +472,11 @@ export default function PersonalInformationPage() {
               }}
             >
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 2 of 6</p>
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>33% Complete</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>33% Complete</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Approximately 3 Minutes</p>
               </div>
             </div>
@@ -511,7 +485,7 @@ export default function PersonalInformationPage() {
               <h1
                 style={{
                   margin: '0 0 8px',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                   fontSize: '24px',
                   fontWeight: 800,
                   color: T.navy,
@@ -526,11 +500,12 @@ export default function PersonalInformationPage() {
               </p>
             </header>
 
-            <div style={{ marginBottom: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 11px', borderRadius: '100px', background: savedTick ? T.greenLight : 'rgba(4,53,77,0.03)', border: `1px solid ${savedTick ? 'rgba(9,173,112,0.25)' : 'rgba(4,53,77,0.08)'}` }}>
+            <div style={{ marginBottom: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 11px', borderRadius: '100px', background: savedTick ? T.greenLight : "var(--surface-hover)", border: `1px solid ${savedTick ? 'rgba(9,173,112,0.25)' : "var(--border)"}` }}>
               <Ico p={savedTick ? ICONS.check : ICONS.activity} size={11} sw={2} color={savedTick ? T.green : T.slate2} />
-              <span style={{ fontSize: '11.5px', fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
+              <span style={{ fontSize: "13px", fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
             </div>
 
+            <ValidationSummary errors={Object.fromEntries(Object.entries(errors).filter(([key]) => touched[key]))} />
             {submitError ? (
               <div role='alert' style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
                 {submitError}
@@ -539,17 +514,17 @@ export default function PersonalInformationPage() {
 
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='fullName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Full Name</label>
+                <label htmlFor='fullName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Full Name (Required)</label>
                 <input
-                  id='fullName'
+                  id='fullName' required aria-required='true'
                   value={form.fullName}
                   autoComplete='name'
                   onChange={(e) => updateField('fullName', e.target.value)}
-                  onBlur={() => setTouched((prev) => ({ ...prev, fullName: true }))}
+                  onBlur={() => markTouched('fullName')}
                   placeholder='Emma Harrison'
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('fullName'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
+                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('fullName'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 />
-                {touched.fullName && errors.fullName ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.fullName}</p> : null}
+                {touched.fullName && errors.fullName ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.fullName}</p> : null}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -559,173 +534,85 @@ export default function PersonalInformationPage() {
                   value={form.preferredName}
                   autoComplete='nickname'
                   onChange={(e) => updateField('preferredName', e.target.value)}
-                  onBlur={() => setTouched((prev) => ({ ...prev, preferredName: true }))}
+                  onBlur={() => markTouched('preferredName')}
                   placeholder='What should we call you?'
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('preferredName'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
+                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('preferredName'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 />
               </div>
-            </div>
-
-            <div style={{ marginBottom: '12px' }}>
-              <p style={{ margin: '0 0 7px', fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Profile Photo <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></p>
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setDragging(true)
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  setDragging(false)
-                  onFileSelect(e.dataTransfer.files?.[0])
-                }}
-                style={{
-                  borderRadius: '12px',
-                  border: `1.5px dashed ${dragging ? T.blue : 'rgba(4,53,77,0.14)'}`,
-                  background: dragging ? 'rgba(234,241,255,0.72)' : 'rgba(255,255,255,0.72)',
-                  padding: '14px',
-                }}
-              >
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(4,53,77,0.04)', border: '1px solid rgba(4,53,77,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                    {form.photoDataUrl ? (
-                      <img src={form.photoDataUrl} alt='Profile preview' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Ico p={ICONS.user} size={20} sw={1.5} color={T.slate2} />
-                    )}
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: '200px' }}>
-                    <p style={{ margin: '0 0 6px', fontSize: '12.5px', color: T.slate, lineHeight: 1.5 }}>
-                      Drag and drop an image, upload from files, or use camera.
-                    </p>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <button
-                        type='button'
-                        onClick={() => filePickerRef.current?.click()}
-                        style={{ padding: '7px 10px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.88)', fontSize: '12.5px', fontWeight: 600, color: T.navy, cursor: 'pointer' }}
-                      >
-                        Upload Photo
-                      </button>
-                      <button
-                        type='button'
-                        onClick={() => cameraPickerRef.current?.click()}
-                        style={{ padding: '7px 10px', borderRadius: '9px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(255,255,255,0.88)', fontSize: '12.5px', fontWeight: 600, color: T.navy, cursor: 'pointer' }}
-                      >
-                        Camera Upload
-                      </button>
-                      {form.photoDataUrl ? (
-                        <button
-                          type='button'
-                          onClick={() => updateField('photoDataUrl', '')}
-                          style={{ padding: '7px 10px', borderRadius: '9px', border: '1px solid rgba(220,38,38,0.18)', background: '#FFF5F5', fontSize: '12.5px', fontWeight: 600, color: T.red, cursor: 'pointer' }}
-                        >
-                          Remove Photo
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <input
-                ref={filePickerRef}
-                type='file'
-                accept='image/*'
-                onChange={(e) => onFileSelect(e.target.files?.[0])}
-                style={{ display: 'none' }}
-              />
-              <input
-                ref={cameraPickerRef}
-                type='file'
-                accept='image/*'
-                capture='user'
-                onChange={(e) => onFileSelect(e.target.files?.[0])}
-                style={{ display: 'none' }}
-              />
             </div>
 
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='dob' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Date of Birth</label>
+                <label htmlFor='dob' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Date of Birth (Required)</label>
                 <input
-                  id='dob'
+                  id='dob' required aria-required='true'
                   type='date'
                   value={form.dateOfBirth}
                   onChange={(e) => updateField('dateOfBirth', e.target.value)}
-                  onBlur={() => setTouched((prev) => ({ ...prev, dateOfBirth: true }))}
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('dateOfBirth'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
+                  onBlur={() => markTouched('dateOfBirth')}
+                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('dateOfBirth'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 />
-                {touched.dateOfBirth && errors.dateOfBirth ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.dateOfBirth}</p> : null}
+                {touched.dateOfBirth && errors.dateOfBirth ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.dateOfBirth}</p> : null}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='gender' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Gender</label>
+                <label htmlFor='gender' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Gender (Required)</label>
                 <select
-                  id='gender'
+                  id='gender' required aria-required='true'
                   value={form.gender}
                   onChange={(e) => updateField('gender', e.target.value as Gender)}
-                  onBlur={() => setTouched((prev) => ({ ...prev, gender: true }))}
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('gender'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
+                  onBlur={() => markTouched('gender')}
+                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('gender'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 >
                   <option value=''>Select</option>
                   <option value='Male'>Male</option>
                   <option value='Female'>Female</option>
                   <option value='Prefer Not to Say'>Prefer Not to Say</option>
                 </select>
-                {touched.gender && errors.gender ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.gender}</p> : null}
+                {touched.gender && errors.gender ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.gender}</p> : null}
               </div>
             </div>
 
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='nationality' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Nationality</label>
-                <input
-                  id='nationality'
-                  list='nationalities'
+                <label htmlFor='nationality' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Nationality (Required)</label>
+                <select
+                  id='nationality' required aria-required='true'
                   value={form.nationality}
-                  autoComplete='country-name'
-                  placeholder='Start typing to search'
                   onChange={(e) => updateField('nationality', e.target.value)}
-                  onBlur={() => setTouched((prev) => ({ ...prev, nationality: true }))}
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('nationality'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
-                />
-                <datalist id='nationalities'>
-                  {NATIONALITIES.map((item) => (
-                    <option key={item} value={item} />
-                  ))}
-                </datalist>
-                {touched.nationality && errors.nationality ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.nationality}</p> : null}
+                  onBlur={() => markTouched('nationality')}
+                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('nationality'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
+                >
+                  <option value=''>Select</option>
+                  {NATIONALITIES.map(item => <option key={item} value={item}>{item}</option>)}
+                </select>
+                {touched.nationality && errors.nationality ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.nationality}</p> : null}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='language' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Language</label>
-                <input
-                  id='language'
-                  list='languages'
+                <label htmlFor='language' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Language (Required)</label>
+                <select
+                  id='language' required aria-required='true'
                   value={form.preferredLanguage}
-                  placeholder='Start typing to search'
                   onChange={(e) => updateField('preferredLanguage', e.target.value)}
-                  onBlur={() => setTouched((prev) => ({ ...prev, preferredLanguage: true }))}
-                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('preferredLanguage'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
-                />
-                <datalist id='languages'>
-                  {LANGUAGES.map((item) => (
-                    <option key={item} value={item} />
-                  ))}
-                </datalist>
-                {touched.preferredLanguage && errors.preferredLanguage ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.preferredLanguage}</p> : null}
+                  onBlur={() => markTouched('preferredLanguage')}
+                  style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('preferredLanguage'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
+                >
+                  <option value=''>Select</option>
+                  {LANGUAGES.map(item => <option key={item} value={item}>{item}</option>)}
+                </select>
+                {touched.preferredLanguage && errors.preferredLanguage ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.preferredLanguage}</p> : null}
               </div>
             </div>
 
             <div style={{ marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label htmlFor='maritalStatus' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Marital Status</label>
+              <label htmlFor='maritalStatus' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Marital Status (Required)</label>
               <select
-                id='maritalStatus'
+                id='maritalStatus' required aria-required='true'
                 value={form.maritalStatus}
                 onChange={(e) => updateField('maritalStatus', e.target.value as MaritalStatus)}
-                onBlur={() => setTouched((prev) => ({ ...prev, maritalStatus: true }))}
-                style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('maritalStatus'), background: 'rgba(255,255,255,0.78)', color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
+                onBlur={() => markTouched('maritalStatus')}
+                style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('maritalStatus'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
               >
                 <option value=''>Select</option>
                 <option value='Single'>Single</option>
@@ -734,7 +621,7 @@ export default function PersonalInformationPage() {
                 <option value='Widowed'>Widowed</option>
                 <option value='Prefer Not to Say'>Prefer Not to Say</option>
               </select>
-              {touched.maritalStatus && errors.maritalStatus ? <p style={{ margin: 0, fontSize: '12px', color: T.red }}>{errors.maritalStatus}</p> : null}
+              {touched.maritalStatus && errors.maritalStatus ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.maritalStatus}</p> : null}
             </div>
 
             <div
@@ -742,8 +629,8 @@ export default function PersonalInformationPage() {
                 marginBottom: '16px',
                 padding: '12px 13px',
                 borderRadius: '12px',
-                background: 'rgba(4,53,77,0.024)',
-                border: '1px solid rgba(4,53,77,0.06)',
+                background: "var(--surface-hover)",
+                border: "1px solid var(--border)",
                 display: 'flex',
                 gap: '10px',
                 alignItems: 'flex-start',
@@ -753,8 +640,8 @@ export default function PersonalInformationPage() {
                 <Ico p={ICONS.info} size={13} sw={1.75} color={T.blue} />
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '12.5px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Why do we need this information?</p>
-                <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{helperText}</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Why do we need this information?</p>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{helperText}</p>
               </div>
             </div>
 
@@ -772,8 +659,8 @@ export default function PersonalInformationPage() {
                   border: 'none',
                   background: canContinue
                     ? continueHover
-                      ? 'linear-gradient(135deg,#348CEA 0%,#0F47B8 100%)'
-                      : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`
+                      ? 'linear-gradient(135deg,var(--primary-end) 0%,#0F47B8 100%)'
+                      : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`
                     : 'rgba(32,181,223,0.5)',
                   color: '#fff',
                   fontFamily: 'inherit',
@@ -809,7 +696,7 @@ export default function PersonalInformationPage() {
                 Back
               </Link>
             </div>
-          </form>
+          </fieldset></form>
         </div>
       </div>
     </main>
