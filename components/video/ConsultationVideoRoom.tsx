@@ -69,22 +69,23 @@ function VerifiedVideoRoom({ role, id }: Props & { id: string }) {
     setState('connecting'); setError(''); setNotice(''); setTiles([]); setOthers(0)
     try {
       await connection.current?.stop()
-      // Only an explicit join starts these tasks. SDK loading overlaps the API
-      // handshake instead of adding a second network waterfall after it.
-      const [payload,{createVideoConnection},sdk] = await Promise.all([
-        apiPost<ChimeJoinResponse>(`/api/v1/consultations/${id}/video-session/join`, {}),
-        import('@/lib/video-connection'),
-        import('amazon-chime-sdk-js'),
-      ])
+      // Only an explicit join starts these tasks. The join payload names the provider,
+      // so its media client (Chime SDK or the simulated one) loads after the handshake.
+      const payload = await apiPost<ChimeJoinResponse>(`/api/v1/consultations/${id}/video-session/join`, {})
       if (version !== attempt.current) return
       const current = () => version === attempt.current
-      const room = await createVideoConnection(payload, audio.current, {
-        state(next, message) { if (current()) { setState(next); if (message) setNotice(message) } },
-        tile(tile) { if (current()) setTiles(items => [...items.filter(item => item.id !== tile.id), tile]) },
-        removeTile(tileId) { if (current()) setTiles(items => items.filter(item => item.id !== tileId)) },
-        participants(count) { if (current()) setOthers(count) },
-        warning(message) { if (current()) setNotice(message) },
-      },()=>Promise.resolve(sdk))
+      const callbacks = {
+        state(next: VideoState, message?: string) { if (current()) { setState(next); if (message) setNotice(message) } },
+        tile(tile: VideoTile) { if (current()) setTiles(items => [...items.filter(item => item.id !== tile.id), tile]) },
+        removeTile(tileId: number) { if (current()) setTiles(items => items.filter(item => item.id !== tileId)) },
+        participants(count: number) { if (current()) setOthers(count) },
+        warning(message: string) { if (current()) setNotice(message) },
+      }
+      // The provider named in the join payload decides the media client.
+      const simulated = await import('@/lib/simulated-video-connection')
+      const room: VideoConnection = simulated.isSimulatedPayload(payload)
+        ? await simulated.createSimulatedConnection(payload, audio.current, callbacks)
+        : await (await import('@/lib/video-connection')).createVideoConnection(payload, audio.current, callbacks)
       if (!current()) { await room.stop(); return }
       connection.current = room
       const enabled = await room.start(cameraOnJoin)
