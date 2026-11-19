@@ -131,7 +131,13 @@ test('a same-tick target query change rejects the old upload control before hash
   await page.evaluate(() => {
     const counters = window as unknown as { uploadHashCalls: number }; counters.uploadHashCalls = 0
     const original = crypto.subtle.digest.bind(crypto.subtle)
-    Object.defineProperty(crypto.subtle, 'digest', { configurable: true, value: (...args: Parameters<typeof original>) => { counters.uploadHashCalls++; return original(...args) } })
+    // Count only hashes of the uploaded file itself: Next.js also uses digest internally (router cache keys).
+    const fileText = 'Synthetic stale query upload'
+    Object.defineProperty(crypto.subtle, 'digest', { configurable: true, value: (...args: Parameters<typeof original>) => {
+      const data = args[1], bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      if (new TextDecoder().decode(bytes) === fileText) counters.uploadHashCalls++
+      return original(...args)
+    } })
   })
   state.holdExactPatient = otherPatient
   await page.locator('input[type=file]').first().evaluate((element, next) => {
@@ -144,6 +150,8 @@ test('a same-tick target query change rejects the old upload control before hash
   expect(await page.evaluate(() => (window as unknown as { uploadHashCalls: number }).uploadHashCalls)).toBe(0)
   expect(state.uploads).toHaveLength(0)
   state.releaseLookup(); await state.lookupDelivery
+  // Positive control: hashing the file's bytes is counted, so the zero above is meaningful.
+  expect(await page.evaluate(async () => { await crypto.subtle.digest('SHA-256', await new Blob(['Synthetic stale query upload']).arrayBuffer()); return (window as unknown as { uploadHashCalls: number }).uploadHashCalls })).toBe(1)
 })
 
 test('superseded and unavailable inbox files cannot silently open replacements', async ({ page, context }) => {
