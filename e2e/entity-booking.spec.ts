@@ -47,7 +47,7 @@ test('self-pay booking shows the treating practice and needs the price confirmed
   await page.getByRole('button', { name: 'Confirm Appointment', exact: true }).click()
   await expect(page.getByText('Confirm the self-pay price before booking.')).toBeVisible()
   expect(state.booked).toHaveLength(0)
-  await page.getByLabel(/I confirm I will pay 25,47 €/).check()
+  await page.getByLabel(/I confirm I will pay 25,47\s*€/).check()
   await page.getByRole('button', { name: 'Confirm Appointment', exact: true }).click()
   await expect(page).toHaveURL(/consultation-booking\/success\?/)
   expect(state.booked[0]).toMatchObject({ treating_entity_id: PRACTICE, confirmed_self_pay_fee_minor: 2547, start_at: slot.start_at })
