@@ -139,6 +139,11 @@ function routeAccess(path: string[], portal: Portal): 'public' | 'access' | 'mfa
   const namespace = path[2];
   const suffix = path.slice(3).join('/');
   if (namespace === 'practice' && suffix === 'capabilities') return 'public';
+  // Published legal texts (platform agreement, AVV, patient terms, privacy notice) are public reads.
+  if (namespace === 'legal') {
+    if (!/^documents(?:\/[A-Z_]{3,40})?$/.test(suffix)) throw new BoundaryError(404, 'The requested application service is unavailable.');
+    return 'public';
+  }
   if (PORTALS.includes(namespace as Portal)) {
     if (namespace !== portal) throw new BoundaryError(403, 'This operation belongs to a different portal.');
     if ((portal === 'patient' && suffix === 'register') ||
@@ -154,7 +159,7 @@ function routeAccess(path: string[], portal: Portal): 'public' | 'access' | 'mfa
   if (suffix === 'practice/invitations/inspect' && ['practice', 'doctor'].includes(portal)) return 'public';
   if (suffix === 'practice/invitations/accept-owner' && portal === 'practice') return 'public';
   if (portal === 'practice') {
-    if (['practice/login', 'practice/verify', 'practice/resend'].includes(suffix)) return 'public';
+    if (['practice/login', 'practice/verify', 'practice/resend', 'practice/register'].includes(suffix)) return 'public';
     if (['forgot-password', 'resend-password-reset', 'reset-password'].includes(suffix)) return 'public';
     if (['practice/refresh', 'practice/logout'].includes(suffix)) return 'refresh';
     throw new BoundaryError(403, 'This identity operation is unavailable in the practice portal.');
@@ -312,7 +317,7 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
     for (const name of ['content-type', 'accept', 'range', 'user-agent']) {
       const value = request.headers.get(name); if (value) headers.set(name, value);
     }
-    const practiceWrite = ['POST', 'PATCH', 'PUT'].includes(request.method) && /^\/api\/v1\/(?:admin|practice)\/practices\//.test(upstreamPath);
+    const practiceWrite = ['POST', 'PATCH', 'PUT'].includes(request.method) && /^\/api\/v1\/(?:(?:admin|practice)\/practices|admin\/verifications)\//.test(upstreamPath);
     if (((portal !== 'practice' && clinicalConditionalRoute(portal, request.method, upstreamPath)) || practiceWrite) && request.headers.has('If-Match')) {
       const supplied = request.headers.get('If-Match');
       const version = practiceWrite ? supplied && /^"[1-9]\d{0,15}"$/.test(supplied) && Number.isSafeInteger(Number(supplied.slice(1, -1))) ? supplied : null : strongClinicalIfMatch(supplied);

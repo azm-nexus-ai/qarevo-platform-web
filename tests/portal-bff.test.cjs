@@ -550,3 +550,52 @@ for (const [portal, endpoint] of [['practice', '/api/v1/auth/reset-password'], [
   const response = await run(req(endpoint, { portal, method: 'POST', body: {} }), portal, async () => Response.json({ detail: [{ loc: ['body', 'new_password'], type: 'value_error', msg: 'Use a stronger password.', input: 'PRIVATE-PASSWORD', ctx: { token: 'PRIVATE-RESET-TOKEN' } }], secret: 'PRIVATE-SECRET' }, { status: 422 }));
   assert.equal(response.status, 422); const body = await response.text(); assert.doesNotMatch(body, /PRIVATE|input|ctx|secret/); assert.deepEqual(JSON.parse(body), { detail: [{ loc: ['body', 'new_password'], type: 'value_error', msg: 'Use a stronger password.' }] });
 });
+
+test('practice self-registration is public only in the practice portal and forwards no identity', async () => {
+  let calls = 0
+  const endpoint = '/api/v1/auth/practice/register'
+  const response = await run(req(endpoint, { portal: 'practice', method: 'POST', body: { email: 'owner@example.com' }, cookies: `qarevo_practice_csrf=${csrf}` }), 'practice', async (url, init) => {
+    calls++
+    assert.equal(new URL(url).pathname, endpoint)
+    assert.equal(new Headers(init.headers).get('Authorization'), null)
+    return Response.json({ challenge_id: 'synthetic-challenge', expires_in: 300, resend_after: 60, message: 'Check your inbox.' }, { status: 202 })
+  })
+  assert.equal(response.status, 202)
+  assert.equal(calls, 1)
+  assert.equal(response.headers.get('set-cookie'), null)
+  for (const portal of ['patient', 'doctor', 'admin']) {
+    assert.equal((await run(req(endpoint, { portal, method: 'POST', body: {} }), portal)).status, 403)
+  }
+})
+
+test('published legal documents are public reads in every portal; other legal paths never proxy', async () => {
+  for (const portal of ['patient', 'doctor', 'admin', 'practice']) {
+    for (const endpoint of ['/api/v1/legal/documents', '/api/v1/legal/documents/PLATFORM_AGREEMENT']) {
+      let forwarded = null
+      const response = await run(req(endpoint + '?locale=de', { portal, cookies: '' }), portal, async (url, init) => {
+        forwarded = new URL(url)
+        assert.equal(new Headers(init.headers).get('Authorization'), null)
+        return Response.json({ kind: 'PLATFORM_AGREEMENT' })
+      })
+      assert.equal(response.status, 200, `${portal} ${endpoint}`)
+      assert.equal(forwarded.pathname, endpoint)
+    }
+    for (const endpoint of ['/api/v1/legal/acceptances', '/api/v1/legal/documents/lowercase/extra']) {
+      assert.equal((await run(req(endpoint, { portal, cookies: '' }), portal, async () => { throw new Error('must not proxy') })).status, 404, endpoint)
+    }
+  }
+})
+
+test('admin verification decisions forward one strong submission version and refuse weak ones', async () => {
+  const endpoint = '/api/v1/admin/verifications/11111111-1111-4111-8111-111111111111/approve'
+  let forwarded = null
+  const response = await run(req(endpoint, { portal: 'admin', method: 'POST', headers: { 'If-Match': '"2"' }, body: { reason: 'Synthetic' } }), 'admin', async (url, init) => {
+    forwarded = new Headers(init.headers).get('If-Match'); return Response.json({ submission: {} })
+  })
+  assert.equal(response.status, 200)
+  assert.equal(forwarded, '"2"')
+  for (const weak of ['W/"2"', '*', '"0"', '"2", "3"']) {
+    const refused = await run(req(endpoint, { portal: 'admin', method: 'POST', headers: { 'If-Match': weak }, body: {} }), 'admin', async () => { throw new Error('must not proxy') })
+    assert.equal(refused.status, 400, weak)
+  }
+})
