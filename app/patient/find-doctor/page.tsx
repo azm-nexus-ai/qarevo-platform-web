@@ -19,6 +19,7 @@ import DoctorCard from '@/components/cards/DoctorCard'
 import { doctorVerification } from '@/lib/doctor-verification'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import TrustCard from '@/components/cards/TrustCard'
+import { bookingFunding } from '@/lib/booking-funding'
 import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuthError, clearPortalSession, type PatientSettings, type PatientDoctor } from '@/lib/api'
 import ProfileImage from '@/components/patient/ProfileImage'
 import { physicianPath } from '@/lib/physician-slug'
@@ -227,6 +228,8 @@ function FindDoctorPageContent() {
       if (price !== 'any') params.set('price', price)
       if (distance !== 'any') params.set('distance', distance)
       params.set('sort', sortBy)
+      // Hide doctors who can't treat this coverage (the API enforces it again at booking).
+      if (userSettings) params.set('coverage', bookingFunding(userSettings.insurance).route)
       params.set('page', String(page))
       params.set('page_size', String(pageSize))
 
@@ -262,7 +265,7 @@ function FindDoctorPageContent() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sortBy, page, reload])
+  }, [q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sortBy, page, reload, userSettings])
 
   function toggleFavorite(id: string) {
     setFavorites((prev) => ({ ...prev, [id]: !prev[id] }))
