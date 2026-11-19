@@ -351,7 +351,7 @@ export default function NavigationBar() {
                   <AuthenticatedLogo priority width={100} />
                 </Link>
 
-                <ThemeToggle /><LanguageSwitch />
+                <ThemeToggle />
                 {/* Mobile hamburger */}
                 <button
                   ref={hamburgerRef}
@@ -485,6 +485,7 @@ export default function NavigationBar() {
         </div>
 
         {/* Drawer nav items */}
+        <div style={{ marginBottom: '14px' }}><LanguageSwitch /></div>
         <nav aria-label="Mobile navigation" style={{ flex: 1 }}>
           {NAV_LINKS.map((label) => {
             const isActive = activeSection === label

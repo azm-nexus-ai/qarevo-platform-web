@@ -21,6 +21,7 @@ import DoctorCard from '@/components/cards/DoctorCard'
 import AIItem from '@/components/cards/AIItem'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { physicianPath } from '@/lib/physician-slug'
+import { NavLabel } from '@/components/ui/NavLabel'
 
 type NavItem = {
   label: string
@@ -941,7 +942,7 @@ export default function PatientDashboardPage() {
                       aria-current={isActive ? 'page' : undefined}
                     >
                       <Ico p={item.icon} size={15} sw={1.7} color={isActive ? T.blue : T.slate2} />
-                      {item.label}
+                      <NavLabel portal='patient' label={item.label} />
                     </button>
                   )
                 })}

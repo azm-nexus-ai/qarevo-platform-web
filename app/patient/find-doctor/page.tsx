@@ -23,6 +23,7 @@ import { bookingFunding } from '@/lib/booking-funding'
 import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuthError, clearPortalSession, type PatientSettings, type PatientDoctor } from '@/lib/api'
 import ProfileImage from '@/components/patient/ProfileImage'
 import { physicianPath } from '@/lib/physician-slug'
+import { NavLabel } from '@/components/ui/NavLabel'
 
 function getQuickBookServiceType(
   consultationType: string,
@@ -379,7 +380,7 @@ function FindDoctorPageContent() {
                     }}
                     >
                       <Ico p={item.icon} size={15} sw={1.7} color={isActive ? T.blue : T.slate2} />
-                      {item.label}
+                      <NavLabel portal='patient' label={item.label} />
                     </Link>
                   )
                 })}

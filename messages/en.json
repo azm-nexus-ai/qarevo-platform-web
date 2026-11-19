@@ -6,7 +6,66 @@
     "theme": {
       "light": "Light mode",
       "dark": "Dark mode",
-      "switchTo": "Switch to {mode}"
+      "switchToLight": "Switch to light mode",
+      "switchToDark": "Switch to dark mode"
+    },
+    "signingOut": "Signing out…"
+  },
+  "nav": {
+    "patient": {
+      "dashboard": "Dashboard",
+      "findADoctor": "Find a Doctor",
+      "appointments": "Appointments",
+      "medicalRecords": "Medical Records",
+      "prescriptions": "Prescriptions",
+      "labRequests": "Lab Requests",
+      "messages": "Messages",
+      "notifications": "Notifications",
+      "billingPayments": "Billing & Payments",
+      "settings": "Settings",
+      "helpSupport": "Help & Support",
+      "logout": "Logout"
+    },
+    "doctor": {
+      "dashboard": "Dashboard",
+      "workspace": "Workspace",
+      "appointments": "Appointments",
+      "patients": "Patients",
+      "myPractices": "My Practices",
+      "independentPractice": "Independent Practice",
+      "messages": "Messages",
+      "carePlans": "Care Plans",
+      "prescriptions": "Prescriptions",
+      "labOrders": "Lab Orders",
+      "notifications": "Notifications",
+      "videoConsultation": "Video Consultation",
+      "outcomes": "Outcomes",
+      "profile": "Profile",
+      "settings": "Settings",
+      "helpSupport": "Help & Support",
+      "logout": "Logout"
+    },
+    "admin": {
+      "dashboard": "Dashboard",
+      "doctors": "Doctors",
+      "practices": "Practices",
+      "verifications": "Verifications",
+      "settlement": "Settlement",
+      "accounts": "Accounts",
+      "adminUsers": "Admin Users",
+      "exceptions": "Exceptions",
+      "systemConfig": "System Config",
+      "clinicalSafety": "Clinical Safety",
+      "auditLogs": "Audit Logs",
+      "settings": "Settings",
+      "logout": "Logout"
+    },
+    "practice": {
+      "practiceWorkspace": "Practice workspace",
+      "verification": "Verification",
+      "invoices": "Invoices",
+      "settingsAndSecurity": "Settings and security",
+      "helpAndSupport": "Help and support"
     }
   }
 }

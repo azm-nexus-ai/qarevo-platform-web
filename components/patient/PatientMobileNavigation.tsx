@@ -16,6 +16,7 @@ import { ICONS } from '@/constants/icons'
 import { T, Glass } from '@/lib/tokens'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 import { logoutCurrentUser, clearPortalSession, getPatientSettings, isAuthError, readSessionMarker } from '@/lib/api'
+import { NavLabel } from '@/components/ui/NavLabel'
 
 export default function PatientMobileNavigation() {
   const pathname = usePathname()
@@ -224,7 +225,7 @@ export default function PatientMobileNavigation() {
 
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-          <ThemeToggle /><LanguageSwitch />
+          <ThemeToggle />
           <button
             type="button"
             aria-label="Open messages"
@@ -274,6 +275,7 @@ export default function PatientMobileNavigation() {
           ✕
         </button>
 
+        <div style={{ marginBottom: '14px' }}><LanguageSwitch /></div>
         <div style={{ marginBottom: '18px', paddingTop: '8px' }}>
           <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
             <AuthenticatedLogo />
@@ -318,7 +320,7 @@ export default function PatientMobileNavigation() {
                   aria-current={isActive ? 'page' : undefined}
                 >
                   <Ico p={item.icon} size={15} sw={1.7} color={isActive ? T.blue : T.slate2} />
-                  {item.label}
+                  <NavLabel portal='patient' label={item.label} />
                 </Link>
               )
             })}

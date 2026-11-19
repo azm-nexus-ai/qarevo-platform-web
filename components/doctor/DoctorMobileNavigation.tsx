@@ -1,5 +1,6 @@
 'use client'
 
+import { NavLabel, SigningOut } from '@/components/ui/NavLabel'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
@@ -242,7 +243,7 @@ export default function DoctorMobileNavigation() {
 
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-          <ThemeToggle /><LanguageSwitch />
+          <ThemeToggle />
           <PortalAccountMenu portal='doctor' name={displayName} description={specialty} avatar={<ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={34} />} profileHref='/doctor/profile' settingsHref='/doctor/settings' />
 
         </div>
@@ -271,6 +272,7 @@ export default function DoctorMobileNavigation() {
           ✕
         </button>
 
+        <div style={{ marginBottom: '14px' }}><LanguageSwitch /></div>
         <div style={{ marginBottom: '18px', paddingTop: '8px' }}>
           <Link href="/doctor/dashboard" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
             <AuthenticatedLogo />
@@ -322,7 +324,7 @@ export default function DoctorMobileNavigation() {
                     }}
                   >
                     <Ico p={item.icon} size={15} sw={1.7} color={T.red} />
-                    {loggingOut ? 'Signing out...' : item.label}
+                    {loggingOut ? <SigningOut /> : <NavLabel portal='doctor' label={item.label} />}
                   </button>
                 ) : (
                   <Link
@@ -345,7 +347,7 @@ export default function DoctorMobileNavigation() {
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <Ico p={item.icon} size={15} sw={1.7} color={isActive ? T.blue : T.slate2} />
-                    {item.label}
+                    <NavLabel portal='doctor' label={item.label} />
                   </Link>
                 )
               )

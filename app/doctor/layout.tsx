@@ -1,5 +1,6 @@
 'use client'
 
+import { NavLabel, SigningOut } from '@/components/ui/NavLabel'
 import SidebarToggle from '@/components/layout/SidebarToggle'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
@@ -251,7 +252,7 @@ export default function DoctorLayout({
                         }}
                       >
                         <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={T.red} /></span>
-                        {loggingOut ? 'Signing out...' : item.label}
+                        {loggingOut ? <SigningOut /> : <NavLabel portal='doctor' label={item.label} />}
                       </button>
                     ) : (
                       <Link
@@ -282,7 +283,7 @@ export default function DoctorLayout({
                         }}
                       >
                         <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={isActive ? T.blue : T.slate2} /></span>
-                        {item.label}
+                        <NavLabel portal='doctor' label={item.label} />
                       </Link>
                     )}
                   </li>

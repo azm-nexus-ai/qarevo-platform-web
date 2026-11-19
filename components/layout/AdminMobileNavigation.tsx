@@ -7,12 +7,13 @@ import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 import { usePathname } from 'next/navigation'
 import { ADMIN_ROUTES, ADMIN_SIDEBAR_ITEMS, isAdminNavActive } from '@/constants/admin-navigation'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
+import { NavLabel } from '@/components/ui/NavLabel'
 
 export default function AdminMobileNavigation({ onSignOut }: { onSignOut: () => void }) {
   const pathname = usePathname()
   return <div className="admin-mobile-navigation">
     <Link href={ADMIN_ROUTES.dashboard} aria-label="Admin dashboard"><AuthenticatedLogo width={100} /></Link>
-    <ThemeToggle /><LanguageSwitch />
+    <ThemeToggle />
     <details key={pathname} onKeyDown={event => {
       if (event.key === 'Escape') {
         event.currentTarget.open = false
@@ -22,8 +23,8 @@ export default function AdminMobileNavigation({ onSignOut }: { onSignOut: () => 
       <summary>Admin menu</summary>
       <nav aria-label="Admin mobile navigation">
         {ADMIN_SIDEBAR_ITEMS.filter(item => item.href !== ADMIN_ROUTES.logout).map(item =>
-          <Link key={item.href} href={item.href} aria-current={isAdminNavActive(pathname, item.href) ? 'page' : undefined}>{item.label}</Link>)}
-        <PortalAccessLinks /><button type="button" onClick={onSignOut}>Sign out</button>
+          <Link key={item.href} href={item.href} aria-current={isAdminNavActive(pathname, item.href) ? 'page' : undefined}><NavLabel portal='admin' label={item.label} /></Link>)}
+        <PortalAccessLinks /><LanguageSwitch /><button type="button" onClick={onSignOut}>Sign out</button>
       </nav>
     </details>
 

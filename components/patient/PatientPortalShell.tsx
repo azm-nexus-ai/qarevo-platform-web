@@ -10,6 +10,7 @@ import { ICONS } from '@/constants/icons'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 import { getPatientSettings, isAuthError, clearPortalSession, logoutCurrentUser, type PatientSettings } from '@/lib/api'
+import { NavLabel } from '@/components/ui/NavLabel'
 
 type PatientPortalShellProps = {
   eyebrow?: string
@@ -79,7 +80,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
                 aria-current={isActive ? 'page' : undefined}
               >
                 <Ico p={item.icon} size={16} sw={1.7} color={isActive ? T.blue : T.slate2} />
-                {item.label}
+                <NavLabel portal='patient' label={item.label} />
               </Link>
             )
           })}

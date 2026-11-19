@@ -6,7 +6,66 @@
     "theme": {
       "light": "Helles Design",
       "dark": "Dunkles Design",
-      "switchTo": "Wechseln zu: {mode}"
+      "switchToLight": "Zum hellen Design wechseln",
+      "switchToDark": "Zum dunklen Design wechseln"
+    },
+    "signingOut": "Abmeldung läuft…"
+  },
+  "nav": {
+    "patient": {
+      "dashboard": "Übersicht",
+      "findADoctor": "Ärztin oder Arzt finden",
+      "appointments": "Termine",
+      "medicalRecords": "Gesundheitsakte",
+      "prescriptions": "Rezepte",
+      "labRequests": "Laboraufträge",
+      "messages": "Nachrichten",
+      "notifications": "Benachrichtigungen",
+      "billingPayments": "Rechnungen und Zahlungen",
+      "settings": "Einstellungen",
+      "helpSupport": "Hilfe und Support",
+      "logout": "Abmelden"
+    },
+    "doctor": {
+      "dashboard": "Übersicht",
+      "workspace": "Arbeitsbereich",
+      "appointments": "Termine",
+      "patients": "Patientinnen und Patienten",
+      "myPractices": "Meine Praxen",
+      "independentPractice": "Eigene Praxis",
+      "messages": "Nachrichten",
+      "carePlans": "Behandlungspläne",
+      "prescriptions": "Rezepte",
+      "labOrders": "Laboraufträge",
+      "notifications": "Benachrichtigungen",
+      "videoConsultation": "Videosprechstunde",
+      "outcomes": "Behandlungsergebnisse",
+      "profile": "Profil",
+      "settings": "Einstellungen",
+      "helpSupport": "Hilfe und Support",
+      "logout": "Abmelden"
+    },
+    "admin": {
+      "dashboard": "Übersicht",
+      "doctors": "Ärztinnen und Ärzte",
+      "practices": "Praxen",
+      "verifications": "Verifizierungen",
+      "settlement": "Abrechnung",
+      "accounts": "Konten",
+      "adminUsers": "Administratoren",
+      "exceptions": "Ausnahmen",
+      "systemConfig": "Systemkonfiguration",
+      "clinicalSafety": "Klinische Sicherheit",
+      "auditLogs": "Audit-Protokolle",
+      "settings": "Einstellungen",
+      "logout": "Abmelden"
+    },
+    "practice": {
+      "practiceWorkspace": "Praxisverwaltung",
+      "verification": "Verifizierung",
+      "invoices": "Rechnungen",
+      "settingsAndSecurity": "Einstellungen und Sicherheit",
+      "helpAndSupport": "Hilfe und Support"
     }
   }
 }

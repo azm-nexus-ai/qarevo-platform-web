@@ -1,5 +1,6 @@
 'use client'
 
+import { NavLabel, SigningOut } from '@/components/ui/NavLabel'
 import AdminMobileNavigation from '@/components/layout/AdminMobileNavigation'
 import PortalAccessLinks from '@/components/layout/PortalAccessLinks'
 import SidebarToggle from '@/components/layout/SidebarToggle'
@@ -191,7 +192,7 @@ export default function AdminLayout({
                         }}
                       >
                         <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={T.red} /></span>
-                        {loggingOut ? 'Signing out...' : item.label}
+                        {loggingOut ? <SigningOut /> : <NavLabel portal='admin' label={item.label} />}
                       </button>
                     ) : (
                       <Link
@@ -222,7 +223,7 @@ export default function AdminLayout({
                         }}
                       >
                         <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={isActive ? T.blue : T.slate2} /></span>
-                        {item.label}
+                        <NavLabel portal='admin' label={item.label} />
                       </Link>
                     )}
                   </li>

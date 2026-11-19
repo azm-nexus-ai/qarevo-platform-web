@@ -7,6 +7,7 @@ import Ico from '@/components/ui/Ico'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import { T, Sh, PAGE_BG } from '@/lib/tokens'
 import { PATIENT_SIDEBAR_ITEMS, PATIENT_ROUTES, isPatientNavActive } from '@/constants/patient-navigation'
+import { NavLabel } from '@/components/ui/NavLabel'
 
 type Props = {
   title: string
@@ -49,7 +50,7 @@ export default function PatientPlaceholderPage({ title, description }: Props) {
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <Ico p={item.icon} size={15} sw={1.7} color={isActive ? T.blue : T.slate2} />
-                    {item.label}
+                    <NavLabel portal='patient' label={item.label} />
                   </Link>
                 )
               })}

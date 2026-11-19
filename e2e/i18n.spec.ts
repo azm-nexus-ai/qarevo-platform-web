@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { seedPortalSession, testSessionTiming } from './helpers/portal-session'
 
 // German is the default without a stored choice (ADR-0002); the rest of the suite seeds English.
 test.describe('without a stored language', () => {
@@ -22,6 +23,22 @@ test.describe('without a stored language', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
     await page.getByRole('group', { name: 'Language' }).getByRole('button', { name: 'Deutsch' }).click()
     await expect(page.locator('html')).toHaveAttribute('lang', 'de')
+  })
+
+  test('portal navigation follows the chosen language', async ({ page, context }) => {
+    const identity = await seedPortalSession(context, 'admin')
+    await context.route('**/api/v1/**', route => {
+      const path = new URL(route.request().url()).pathname
+      if (path.startsWith('/api/v1/session')) return route.fulfill({ json: testSessionTiming(identity) })
+      return route.fulfill({ status: 404, json: { detail: 'No synthetic fixture' } })
+    })
+    await page.goto('/admin/verifications')
+    const nav = page.getByRole('navigation').filter({ has: page.getByRole('link', { name: 'Verifizierungen' }) }).first()
+    await expect(nav.getByRole('link', { name: 'Abrechnung' })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Konten' })).toBeVisible()
+    await page.getByRole('group', { name: 'Sprache' }).first().getByRole('button', { name: 'English' }).click()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+    await expect(page.getByRole('link', { name: 'Settlement' }).first()).toBeVisible()
   })
 
   test('an unknown stored value falls back to German', async ({ page, context, baseURL }) => {
