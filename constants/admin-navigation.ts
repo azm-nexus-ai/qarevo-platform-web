@@ -10,6 +10,7 @@ export const ADMIN_ROUTES = {
   dashboard: '/admin/dashboard',
   doctors: '/admin/doctors',
   practices: '/admin/practices',
+  verifications: '/admin/verifications',
   patients: '/admin/patients',
   accounts: '/admin/accounts',
   adminUsers: '/admin/admin-users',
@@ -25,6 +26,7 @@ export const ADMIN_SIDEBAR_ITEMS: AdminNavItem[] = [
   { label: 'Dashboard', icon: ICONS.activity, href: ADMIN_ROUTES.dashboard },
   { label: 'Doctors', icon: ICONS.steth, href: ADMIN_ROUTES.doctors },
   { label: 'Practices', icon: ICONS.user, href: ADMIN_ROUTES.practices },
+  { label: 'Verifications', icon: ICONS.shield, href: ADMIN_ROUTES.verifications },
   { label: 'Accounts', icon: ICONS.user, href: ADMIN_ROUTES.accounts },
   { label: 'Admin Users', icon: ICONS.shield, href: ADMIN_ROUTES.adminUsers },
   { label: 'Exceptions', icon: ICONS.zap, href: ADMIN_ROUTES.exceptions },
@@ -46,5 +48,6 @@ export function isAdminNavActive(pathname: string, href: string) {
   if (href === ADMIN_ROUTES.audit) return pathname.startsWith('/admin/audit')
   if (href === ADMIN_ROUTES.clinicalSafety) return pathname.startsWith('/admin/clinical-safety')
   if (href === ADMIN_ROUTES.settings) return pathname.startsWith('/admin/settings')
+  if (href === ADMIN_ROUTES.verifications) return pathname.startsWith('/admin/verifications')
   return pathname === href
 }
