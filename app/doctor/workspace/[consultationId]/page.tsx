@@ -6,6 +6,7 @@ import '@/components/doctor/doctor-clinical.css'
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import ClinicalRecordEditor from '@/components/doctor/ClinicalRecordEditor'
+import WorkCertificates from '@/components/doctor/WorkCertificates'
 import {
   clearPortalSession,
   getDoctorConsultation,
@@ -204,6 +205,7 @@ export default function ConsultationDetailPage() {
 
       <ClinicalRecordEditor key={consultationId} consultationId={consultationId} consultationStatus={consultation.status}
         onPublished={async () => { setConsultationData(await getDoctorConsultation(consultationId)) }} />
+      <div className="mt-6"><WorkCertificates consultationId={consultationId} started={['STARTED', 'COMPLETED', 'ENDED'].includes(String(consultation.status).toUpperCase())} /></div>
     </div>
   )
 }
