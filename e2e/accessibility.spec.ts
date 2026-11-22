@@ -4,6 +4,8 @@ import { seedPortalSession } from './helpers/portal-session'
 
 /** Automated WCAG 2.1 A/AA checks on the entry points and shared shells, light and dark. */
 const now = () => new Date().toISOString()
+// Measure final colours, not a theme transition in progress.
+test.use({ reducedMotion: 'reduce' })
 
 async function mockApi(context: BrowserContext, identity?: unknown) {
   await context.route('**/api/v1/**', async route => {

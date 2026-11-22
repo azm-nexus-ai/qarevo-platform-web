@@ -82,3 +82,7 @@
 .filter[aria-pressed='true'] { background: var(--primary-soft); border-color: var(--primary-border); color: var(--link); }
 .filter:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid var(--border); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bell, .textButton, .itemLink, .footerLink, .filter { transition: none; }
+}
