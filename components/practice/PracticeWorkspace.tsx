@@ -58,7 +58,7 @@ function InvitationRow({ row, endpoint, canManage, refresh }: { row: PracticeInv
       <Decision label='Revoke invitation' endpoint={endpoint + '/' + row.id + '/revoke'} version={row.version} refresh={refresh} confirm={result => object(result) && practiceInvitation(result.invitation, row.practice_id)?.id === row.id && object(result.invitation) && result.invitation.status === 'REVOKED'} /></div>}
   </li>
 }
-function PracticeInvitations({ saved, admin, canManage }: { saved: Practice; admin: boolean; canManage: boolean }) {
+export function PracticeInvitations({ saved, admin, canManage }: { saved: Practice; admin: boolean; canManage: boolean }) {
   const base = `/api/v1/${admin ? 'admin' : 'practice'}/practices/${saved.id}/invitations`, [offset, setOffset] = useState(0), [email, setEmail] = useState(''), [error, setError] = useState('')
   const resource = usePortalResource<unknown>(canManage ? `${base}?limit=25&offset=${offset}` : null, false, { abortOnCleanup: true, refreshOnFocus: true })
   const data = useMemo(() => practicePage(resource.data, 'invitations', value => practiceInvitation(value, saved.id)), [resource.data, saved.id]), action = usePracticeAction(base + ':' + saved.version + ':' + canManage + ':' + data?.canManage)
@@ -71,7 +71,7 @@ function PracticeInvitations({ saved, admin, canManage }: { saved: Practice; adm
     </>}
   </PortalCard>
 }
-function PracticeMembers({ saved, canManage }: { saved: Practice; canManage: boolean }) {
+export function PracticeMembers({ saved, canManage }: { saved: Practice; canManage: boolean }) {
   const [offset, setOffset] = useState(0), base = `/api/v1/practice/practices/${saved.id}/members`
   const resource = usePortalResource<unknown>(`${base}?limit=25&offset=${offset}`, false, { abortOnCleanup: true, refreshOnFocus: true })
   const data = useMemo(() => practicePage(resource.data, 'members', value => practiceMember(value, saved.id)), [resource.data, saved.id])
