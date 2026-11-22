@@ -13,7 +13,7 @@ function rows(): Row[] {
   ]
 }
 
-async function prepare(context: BrowserContext, portal: 'doctor' | 'admin' | 'practice', options: { enabled?: boolean } = {}) {
+async function prepare(context: BrowserContext, portal: 'doctor' | 'admin', options: { enabled?: boolean } = {}) {
   const identity = await seedPortalSession(context, portal, { user_id: 'synthetic-notification-user' })
   const state = { rows: rows(), reads: [] as string[], readAll: 0, enabled: options.enabled ?? true }
   await context.route('**/api/v1/**', async route => {
