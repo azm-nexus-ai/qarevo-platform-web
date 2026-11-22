@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
@@ -27,6 +28,7 @@ function ConfigCard({ config, onEdit, onDelete }: {
   onEdit: (id: string) => void
   onDelete: (id: string) => void
 }) {
+  const t = useTranslations('adminSystemConfig');
   return (
     <div style={{
       background: "var(--surface-glass)",
@@ -46,7 +48,7 @@ function ConfigCard({ config, onEdit, onDelete }: {
           <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{config.key}</p>
           {config.is_sensitive && (
             <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, background: 'rgba(220,38,38,0.12)', color: T.red }}>
-              SENSITIVE
+              {t('sensitive')}
             </span>
           )}
         </div>
@@ -77,7 +79,7 @@ function ConfigCard({ config, onEdit, onDelete }: {
             transition: 'all 0.15s',
           }}
         >
-          Edit
+          {t('edit')}
         </button>
         <button
           type="button"
@@ -94,7 +96,7 @@ function ConfigCard({ config, onEdit, onDelete }: {
             transition: 'all 0.15s',
           }}
         >
-          Delete
+          {t('delete')}
         </button>
       </div>
     </div>
@@ -102,6 +104,7 @@ function ConfigCard({ config, onEdit, onDelete }: {
 }
 
 export default function SystemConfigPage() {
+  const t = useTranslations('adminSystemConfig');
   const router = useRouter()
   const [configs, setConfigs] = useState<AdminSystemConfig[]>([])
   const [loading, setLoading] = useState(true)
@@ -191,7 +194,7 @@ export default function SystemConfigPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '280px', color: T.slate2 }}>
-        Loading system config...
+        {t('loadingSystemConfig')}
       </div>
     )
   }
@@ -209,10 +212,10 @@ export default function SystemConfigPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
-            System Configuration
+            {t('systemConfiguration')}
           </h1>
           <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate2 }}>
-            Manage feature flags and platform settings
+            {t('manageFeatureFlagsAndPlatform')}
           </p>
         </div>
         <button
@@ -230,7 +233,7 @@ export default function SystemConfigPage() {
             transition: 'all 0.15s',
           }}
         >
-          Add Config
+          {t('addConfig')}
         </button>
       </div>
 
@@ -239,7 +242,7 @@ export default function SystemConfigPage() {
           <Ico p={ICONS.search} size={16} sw={1.6} color={T.slate2} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
-            placeholder="Search configs..."
+            placeholder={t('searchConfigs')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -267,19 +270,19 @@ export default function SystemConfigPage() {
             cursor: 'pointer',
           }}
         >
-          <option value="">All Categories</option>
-          <option value="general">General</option>
-          <option value="features">Features</option>
-          <option value="limits">Limits</option>
-          <option value="integrations">Integrations</option>
-          <option value="security">Security</option>
+          <option value="">{t('allCategories')}</option>
+          <option value="general">{t('general')}</option>
+          <option value="features">{t('features')}</option>
+          <option value="limits">{t('limits')}</option>
+          <option value="integrations">{t('integrations')}</option>
+          <option value="security">{t('security')}</option>
         </select>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {configs.length === 0 ? (
           <div style={{ padding: '48px', textAlign: 'center', color: T.slate2, fontSize: '14px' }}>
-            No configs found
+            {t('noConfigsFound')}
           </div>
         ) : (
           configs.map((config) => (
@@ -320,12 +323,12 @@ export default function SystemConfigPage() {
             padding: '24px',
           }}>
             <h2 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 800, color: T.navy }}>
-              Add System Config
+              {t('addSystemConfig')}
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Key
+                  {t('key')}
                 </label>
                 <input
                   type="text"
@@ -345,7 +348,7 @@ export default function SystemConfigPage() {
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Value
+                  {t('value')}
                 </label>
                 <input
                   type="text"
@@ -365,7 +368,7 @@ export default function SystemConfigPage() {
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Description
+                  {t('description')}
                 </label>
                 <input
                   type="text"
@@ -385,7 +388,7 @@ export default function SystemConfigPage() {
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: T.navy }}>
-                  Category
+                  {t('category')}
                 </label>
                 <select
                   value={createForm.category}
@@ -401,11 +404,11 @@ export default function SystemConfigPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  <option value="general">General</option>
-                  <option value="features">Features</option>
-                  <option value="limits">Limits</option>
-                  <option value="integrations">Integrations</option>
-                  <option value="security">Security</option>
+                  <option value="general">{t('general')}</option>
+                  <option value="features">{t('features')}</option>
+                  <option value="limits">{t('limits')}</option>
+                  <option value="integrations">{t('integrations')}</option>
+                  <option value="security">{t('security')}</option>
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -417,7 +420,7 @@ export default function SystemConfigPage() {
                   style={{ width: '16px', height: '16px' }}
                 />
                 <label htmlFor="sensitive" style={{ fontSize: '13px', color: T.navy }}>
-                  Mark as sensitive
+                  {t('markAsSensitive')}
                 </label>
               </div>
             </div>
@@ -430,14 +433,14 @@ export default function SystemConfigPage() {
                 }}
                 style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="button"
                 onClick={handleCreateConfig}
                 style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
               >
-                Create Config
+                {t('createConfig')}
               </button>
             </div>
           </div>

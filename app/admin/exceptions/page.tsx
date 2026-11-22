@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
@@ -88,6 +89,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
   onResolve: (id: string) => void
   onClose: (id: string) => void
 }) {
+  const t = useTranslations('adminExceptions');
   return (
     <div style={{
       background: "var(--surface-glass)",
@@ -128,7 +130,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
 
       {exception.resolution_notes && (
         <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(15,158,119,0.08)', border: '1px solid rgba(15,158,119,0.18)' }}>
-          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.green, marginBottom: '4px' }}>Resolution:</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.green, marginBottom: '4px' }}>{t('resolution')}</p>
           <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>{exception.resolution_notes}</p>
         </div>
       )}
@@ -151,7 +153,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
                 transition: 'all 0.15s',
               }}
             >
-              Assign
+              {t('assign')}
             </button>
             <button
               type="button"
@@ -168,7 +170,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
                 transition: 'all 0.15s',
               }}
             >
-              Resolve
+              {t('resolve')}
             </button>
           </>
         )}
@@ -188,7 +190,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
               transition: 'all 0.15s',
             }}
           >
-            Close
+            {t('close')}
           </button>
         )}
       </div>
@@ -197,6 +199,7 @@ function ExceptionCard({ exception, onAssign, onResolve, onClose }: {
 }
 
 export default function AdminExceptionsPage() {
+  const t = useTranslations('adminExceptions');
   const router = useRouter()
   const [exceptions, setExceptions] = useState<AdminException[]>([])
   const [stats, setStats] = useState<AdminExceptionStats | null>(null)
@@ -298,7 +301,7 @@ export default function AdminExceptionsPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '280px', color: T.slate2 }}>
-        Loading exceptions...
+        {t('loadingExceptions')}
       </div>
     )
   }
@@ -307,7 +310,7 @@ export default function AdminExceptionsPage() {
     return (
       <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         <p role='alert'>{error}</p>
-        <button type='button' className='theme-toggle' onClick={() => setRetry(value => value + 1)}>Try again</button>
+        <button type='button' className='theme-toggle' onClick={() => setRetry(value => value + 1)}>{t('tryAgain')}</button>
       </div>
     )
   }
@@ -317,10 +320,10 @@ export default function AdminExceptionsPage() {
       {/* Page Header */}
       <div>
         <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
-          Exceptions Management
+          {t('exceptionsManagement')}
         </h1>
         <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate2 }}>
-          Track and resolve operational exceptions
+          {t('trackAndResolveOperationalExceptions')}
         </p>
       </div>
 
@@ -336,7 +339,7 @@ export default function AdminExceptionsPage() {
             boxShadow: Sh.card,
             padding: '16px',
           }}>
-            <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>Total</p>
+            <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>{t('total')}</p>
             <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: T.navy }}>{stats.total}</p>
           </div>
           <div style={{
@@ -348,7 +351,7 @@ export default function AdminExceptionsPage() {
             boxShadow: Sh.card,
             padding: '16px',
           }}>
-            <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>Open</p>
+            <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>{t('open')}</p>
             <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: stats.by_status.open > 0 ? T.red : T.navy }}>{stats.by_status.open || 0}</p>
           </div>
           <div style={{
@@ -360,7 +363,7 @@ export default function AdminExceptionsPage() {
             boxShadow: Sh.card,
             padding: '16px',
           }}>
-            <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>Critical</p>
+            <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>{t('critical')}</p>
             <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: stats.by_severity.critical > 0 ? T.red : T.navy }}>{stats.by_severity.critical || 0}</p>
           </div>
           <div style={{
@@ -372,7 +375,7 @@ export default function AdminExceptionsPage() {
             boxShadow: Sh.card,
             padding: '16px',
           }}>
-            <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>High</p>
+            <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>{t('high')}</p>
             <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: stats.by_severity.high > 0 ? T.amber : T.navy }}>{stats.by_severity.high || 0}</p>
           </div>
         </div>
@@ -393,11 +396,11 @@ export default function AdminExceptionsPage() {
             cursor: 'pointer',
           }}
         >
-          <option value="">All Status</option>
-          <option value="open">Open</option>
-          <option value="in_progress">In Progress</option>
-          <option value="resolved">Resolved</option>
-          <option value="closed">Closed</option>
+          <option value="">{t('allStatus')}</option>
+          <option value="open">{t('open')}</option>
+          <option value="in_progress">{t('inProgress')}</option>
+          <option value="resolved">{t('resolved')}</option>
+          <option value="closed">{t('closed')}</option>
         </select>
         <select
           value={severityFilter}
@@ -412,11 +415,11 @@ export default function AdminExceptionsPage() {
             cursor: 'pointer',
           }}
         >
-          <option value="">All Severity</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
+          <option value="">{t('allSeverity')}</option>
+          <option value="critical">{t('critical')}</option>
+          <option value="high">{t('high')}</option>
+          <option value="medium">{t('medium')}</option>
+          <option value="low">{t('low')}</option>
         </select>
         <select
           value={typeFilter}
@@ -431,11 +434,11 @@ export default function AdminExceptionsPage() {
             cursor: 'pointer',
           }}
         >
-          <option value="">All Types</option>
-          <option value="system">System</option>
-          <option value="user">User</option>
-          <option value="payment">Payment</option>
-          <option value="api">API</option>
+          <option value="">{t('allTypes')}</option>
+          <option value="system">{t('system')}</option>
+          <option value="user">{t('user')}</option>
+          <option value="payment">{t('payment')}</option>
+          <option value="api">{t('api')}</option>
         </select>
       </div>
 
@@ -443,7 +446,7 @@ export default function AdminExceptionsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {exceptions.length === 0 ? (
           <div style={{ padding: '48px', textAlign: 'center', color: T.slate2, fontSize: '14px' }}>
-            No exceptions found
+            {t('noExceptionsFound')}
           </div>
         ) : (
           exceptions.map((exception) => (

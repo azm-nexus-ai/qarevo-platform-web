@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { FieldFeedback, ValidationSummary } from '@/components/ui/ValidationFeedback'
 import { getAdminUsers, createAdminUser, updateAdminUser, updateAdminUserStatus, resendAdminInvitation,
@@ -13,6 +14,7 @@ const STATUSES: AdminStatus[] = ['INVITED', 'ACTIVE', 'SUSPENDED', 'DISABLED']
 type Action = { kind: 'invite' | 'edit' | 'status' | 'resend'; user?: AdminUser; status?: Exclude<AdminStatus, 'INVITED'> }
 
 export default function AdminUsersPage() {
+  const t = useTranslations('adminUsers');
   const [users, setUsers] = useState<AdminUser[]>([])
   const [canManage, setCanManage] = useState(false)
   const [currentId, setCurrentId] = useState('')
@@ -89,38 +91,38 @@ export default function AdminUsersPage() {
   const title = action?.kind === 'invite' ? 'Invite administrator' : action?.kind === 'edit' ? 'Edit administrator' : action?.kind === 'resend' ? 'Send a new invitation' : 'Change administrator access'
   return <section className='admin-management'>
     <header className='management-heading'>
-      <div><h1>Admin Users</h1><p>Invite trusted colleagues, assign roles and control administrative access.</p></div>
-      {canManage && <button className='primary' onClick={() => open({ kind: 'invite' })}>Invite administrator</button>}
+      <div><h1>{t('adminUsers')}</h1><p>{t('inviteTrustedColleaguesAssignRoles')}</p></div>
+      {canManage && <button className='primary' onClick={() => open({ kind: 'invite' })}>{t('inviteAdministrator')}</button>}
     </header>
     <div className='management-guide'>
-      <h2>Owner & administrator setup</h2>
-      <p>A super administrator can manage other administrators. Invitations expire after 24 hours and require mailbox verification and a personal password. Keep at least one active super administrator.</p>
+      <h2>{t('ownerAdministratorSetup')}</h2>
+      <p>{t('aSuperAdministratorCanManage')}</p>
       <p>Suspend or revoke access to stop existing sessions. Restore access when appropriate. These controls preserve account and audit records; they do not permanently delete people or clinical data.</p>
-      {!canManage && !loading && !error && <p>You can view this directory. Only a super administrator can change access.</p>}
+      {!canManage && !loading && !error && <p>{t('youCanViewThisDirectory')}</p>}
     </div>
     <div className='management-filters'>
-      <label>Search administrators<input type='search' value={search} onChange={e => { setSearch(e.target.value); setOffset(0) }} maxLength={200} /></label>
-      <label>Role<select value={role} onChange={e => { setRole(e.target.value); setOffset(0) }}><option value=''>All roles</option>{Object.entries(ROLES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <label>Status<select value={status} onChange={e => { setStatus(e.target.value); setOffset(0) }}><option value=''>All statuses</option>{STATUSES.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label>{t('searchAdministrators')}<input type='search' value={search} onChange={e => { setSearch(e.target.value); setOffset(0) }} maxLength={200} /></label>
+      <label>{t('role')}<select value={role} onChange={e => { setRole(e.target.value); setOffset(0) }}><option value=''>{t('allRoles')}</option>{Object.entries(ROLES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label>{t('status')}<select value={status} onChange={e => { setStatus(e.target.value); setOffset(0) }}><option value=''>{t('allStatuses')}</option>{STATUSES.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
     </div>
     {notice && <p role='status' className='management-guide'>{notice}</p>}
-    {error ? <div role='alert'><p>{error}</p><button onClick={() => setRevision(n => n + 1)}>Retry</button></div> : loading ? <p role='status'>Loading administrators…</p> : <>
-      {!users.length && <p>No administrators match these filters.</p>}
+    {error ? <div role='alert'><p>{error}</p><button onClick={() => setRevision(n => n + 1)}>{t('retry')}</button></div> : loading ? <p role='status'>{t('loadingAdministrators')}</p> : <>
+      {!users.length && <p>{t('noAdministratorsMatchTheseFilters')}</p>}
       {users.map(user => <article className='management-card' key={user.id}>
         <div><h2>{user.full_name}{user.id === currentId ? ' (you)' : ''}</h2><p>{user.email}</p><p>{ROLES[user.role]} · <strong>{user.status}</strong></p></div>
         {canManage && <div className='management-actions'>
-          <button onClick={() => open({kind:'edit',user})}>Edit</button>
-          {user.status === 'INVITED' && <button onClick={() => open({kind:'resend',user})}>Resend invitation</button>}
-          {user.status === 'ACTIVE' && <button onClick={() => open({kind:'status',user,status:'SUSPENDED'})}>Suspend access</button>}
-          {(user.status === 'SUSPENDED' || user.status === 'DISABLED') && <button onClick={() => open({kind:'status',user,status:'ACTIVE'})}>Restore access</button>}
-          {user.status === 'DISABLED' && <button onClick={() => open({kind:'resend',user})}>Reinvite unactivated account</button>}
+          <button onClick={() => open({kind:'edit',user})}>{t('edit')}</button>
+          {user.status === 'INVITED' && <button onClick={() => open({kind:'resend',user})}>{t('resendInvitation')}</button>}
+          {user.status === 'ACTIVE' && <button onClick={() => open({kind:'status',user,status:'SUSPENDED'})}>{t('suspendAccess')}</button>}
+          {(user.status === 'SUSPENDED' || user.status === 'DISABLED') && <button onClick={() => open({kind:'status',user,status:'ACTIVE'})}>{t('restoreAccess')}</button>}
+          {user.status === 'DISABLED' && <button onClick={() => open({kind:'resend',user})}>{t('reinviteUnactivatedAccount')}</button>}
           {user.status !== 'DISABLED' && <button className='danger' onClick={() => open({kind:'status',user,status:'DISABLED'})}>{user.status === 'INVITED' ? 'Revoke invitation' : 'Revoke access'}</button>}
         </div>}
       </article>)}
-      <nav aria-label='Administrator directory pages' className='management-actions'>
-        <button disabled={offset === 0} onClick={() => setOffset(n => Math.max(0,n-50))}>Previous</button>
+      <nav aria-label={t('administratorDirectoryPages')} className='management-actions'>
+        <button disabled={offset === 0} onClick={() => setOffset(n => Math.max(0,n-50))}>{t('previous')}</button>
         <span>{total ? `${offset+1}–${Math.min(offset+50,total)} of ${total}` : '0 administrators'}</span>
-        <button disabled={offset+50 >= total} onClick={() => setOffset(n => n+50)}>Next</button>
+        <button disabled={offset+50 >= total} onClick={() => setOffset(n => n+50)}>{t('next')}</button>
       </nav>
     </>}
     <dialog ref={dialog} className='preferences-dialog' aria-labelledby='admin-action-title' onCancel={event => { if (saving) event.preventDefault() }} onClose={() => { setAction(null); trigger.current?.focus() }}>
@@ -128,22 +130,22 @@ export default function AdminUsersPage() {
       <form noValidate onSubmit={submit}>
         <ValidationSummary errors={errors} />
         {(action?.kind === 'invite' || action?.kind === 'edit') && <>
-          <label htmlFor='admin-full_name'>Full Name (Required)</label>
+          <label htmlFor='admin-full_name'>{t('fullNameRequired')}</label>
           <input id='admin-full_name' autoComplete='name' required maxLength={200} value={form.full_name} onChange={e => setForm({...form,full_name:e.target.value})} aria-invalid={!!errors.full_name} aria-describedby={errors.full_name ? 'admin-full_name-error' : undefined} />
           <FieldFeedback name='admin-full_name' error={errors.full_name} />
-          {action.kind === 'invite' && <><label htmlFor='admin-email'>Email (Required)</label>
+          {action.kind === 'invite' && <><label htmlFor='admin-email'>{t('emailRequired')}</label>
             <input id='admin-email' type='email' autoComplete='email' required value={form.email} onChange={e => setForm({...form,email:e.target.value})} aria-invalid={!!errors.email} aria-describedby={errors.email ? 'admin-email-error' : 'admin-email-hint'} />
-            <small id='admin-email-hint'>Use a dedicated mailbox the recipient controls, separate from patient or clinician accounts.</small><FieldFeedback name='admin-email' error={errors.email} /></>}
-          <label htmlFor='admin-role'>Role (Required)</label>
+            <small id='admin-email-hint'>{t('useADedicatedMailboxThe')}</small><FieldFeedback name='admin-email' error={errors.email} /></>}
+          <label htmlFor='admin-role'>{t('roleRequired')}</label>
           <select id='admin-role' required value={form.role} onChange={e => setForm({...form,role:e.target.value as AdminRole})} aria-invalid={!!errors.role} aria-describedby={errors.role?'admin-role-hint admin-role-error':'admin-role-hint'}>
             {Object.entries(ROLES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
-          </select><small id='admin-role-hint'>Super administrators can grant and revoke administrative access. Operations administrators can review clinicians.</small>
+          </select><small id='admin-role-hint'>{t('superAdministratorsCanGrantAnd')}</small>
           <FieldFeedback name='admin-role' error={errors.role} />
         </>}
-        {action?.kind === 'status' && <><p>Set {action.user?.email} to <strong>{action.status}</strong>. Current sessions will be revoked. Records will be preserved.</p>
-          <label htmlFor='admin-reason'>Reason (Required)</label><textarea id='admin-reason' required minLength={10} maxLength={500} value={form.reason} onChange={e => setForm({...form,reason:e.target.value})} aria-invalid={!!errors.reason} aria-describedby='admin-reason-error' /><FieldFeedback name='admin-reason' error={errors.reason} /></>}
+        {action?.kind === 'status' && <><p>Set {action.user?.email} to <strong>{action.status}</strong>{t('currentSessionsWillBeRevoked')}</p>
+          <label htmlFor='admin-reason'>{t('reasonRequired')}</label><textarea id='admin-reason' required minLength={10} maxLength={500} value={form.reason} onChange={e => setForm({...form,reason:e.target.value})} aria-invalid={!!errors.reason} aria-describedby='admin-reason-error' /><FieldFeedback name='admin-reason' error={errors.reason} /></>}
         {action?.kind === 'resend' && <p>Send a replacement invitation to {action.user?.email}. The previous link will stop working. This applies only to an invitation that has not been accepted.</p>}
-        <div className='management-actions'><button type='button' disabled={saving} onClick={close}>Cancel</button><button className='primary' type='submit' disabled={saving}>{saving ? 'Saving…' : action?.kind === 'invite' ? 'Send invitation' : action?.kind === 'resend' ? 'Resend invitation' : 'Save changes'}</button></div>
+        <div className='management-actions'><button type='button' disabled={saving} onClick={close}>{t('cancel')}</button><button className='primary' type='submit' disabled={saving}>{saving ? 'Saving…' : action?.kind === 'invite' ? 'Send invitation' : action?.kind === 'resend' ? 'Resend invitation' : 'Save changes'}</button></div>
       </form>
     </dialog>
     <style jsx>{`

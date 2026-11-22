@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Suspense, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { getApiErrorDetail } from '@/lib/api'
@@ -24,6 +25,7 @@ function StatusBadge({ status }: { status: AccountStatus }) {
 }
 
 function ActionDialog({ action, account, onClose, onDone }: { action: Action; account: AccountDetail; onClose: () => void; onDone: (detail: AccountDetail, message: string) => void }) {
+  const t = useTranslations('adminAccounts');
   const copy = ACTION_COPY[action]
   const [reason, setReason] = useState('')
   const [email, setEmail] = useState('')
@@ -64,23 +66,23 @@ function ActionDialog({ action, account, onClose, onDone }: { action: Action; ac
       <p><strong>{account.name || account.email || 'Unnamed account'}</strong>{account.email ? ` · ${account.email}` : ''}</p>
       <p>{copy.body}</p>
       {action === 'delete' && <div className='acc-retention'>
-        <h3>What happens to the data</h3>
+        <h3>{t('whatHappensToTheData')}</h3>
         <ul>{account.retention_plan.map(item => <li key={item.category}><strong>{item.category}</strong>: {item.handling}{item.retention ? ` (${item.retention})` : ''}</li>)}</ul>
-        {!account.retention_confirmed && <p className='acc-warn'>Retention periods are awaiting legal confirmation. Erasure runs only after an administrator reviews the dry-run plan.</p>}
+        {!account.retention_confirmed && <p className='acc-warn'>{t('retentionPeriodsAreAwaitingLegal')}</p>}
       </div>}
-      <label htmlFor={`${titleId}-reason`}>Reason (Required)</label>
+      <label htmlFor={`${titleId}-reason`}>{t('reasonRequired')}</label>
       <textarea id={`${titleId}-reason`} ref={reasonRef} value={reason} onChange={event => setReason(event.target.value)} rows={3} maxLength={600}
         aria-invalid={attempted && !!reasonError} aria-describedby={`${titleId}-reason-help`} />
       <p id={`${titleId}-reason-help`} className={attempted && reasonError ? 'acc-error' : 'acc-help'}>{attempted && reasonError ? reasonError : 'Stored in the audit trail with your name and the time.'}</p>
       {action === 'delete' && <>
-        <label htmlFor={`${titleId}-email`}>Type the account’s email address to confirm (Required)</label>
+        <label htmlFor={`${titleId}-email`}>{t('typeTheAccountSEmail')}</label>
         <input id={`${titleId}-email`} value={email} onChange={event => setEmail(event.target.value)} autoComplete='off' spellCheck={false}
           aria-invalid={attempted && !!emailError} aria-describedby={attempted && emailError ? `${titleId}-email-error` : undefined} />
         {attempted && emailError && <p id={`${titleId}-email-error`} className='acc-error'>{emailError}</p>}
       </>}
       {error && <p role='alert' className='acc-error'>{error}</p>}
       <div className='acc-actions'>
-        <button type='button' className='acc-button' onClick={onClose} disabled={busy}>Keep as is</button>
+        <button type='button' className='acc-button' onClick={onClose} disabled={busy}>{t('keepAsIs')}</button>
         <button type='submit' className={`acc-button ${copy.danger ? 'danger' : 'primary'}`} disabled={busy}>{busy ? 'Saving…' : copy.button}</button>
       </div>
     </form>
@@ -88,6 +90,7 @@ function ActionDialog({ action, account, onClose, onDone }: { action: Action; ac
 }
 
 function AccountPanel({ id, onChanged }: { id: string; onChanged: () => void }) {
+  const t = useTranslations('adminAccounts');
   const [detail, setDetail] = useState<AccountDetail | null>(null)
   const [error, setError] = useState('')
   const [action, setAction] = useState<Action | null>(null)
@@ -102,8 +105,8 @@ function AccountPanel({ id, onChanged }: { id: string; onChanged: () => void }) 
     return () => { live = false }
   }, [id, attempt])
 
-  if (error) return <section className='acc-panel' aria-label='Account details'><p role='alert' className='acc-error'>{error}</p><button className='acc-button' onClick={() => { setError(''); setDetail(null); setAttempt(n => n + 1) }}>Try again</button></section>
-  if (!detail) return <section className='acc-panel' aria-label='Account details'><p role='status'>Loading account…</p></section>
+  if (error) return <section className='acc-panel' aria-label={t('accountDetails')}><p role='alert' className='acc-error'>{error}</p><button className='acc-button' onClick={() => { setError(''); setDetail(null); setAttempt(n => n + 1) }}>{t('tryAgain')}</button></section>
+  if (!detail) return <section className='acc-panel' aria-label={t('accountDetails')}><p role='status'>{t('loadingAccount')}</p></section>
   const can = detail.can
   const any = can.suspend || can.reactivate || can.request_deletion || can.cancel_deletion
   return <section className='acc-panel' aria-labelledby='acc-detail-title'>
@@ -115,34 +118,34 @@ function AccountPanel({ id, onChanged }: { id: string; onChanged: () => void }) 
       <StatusBadge status={detail.status} />
     </header>
     {notice && <p role='status' className='acc-notice'>{notice}</p>}
-    {detail.contact_data_erased_at && <div className='acc-banner' role='note'><strong>Contact data erased</strong> on {formatBerlin(detail.contact_data_erased_at)}. The identity kept with the medical documentation remains.</div>}
+    {detail.contact_data_erased_at && <div className='acc-banner' role='note'><strong>{t('contactDataErased')}</strong> on {formatBerlin(detail.contact_data_erased_at)}. The identity kept with the medical documentation remains.</div>}
     {detail.deletion && <div className='acc-banner' role='note'>
-      <strong>Deletion requested</strong> on {formatBerlin(detail.deletion.requested_at)} by {detail.deletion.requested_by}. Contact data becomes eligible for erasure from {formatBerlin(detail.deletion.erase_contact_data_after, false)}. {detail.deletion.erasure_job === 'enabled' ? 'A super or compliance administrator erases it from the erasure plan below the account list.' : 'Erasure is a dry run only on this deployment.'}
+      <strong>{t('deletionRequested')}</strong> on {formatBerlin(detail.deletion.requested_at)} by {detail.deletion.requested_by}. Contact data becomes eligible for erasure from {formatBerlin(detail.deletion.erase_contact_data_after, false)}. {detail.deletion.erasure_job === 'enabled' ? 'A super or compliance administrator erases it from the erasure plan below the account list.' : 'Erasure is a dry run only on this deployment.'}
     </div>}
     <dl className='acc-facts'>
-      <div><dt>Account type</dt><dd>{detail.role === 'doctor' ? 'Doctor' : 'Patient'}</dd></div>
-      <div><dt>Registered</dt><dd>{formatBerlin(detail.registered_at)}</dd></div>
-      <div><dt>Last sign-in</dt><dd>{formatBerlin(detail.last_login_at)}</dd></div>
+      <div><dt>{t('accountType')}</dt><dd>{detail.role === 'doctor' ? 'Doctor' : 'Patient'}</dd></div>
+      <div><dt>{t('registered')}</dt><dd>{formatBerlin(detail.registered_at)}</dd></div>
+      <div><dt>{t('lastSignIn')}</dt><dd>{formatBerlin(detail.last_login_at)}</dd></div>
       <div><dt>{detail.role === 'doctor' ? 'Licence verification' : 'Email verification'}</dt><dd>{detail.verification === 'verified' ? 'Verified' : detail.verification === 'pending' ? 'Pending review' : 'Not verified'}</dd></div>
-      <div><dt>Phone</dt><dd>{detail.phone || '—'}{detail.phone ? (detail.phone_verified ? ' · verified' : ' · not verified') : ''}</dd></div>
-      <div><dt>Active sessions</dt><dd>{detail.sessions.length}</dd></div>
+      <div><dt>{t('phone')}</dt><dd>{detail.phone || '—'}{detail.phone ? (detail.phone_verified ? ' · verified' : ' · not verified') : ''}</dd></div>
+      <div><dt>{t('activeSessions')}</dt><dd>{detail.sessions.length}</dd></div>
     </dl>
     {any ? <div className='acc-actions start'>
-      {can.suspend && <button className='acc-button danger' onClick={() => setAction('suspend')}>Suspend</button>}
-      {can.reactivate && <button className='acc-button primary' onClick={() => setAction('reactivate')}>Reactivate</button>}
-      {can.cancel_deletion && <button className='acc-button' onClick={() => setAction('cancel-delete')}>Cancel deletion request</button>}
-      {can.request_deletion && <button className='acc-button danger subtle' onClick={() => setAction('delete')}>Request deletion</button>}
-    </div> : <p className='acc-help'>Your administrator role can view this account but not change it.</p>}
+      {can.suspend && <button className='acc-button danger' onClick={() => setAction('suspend')}>{t('suspend')}</button>}
+      {can.reactivate && <button className='acc-button primary' onClick={() => setAction('reactivate')}>{t('reactivate')}</button>}
+      {can.cancel_deletion && <button className='acc-button' onClick={() => setAction('cancel-delete')}>{t('cancelDeletionRequest')}</button>}
+      {can.request_deletion && <button className='acc-button danger subtle' onClick={() => setAction('delete')}>{t('requestDeletion')}</button>}
+    </div> : <p className='acc-help'>{t('yourAdministratorRoleCanView')}</p>}
     <div className='acc-columns'>
-      <section aria-labelledby='acc-sessions'><h3 id='acc-sessions'>Sessions</h3>
-        {detail.sessions.length ? <ul className='acc-list'>{detail.sessions.map(s => <li key={s.id}><strong>{[s.device, s.browser, s.os].filter(Boolean).join(' · ') || 'Unknown device'}</strong><span>Network {s.network || 'unknown'} · started {formatBerlin(s.started_at)} · last seen {formatBerlin(s.last_seen_at)}</span></li>)}</ul> : <p className='acc-help'>No active sessions.</p>}
+      <section aria-labelledby='acc-sessions'><h3 id='acc-sessions'>{t('sessions')}</h3>
+        {detail.sessions.length ? <ul className='acc-list'>{detail.sessions.map(s => <li key={s.id}><strong>{[s.device, s.browser, s.os].filter(Boolean).join(' · ') || 'Unknown device'}</strong><span>Network {s.network || 'unknown'} · started {formatBerlin(s.started_at)} · last seen {formatBerlin(s.last_seen_at)}</span></li>)}</ul> : <p className='acc-help'>{t('noActiveSessions')}</p>}
       </section>
-      <section aria-labelledby='acc-activity'><h3 id='acc-activity'>Recent activity</h3>
-        {detail.activity.length ? <ul className='acc-list'>{detail.activity.map((a, i) => <li key={`${a.event}-${a.at}-${i}`}><strong>{eventLabel(a.event)}{a.success ? '' : ' (failed)'}</strong><span>{formatBerlin(a.at)}</span></li>)}</ul> : <p className='acc-help'>No recorded activity.</p>}
+      <section aria-labelledby='acc-activity'><h3 id='acc-activity'>{t('recentActivity')}</h3>
+        {detail.activity.length ? <ul className='acc-list'>{detail.activity.map((a, i) => <li key={`${a.event}-${a.at}-${i}`}><strong>{eventLabel(a.event)}{a.success ? '' : ' (failed)'}</strong><span>{formatBerlin(a.at)}</span></li>)}</ul> : <p className='acc-help'>{t('noRecordedActivity')}</p>}
       </section>
     </div>
-    <section aria-labelledby='acc-history'><h3 id='acc-history'>Administrative history</h3>
-      {detail.admin_history.length ? <ol className='acc-list'>{detail.admin_history.map((h, i) => <li key={`${h.action}-${h.at}-${i}`}><strong>{ACTION_LABELS[h.action] || eventLabel(h.action)} by {h.by}</strong><span>{formatBerlin(h.at)}{h.reason ? ` · “${h.reason}”` : ''}</span></li>)}</ol> : <p className='acc-help'>No administrative changes yet.</p>}
+    <section aria-labelledby='acc-history'><h3 id='acc-history'>{t('administrativeHistory')}</h3>
+      {detail.admin_history.length ? <ol className='acc-list'>{detail.admin_history.map((h, i) => <li key={`${h.action}-${h.at}-${i}`}><strong>{ACTION_LABELS[h.action] || eventLabel(h.action)} by {h.by}</strong><span>{formatBerlin(h.at)}{h.reason ? ` · “${h.reason}”` : ''}</span></li>)}</ol> : <p className='acc-help'>{t('noAdministrativeChangesYet')}</p>}
     </section>
     {action && <ActionDialog action={action} account={detail} onClose={() => setAction(null)}
       onDone={(value, message) => { setAction(null); setDetail(value); setNotice(message); onChanged(); requestAnimationFrame(() => heading.current?.focus()) }} />}
@@ -150,6 +153,7 @@ function AccountPanel({ id, onChanged }: { id: string; onChanged: () => void }) 
 }
 
 function AccountsContent() {
+  const t = useTranslations('adminAccounts');
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -184,37 +188,37 @@ function AccountsContent() {
   const total = list?.total ?? 0
   return <section className='accounts'>
     <header>
-      <h1>Accounts</h1>
-      <p>Find patient and doctor accounts, check their status and sessions, and suspend, reactivate or request deletion. Clinical records are never shown here.</p>
+      <h1>{t('accounts')}</h1>
+      <p>{t('findPatientAndDoctorAccounts')}</p>
     </header>
-    <div role='tablist' aria-label='Account type' className='acc-tabs'>
+    <div role='tablist' aria-label={t('accountType')} className='acc-tabs'>
       {(['patient', 'doctor'] as const).map(value => <button key={value} role='tab' aria-selected={role === value} className={role === value ? 'active' : ''}
         onClick={() => { setOffset(0); setVerification(''); navigate({ role: value, account: null }) }}>{value === 'patient' ? 'Patients' : 'Doctors'}</button>)}
     </div>
     <form className='acc-filters' role='search' onSubmit={event => event.preventDefault()}>
-      <label>Search by name or email<input type='search' value={search} maxLength={120} onChange={event => { setOffset(0); setSearch(event.target.value) }} /></label>
-      <label>Status<select value={status} onChange={event => { setOffset(0); setStatus(event.target.value) }}>
-        <option value=''>Any status</option>{(Object.keys(STATUS_LABELS) as AccountStatus[]).map(value => <option key={value} value={value}>{STATUS_LABELS[value]}</option>)}
+      <label>{t('searchByNameOrEmail')}<input type='search' value={search} maxLength={120} onChange={event => { setOffset(0); setSearch(event.target.value) }} /></label>
+      <label>{t('status')}<select value={status} onChange={event => { setOffset(0); setStatus(event.target.value) }}>
+        <option value=''>{t('anyStatus')}</option>{(Object.keys(STATUS_LABELS) as AccountStatus[]).map(value => <option key={value} value={value}>{STATUS_LABELS[value]}</option>)}
       </select></label>
-      <label>Verification<select value={verification} onChange={event => { setOffset(0); setVerification(event.target.value) }}>
-        <option value=''>Any</option>{verificationOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      <label>{t('verification')}<select value={verification} onChange={event => { setOffset(0); setVerification(event.target.value) }}>
+        <option value=''>{t('any')}</option>{verificationOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select></label>
     </form>
     <div className={`acc-layout${selected ? ' with-panel' : ''}`}>
       <div className='acc-results'>
         <p role='status' className='acc-help'>{list ? `${total} ${role === 'doctor' ? 'doctor' : 'patient'} account${total === 1 ? '' : 's'}` : 'Loading accounts…'}</p>
-        {error && <p role='alert' className='acc-error'>{error} <button className='acc-button' onClick={() => setRevision(n => n + 1)}>Try again</button></p>}
+        {error && <p role='alert' className='acc-error'>{error} <button className='acc-button' onClick={() => setRevision(n => n + 1)}>{t('tryAgain')}</button></p>}
         {list && <ul className='acc-rows'>{list.accounts.map(account => <li key={account.user_id} className={selected === account.user_id ? 'current' : ''}>
           <button className='acc-row' aria-current={selected === account.user_id || undefined} aria-label={`Open account ${account.name || account.email || account.user_id}`} onClick={() => navigate({ account: account.user_id })}>
             <span className='acc-row-main'><strong>{account.name || 'Unnamed account'}</strong><span>{account.email ?? 'Contact data erased'}</span></span>
-            <span className='acc-row-meta'><StatusBadge status={account.status} />{account.deletion_pending && <span className='acc-badge deactivated'>Deletion pending</span>}
+            <span className='acc-row-meta'><StatusBadge status={account.status} />{account.deletion_pending && <span className='acc-badge deactivated'>{t('deletionPending')}</span>}
               <span>Registered {formatBerlin(account.registered_at, false)} · last sign-in {formatBerlin(account.last_login_at, false)}</span></span>
           </button>
         </li>)}</ul>}
-        {list && total > PAGE && <nav aria-label='Pages' className='acc-actions start'>
-          <button className='acc-button' disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Previous</button>
+        {list && total > PAGE && <nav aria-label={t('pages')} className='acc-actions start'>
+          <button className='acc-button' disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>{t('previous')}</button>
           <span className='acc-help'>{offset + 1}–{Math.min(offset + PAGE, total)} of {total}</span>
-          <button className='acc-button' disabled={offset + PAGE >= total} onClick={() => setOffset(offset + PAGE)}>Next</button>
+          <button className='acc-button' disabled={offset + PAGE >= total} onClick={() => setOffset(offset + PAGE)}>{t('next')}</button>
         </nav>}
       </div>
       {selected && <AccountPanel key={selected} id={selected} onChanged={() => setRevision(n => n + 1)} />}
@@ -278,5 +282,6 @@ function AccountsContent() {
 }
 
 export default function AccountsPage() {
-  return <Suspense fallback={<p role='status'>Loading accounts…</p>}><AccountsContent /></Suspense>
+  const t = useTranslations('adminAccounts');
+  return <Suspense fallback={<p role='status'>{t('loadingAccounts')}</p>}><AccountsContent /></Suspense>
 }

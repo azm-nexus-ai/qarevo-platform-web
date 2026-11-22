@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
@@ -17,6 +18,7 @@ import {
 } from '@/lib/api'
 
 function AuditLogCard({ log }: { log: AdminAuditLog }) {
+  const t = useTranslations('adminAudit');
   return (
     <div style={{
       background: "var(--surface-glass)",
@@ -60,7 +62,7 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
 
       {log.changes && Object.keys(log.changes).length > 0 && (
         <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.18)' }}>
-          <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.link }}>Changes:</p>
+          <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.link }}>{t('changes')}</p>
           {Object.entries(log.changes).map(([field, change]) => (
             <div key={field} style={{ marginBottom: '8px', fontSize: "13px", color: T.slate }}>
               <span style={{ fontWeight: 600 }}>{field}:</span> {change && typeof change === 'object' && 'old' in change && 'new' in change ? `${String(change.old)} → ${String(change.new)}` : JSON.stringify(change)}
@@ -73,6 +75,7 @@ function AuditLogCard({ log }: { log: AdminAuditLog }) {
 }
 
 function AdminActionAuditPanel() {
+  const t = useTranslations('adminAudit');
   const router = useRouter()
   const [logs, setLogs] = useState<AdminAuditLog[]>([])
   const [actionSummary, setActionSummary] = useState<AdminActionSummary[]>([])
@@ -144,7 +147,7 @@ function AdminActionAuditPanel() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '280px', color: T.slate2 }}>
-        Loading audit logs...
+        {t('loadingAuditLogs')}
       </div>
     )
   }
@@ -153,7 +156,7 @@ function AdminActionAuditPanel() {
     return (
       <div style={{ background: "var(--surface-glass)", border: '1px solid rgba(220,38,38,0.18)', borderRadius: '16px', padding: '24px', color: T.red }}>
         <p role='alert'>{error}</p>
-        <button type='button' className='theme-toggle' onClick={() => setRetry(value => value + 1)}>Try again</button>
+        <button type='button' className='theme-toggle' onClick={() => setRetry(value => value + 1)}>{t('tryAgain')}</button>
       </div>
     )
   }
@@ -163,10 +166,10 @@ function AdminActionAuditPanel() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>
-            Audit Logs
+            {t('auditLogs')}
           </h1>
           <p style={{ margin: '8px 0 0', fontSize: '14px', color: T.slate2 }}>
-            Track all admin actions and system changes
+            {t('trackAllAdminActionsAnd')}
           </p>
         </div>
         <button
@@ -184,7 +187,7 @@ function AdminActionAuditPanel() {
             transition: 'all 0.15s',
           }}
         >
-          Export Logs
+          {t('exportLogs')}
         </button>
       </div>
 
@@ -199,7 +202,7 @@ function AdminActionAuditPanel() {
           padding: '20px',
         }}>
           <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 700, color: T.navy }}>
-            Action Summary
+            {t('actionSummary')}
           </h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {actionSummary.map((item) => (
@@ -232,12 +235,12 @@ function AdminActionAuditPanel() {
             cursor: 'pointer',
           }}
         >
-          <option value="">All Actions</option>
-          <option value="create">Create</option>
-          <option value="update">Update</option>
-          <option value="delete">Delete</option>
-          <option value="login">Login</option>
-          <option value="logout">Logout</option>
+          <option value="">{t('allActions')}</option>
+          <option value="create">{t('create')}</option>
+          <option value="update">{t('update')}</option>
+          <option value="delete">{t('delete')}</option>
+          <option value="login">{t('login')}</option>
+          <option value="logout">{t('logout')}</option>
         </select>
         <select
           value={targetTypeFilter}
@@ -252,12 +255,12 @@ function AdminActionAuditPanel() {
             cursor: 'pointer',
           }}
         >
-          <option value="">All Targets</option>
-          <option value="user">User</option>
-          <option value="doctor">Doctor</option>
-          <option value="patient">Patient</option>
-          <option value="admin">Admin</option>
-          <option value="config">Config</option>
+          <option value="">{t('allTargets')}</option>
+          <option value="user">{t('user')}</option>
+          <option value="doctor">{t('doctor')}</option>
+          <option value="patient">{t('patient')}</option>
+          <option value="admin">{t('admin')}</option>
+          <option value="config">{t('config')}</option>
         </select>
         <input
           type="date"
@@ -292,7 +295,7 @@ function AdminActionAuditPanel() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {logs.length === 0 ? (
           <div style={{ padding: '48px', textAlign: 'center', color: T.slate2, fontSize: '14px' }}>
-            No audit logs found
+            {t('noAuditLogsFound')}
           </div>
         ) : (
           logs.map((log) => (
