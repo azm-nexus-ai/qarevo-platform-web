@@ -6,6 +6,7 @@ export const PATIENT_NOTIFICATION_PAGE_SIZE = 50
 export type PatientNotice = {
   id: string; eventType: string; title: string; body: string; href?: string; source: string; sourceId: string | null
   isRead: boolean; readAt: string | null; createdAt: string | null; official: boolean; careRecord: boolean; extra: Record<string, unknown>
+  actor: string | null
 }
 const publicationKeys = ['consultation_id', 'episode_id', 'published_at', 'record_id', 'revision', 'version']
 const careRecordKeys = ['action', 'actor_user_id', 'audit_id', 'kind', 'record_reference_hash', 'resource_id']
@@ -63,7 +64,7 @@ export function patientNotice(value: unknown): PatientNotice | null {
   return {
     id, eventType: row.event_type, source: row.source, sourceId: typeof row.source_id === 'string' ? row.source_id : null,
     isRead: row.is_read, readAt: dateValue(row.read_at), createdAt: dateValue(row.created_at), official, careRecord, extra,
-    title, body, href,
+    title, body, href, actor: typeof extra.actor === 'string' && extra.actor.trim() ? extra.actor.trim().slice(0, 160) : null,
   }
 }
 export type PatientNoticePage = {

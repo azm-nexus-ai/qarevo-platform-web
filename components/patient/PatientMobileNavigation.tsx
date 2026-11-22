@@ -115,7 +115,7 @@ export default function PatientMobileNavigation() {
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
           border-bottom: 1px solid var(--border);
-          box-shadow: 0 2px 12px rgba(4,53,77,0.06);
+          box-shadow: var(--shadow-sm);
         }
         @media(max-width:460px) {
           .pmn-topbar button[aria-label="Open messages"], .pmn-topbar button[aria-label="Profile"] { display: none !important; }
@@ -150,7 +150,7 @@ export default function PatientMobileNavigation() {
           position: fixed;
           inset: 0;
           z-index: 1000;
-          background: rgba(4,53,77,0.38);
+          background: color-mix(in srgb, var(--canvas) 60%, transparent);
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
           transition: opacity 0.28s ease;
@@ -165,7 +165,7 @@ export default function PatientMobileNavigation() {
           z-index: 1001;
           background: var(--surface);
           border-right: 1px solid var(--border);
-          box-shadow: 14px 0 44px rgba(4,53,77,0.2);
+          box-shadow: var(--shadow-float);
           padding: 20px 16px;
           display: flex;
           flex-direction: column;
@@ -311,7 +311,7 @@ export default function PatientMobileNavigation() {
                     gap: '10px',
                     padding: '10px 12px',
                     borderRadius: '12px',
-                    background: isActive ? 'rgba(32,181,223,0.14)' : 'transparent',
+                    background: isActive ? 'var(--primary-soft)' : 'transparent',
                     color: isActive ? T.link : T.slate,
                     fontSize: '13.5px',
                     fontWeight: isActive ? 700 : 500,

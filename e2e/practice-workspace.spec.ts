@@ -153,7 +153,8 @@ for (const width of [320, 820, 1440]) test('practice workspace remains responsiv
 
 test('practice sign-out and theme preferences preserve all three existing portal markers', async ({ page, context }) => {
   const state = await openOwner(page, context); await page.getByRole('button', { name: 'Dark mode', exact: true }).click(); await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark'); await page.reload(); await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click(); await expect(page).toHaveURL(/\/auth\/practice\/login$/)
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Sign out?' }).getByRole('button', { name: 'Yes, sign out', exact: true }).click(); await expect(page).toHaveURL(/\/auth\/practice\/login$/)
   expect(await page.evaluate(() => localStorage.getItem('qarevo:practice:identity'))).toBeNull()
   for (const portal of ['patient', 'doctor', 'admin'] as const) expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key) || 'null')?.session_id, `qarevo:${portal}:identity`)).toBe(state.identities[portal].session_id)
 })

@@ -230,7 +230,7 @@ export default function NavigationBar() {
                   })}
                 </div>
 
-                <div style={{ margin: '0 12px', flexShrink: 0 }}><ThemeToggle /><LanguageSwitch /></div>
+                <div className='appearance-controls' style={{ margin: '0 12px' }}><ThemeToggle /><LanguageSwitch /></div>
                 {/* Desktop auth buttons */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginLeft: 'auto' }}>
                   {isAuthenticated ? (

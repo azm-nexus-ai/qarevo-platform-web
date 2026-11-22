@@ -1,16 +1,19 @@
 'use client'
 
-import { NavLabel, SigningOut } from '@/components/ui/NavLabel'
+import { useTranslations } from 'next-intl'
+import { Settings } from 'lucide-react'
+import { PortalSidebar } from '@/components/layout/PortalNav'
+import { NotificationBell } from '@/components/notifications/NotificationCenter'
+import SignOutDialog from '@/components/layout/SignOutDialog'
+import { DOCTOR_NAV_GROUPS } from '@/constants/portal-navigation'
 import SidebarToggle from '@/components/layout/SidebarToggle'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
-import { DOCTOR_SIDEBAR_ITEMS, DOCTOR_ROUTES, isDoctorNavActive } from '@/constants/doctor-navigation'
-import { ICONS } from '@/constants/icons'
-import { T, Sh, PAGE_BG } from '@/lib/tokens'
-import Ico from '@/components/ui/Ico'
+import { useRouter } from 'next/navigation'
+import { isDoctorNavActive } from '@/constants/doctor-navigation'
+import { PAGE_BG } from '@/lib/tokens'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import Link from 'next/link'
 import DoctorMobileNavigation from '@/components/doctor/DoctorMobileNavigation'
@@ -35,7 +38,6 @@ export default function DoctorLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const [doctorProfile, setDoctorProfile] = useState<DoctorProfileResponse | null>(null)
   const [identityRevision, setIdentityRevision] = useState(0)
@@ -113,255 +115,52 @@ export default function DoctorLayout({
     }
   }
 
-  const fullName = doctorProfile?.full_name?.trim() || 'Doctor'
+  const t = useTranslations('shell')
+  const fullName = doctorProfile?.full_name?.trim() || t('doctorFallback')
   const displayName = fullName.toLowerCase().startsWith('dr.') ? fullName : `Dr. ${fullName}`
-  const specialty = doctorProfile?.specialty || 'Doctor'
+  const specialty = doctorProfile?.specialty || t('doctorFallback')
   return (
     <div className='doctor-portal-shell portal-shell' style={{ minHeight: '100vh', background: PAGE_BG }}>
       <DoctorMobileNavigation />
       <style>{`
         @media (max-width: 920px) {
-          #doctor-primary-sidebar {
-            display: none !important;
-          }
-          [data-portal-main=doctor] {
-            margin-left: 0 !important;
-          }
-          [data-portal-main=doctor] > header {
-            display: none !important;
-          }
-          .doctor-portal-shell div[style*="padding: 28px 32px"] {
-            padding: 16px !important;
-          }
+          [data-portal-main=doctor] { margin-left: 0 !important; }
+          [data-portal-main=doctor] > header { display: none !important; }
+          .doctor-portal-shell .portal-page-content { padding: 16px !important; }
         }
       `}</style>
-          {/* Header */}
-          <header className="portal-desktop-navbar" aria-label="Doctor main navigation" style={{
-            background: "var(--surface-glass)",
-            backdropFilter: 'blur(22px) saturate(175%)',
-            WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-            borderBottom: "1px solid var(--border)",
-            padding: '12px 24px', minHeight: '80px',
-            position: 'sticky',
-            top: 0,
-            zIndex: 5,
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94)',
-          }}>
-            <div className='portal-navbar-row' style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-              <Link href='/doctor/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health doctor dashboard'><AuthenticatedLogo width={156} /></Link>
-              <SidebarToggle role='doctor' />
-              <div className='portal-navbar-title'>
-                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Welcome, {fullName}</h2>
-                <p style={{ margin: '2px 0 0', fontSize: '13px', color: T.slate2 }}>Manage your consultations and patients</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <ThemeToggle /><LanguageSwitch />
-                <button
-                  onClick={handleSettingsClick}
-                  style={{
-                    padding: '10px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: "var(--surface-subtle)",
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                  title="Settings"
-                >
-                  <Ico p={ICONS.info} size={18} sw={1.8} color={T.slate2} />
-                </button>
-                <button
-                  onClick={handleLogoutClick}
-                  disabled={loggingOut}
-                  style={{
-                    minHeight: '40px',
-                    padding: '0 14px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(220,38,38,0.16)',
-                    background: 'rgba(220,38,38,0.06)',
-                    color: T.red,
-                    cursor: loggingOut ? 'wait' : 'pointer',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    transition: 'all 0.15s',
-                    opacity: loggingOut ? 0.65 : 1,
-                  }}
-                  title="Sign out"
-                >
-                  {loggingOut ? 'Signing out...' : 'Sign out'}
-                </button>
-                <PortalAccountMenu portal='doctor' name={displayName} description={specialty} avatar={<ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={36} />} profileHref='/doctor/profile' settingsHref='/doctor/settings' />
-              </div>
-            </div>
-          </header>
-      <div style={{ display: 'flex' }}>
-        {/* Sidebar */}
-        <aside id="doctor-primary-sidebar" style={{
-          width: '260px',
-          background: "var(--surface-subtle)",
-          backdropFilter: 'blur(22px) saturate(175%)',
-          WebkitBackdropFilter: 'blur(22px) saturate(175%)',
-          borderRight: "1px solid var(--border)",
-          minHeight: 0, height: 'calc(100dvh - 80px)',
-          position: 'fixed',
-          left: 0,
-          top: '80px',
-          zIndex: 10,
-          boxShadow: Sh.nav,
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <Link href='/doctor/dashboard' aria-label='Qarevo Health doctor dashboard'><AuthenticatedLogo width={140} /></Link>
-            <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate2, fontWeight: 500 }}>Doctor Portal</p>
+      <header className='portal-desktop-navbar portal-header' aria-label='Doctor main navigation'>
+        <div className='portal-navbar-row'>
+          <Link href='/doctor/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health doctor dashboard'><AuthenticatedLogo width={156} /></Link>
+          <SidebarToggle role='doctor' />
+          <div className='portal-navbar-title'>
+            <h2 className='portal-header-title'>{t('welcome', { name: fullName })}</h2>
+            <p className='portal-header-subtitle'>{t('doctorSubtitle')}</p>
           </div>
-
-          <nav style={{ padding: '16px 12px', flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {DOCTOR_SIDEBAR_ITEMS.map((item) => {
-                const isActive = isDoctorNavActive(pathname, item.href)
-                const isLogout = item.href === DOCTOR_ROUTES.logout
-                return (
-                  <li key={item.href}>
-                    {isLogout ? (
-                      <button
-                        type="button"
-                        onClick={handleLogoutClick}
-                        disabled={loggingOut}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          width: '100%',
-                          padding: '12px 14px',
-                          borderRadius: '12px',
-                          border: 'none',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          textDecoration: 'none',
-                          transition: 'all 0.15s ease',
-                          color: T.red,
-                          background: 'transparent',
-                          cursor: loggingOut ? 'wait' : 'pointer',
-                          opacity: loggingOut ? 0.65 : 1,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(220,38,38,0.06)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent'
-                        }}
-                      >
-                        <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={T.red} /></span>
-                        {loggingOut ? <SigningOut /> : <NavLabel portal='doctor' label={item.label} />}
-                      </button>
-                    ) : (
-                      <Link
-                        href={item.href}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '12px 14px',
-                          borderRadius: '12px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          textDecoration: 'none',
-                          transition: 'all 0.15s ease',
-                          ...(isActive
-                            ? { background: 'rgba(32,181,223,0.12)', color: T.link, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }
-                            : { color: T.slate, background: 'transparent' }
-                          ),
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.background = 'rgba(4,53,77,0.04)'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.background = 'transparent'
-                          }
-                        }}
-                      >
-                        <span style={{ marginRight: '12px' }}><Ico p={item.icon} size={16} sw={1.6} color={isActive ? T.blue : T.slate2} /></span>
-                        <NavLabel portal='doctor' label={item.label} />
-                      </Link>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </nav>
-        </aside>
-
-        {/* Main content */}
-        <main data-portal-main='doctor' style={{ flex: 1, marginLeft: '260px' }}>
-
-
-          {/* Page content */}
-          <div style={{ padding: '28px 32px' }}>
-            {mounted ? children : null}
-          </div>
-        </main>
-      </div>
-      {showLogoutConfirm && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="doctor-logout-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            background: "var(--surface-hover)",
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-          }}
-        >
-          <div style={{
-            width: '100%',
-            maxWidth: '380px',
-            borderRadius: '18px',
-            border: "1px solid var(--border)",
-            background: "var(--surface-glass)",
-            boxShadow: '0 24px 64px rgba(4,53,77,0.2)',
-            padding: '24px',
-          }}>
-            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(220,38,38,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Ico p={ICONS.logout} size={20} sw={1.8} color={T.red} />
-              </div>
-              <div>
-                <h2 id="doctor-logout-title" style={{ margin: '0 0 6px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Sign out?</h2>
-                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: T.slate }}>
-                  Save any unfinished clinical draft before signing out. Unsaved changes will be discarded.
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '24px' }}>
-              <button
-                type="button"
-                onClick={() => setShowLogoutConfirm(false)}
-                disabled={loggingOut}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer' }}
-              >
-                No, stay
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmLogout}
-                disabled={loggingOut}
-                style={{ minHeight: '40px', padding: '0 16px', borderRadius: '10px', border: 'none', background: '#b92332', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: loggingOut ? 'wait' : 'pointer', opacity: loggingOut ? 0.7 : 1 }}
-              >
-                {loggingOut ? 'Signing out...' : 'Yes, sign out'}
-              </button>
-            </div>
+          <div className='portal-header-actions'>
+            <NotificationBell portal='doctor' />
+            <span className='portal-header-divider' aria-hidden='true' />
+            <ThemeToggle /><LanguageSwitch />
+            <button type='button' className='portal-icon-button' onClick={handleSettingsClick} title={t('settings')} aria-label={t('settings')}>
+              <Settings size={18} aria-hidden='true' />
+            </button>
+            <button type='button' className='portal-signout-button' onClick={handleLogoutClick} disabled={loggingOut}>
+              {loggingOut ? t('signingOut') : t('signOut')}
+            </button>
+            <PortalAccountMenu portal='doctor' name={displayName} description={specialty} avatar={<ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={36} />} profileHref='/doctor/profile' settingsHref='/doctor/settings' />
           </div>
         </div>
-      )}
+      </header>
+      <PortalSidebar portal='doctor' groups={DOCTOR_NAV_GROUPS} isActive={isDoctorNavActive} label={t('doctorNavigation')}
+        onLogout={handleLogoutClick} loggingOut={loggingOut}
+        identity={{ name: displayName, description: specialty, avatar: <ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={40} /> }} />
+      <main data-portal-main='doctor' className='portal-main'>
+        <div className='portal-page-content'>
+          {mounted ? children : null}
+        </div>
+      </main>
+      <SignOutDialog open={showLogoutConfirm} busy={loggingOut} onCancel={() => setShowLogoutConfirm(false)} onConfirm={handleConfirmLogout}
+        description={t('doctorSignOutWarning')} />
     </div>
   )
 }

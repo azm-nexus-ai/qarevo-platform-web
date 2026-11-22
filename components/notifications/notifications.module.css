@@ -1,0 +1,84 @@
+.bellWrap { position: relative; display: inline-flex; }
+
+.bell {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.bell:hover { background: var(--surface-subtle); }
+.bell:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+.badge {
+  position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 999px; background: var(--danger); color: var(--surface); border: 2px solid var(--surface);
+  font-size: 11px; font-weight: 800; line-height: 16px; text-align: center;
+}
+
+.panel {
+  position: absolute; right: 0; top: calc(100% + 10px); z-index: 60;
+  width: min(380px, calc(100vw - 32px)); max-height: min(560px, calc(100dvh - 120px));
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 16px; border: 1px solid var(--border); background: var(--surface);
+  box-shadow: var(--shadow-float); color: var(--text);
+}
+@media (max-width: 520px) {
+  .panel { position: fixed; left: 16px; right: 16px; top: 64px; width: auto; }
+}
+
+.panelHeader {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+}
+.panelTitle { margin: 0; font-size: 15px; font-weight: 800; color: var(--text); }
+
+.textButton {
+  border: 0; background: transparent; color: var(--link); font-size: 13px; font-weight: 700;
+  cursor: pointer; padding: 6px 8px; border-radius: 8px; min-height: 32px;
+}
+.textButton:hover { background: var(--surface-subtle); }
+.textButton:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 1px; }
+.textButton:disabled { color: var(--text-muted); cursor: default; background: transparent; }
+
+.list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; flex: 1 1 auto; }
+
+.item { border-radius: 12px; }
+.item + .item { margin-top: 2px; }
+.itemLink {
+  display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 10px; align-items: start;
+  padding: 10px 10px; border-radius: 12px; color: inherit; text-decoration: none; width: 100%;
+  border: 0; background: transparent; text-align: left; font: inherit; cursor: pointer;
+}
+.itemLink:hover { background: var(--surface-subtle); }
+.itemLink:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: -3px; }
+.unread .itemLink { background: var(--primary-soft); }
+.unread .itemLink:hover { background: var(--surface-subtle); }
+
+.dot { width: 10px; height: 10px; margin-top: 5px; border-radius: 999px; background: transparent; }
+.unread .dot { background: var(--primary); }
+
+.itemTitle { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.read .itemTitle { font-weight: 600; }
+.itemMeta { margin: 3px 0 0; font-size: 12.5px; color: var(--text-secondary); overflow-wrap: anywhere; }
+
+.state { padding: 24px 16px; text-align: center; font-size: 14px; color: var(--text-secondary); }
+
+.panelFooter { border-top: 1px solid var(--border); padding: 8px; text-align: center; }
+.footerLink {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 12px;
+  border-radius: 10px; color: var(--link); font-weight: 700; font-size: 13px; text-decoration: none;
+}
+.footerLink:hover { background: var(--surface-subtle); }
+.footerLink:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 1px; }
+
+.page { display: grid; gap: 16px; }
+.pageCard { border: 1px solid var(--border); background: var(--surface); border-radius: 18px; overflow: hidden; }
+.pageToolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.filters { display: inline-flex; gap: 6px; }
+.filter {
+  min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text-secondary); font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.filter[aria-pressed='true'] { background: var(--primary-soft); border-color: var(--primary-border); color: var(--link); }
+.filter:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid var(--border); }

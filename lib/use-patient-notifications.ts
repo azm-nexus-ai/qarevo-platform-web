@@ -8,6 +8,7 @@ import { currentPortal } from './portal-scope'
 import { usePortalAction } from './portal-action'
 import { usePortalResource } from './use-portal-resource'
 import { PATIENT_NOTIFICATIONS_PATH, patientNotice, patientNotices, patientNotificationPath } from './patient-notifications'
+import { NOTIFICATIONS_CHANGED } from './notifications'
 
 const readScope = () => readAccountScope('patient')
 const subscribe = (changed: () => void) => {
@@ -36,6 +37,14 @@ export function usePatientNotifications() {
   // A legacy recent-only response cannot substantiate an older page.
   const pageError = resource.data !== null && (!parsed || (before !== null && !parsed.paginated))
   const [mutation, setMutation] = useState<Mutation | null>(null)
+  // The first page follows new events: every 30 s while visible and whenever another view changes read state.
+  useEffect(() => {
+    if (before !== null) return
+    const tick = () => { if (document.visibilityState === 'visible' && !changingPage.current) refresh() }
+    const timer = window.setInterval(tick, 30_000)
+    window.addEventListener(NOTIFICATIONS_CHANGED, tick)
+    return () => { window.clearInterval(timer); window.removeEventListener(NOTIFICATIONS_CHANGED, tick) }
+  }, [before, refresh])
   const inFlight = useRef<AbortController | null>(null)
   const active = mutation?.page === page ? mutation : null
   useEffect(() => {
@@ -64,7 +73,7 @@ export function usePatientNotifications() {
       if (!saved || saved.id !== id || !saved.isRead || saved.source !== notice.source || saved.eventType !== notice.eventType || saved.sourceId !== notice.sourceId || saved.href !== notice.href) throw new Error('The read status could not be confirmed. Please retry.')
       const visibleIds = new Set(parsed?.items.map(item => item.id))
       setMutation(previous => ({ page, confirmed: [...new Set([...(previous?.page === page ? previous.confirmed.filter(value => visibleIds.has(value)) : []), id])], pendingId: null, errorId: null, error: '' }))
-      refresh()
+      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED))
     } catch (error) {
       if (!action.isCurrent() || currentPage.current !== page || controller.signal.aborted) return
       setMutation(previous => ({ page, confirmed: previous?.page === page ? previous.confirmed : [], pendingId: null, errorId: id, error: getApiErrorDetail(error) || 'The read status could not be saved. Please retry.' }))

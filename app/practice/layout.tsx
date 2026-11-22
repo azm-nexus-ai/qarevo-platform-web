@@ -1,31 +1,63 @@
 'use client'
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
 import { useState, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { logoutCurrentUser } from '@/lib/api'
 import RoleHomeLink from '@/components/branding/RoleHomeLink'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import ProfileAvatar from '@/components/branding/ProfileAvatar'
 import PortalAccountMenu from '@/components/layout/PortalAccountMenu'
+import PortalMobileNavigation from '@/components/layout/PortalMobileNavigation'
+import { PortalSidebar } from '@/components/layout/PortalNav'
 import SidebarToggle from '@/components/layout/SidebarToggle'
+import SignOutDialog from '@/components/layout/SignOutDialog'
+import { NotificationBell } from '@/components/notifications/NotificationCenter'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
-import { NavLabel } from '@/components/ui/NavLabel'
-import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
+import { PRACTICE_NAV_GROUPS, PRACTICE_ROUTES, isPracticeNavActive } from '@/constants/portal-navigation'
+import { PAGE_BG } from '@/lib/tokens'
 
-const items = [['Practice workspace', '/practice/dashboard'], ['Verification', '/practice/verification'], ['Invoices', '/practice/statements'], ['Settings and security', '/practice/settings'], ['Help and support', '/support']] as const
+/** Practice portal shell: the same header, sidebar, drawer and notifications as the other portals. */
 export default function PracticeLayout({ children }: { children: ReactNode }) {
-  const pathname = usePathname(), router = useRouter(), [ending, setEnding] = useState(false), [error, setError] = useState('')
-  const links = items.map(([label, href]) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined} className={'rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] ' + (pathname === href ? 'bg-surface-subtle text-ink' : 'text-secondary hover:bg-surface-subtle')}><NavLabel portal='practice' label={label} /></Link>)
-  return <div className='practice-shell min-h-dvh bg-page text-ink'>
-    <style>{`.practice-header{position:sticky;top:0;z-index:20;background:var(--surface-glass);backdrop-filter:blur(22px);border-bottom:1px solid var(--border)}.practice-body{display:flex;gap:24px;max-width:1600px;margin:auto}.practice-sidebar{width:240px;flex-shrink:0;align-self:flex-start;position:sticky;top:104px;padding:24px 12px;max-height:calc(100dvh - 104px);overflow-y:auto}.practice-main{flex:1;min-width:0;padding:28px 24px 48px}.practice-mobile-nav{display:none}html[data-practice-sidebar=collapsed] .practice-sidebar{display:none}html:has(.practice-shell){scroll-padding-top:180px}@media(max-width:920px){.practice-sidebar,.practice-shell .sidebar-toggle{display:none}.practice-mobile-nav{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.practice-mobile-nav a{flex-shrink:0;white-space:nowrap}.practice-main{padding:24px 16px 40px}.practice-header .practice-account{display:none}}`}</style>
-    <header className='practice-header' aria-label='Practice main navigation'><div className='mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-4 sm:px-6'>
-      <RoleHomeLink aria-label='Qarevo Health practice dashboard' className='shrink-0'><AuthenticatedLogo width={156} /></RoleHomeLink><SidebarToggle role='practice' />
-      <span className='mr-auto text-sm font-semibold text-secondary'>Practice administration</span><ThemeToggle /><span className='practice-account'><LanguageSwitch /></span>
-      <div className='practice-account'><PortalAccountMenu portal='practice' name='Practice account' description='Administrative access' avatar={<ProfileAvatar name='Practice account' kind='practice' size={36} />} profileHref='/practice/dashboard' settingsHref='/practice/settings' /></div>
-      <PortalButton type='button' disabled={ending} onClick={async () => { if (ending) return; setEnding(true); setError(''); try { await logoutCurrentUser(); router.replace('/auth/practice/login') } catch { setError('Server sign-out could not be confirmed. This browser’s practice access is closed; sign in again if needed.'); router.replace('/auth/practice/login') } }}>{ending ? 'Signing out…' : 'Sign out'}</PortalButton>
-    </div><nav aria-label='Practice mobile navigation' className='practice-mobile-nav gap-1 border-t border-theme px-2 py-2'>{links}<LanguageSwitch /></nav></header>
-    <div className='practice-body'><aside id='practice-primary-sidebar' className='practice-sidebar'><nav aria-label='Practice navigation' className='grid gap-2'>{links}</nav><p className='mt-6 px-3 text-xs leading-6 text-secondary'>Practice administration remains separate from patient care and platform oversight.</p></aside>
-      <main className='practice-main'>{error && <p role='alert' className='mb-5 rounded-xl border border-theme p-4 text-sm'>{error}</p>}{children}</main></div>
+  const t = useTranslations('shell'), router = useRouter()
+  const [ending, setEnding] = useState(false), [confirming, setConfirming] = useState(false), [error, setError] = useState('')
+  const name = t('practiceFallback')
+  const signOut = async () => {
+    if (ending) return
+    setEnding(true); setError('')
+    try { await logoutCurrentUser() } catch { setError(t('practiceSignOutUnconfirmed')) }
+    finally { setConfirming(false); router.replace('/auth/practice/login') }
+  }
+  const avatar = (size: number) => <ProfileAvatar name={name} kind='practice' size={size} />
+  return <div className='practice-portal-shell portal-shell' style={{ minHeight: '100vh', background: PAGE_BG }}>
+    <PortalMobileNavigation portal='practice' className='practice-mobile-navigation' homeHref={PRACTICE_ROUTES.dashboard} homeLabel='Qarevo Health practice dashboard'
+      groups={PRACTICE_NAV_GROUPS} isActive={isPracticeNavActive} navLabel={t('practiceNavigation')} summaryLabel={name}
+      identity={{ name, description: t('practiceSubtitle'), avatar: avatar(40) }} onLogout={() => setConfirming(true)} loggingOut={ending} />
+    <header className='portal-desktop-navbar portal-header' aria-label='Practice main navigation'>
+      <div className='portal-navbar-row'>
+        <RoleHomeLink aria-label='Qarevo Health practice dashboard' className='portal-navbar-brand'><AuthenticatedLogo width={156} /></RoleHomeLink>
+        <SidebarToggle role='practice' />
+        <div className='portal-navbar-title'>
+          <h2 className='portal-header-title'>{name}</h2>
+          <p className='portal-header-subtitle'>{t('practiceSubtitle')}</p>
+        </div>
+        <div className='portal-header-actions'>
+          <NotificationBell portal='practice' />
+          <span className='portal-header-divider' aria-hidden='true' />
+          <ThemeToggle /><LanguageSwitch />
+          <button type='button' className='portal-signout-button' onClick={() => setConfirming(true)} disabled={ending}>{ending ? t('signingOut') : t('signOut')}</button>
+          <PortalAccountMenu portal='practice' name={name} description={t('practiceAccess')} avatar={avatar(36)} profileHref={PRACTICE_ROUTES.dashboard} settingsHref={PRACTICE_ROUTES.settings} />
+        </div>
+      </div>
+    </header>
+    <PortalSidebar portal='practice' groups={PRACTICE_NAV_GROUPS} isActive={isPracticeNavActive} label={t('practiceNavigation')}
+      onLogout={() => setConfirming(true)} loggingOut={ending} identity={{ name, description: t('practiceBoundary'), avatar: avatar(40) }} />
+    <main data-portal-main='practice' className='portal-main'>
+      <div className='portal-page-content'>
+        {error && <p role='alert' className='mb-5 rounded-xl border border-theme p-4 text-sm'>{error}</p>}
+        {children}
+      </div>
+    </main>
+    <SignOutDialog open={confirming} busy={ending} onCancel={() => setConfirming(false)} onConfirm={() => void signOut()} description={t('signOutWarning')} />
   </div>
 }
