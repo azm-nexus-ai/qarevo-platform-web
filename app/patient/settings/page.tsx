@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 import AccountSecurity from '@/components/security/AccountSecurity'
 
 import { ProfileImageEditor } from '@/components/patient/ProfileImage'
@@ -61,6 +62,7 @@ const SECURITY_ITEMS = [
 ]
 
 export default function PatientSettingsPage() {
+  const t = useTranslations('patientSettings')
   const [contactErrors, setContactErrors] = useState<Record<string, string>>({})
   const { theme, setTheme } = useTheme()
   const router = useRouter()
@@ -629,7 +631,7 @@ export default function PatientSettingsPage() {
 
   const headerActions = (
     <>
-      <PortalButton tone='secondary' onClick={handleCancel}>Cancel</PortalButton>
+      <PortalButton tone='secondary' onClick={handleCancel}>{t('cancel')}</PortalButton>
       <PortalButton tone='primary' onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</PortalButton>
     </>
   )
@@ -648,8 +650,8 @@ export default function PatientSettingsPage() {
   const rightRail = (
     <div className='grid gap-3'>
       <PortalCard>
-        <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Profile Health</p>
-        <h2 className='portal-h2'>Your preferences are current</h2>
+        <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('profileHealth')}</p>
+        <h2 className='portal-h2'>{t('yourPreferencesAreCurrent')}</h2>
         <div className='grid gap-2'>
           {[
             ['Security status', sessionStatus === 'checking' ? 'Checking' : sessionStatus === 'active' ? 'Active session' : 'Signed out'],
@@ -670,19 +672,19 @@ export default function PatientSettingsPage() {
             <Ico p={ICONS.lock} size={15} sw={1.7} color={T.blue} />
           </div>
           <div>
-            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>Trusted access</p>
-            <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>Review sign-ins and privacy controls regularly.</p>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{t('trustedAccess')}</p>
+            <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>{t('reviewSignInsAndPrivacy')}</p>
           </div>
         </div>
-        <PortalButton tone='secondary' fullWidth onClick={handleOpenLoginHistory}>Review Login History</PortalButton>
+        <PortalButton tone='secondary' fullWidth onClick={handleOpenLoginHistory}>{t('reviewLoginHistory')}</PortalButton>
       </PortalCard>
     </div>
   )
 
   return (
     <PatientPortalShell
-      title='Settings'
-      description='Manage account details, privacy, notifications, accessibility, insurance information, and the preferences that shape your care experience.'
+      title={t('settings')}
+      description={t('manageAccountDetailsPrivacyNotifications')}
       headerActions={!loading && !loadError ? headerActions : undefined}
       rightRail={!loading && !loadError ? rightRail : undefined}
       appearance={settingsAppearance}
@@ -720,7 +722,7 @@ export default function PatientSettingsPage() {
           <PortalSkeleton height={180} />
         </div>
       ) : loadError ? (
-        <PortalCard><h2>We couldn’t load your settings</h2><p role='alert'>{loadError}</p><PortalButton onClick={() => setLoadAttempt(value => value + 1)}>Try again</PortalButton></PortalCard>
+        <PortalCard><h2>{t('weCouldnTLoadYour')}</h2><p role='alert'>{loadError}</p><PortalButton onClick={() => setLoadAttempt(value => value + 1)}>{t('tryAgain')}</PortalButton></PortalCard>
       ) : (
         <div className='settings-stack'>
           {saveMessage ? <PortalBadge tone='success'>{saveMessage}</PortalBadge> : null}
@@ -728,8 +730,8 @@ export default function PatientSettingsPage() {
           <PortalCard className='settings-card'>
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Account Information</p>
-                <h2 className='portal-h2 settings-card-title'>Profile and contact identity</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('accountInformation')}</p>
+                <h2 className='portal-h2 settings-card-title'>{t('profileAndContactIdentity')}</h2>
               </div>
               <PortalButton tone='secondary' onClick={() => { if (!showProfileEdit) openProfileEdit(); else setShowProfileEdit(false) }}>
                 {showProfileEdit ? 'Cancel' : 'Edit'}
@@ -741,7 +743,7 @@ export default function PatientSettingsPage() {
                 {showProfileEdit ? (
                   <>
                     <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>First Name</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('firstName')}</label>
                       <input
                         type='text'
                         value={profileEdit.first_name}
@@ -750,7 +752,7 @@ export default function PatientSettingsPage() {
                       />
                     </div>
                     <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Last Name</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('lastName')}</label>
                       <input
                         type='text'
                         value={profileEdit.last_name}
@@ -759,7 +761,7 @@ export default function PatientSettingsPage() {
                       />
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('phoneNumber')}</label>
                       <input
                         type='text'
                         value={profileEdit.phone}
@@ -769,7 +771,7 @@ export default function PatientSettingsPage() {
                       />
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('dateOfBirth')}</label>
                       <input
                         type='date'
                         value={profileEdit.date_of_birth}
@@ -778,47 +780,47 @@ export default function PatientSettingsPage() {
                       />
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('gender')}</label>
                       <select
                         value={profileEdit.gender}
                         onChange={(e) => setProfileEdit({ ...profileEdit, gender: e.target.value })}
                         style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       >
-                        <option value=''>Select</option>
-                        <option value='MALE'>Male</option>
-                        <option value='FEMALE'>Female</option>
-                        <option value='OTHER'>Other</option>
+                        <option value=''>{t('select')}</option>
+                        <option value='MALE'>{t('male')}</option>
+                        <option value='FEMALE'>{t('female')}</option>
+                        <option value='OTHER'>{t('other')}</option>
                       </select>
                     </div>
                     <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('email')}</label>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.email}</p>
                     </div>
                     <div className='settings-wide flex gap-2'>
-                      <PortalButton tone='primary' onClick={handleProfileSave}>Save Changes</PortalButton>
-                      <PortalButton tone='secondary' onClick={() => setShowProfileEdit(false)}>Cancel</PortalButton>
+                      <PortalButton tone='primary' onClick={handleProfileSave}>{t('saveChanges')}</PortalButton>
+                      <PortalButton tone='secondary' onClick={() => setShowProfileEdit(false)}>{t('cancel')}</PortalButton>
                     </div>
                   </>
                 ) : (
                   <>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Full Name</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('fullName')}</p>
                       <p className='settings-field-value' style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.fullName}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('email')}</p>
                       <p className='settings-field-value' style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.email}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('phoneNumber')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.phone}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('dateOfBirth')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.dateOfBirth}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('gender')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.gender}</p>
                     </div>
                   </>
@@ -830,33 +832,33 @@ export default function PatientSettingsPage() {
           <PortalCard className='settings-card'>
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Health Information</p>
-              <h2 className='portal-h2 settings-card-title'>Vital signs and medical details</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('healthInformation')}</p>
+              <h2 className='portal-h2 settings-card-title'>{t('vitalSignsAndMedicalDetails')}</h2>
               </div>
             </div>
             <div className='settings-info-grid'>
               <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Pressure</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('bloodPressure')}</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodPressure ? `${healthInfo.bloodPressure} mmHg` : 'Not set'}</p>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Weight</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('weight')}</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.weight ? `${healthInfo.weight} kg` : 'Not set'}</p>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Height</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('height')}</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.height ? `${healthInfo.height} cm` : 'Not set'}</p>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Type</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('bloodType')}</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodType || 'Not set'}</p>
               </div>
               <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Allergies</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('allergies')}</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || 'Not recorded'}</p>
               </div>
               <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Medical Conditions</p>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('medicalConditions')}</p>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || 'Not recorded'}</p>
               </div>
             </div>
@@ -864,7 +866,7 @@ export default function PatientSettingsPage() {
 
           <PortalCard className='settings-card'>
             <div className='mb-4'>
-              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Security</p>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('security')}</p>
               <AccountSecurity/>
             </div>
             <div className='grid gap-3'>
@@ -878,7 +880,7 @@ export default function PatientSettingsPage() {
                     <PortalBadge tone={item.tone}>{item.badge}</PortalBadge>
                   </div>
                   {item.title === 'Active Devices' ? (
-                    <PortalButton tone='secondary' onClick={handleOpenActiveDevices}>Manage devices</PortalButton>
+                    <PortalButton tone='secondary' onClick={handleOpenActiveDevices}>{t('manageDevices')}</PortalButton>
                   ) : null}
                   {item.title === 'Face ID / Biometrics' ? (
                     <PortalButton tone='secondary' onClick={handlePasskeyClick}>
@@ -892,8 +894,8 @@ export default function PatientSettingsPage() {
 
           <PortalCard className='settings-card'>
             <div className='mb-4'>
-              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Notification Preferences</p>
-              <h2 className='portal-h2 settings-card-title'>Care communication and reminders</h2>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('notificationPreferences')}</p>
+              <h2 className='portal-h2 settings-card-title'>{t('careCommunicationAndReminders')}</h2>
             </div>
             <div className='grid gap-3'>
               {[
@@ -913,28 +915,28 @@ export default function PatientSettingsPage() {
           <div className='settings-two-up'>
             <PortalCard className='settings-card'>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Privacy</p>
-                <h2 className='portal-h2 settings-card-title'>Control your health data</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('privacy')}</p>
+                <h2 className='portal-h2 settings-card-title'>{t('controlYourHealthData')}</h2>
               </div>
               <div className='grid gap-3'>
-                <p style={{ color: T.slate, lineHeight: 1.6 }}>Privacy choices and consent withdrawal for a real-patient service are awaiting implementation and approved texts. This development environment is for synthetic test data only.</p>
-                <PreferenceActionRow label='Download My Data' buttonLabel='Open' onClick={handleDataExport} />
-                <PreferenceActionRow label='Delete Account' buttonLabel='Manage' tone='danger' onClick={() => setShowDeleteAccountConfirm(true)} />
-                <PreferenceActionRow label='Privacy Policy' buttonLabel='Open' onClick={() => router.push('/privacy')} />
+                <p style={{ color: T.slate, lineHeight: 1.6 }}>{t('privacyChoicesAndConsentWithdrawal')}</p>
+                <PreferenceActionRow label={t('downloadMyData')} buttonLabel='Open' onClick={handleDataExport} />
+                <PreferenceActionRow label={t('deleteAccount')} buttonLabel='Manage' tone='danger' onClick={() => setShowDeleteAccountConfirm(true)} />
+                <PreferenceActionRow label={t('privacyPolicy')} buttonLabel='Open' onClick={() => router.push('/privacy')} />
               </div>
             </PortalCard>
 
             <PortalCard className='settings-card'>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Accessibility</p>
-                <h2 className='portal-h2 settings-card-title'>Personalize readability and comfort</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('accessibility')}</p>
+                <h2 className='portal-h2 settings-card-title'>{t('personalizeReadabilityAndComfort')}</h2>
               </div>
               <div className='grid gap-3'>
-                <ToggleRow label='Dark Mode' enabled={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} description='Saved automatically in this browser across every Qarevo portal, including after sign-out.' />
-                <ToggleRow label='High Contrast' enabled={toggles.highContrast} onToggle={() => toggleSetting('highContrast')} />
-                <SelectRow label='Font Size' value={fontSize} options={['Small', 'Medium', 'Large']} onChange={updateFontSizePreference} />
-                <SelectRow label='Language' value={language} options={['German', 'English']} onChange={setLanguage} />
-                <SelectRow label='Time Zone' value={timeZone} options={['Europe/Berlin', 'UTC', 'Europe/London']} onChange={setTimeZone} />
+                <ToggleRow label={t('darkMode')} enabled={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} description={t('savedAutomaticallyInThisBrowser')} />
+                <ToggleRow label={t('highContrast')} enabled={toggles.highContrast} onToggle={() => toggleSetting('highContrast')} />
+                <SelectRow label={t('fontSize')} value={fontSize} options={['Small', 'Medium', 'Large']} onChange={updateFontSizePreference} />
+                <SelectRow label={t('language')} value={language} options={['German', 'English']} onChange={setLanguage} />
+                <SelectRow label={t('timeZone')} value={timeZone} options={['Europe/Berlin', 'UTC', 'Europe/London']} onChange={setTimeZone} />
               </div>
             </PortalCard>
           </div>
@@ -943,8 +945,8 @@ export default function PatientSettingsPage() {
             <PortalCard className='settings-card'>
               <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Emergency Contacts</p>
-                  <h2 className='portal-h2 settings-card-title'>People to contact quickly</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('emergencyContacts')}</p>
+                  <h2 className='portal-h2 settings-card-title'>{t('peopleToContactQuickly')}</h2>
                 </div>
                 <PortalButton tone='primary' onClick={() => setShowAddContactForm(!showAddContactForm)}>
                   {showAddContactForm ? 'Cancel' : 'Add Contact'}
@@ -955,34 +957,34 @@ export default function PatientSettingsPage() {
                 <div style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', marginBottom: '16px' }}>
                   <div className='grid gap-3'>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Name</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('name')}</label>
                       <input
                         type='text'
-                        id='newContact-name' aria-label='Contact name (Required)' required aria-invalid={!!contactErrors.name} aria-describedby={contactErrors.name ? 'newContact-name-error' : undefined}
+                        id='newContact-name' aria-label={t('contactNameRequired')} required aria-invalid={!!contactErrors.name} aria-describedby={contactErrors.name ? 'newContact-name-error' : undefined}
                             value={newContact.name}
                         onChange={(e) => { setNewContact({ ...newContact, name: e.target.value }); setContactErrors(previous => ({ ...previous, name: '' })) }}
-                        placeholder='Contact name'
+                        placeholder={t('contactName')}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                           <FieldFeedback name='newContact-name' error={contactErrors.name} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Relationship</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('relationship')}</label>
                       <input
                         type='text'
-                        id='newContact-relationship' aria-label='Relationship (Required)' required aria-invalid={!!contactErrors.relationship} aria-describedby={contactErrors.relationship ? 'newContact-relationship-error' : undefined}
+                        id='newContact-relationship' aria-label={t('relationshipRequired')} required aria-invalid={!!contactErrors.relationship} aria-describedby={contactErrors.relationship ? 'newContact-relationship-error' : undefined}
                             value={newContact.relationship}
                         onChange={(e) => { setNewContact({ ...newContact, relationship: e.target.value }); setContactErrors(previous => ({ ...previous, relationship: '' })) }}
-                        placeholder='e.g., Spouse, Parent, Sibling'
+                        placeholder={t('eGSpouseParentSibling')}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                           <FieldFeedback name='newContact-relationship' error={contactErrors.relationship} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Phone Number</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('phoneNumber')}</label>
                       <input
                         type='text'
-                        id='newContact-phone' aria-label='Phone number (Required)' required aria-invalid={!!contactErrors.phone} aria-describedby={contactErrors.phone ? 'newContact-phone-error' : undefined}
+                        id='newContact-phone' aria-label={t('phoneNumberRequired')} required aria-invalid={!!contactErrors.phone} aria-describedby={contactErrors.phone ? 'newContact-phone-error' : undefined}
                             value={newContact.phone}
                         onChange={(e) => { setNewContact({ ...newContact, phone: e.target.value }); setContactErrors(previous => ({ ...previous, phone: '' })) }}
                         placeholder='+49 151 23456789'
@@ -995,7 +997,7 @@ export default function PatientSettingsPage() {
                         {contactSaving ? 'Saving…' : 'Add Contact'}
                       </PortalButton>
                       <PortalButton tone='secondary' onClick={() => setShowAddContactForm(false)}>
-                        Cancel
+                        {t('cancel')}
                       </PortalButton>
                     </div>
                   </div>
@@ -1005,8 +1007,8 @@ export default function PatientSettingsPage() {
               <div className='grid gap-3'>
                 {contacts.length === 0 ? (
                   <div style={{ borderRadius: '18px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '20px', textAlign: 'center' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: T.navy }}>No emergency contacts saved</p>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>Add a trusted contact for faster response during urgent situations.</p>
+                    <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{t('noEmergencyContactsSaved')}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>{t('addATrustedContactFor')}</p>
                   </div>
                 ) : (
                   contacts.map((contact) => (
@@ -1015,28 +1017,28 @@ export default function PatientSettingsPage() {
                         <div className='grid gap-3'>
                           <input
                             type='text'
-                            id='contactEdit-name' aria-label='Contact name (Required)' required aria-invalid={!!contactErrors.name} aria-describedby={contactErrors.name ? 'contactEdit-name-error' : undefined}
+                            id='contactEdit-name' aria-label={t('contactNameRequired')} required aria-invalid={!!contactErrors.name} aria-describedby={contactErrors.name ? 'contactEdit-name-error' : undefined}
                             value={contactEdit.name}
                             onChange={(e) => { setContactEdit({ ...contactEdit, name: e.target.value }); setContactErrors(previous => ({ ...previous, name: '' })) }}
-                            placeholder='Contact name'
+                            placeholder={t('contactName')}
                             style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
                           <FieldFeedback name='contactEdit-name' error={contactErrors.name} />
                           <input
                             type='text'
-                            id='contactEdit-relationship' aria-label='Relationship (Required)' required aria-invalid={!!contactErrors.relationship} aria-describedby={contactErrors.relationship ? 'contactEdit-relationship-error' : undefined}
+                            id='contactEdit-relationship' aria-label={t('relationshipRequired')} required aria-invalid={!!contactErrors.relationship} aria-describedby={contactErrors.relationship ? 'contactEdit-relationship-error' : undefined}
                             value={contactEdit.relationship}
                             onChange={(e) => { setContactEdit({ ...contactEdit, relationship: e.target.value }); setContactErrors(previous => ({ ...previous, relationship: '' })) }}
-                            placeholder='Relationship'
+                            placeholder={t('relationship')}
                             style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
                           <FieldFeedback name='contactEdit-relationship' error={contactErrors.relationship} />
                           <input
                             type='text'
-                            id='contactEdit-phone' aria-label='Phone number (Required)' required aria-invalid={!!contactErrors.phone} aria-describedby={contactErrors.phone ? 'contactEdit-phone-error' : undefined}
+                            id='contactEdit-phone' aria-label={t('phoneNumberRequired')} required aria-invalid={!!contactErrors.phone} aria-describedby={contactErrors.phone ? 'contactEdit-phone-error' : undefined}
                             value={contactEdit.phone}
                             onChange={(e) => { setContactEdit({ ...contactEdit, phone: e.target.value }); setContactErrors(previous => ({ ...previous, phone: '' })) }}
-                            placeholder='Phone number'
+                            placeholder={t('phoneNumber2')}
                             style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
                           <FieldFeedback name='contactEdit-phone' error={contactErrors.phone} hint='Include the country code, for example +49 151 23456789.' />
@@ -1044,7 +1046,7 @@ export default function PatientSettingsPage() {
                             <PortalButton tone='primary' onClick={handleContactEditSave} disabled={contactSaving}>
                               {contactSaving ? 'Saving…' : 'Save'}
                             </PortalButton>
-                            <PortalButton tone='secondary' onClick={() => setEditingContactId(null)}>Cancel</PortalButton>
+                            <PortalButton tone='secondary' onClick={() => setEditingContactId(null)}>{t('cancel')}</PortalButton>
                           </div>
                         </div>
                       ) : (
@@ -1054,8 +1056,8 @@ export default function PatientSettingsPage() {
                             <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate }}>{contact.relationship} • {contact.phone}</p>
                           </div>
                           <div className='flex gap-2'>
-                            <PortalButton tone='secondary' onClick={() => openContactEdit(contact)}>Edit</PortalButton>
-                            <PortalButton tone='danger' onClick={() => handleDeleteContact(contact.id)}>Delete</PortalButton>
+                            <PortalButton tone='secondary' onClick={() => openContactEdit(contact)}>{t('edit')}</PortalButton>
+                            <PortalButton tone='danger' onClick={() => handleDeleteContact(contact.id)}>{t('delete')}</PortalButton>
                           </div>
                         </div>
                       )}
@@ -1068,8 +1070,8 @@ export default function PatientSettingsPage() {
             <PortalCard className='settings-card'>
               <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Information</p>
-                  <h2 className='portal-h2 settings-card-title'>Coverage and card upload</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('insuranceInformation')}</p>
+                  <h2 className='portal-h2 settings-card-title'>{t('coverageAndCardUpload')}</h2>
                 </div>
                 <div className='flex gap-2'>
                   <PortalBadge tone={insuranceInfo.tone}>{insuranceInfo.label}</PortalBadge>
@@ -1084,54 +1086,54 @@ export default function PatientSettingsPage() {
                 <div style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', marginBottom: '16px' }}>
                   <div className='settings-info-grid'>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Insurance Type</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('insuranceType')}</label>
                       <select
                         value={insuranceEdit.insurance_type}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_type: e.target.value })}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       >
-                        <option value='SELF_PAY'>Self Pay (Private)</option>
-                        <option value='GKV'>Statutory (GKV)</option>
-                        <option value='PKV'>Private (PKV)</option>
+                        <option value='SELF_PAY'>{t('selfPayPrivate')}</option>
+                        <option value='GKV'>{t('statutoryGkv')}</option>
+                        <option value='PKV'>{t('privatePkv')}</option>
                       </select>
                     </div>
                     <div className='settings-wide'>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Insurance Provider</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('insuranceProvider')}</label>
                       <input
                         type='text'
                         value={insuranceEdit.insurance_provider_name}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_provider_name: e.target.value })}
-                        placeholder='e.g., Axa Mansard, HMO'
+                        placeholder={t('eGAxaMansardHmo')}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Policy Number</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('policyNumber')}</label>
                       <input
                         type='text'
                         value={insuranceEdit.insurance_number}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_number: e.target.value })}
-                        placeholder='e.g., QH-8892-4481'
+                        placeholder={t('eGQh88924481')}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Membership category (patient reported)</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('membershipCategoryPatientReported')}</label>
                       <select
                         value={insuranceEdit.insured_status}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insured_status: e.target.value })}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       >
-                        <option value=''>Select</option>
-                        <option value='SELF_INSURED'>Self Insured</option>
-                        <option value='FAMILY_MEMBER'>Family Member</option>
-                        <option value='STUDENT'>Student</option>
-                        <option value='PENSIONER'>Pensioner</option>
-                        <option value='OTHER'>Other</option>
+                        <option value=''>{t('select')}</option>
+                        <option value='SELF_INSURED'>{t('selfInsured')}</option>
+                        <option value='FAMILY_MEMBER'>{t('familyMember')}</option>
+                        <option value='STUDENT'>{t('student')}</option>
+                        <option value='PENSIONER'>{t('pensioner')}</option>
+                        <option value='OTHER'>{t('other')}</option>
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Reported card validity from</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('reportedCardValidityFrom')}</label>
                       <input
                         type='date'
                         value={insuranceEdit.validity_start}
@@ -1140,7 +1142,7 @@ export default function PatientSettingsPage() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>Reported card validity until</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('reportedCardValidityUntil')}</label>
                       <input
                         type='date'
                         value={insuranceEdit.validity_end}
@@ -1149,8 +1151,8 @@ export default function PatientSettingsPage() {
                       />
                     </div>
                     <div className='settings-wide flex gap-2'>
-                      <PortalButton tone='primary' onClick={handleInsuranceSave}>Save Insurance</PortalButton>
-                      <PortalButton tone='secondary' onClick={() => setShowInsuranceEdit(false)}>Cancel</PortalButton>
+                      <PortalButton tone='primary' onClick={handleInsuranceSave}>{t('saveInsurance')}</PortalButton>
+                      <PortalButton tone='secondary' onClick={() => setShowInsuranceEdit(false)}>{t('cancel')}</PortalButton>
                     </div>
                   </div>
                 </div>
@@ -1160,23 +1162,23 @@ export default function PatientSettingsPage() {
                 {insurance ? (
                   <>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Type</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('insuranceType')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insuranceInfo.fundingLabel}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Provider</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('insuranceProvider')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_provider_name || 'Not set'}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Policy Number</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('policyNumber')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_number || 'Not set'}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Membership category (patient reported)</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('membershipCategoryPatientReported')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insuranceInfo.membershipLabel}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Reported card validity until</p>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('reportedCardValidityUntil')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>
                         {insurance.validity_end
                           ? new Date(insurance.validity_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -1186,7 +1188,7 @@ export default function PatientSettingsPage() {
                   </>
                 ) : (
                   <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)", gridColumn: '1 / -1' }}>
-                    <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>No insurance information on file</p>
+                    <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>{t('noInsuranceInformationOnFile')}</p>
                   </div>
                 )}
               </div>
@@ -1194,7 +1196,7 @@ export default function PatientSettingsPage() {
                 <input
                   ref={insuranceCardInputRef}
                   type='file'
-                  aria-label='Upload insurance card'
+                  aria-label={t('uploadInsuranceCard')}
                   aria-describedby='insurance-card-upload-help insurance-card-upload-error'
                   aria-invalid={Boolean(insuranceCardError)}
                   accept='.pdf,.png,.jpg,.jpeg,.webp'
@@ -1204,7 +1206,7 @@ export default function PatientSettingsPage() {
                 <PortalButton tone='secondary' onClick={() => insuranceCardInputRef.current?.click()} disabled={uploadingInsuranceCard}>
                   {uploadingInsuranceCard ? 'Uploading…' : 'Upload Insurance Card'}
                 </PortalButton>
-                <p id='insurance-card-upload-help' className='mt-2 text-sm text-muted'>Maximum 3 MB per file in development. An uploaded card does not verify coverage.</p>
+                <p id='insurance-card-upload-help' className='mt-2 text-sm text-muted'>{t('maximum3MbPerFile')}</p>
                 <p id='insurance-card-upload-error' role={insuranceCardError ? 'alert' : undefined} className='mt-2 text-sm text-ink'>{insuranceCardError}</p>
               </div>
             </PortalCard>
@@ -1213,7 +1215,7 @@ export default function PatientSettingsPage() {
       )}
       {showDeleteAccountConfirm ? (
         <ConfirmDialog
-          title='Deactivate account'
+          title={t('deactivateAccount')}
           body='This will sign you out and deactivate your account. Clinical records are preserved for compliance and care continuity.'
           confirmLabel='Deactivate'
           onCancel={() => setShowDeleteAccountConfirm(false)}
@@ -1262,6 +1264,7 @@ function PreferenceActionRow({ label, buttonLabel, tone = 'secondary', onClick }
 }
 
 function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { title: string; body: string; confirmLabel: string; onCancel: () => void; onConfirm: () => void }) {
+  const t = useTranslations('patientSettings')
   return (
     <div
       role='presentation'
@@ -1295,7 +1298,7 @@ function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { tit
         <h2 id='confirm-dialog-title' className='portal-h2'>{title}</h2>
         <p style={{ margin: '0 0 18px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>{body}</p>
         <div className='flex flex-wrap justify-end gap-2'>
-          <PortalButton tone='secondary' onClick={onCancel}>Cancel</PortalButton>
+          <PortalButton tone='secondary' onClick={onCancel}>{t('cancel')}</PortalButton>
           <PortalButton tone='danger' onClick={onConfirm}>{confirmLabel}</PortalButton>
         </div>
       </div>
@@ -1304,6 +1307,7 @@ function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { tit
 }
 
 function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHistoryItem[]; loading: boolean; onClose: () => void }) {
+  const t = useTranslations('patientSettings')
   return (
     <div
       role='presentation'
@@ -1338,12 +1342,12 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
       >
         <div className='mb-4 flex items-start justify-between gap-3'>
           <div>
-            <h2 id='login-history-title' className='portal-h2'>Login history</h2>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Recent security events from your account audit log.</p>
+            <h2 id='login-history-title' className='portal-h2'>{t('loginHistory')}</h2>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('recentSecurityEventsFromYour')}</p>
           </div>
           <button
             type='button'
-            aria-label='Close login history'
+            aria-label={t('closeLoginHistory')}
             onClick={onClose}
             style={{
               width: '38px',
@@ -1366,8 +1370,8 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
           <PortalSkeleton height={120} />
         ) : items.length === 0 ? (
           <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '18px', textAlign: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>No login history yet</p>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Your future sign-in audit events will appear here.</p>
+            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>{t('noLoginHistoryYet')}</p>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('yourFutureSignInAudit')}</p>
           </div>
         ) : (
           <div className='grid gap-2'>
@@ -1403,6 +1407,7 @@ function ActiveDevicesDialog({
   onRevoke: (deviceId: string, isCurrent: boolean) => void
   onRevokeOthers: () => void
 }) {
+  const t = useTranslations('patientSettings')
   return (
     <div
       role='presentation'
@@ -1437,12 +1442,12 @@ function ActiveDevicesDialog({
       >
         <div className='mb-4 flex items-start justify-between gap-3'>
           <div>
-            <h2 id='active-devices-title' className='portal-h2'>Active devices</h2>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>These are browser sessions that can currently refresh access to your account.</p>
+            <h2 id='active-devices-title' className='portal-h2'>{t('activeDevices')}</h2>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('theseAreBrowserSessionsThat')}</p>
           </div>
           <button
             type='button'
-            aria-label='Close active devices'
+            aria-label={t('closeActiveDevices')}
             onClick={onClose}
             style={{
               width: '38px',
@@ -1465,14 +1470,14 @@ function ActiveDevicesDialog({
           <PortalSkeleton height={150} />
         ) : items.length === 0 ? (
           <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '18px', textAlign: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>No active devices found</p>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Your current browser may need to sign in again.</p>
+            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>{t('noActiveDevicesFound')}</p>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('yourCurrentBrowserMayNeed')}</p>
           </div>
         ) : (
           <div className='grid gap-3'>
             <div className='flex flex-wrap justify-end gap-2'>
               <PortalButton tone='secondary' onClick={onRevokeOthers} disabled={items.filter((item) => !item.is_current).length === 0}>
-                Sign out other devices
+                {t('signOutOtherDevices')}
               </PortalButton>
             </div>
             {items.map((item) => (
@@ -1481,7 +1486,7 @@ function ActiveDevicesDialog({
                   <div>
                     <div className='flex flex-wrap items-center gap-2'>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: T.navy }}>{item.device_name}</p>
-                      {item.is_current ? <PortalBadge tone='success'>Current</PortalBadge> : null}
+                      {item.is_current ? <PortalBadge tone='success'>{t('current')}</PortalBadge> : null}
                     </div>
                     <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
                       {[item.browser_name, item.operating_system, item.ip_address].filter(Boolean).join(' • ') || 'Device details unavailable'}
@@ -1518,6 +1523,7 @@ function PasskeysDialog({
   onRegister: () => void
   onDelete: (credentialId: string) => void
 }) {
+  const t = useTranslations('patientSettings')
   return (
     <div
       role='presentation'
@@ -1552,12 +1558,12 @@ function PasskeysDialog({
       >
         <div className='mb-4 flex items-start justify-between gap-3'>
           <div>
-            <h2 id='passkeys-title' className='portal-h2'>Passkeys</h2>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Use your device security, such as Face ID, Touch ID, or a screen lock, to sign in without a password.</p>
+            <h2 id='passkeys-title' className='portal-h2'>{t('passkeys')}</h2>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('useYourDeviceSecuritySuch')}</p>
           </div>
           <button
             type='button'
-            aria-label='Close passkeys'
+            aria-label={t('closePasskeys')}
             onClick={onClose}
             style={{
               width: '38px',
@@ -1586,8 +1592,8 @@ function PasskeysDialog({
           <PortalSkeleton height={130} />
         ) : items.length === 0 ? (
           <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '18px', textAlign: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>No passkeys added</p>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Add this device as a passkey to enable faster sign-in.</p>
+            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>{t('noPasskeysAdded')}</p>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('addThisDeviceAsA')}</p>
           </div>
         ) : (
           <div className='grid gap-3'>
@@ -1604,7 +1610,7 @@ function PasskeysDialog({
                     </p>
                   </div>
                   <PortalButton tone='danger' onClick={() => onDelete(item.id)}>
-                    Remove
+                    {t('remove')}
                   </PortalButton>
                 </div>
               </div>

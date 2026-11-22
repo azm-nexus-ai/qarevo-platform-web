@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback, useSyncExternalStore } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -63,6 +64,7 @@ const downloadTextFile = (filename: string, content: string) => {
 }
 
 function LabRequestsPageContent() {
+  const t = useTranslations('patientLabRequests')
   const router = useRouter(), parameters = useSearchParams()
   const linkedRequest = patientLabRequestTarget(parameters), appliedRequestLink = useRef(false)
   const renderedQuery = parameters.toString()
@@ -284,23 +286,23 @@ function LabRequestsPageContent() {
 
   const rightRail = (
     <div className='lab-summary-card'>
-      <p className='section-eyebrow'>Care summary</p>
-      <h2 className='rail-title'>Diagnostic overview</h2>
+      <p className='section-eyebrow'>{t('careSummary')}</p>
+      <h2 className='rail-title'>{t('diagnosticOverview')}</h2>
       <div className='rail-grid'>
-        <div className='rail-stat'><span>Outstanding tests</span><strong>{data.summary.pending_tests} pending</strong></div>
-        <div className='rail-stat'><span>Patient-reported visit</span><strong>{data.summary.upcoming_lab_appointment ?? 'Not recorded'}</strong></div>
-        <div className='rail-stat'><span>Estimated completion</span><strong>{data.summary.estimated_completion ?? 'Not provided'}</strong></div>
-        <div className='rail-stat'><span>Completed results</span><strong>{data.summary.completed_tests}</strong></div>
+        <div className='rail-stat'><span>{t('outstandingTests')}</span><strong>{data.summary.pending_tests} pending</strong></div>
+        <div className='rail-stat'><span>{t('patientReportedVisit')}</span><strong>{data.summary.upcoming_lab_appointment ?? 'Not recorded'}</strong></div>
+        <div className='rail-stat'><span>{t('estimatedCompletion')}</span><strong>{data.summary.estimated_completion ?? 'Not provided'}</strong></div>
+        <div className='rail-stat'><span>{t('completedResults')}</span><strong>{data.summary.completed_tests}</strong></div>
       </div>
-      <div className='rail-note'>Results uploaded here are saved into Medical Records as Lab Result files for authorized care-team review.</div>
+      <div className='rail-note'>{t('resultsUploadedHereAreSaved')}</div>
     </div>
   )
 
   return (
     <PatientPortalShell
-      eyebrow="Lab Results"
-      title="Lab Requests"
-      description="Doctor-ordered laboratory and diagnostic tests appear here after your care team creates them."
+      eyebrow={t('labResults')}
+      title={t('labRequests')}
+      description={t('doctorOrderedLaboratoryAndDiagnostic')}
       rightRail={rightRail}
     >
       <style>{`
@@ -339,28 +341,28 @@ function LabRequestsPageContent() {
       `}</style>
 
       <section className='lab-hero'>
-        <p className='section-eyebrow'>Lab requests and diagnostic tests</p>
-        <h1 style={{ margin: '8px 0', fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800, color: T.navy }}>Everything your care team orders lives here</h1>
+        <p className='section-eyebrow'>{t('labRequestsAndDiagnosticTests')}</p>
+        <h1 style={{ margin: '8px 0', fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800, color: T.navy }}>{t('everythingYourCareTeamOrders')}</h1>
         <p style={{ margin: '0 0 16px', maxWidth: '760px', fontSize: '14px', color: T.slate, lineHeight: 1.75 }}>
-          New patients will see an empty state until a doctor creates a real lab request from the doctor portal.
+          {t('newPatientsWillSeeAn')}
         </p>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <Link href={PATIENT_ROUTES.dashboard} className='action-btn'>Return to Dashboard</Link>
-          <button type='button' className='action-btn' onClick={() => void refresh()} disabled={saving || loading}>Reload saved requests</button>
-          <button type='button' className='action-btn primary' onClick={downloadRequests} disabled={!hasRequests}>Download Requests</button>
+          <Link href={PATIENT_ROUTES.dashboard} className='action-btn'>{t('returnToDashboard')}</Link>
+          <button type='button' className='action-btn' onClick={() => void refresh()} disabled={saving || loading}>{t('reloadSavedRequests')}</button>
+          <button type='button' className='action-btn primary' onClick={downloadRequests} disabled={!hasRequests}>{t('downloadRequests')}</button>
         </div>
       </section>
 
-      {(linkedRequest.id || linkedRequest.invalid) && <section aria-label='Selected lab request' className='lab-card'><h2 className='portal-h2'>Selected lab request</h2><p className='text-sm leading-7 text-secondary'>{linkedRequest.invalid ? 'This lab request link is invalid. Choose an available request below.' : loading ? 'Loading the selected request…' : !data.test_requests.some(item => item.id === linkedRequest.id) ? 'The referenced request is unavailable to this account. No other request has been selected automatically.' : 'The referenced request is available below. No result file has been opened automatically.'}</p></section>}
+      {(linkedRequest.id || linkedRequest.invalid) && <section aria-label={t('selectedLabRequest')} className='lab-card'><h2 className='portal-h2'>{t('selectedLabRequest')}</h2><p className='text-sm leading-7 text-secondary'>{linkedRequest.invalid ? 'This lab request link is invalid. Choose an available request below.' : loading ? 'Loading the selected request…' : !data.test_requests.some(item => item.id === linkedRequest.id) ? 'The referenced request is unavailable to this account. No other request has been selected automatically.' : 'The referenced request is available below. No result file has been opened automatically.'}</p></section>}
       {notice && <div role='status' className='lab-card'>{notice}</div>}
       {error && <div role='alert' className='lab-card' style={{ color: T.red, border: '1px solid rgba(220,38,38,0.18)' }}>{error}</div>}
-      {loading && <div className='lab-card'>Loading your lab requests...</div>}
+      {loading && <div className='lab-card'>{t('loadingYourLabRequests')}</div>}
 
       {!loading && (
         <>
           <section className='lab-card'>
-            <p className='section-eyebrow'>Request summary</p>
-            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>A quick overview</h2>
+            <p className='section-eyebrow'>{t('requestSummary')}</p>
+            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('aQuickOverview')}</h2>
             <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
               {[
                 ['Requested tests', String(data.summary.requested_tests)],
@@ -374,10 +376,10 @@ function LabRequestsPageContent() {
           </section>
 
           <section className='lab-card'>
-            <p className='section-eyebrow'>Diagnostic requests</p>
-            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Ordered by your physician</h2>
+            <p className='section-eyebrow'>{t('diagnosticRequests')}</p>
+            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('orderedByYourPhysician')}</h2>
             {!hasRequests ? (
-              <div className='empty-box'>No lab requests yet. Once your doctor orders tests, they will appear here with actions to record an externally arranged visit and upload results.</div>
+              <div className='empty-box'>{t('noLabRequestsYetOnce')}</div>
             ) : (
               <div style={{ display: 'grid', gap: '12px' }}>
                 {data.test_requests.map((item) => {
@@ -392,17 +394,17 @@ function LabRequestsPageContent() {
                         <span className='status-badge'><ClinicalStatusBadge status={item.status} domain='lab-request' label={labStatusLabel(item.status)} /></span>
                       </div>
                       <div className='meta-grid'>
-                        <div className='meta-item'><span>Ordering physician</span><strong>{item.physician_name ?? 'Care team'}</strong></div>
-                        <div className='meta-item'><span>Recommended lab</span><strong>{item.recommended_lab_name || 'Any accredited laboratory'}</strong></div>
-                        <div className='meta-item'><span>Processing time</span><strong>{item.processing_time || 'Lab dependent'}</strong></div>
+                        <div className='meta-item'><span>{t('orderingPhysician')}</span><strong>{item.physician_name ?? 'Care team'}</strong></div>
+                        <div className='meta-item'><span>{t('recommendedLab')}</span><strong>{item.recommended_lab_name || 'Any accredited laboratory'}</strong></div>
+                        <div className='meta-item'><span>{t('processingTime')}</span><strong>{item.processing_time || 'Lab dependent'}</strong></div>
                       </div>
                       <div className='mt-3'><LabResultReviewStatus review={item.result_review} fileId={item.result_file_id} /></div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
                         <div style={{ fontSize: "13px", color: T.slate2 }}>Recommended completion: {item.completionDate ?? 'Not scheduled'}</div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <button type='button' className='action-btn primary' onClick={() => beginBooking(item)} disabled={!planAllowed(item) || saving}>Record patient-reported visit</button>
-                          <button type='button' className='action-btn' onClick={() => setDetailsRequest(item)}>View Details</button>
-                          {item.result_file_id && <button type='button' className='action-btn' onClick={() => previewResult(item.result_file_id as string)}>Preview Result</button>}
+                          <button type='button' className='action-btn primary' onClick={() => beginBooking(item)} disabled={!planAllowed(item) || saving}>{t('recordPatientReportedVisit')}</button>
+                          <button type='button' className='action-btn' onClick={() => setDetailsRequest(item)}>{t('viewDetails')}</button>
+                          {item.result_file_id && <button type='button' className='action-btn' onClick={() => previewResult(item.result_file_id as string)}>{t('previewResult')}</button>}
                         </div>
                       </div>
                     </article>
@@ -413,11 +415,11 @@ function LabRequestsPageContent() {
           </section>
 
           <section ref={bookingRef} className='lab-card'>
-            <p className='section-eyebrow'>Patient-reported visit</p>
-            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Record a visit arranged with your laboratory</h2>
-            <p id='lab-plan-guidance' style={{ color: T.slate, lineHeight: 1.7 }}>Arrange the visit directly with the laboratory. Saving here does not book or contact the laboratory, verify availability, or confirm home collection. Dates and times use your device’s local timezone.</p>
+            <p className='section-eyebrow'>{t('patientReportedVisit')}</p>
+            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('recordAVisitArrangedWith')}</h2>
+            <p id='lab-plan-guidance' style={{ color: T.slate, lineHeight: 1.7 }}>{t('arrangeTheVisitDirectlyWith')}</p>
             {!hasRequests ? (
-              <div className='empty-box'>A doctor-created request is required before you can record an externally arranged visit.</div>
+              <div className='empty-box'>{t('aDoctorCreatedRequestIs')}</div>
             ) : (
               <>
                 {selectedRequest && (
@@ -425,17 +427,17 @@ function LabRequestsPageContent() {
                     Doctor guidance: {selectedRequest.recommended_lab_name || 'Any accredited laboratory'}{selectedRequest.recommended_lab_address ? ` - ${selectedRequest.recommended_lab_address}` : ''}
                   </div>
                 )}
-                <label><span id='patient-lab-request-label' className='section-eyebrow'>Request (required)</span><select aria-labelledby='patient-lab-request-label' className='select-input' value={selectedRequestId} disabled={saving} onChange={(event) => selectRequest(event.target.value)}><option value=''>Choose a lab request</option>{data.test_requests.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+                <label><span id='patient-lab-request-label' className='section-eyebrow'>{t('requestRequired')}</span><select aria-labelledby='patient-lab-request-label' className='select-input' value={selectedRequestId} disabled={saving} onChange={(event) => selectRequest(event.target.value)}><option value=''>{t('chooseALabRequest')}</option>{data.test_requests.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
                 {!canRecord && <p role='status' className='empty-box'>{planUnavailable}</p>}
                 <fieldset disabled={saving || !canRecord} aria-describedby='lab-plan-guidance' style={{ border: 0, margin: '12px 0 0', padding: 0, minWidth: 0 }}>
                 <div className='form-grid'>
-                  <label><span id='lab-plan-date-label' className='section-eyebrow'>Date (required)</span><input aria-labelledby='lab-plan-date-label' required className='select-input' type='date' value={selectedDate} aria-invalid={Boolean(validation.date)} aria-describedby={validation.date ? 'lab-plan-date-error' : undefined} onChange={(event) => { planEdited.current = true; setSelectedDate(event.target.value) }} />{validation.date && <span id='lab-plan-date-error' role='alert'>{validation.date}</span>}</label>
-                  <label><span id='lab-plan-time-label' className='section-eyebrow'>Time (required)</span><input aria-labelledby='lab-plan-time-label' required className='select-input' type='time' value={selectedTime} aria-invalid={Boolean(validation.time)} aria-describedby={validation.time ? 'lab-plan-time-error' : undefined} onChange={(event) => { planEdited.current = true; setSelectedTime(event.target.value) }} />{validation.time && <span id='lab-plan-time-error' role='alert'>{validation.time}</span>}</label>
-                  <label><span id='lab-plan-name-label' className='section-eyebrow'>Lab or centre name (required)</span><input aria-labelledby='lab-plan-name-label' required className='text-input' value={appointmentLabName} aria-invalid={Boolean(validation.lab)} aria-describedby={validation.lab ? 'lab-plan-name-error' : undefined} onChange={(event) => { planEdited.current = true; setAppointmentLabName(event.target.value) }} placeholder='Laboratory you arranged the visit with' />{validation.lab && <span id='lab-plan-name-error' role='alert'>{validation.lab}</span>}</label>
-                  <label><span id='lab-plan-address-label' className='section-eyebrow'>Address or branch (optional)</span><input aria-labelledby='lab-plan-address-label' aria-invalid={Boolean(validation.address)} aria-describedby={validation.address ? 'lab-plan-address-error' : undefined} className='text-input' value={appointmentLabAddress} onChange={(event) => { planEdited.current = true; setAppointmentLabAddress(event.target.value) }} placeholder='Optional address or branch details' />{validation.address && <span id='lab-plan-address-error' role='alert'>{validation.address}</span>}</label>
+                  <label><span id='lab-plan-date-label' className='section-eyebrow'>{t('dateRequired')}</span><input aria-labelledby='lab-plan-date-label' required className='select-input' type='date' value={selectedDate} aria-invalid={Boolean(validation.date)} aria-describedby={validation.date ? 'lab-plan-date-error' : undefined} onChange={(event) => { planEdited.current = true; setSelectedDate(event.target.value) }} />{validation.date && <span id='lab-plan-date-error' role='alert'>{validation.date}</span>}</label>
+                  <label><span id='lab-plan-time-label' className='section-eyebrow'>{t('timeRequired')}</span><input aria-labelledby='lab-plan-time-label' required className='select-input' type='time' value={selectedTime} aria-invalid={Boolean(validation.time)} aria-describedby={validation.time ? 'lab-plan-time-error' : undefined} onChange={(event) => { planEdited.current = true; setSelectedTime(event.target.value) }} />{validation.time && <span id='lab-plan-time-error' role='alert'>{validation.time}</span>}</label>
+                  <label><span id='lab-plan-name-label' className='section-eyebrow'>{t('labOrCentreNameRequired')}</span><input aria-labelledby='lab-plan-name-label' required className='text-input' value={appointmentLabName} aria-invalid={Boolean(validation.lab)} aria-describedby={validation.lab ? 'lab-plan-name-error' : undefined} onChange={(event) => { planEdited.current = true; setAppointmentLabName(event.target.value) }} placeholder={t('laboratoryYouArrangedTheVisit')} />{validation.lab && <span id='lab-plan-name-error' role='alert'>{validation.lab}</span>}</label>
+                  <label><span id='lab-plan-address-label' className='section-eyebrow'>{t('addressOrBranchOptional')}</span><input aria-labelledby='lab-plan-address-label' aria-invalid={Boolean(validation.address)} aria-describedby={validation.address ? 'lab-plan-address-error' : undefined} className='text-input' value={appointmentLabAddress} onChange={(event) => { planEdited.current = true; setAppointmentLabAddress(event.target.value) }} placeholder={t('optionalAddressOrBranchDetails')} />{validation.address && <span id='lab-plan-address-error' role='alert'>{validation.address}</span>}</label>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
-                  <button type='button' aria-pressed={homeCollection} className={`toggle-pill ${homeCollection ? 'active' : ''}`} onClick={() => { planEdited.current = true; setHomeCollection((value) => !value) }}>Home collection arranged with laboratory</button>
+                  <button type='button' aria-pressed={homeCollection} className={`toggle-pill ${homeCollection ? 'active' : ''}`} onClick={() => { planEdited.current = true; setHomeCollection((value) => !value) }}>{t('homeCollectionArrangedWithLaboratory')}</button>
                   <button type='button' className='action-btn primary' onClick={handleBook}>{saving ? 'Saving visit…' : 'Save patient-reported visit'}</button>
                 </div>
                 </fieldset>
@@ -444,10 +446,10 @@ function LabRequestsPageContent() {
           </section>
 
           <section className='lab-card'>
-            <p className='section-eyebrow'>Test preparation</p>
-            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Prepare with confidence</h2>
+            <p className='section-eyebrow'>{t('testPreparation')}</p>
+            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('prepareWithConfidence')}</h2>
             <div style={{ display: 'grid', gap: '10px' }}>
-              {preparationItems.length === 0 ? <div className='empty-box'>Preparation notes will appear after you select a request.</div> : preparationItems.map((item) => (
+              {preparationItems.length === 0 ? <div className='empty-box'>{t('preparationNotesWillAppearAfter')}</div> : preparationItems.map((item) => (
                 <div key={item.title} className='download-row'>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                     <div className='icon-btn' style={{ color: T.link }}><Ico p={ICONS.check} size={16} sw={1.8} /></div>
@@ -459,8 +461,8 @@ function LabRequestsPageContent() {
           </section>
 
           <section className='lab-card'>
-            <p className='section-eyebrow'>Results tracker</p>
-            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Status timeline</h2>
+            <p className='section-eyebrow'>{t('resultsTracker')}</p>
+            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('statusTimeline')}</h2>
             <div className='meta-grid'>
               {['Pending', 'Booked', 'Collected', 'Processing', 'Results Available'].map((step) => (
                 <div key={step} className='meta-item'><span>{labStatusLabel(step)}</span><strong>{data.test_requests.filter((item) => item.status.toLowerCase() === step.toLowerCase()).length}</strong></div>
@@ -469,19 +471,19 @@ function LabRequestsPageContent() {
           </section>
 
           <section className='lab-card'>
-            <p className='section-eyebrow'>Upload external results</p>
-            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Add results completed elsewhere</h2>
+            <p className='section-eyebrow'>{t('uploadExternalResults')}</p>
+            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('addResultsCompletedElsewhere')}</h2>
             {!hasRequests ? (
-              <div className='empty-box'>A result must attach to a doctor-created lab request, so uploads are disabled until a request exists.</div>
+              <div className='empty-box'>{t('aResultMustAttachTo')}</div>
             ) : (
               <div className='download-row'>
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{selectedRequest?.title ?? 'Selected lab request'}</div>
-                  <div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>PDF, PNG, JPG, or WEBP. Stored in Medical Records after upload.</div>
+                  <div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>{t('pdfPngJpgOrWebp')}</div>
                 </div>
                 <input ref={uploadInputRef} type='file' accept='.pdf,image/png,image/jpeg,image/webp' style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleUpload(file) }} />
                 <button type='button' className='action-btn primary' onClick={() => uploadInputRef.current?.click()} disabled={saving}>{saving ? 'Uploading...' : 'Upload Result'}</button>
-                {failedUpload?.requestId === selectedRequestId && <button type='button' className='action-btn' disabled={saving} onClick={() => void handleUpload(failedUpload.file, failedUpload.note)}>Retry result upload</button>}
+                {failedUpload?.requestId === selectedRequestId && <button type='button' className='action-btn' disabled={saving} onClick={() => void handleUpload(failedUpload.file, failedUpload.note)}>{t('retryResultUpload')}</button>}
               </div>
             )}
             {data.recent_uploads.length > 0 && (
@@ -489,7 +491,7 @@ function LabRequestsPageContent() {
                 {data.recent_uploads.map((item) => (
                   <div key={item.file_id} className='download-row'>
                     <div><div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{item.title}</div><div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>{item.meta}</div></div>
-                    <button type='button' className='action-btn' onClick={() => previewResult(item.file_id)}>Preview</button>
+                    <button type='button' className='action-btn' onClick={() => previewResult(item.file_id)}>{t('preview')}</button>
                   </div>
                 ))}
               </div>
@@ -497,12 +499,12 @@ function LabRequestsPageContent() {
           </section>
 
           <section className='lab-card'>
-            <p className='section-eyebrow'>Patient actions</p>
-            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Stay connected to care</h2>
+            <p className='section-eyebrow'>{t('patientActions')}</p>
+            <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('stayConnectedToCare')}</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              <button type='button' className='action-btn primary' onClick={downloadRequests} disabled={!hasRequests}>Download Requests</button>
-              <button type='button' className='action-btn' onClick={() => router.push('/patient/messages')} disabled={!selectedRequest?.provider_id}>Message Physician</button>
-              <button type='button' className='action-btn' onClick={() => selectedRequest && beginBooking(selectedRequest)} disabled={!canRecord || saving}>Record patient-reported visit</button>
+              <button type='button' className='action-btn primary' onClick={downloadRequests} disabled={!hasRequests}>{t('downloadRequests')}</button>
+              <button type='button' className='action-btn' onClick={() => router.push('/patient/messages')} disabled={!selectedRequest?.provider_id}>{t('messagePhysician')}</button>
+              <button type='button' className='action-btn' onClick={() => selectedRequest && beginBooking(selectedRequest)} disabled={!canRecord || saving}>{t('recordPatientReportedVisit')}</button>
             </div>
           </section>
         </>
@@ -518,17 +520,17 @@ function LabRequestsPageContent() {
                 <h2 style={{ margin: '0 0 6px', color: T.navy }}>{currentDetails.title}</h2>
                 <p style={{ margin: 0, color: T.slate }}>{currentDetails.physician_name ?? 'Care team'} | {labStatusLabel(currentDetails.status)}</p>
               </div>
-              <button type='button' className='icon-btn' aria-label='Close lab request details' onClick={() => setDetailsRequest(null)}>x</button>
+              <button type='button' className='icon-btn' aria-label={t('closeLabRequestDetails')} onClick={() => setDetailsRequest(null)}>x</button>
             </div>
             <LabResultReviewStatus review={currentDetails.result_review} fileId={currentDetails.result_file_id} />
             <div style={{ display: 'grid', gap: '10px', marginTop: '16px' }}>
-              <div className='meta-item'><span>Description</span><strong>{currentDetails.description || 'No description provided.'}</strong></div>
-              <div className='meta-item'><span>Reason</span><strong>{currentDetails.reason || 'No reason provided.'}</strong></div>
-              <div className='meta-item'><span>Doctor recommendation</span><strong>{currentDetails.recommended_lab_name || 'Any accredited laboratory'}</strong></div>
-              <div className='meta-item'><span>Recommendation details</span><strong>{currentDetails.recommended_lab_address || 'No specific centre or address provided.'}</strong></div>
-              <div className='meta-item'><span>Patient-reported visit</span><strong>{currentDetails.scheduledForLabel || 'Not recorded yet'}</strong></div>
-              <div className='meta-item'><span>Patient recorded lab</span><strong>{currentDetails.selected_lab_name || 'Not recorded yet'}</strong></div>
-              <div className='meta-item'><span>Patient lab address</span><strong>{currentDetails.selected_lab_address || 'Not recorded yet'}</strong></div>
+              <div className='meta-item'><span>{t('description')}</span><strong>{currentDetails.description || 'No description provided.'}</strong></div>
+              <div className='meta-item'><span>{t('reason')}</span><strong>{currentDetails.reason || 'No reason provided.'}</strong></div>
+              <div className='meta-item'><span>{t('doctorRecommendation')}</span><strong>{currentDetails.recommended_lab_name || 'Any accredited laboratory'}</strong></div>
+              <div className='meta-item'><span>{t('recommendationDetails')}</span><strong>{currentDetails.recommended_lab_address || 'No specific centre or address provided.'}</strong></div>
+              <div className='meta-item'><span>{t('patientReportedVisit')}</span><strong>{currentDetails.scheduledForLabel || 'Not recorded yet'}</strong></div>
+              <div className='meta-item'><span>{t('patientRecordedLab')}</span><strong>{currentDetails.selected_lab_name || 'Not recorded yet'}</strong></div>
+              <div className='meta-item'><span>{t('patientLabAddress')}</span><strong>{currentDetails.selected_lab_address || 'Not recorded yet'}</strong></div>
             </div>
           </div>
         </div>
@@ -542,4 +544,5 @@ function LabRequestsRoute() {
   const parameters = useSearchParams(), path = usePathname(), scope = useSyncExternalStore(subscribeLabAccount, () => readAccountScope('patient'), () => null)
   return <LabRequestsPageContent key={JSON.stringify([scope, path, parameters.toString()])} />
 }
-export default function LabRequestsPage() { return <Suspense fallback={<p role='status'>Loading lab requests…</p>}><LabRequestsRoute /></Suspense> }
+export default function LabRequestsPage() {
+  const t = useTranslations('patientLabRequests'); return <Suspense fallback={<p role='status'>{t('loadingLabRequests')}</p>}><LabRequestsRoute /></Suspense> }

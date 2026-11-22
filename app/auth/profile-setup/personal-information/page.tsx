@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -143,6 +144,7 @@ function JourneyVisual() {
 }
 
 function LeftPanel() {
+  const t = useTranslations('onboarding.personal')
   return (
     <div
       style={{
@@ -216,11 +218,11 @@ function LeftPanel() {
               margin: '0 0 10px',
             }}
           >
-            Your profile shapes your care.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Just a few details to get started.</span>
+            {t('yourProfileShapesYourCare')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('justAFewDetailsTo')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            The information you share helps us personalize recommendations, match you to trusted physicians, and improve each consultation.
+            {t('theInformationYouShareHelps')}
           </p>
         </div>
       </div>
@@ -284,6 +286,7 @@ function splitFullName(fullName: string) {
 }
 
 export default function PersonalInformationPage() {
+  const t = useTranslations('onboarding.personal')
   const router = useRouter()
   const [draftStorage] = useState(createAccountDraftStorage)
   const [draftReady, setDraftReady] = useState(false)
@@ -472,12 +475,12 @@ export default function PersonalInformationPage() {
               }}
             >
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 2 of 6</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('profileSetup')}</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('step2Of6')}</p>
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>33% Complete</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Approximately 3 Minutes</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('t33Complete')}</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('approximately3Minutes')}</p>
               </div>
             </div>
 
@@ -493,7 +496,7 @@ export default function PersonalInformationPage() {
                   lineHeight: 1.2,
                 }}
               >
-                Tell Us About Yourself
+                {t('tellUsAboutYourself')}
               </h1>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>
                 Let&apos;s begin with some basic personal information so we can personalize your healthcare experience.
@@ -514,7 +517,7 @@ export default function PersonalInformationPage() {
 
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='fullName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Full Name (Required)</label>
+                <label htmlFor='fullName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('fullNameRequired')}</label>
                 <input
                   id='fullName' required aria-required='true'
                   value={form.fullName}
@@ -528,14 +531,14 @@ export default function PersonalInformationPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='preferredName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Name <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span></label>
+                <label htmlFor='preferredName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('preferredName')} <span style={{ color: T.slate2, fontWeight: 500 }}>{t('optional')}</span></label>
                 <input
                   id='preferredName'
                   value={form.preferredName}
                   autoComplete='nickname'
                   onChange={(e) => updateField('preferredName', e.target.value)}
                   onBlur={() => markTouched('preferredName')}
-                  placeholder='What should we call you?'
+                  placeholder={t('whatShouldWeCallYou')}
                   style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('preferredName'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 />
               </div>
@@ -543,7 +546,7 @@ export default function PersonalInformationPage() {
 
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='dob' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Date of Birth (Required)</label>
+                <label htmlFor='dob' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('dateOfBirthRequired')}</label>
                 <input
                   id='dob' required aria-required='true'
                   type='date'
@@ -556,7 +559,7 @@ export default function PersonalInformationPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='gender' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Gender (Required)</label>
+                <label htmlFor='gender' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('genderRequired')}</label>
                 <select
                   id='gender' required aria-required='true'
                   value={form.gender}
@@ -564,10 +567,10 @@ export default function PersonalInformationPage() {
                   onBlur={() => markTouched('gender')}
                   style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('gender'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 >
-                  <option value=''>Select</option>
-                  <option value='Male'>Male</option>
-                  <option value='Female'>Female</option>
-                  <option value='Prefer Not to Say'>Prefer Not to Say</option>
+                  <option value=''>{t('select')}</option>
+                  <option value='Male'>{t('male')}</option>
+                  <option value='Female'>{t('female')}</option>
+                  <option value='Prefer Not to Say'>{t('preferNotToSay')}</option>
                 </select>
                 {touched.gender && errors.gender ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.gender}</p> : null}
               </div>
@@ -575,7 +578,7 @@ export default function PersonalInformationPage() {
 
             <div className='pi-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='nationality' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Nationality (Required)</label>
+                <label htmlFor='nationality' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('nationalityRequired')}</label>
                 <select
                   id='nationality' required aria-required='true'
                   value={form.nationality}
@@ -583,14 +586,14 @@ export default function PersonalInformationPage() {
                   onBlur={() => markTouched('nationality')}
                   style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('nationality'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 >
-                  <option value=''>Select</option>
+                  <option value=''>{t('select')}</option>
                   {NATIONALITIES.map(item => <option key={item} value={item}>{item}</option>)}
                 </select>
                 {touched.nationality && errors.nationality ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.nationality}</p> : null}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label htmlFor='language' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Preferred Language (Required)</label>
+                <label htmlFor='language' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('preferredLanguageRequired')}</label>
                 <select
                   id='language' required aria-required='true'
                   value={form.preferredLanguage}
@@ -598,7 +601,7 @@ export default function PersonalInformationPage() {
                   onBlur={() => markTouched('preferredLanguage')}
                   style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('preferredLanguage'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 >
-                  <option value=''>Select</option>
+                  <option value=''>{t('select')}</option>
                   {LANGUAGES.map(item => <option key={item} value={item}>{item}</option>)}
                 </select>
                 {touched.preferredLanguage && errors.preferredLanguage ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.preferredLanguage}</p> : null}
@@ -606,7 +609,7 @@ export default function PersonalInformationPage() {
             </div>
 
             <div style={{ marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label htmlFor='maritalStatus' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Marital Status (Required)</label>
+              <label htmlFor='maritalStatus' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('maritalStatusRequired')}</label>
               <select
                 id='maritalStatus' required aria-required='true'
                 value={form.maritalStatus}
@@ -614,12 +617,12 @@ export default function PersonalInformationPage() {
                 onBlur={() => markTouched('maritalStatus')}
                 style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('maritalStatus'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
               >
-                <option value=''>Select</option>
-                <option value='Single'>Single</option>
-                <option value='Married'>Married</option>
-                <option value='Divorced'>Divorced</option>
-                <option value='Widowed'>Widowed</option>
-                <option value='Prefer Not to Say'>Prefer Not to Say</option>
+                <option value=''>{t('select')}</option>
+                <option value='Single'>{t('single')}</option>
+                <option value='Married'>{t('married')}</option>
+                <option value='Divorced'>{t('divorced')}</option>
+                <option value='Widowed'>{t('widowed')}</option>
+                <option value='Prefer Not to Say'>{t('preferNotToSay')}</option>
               </select>
               {touched.maritalStatus && errors.maritalStatus ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.maritalStatus}</p> : null}
             </div>
@@ -640,7 +643,7 @@ export default function PersonalInformationPage() {
                 <Ico p={ICONS.info} size={13} sw={1.75} color={T.blue} />
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Why do we need this information?</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('whyDoWeNeedThis')}</p>
                 <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{helperText}</p>
               </div>
             </div>
@@ -693,7 +696,7 @@ export default function PersonalInformationPage() {
                   letterSpacing: '-0.01em',
                 }}
               >
-                Back
+                {t('back')}
               </Link>
             </div>
           </fieldset></form>

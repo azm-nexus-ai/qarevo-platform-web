@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
@@ -158,6 +159,7 @@ function loadingPhysician(id: string): Physician {
 }
 
 function PhysicianProfilePageContent() {
+  const t = useTranslations('patientPhysician')
   const params = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   // A readable slug (or a bare UUID from an older link) resolves to the provider UUID.
@@ -260,8 +262,8 @@ function PhysicianProfilePageContent() {
     return (
       <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center', padding: '24px' }}>
         <section style={{ ...Glass.nav, maxWidth: '460px', borderRadius: '18px', padding: '22px', textAlign: 'center' }}>
-          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>Loading physician profile</h1>
-          <p style={{ margin: '8px 0 0', fontSize: '13px', color: T.slate }}>Fetching the latest doctor details.</p>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>{t('loadingPhysicianProfile')}</h1>
+          <p style={{ margin: '8px 0 0', fontSize: '13px', color: T.slate }}>{t('fetchingTheLatestDoctorDetails')}</p>
         </section>
       </main>
     )
@@ -271,14 +273,14 @@ function PhysicianProfilePageContent() {
     return (
       <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center', padding: '24px' }}>
         <section style={{ ...Glass.nav, maxWidth: '460px', borderRadius: '18px', padding: '22px', textAlign: 'center' }}>
-          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>Physician unavailable</h1>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy }}>{t('physicianUnavailable')}</h1>
           <p style={{ margin: '8px 0 14px', fontSize: '13px', color: T.slate }}>{remoteDoctorError}</p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <Link href="/patient/dashboard" style={{ minHeight: '40px', borderRadius: '11px', background: 'rgba(52,140,234,0.1)', color: "var(--link)", textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', fontSize: '13px', fontWeight: 700 }}>
-              Back to Dashboard
+              {t('backToDashboard')}
             </Link>
             <Link href={backToDiscovery} style={{ minHeight: '40px', borderRadius: '11px', background: '#20B5DF', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', fontSize: '13px', fontWeight: 700 }}>
-              Back to Find a Doctor
+              {t('backToFindADoctor')}
             </Link>
           </div>
         </section>
@@ -324,12 +326,12 @@ function PhysicianProfilePageContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
               <Link href="/patient/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: "var(--link)", fontSize: '13px', fontWeight: 700 }}>
                 <Ico p={ICONS.arrowBack} size={14} sw={1.8} color='#348CEA' />
-                Back to Dashboard
+                {t('backToDashboard')}
               </Link>
               <span style={{ color: 'rgba(52,140,234,0.4)' }}>|</span>
               <Link href={backToDiscovery} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: "var(--link)", fontSize: '13px', fontWeight: 700 }}>
                 <Ico p={ICONS.arrowBack} size={14} sw={1.8} color='#348CEA' />
-                Back to Find a Doctor
+                {t('backToFindADoctor')}
               </Link>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '108px minmax(0, 1fr) auto', gap: '14px', alignItems: 'center' }}>
@@ -351,7 +353,7 @@ function PhysicianProfilePageContent() {
                 </p>
                 {profile.availabilitySlots.length > 0 && profile.availabilitySlots[0].slots.length > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                    <span style={{ fontSize: "13px", color: T.slate2 }}>Next Available:</span>
+                    <span style={{ fontSize: "13px", color: T.slate2 }}>{t('nextAvailable')}</span>
                     {profile.availabilitySlots.slice(0, 1).map((day) => (
                       <div key={day.day} style={{ display: 'flex', gap: '4px' }}>
                         {day.slots.slice(0, 3).map((slot) => (
@@ -362,7 +364,7 @@ function PhysicianProfilePageContent() {
                       </div>
                     ))}
                     <Link href="#availability" style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>
-                      View All
+                      {t('viewAll')}
                     </Link>
                   </div>
                 )}
@@ -370,7 +372,7 @@ function PhysicianProfilePageContent() {
 
               <div style={{ display: 'grid', gap: '8px' }}>
                 <Link href={toBookingHref(physician, effectiveSelectedService, preservedQuery)} style={{ minHeight: '44px', borderRadius: '12px', background: '#20B5DF', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 5px 14px rgba(32,181,223,0.32)' }}>
-                  Book Now
+                  {t('bookNow')}
                 </Link>
                 <span style={{ fontSize: "13px", color: T.slate2, textAlign: 'center' }}>Response Time: {profile.responseTime}</span>
               </div>
@@ -413,7 +415,7 @@ function PhysicianProfilePageContent() {
 
           <section className='pp-two-col'>
             <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Specializations</h3>
+              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('specializations')}</h3>
               <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {profile.specializations.map((item) => (
                   <span key={item} style={{ ...Glass.chip, borderRadius: '999px', padding: '6px 10px', fontSize: "13px", color: T.link, fontWeight: 600 }}>{item}</span>
@@ -422,7 +424,7 @@ function PhysicianProfilePageContent() {
             </article>
 
             <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Insurance Accepted</h3>
+              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('insuranceAccepted')}</h3>
               <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {physician.insurance.map((item) => (
                   <span key={item} style={{ borderRadius: '999px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '6px 10px', fontSize: "13px", color: T.navy, fontWeight: 600 }}>{item}</span>
@@ -433,7 +435,7 @@ function PhysicianProfilePageContent() {
 
           <section className='pp-two-col'>
             <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Education</h3>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('education')}</h3>
               <div className='pp-timeline'>
                 {(expandedEducation ? profile.education : profile.education.slice(0, 1)).map((item) => (
                   <div key={`${item.title}-${item.period}`} style={{ borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '10px 11px' }}>
@@ -455,7 +457,7 @@ function PhysicianProfilePageContent() {
             </article>
 
             <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Professional Experience</h3>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('professionalExperience')}</h3>
               <div className='pp-timeline'>
                 {(expandedExperience ? profile.experienceTimeline : profile.experienceTimeline.slice(0, 1)).map((item) => (
                   <div key={`${item.title}-${item.period}`} style={{ borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '10px 11px' }}>
@@ -478,11 +480,11 @@ function PhysicianProfilePageContent() {
           </section>
 
           <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Consultation Services</h3>
+            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('consultationServices')}</h3>
             <div className='pp-service-grid'>
 	              {profile.services.length === 0 ? (
 	                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '12px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
-	                  This physician has not published consultation services yet.
+	                  {t('thisPhysicianHasNotPublished')}
 	                </div>
 	              ) : profile.services.map((service) => {
                 const active = effectiveSelectedService === service.type
@@ -504,11 +506,11 @@ function PhysicianProfilePageContent() {
 
           <section className='pp-two-col'>
             <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Availability</h3>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('availability')}</h3>
 	              <p style={{ margin: '0 0 8px', fontSize: "13px", color: T.slate2 }}>Timezone: {profile.availabilitySlots[0]?.timezone ?? 'Not configured'}</p>
 	              {profile.availabilitySlots.length === 0 ? (
 	                <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '12px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
-	                  This physician has not opened appointment slots yet.
+	                  {t('thisPhysicianHasNotOpened')}
 	                </div>
 	              ) : (
 	                <>
@@ -546,7 +548,7 @@ function PhysicianProfilePageContent() {
             </article>
 
             <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Location</h3>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('location')}</h3>
               <PracticeLocation name={physician.name} practice={profile.location.practiceName || physician.hospital} address={profile.location.address}
                 latitude={profile.location.latitude} longitude={profile.location.longitude} />
             </article>
@@ -554,7 +556,7 @@ function PhysicianProfilePageContent() {
 
           <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Patient Reviews</h3>
+              <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('patientReviews')}</h3>
               <div style={{ display: 'flex', gap: '6px' }}>
                 {[
                   { id: 'recent', label: 'Most Recent' },
@@ -577,7 +579,7 @@ function PhysicianProfilePageContent() {
             </div>
 	            {profile.reviews.length === 0 ? (
 	              <div style={{ width: '100%', padding: '16px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
-	                No patient reviews yet.
+	                {t('noPatientReviewsYet')}
 	              </div>
 	            ) : !reviewsLoaded ? (
               <button
@@ -600,7 +602,7 @@ function PhysicianProfilePageContent() {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                           <p style={{ margin: 0, fontSize: '13px', color: T.navy, fontWeight: 700 }}>{review.patient} · {review.rating.toFixed(1)} ★</p>
-                          <span style={{ ...Glass.chip, fontSize: "13px", color: T.link, fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>Verified Patient</span>
+                          <span style={{ ...Glass.chip, fontSize: "13px", color: T.link, fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>{t('verifiedPatient')}</span>
                         </div>
                         <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate2 }}>{review.date} · Helpful {review.helpful}</p>
                         <p style={{ margin: '7px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.55 }}>
@@ -615,7 +617,7 @@ function PhysicianProfilePageContent() {
           </section>
 
           <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Frequently Asked Questions</h3>
+            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('frequentlyAskedQuestions')}</h3>
             {!faqLoaded ? (
               <button
                 type='button'
@@ -653,7 +655,7 @@ function PhysicianProfilePageContent() {
           </section>
 
           <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Related Physicians</h3>
+            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('relatedPhysicians')}</h3>
             <div style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(320px, 1fr)', gap: '10px', overflowX: 'auto', paddingBottom: '2px' }}>
               {relatedPhysicians.map((item) => (
                 <div key={item.id} style={{ display: 'grid', gap: '8px' }}>
@@ -661,7 +663,7 @@ function PhysicianProfilePageContent() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 	                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{formatPhysicianRating(item)} · {item.experienceYears} yrs</p>
                     <Link href={physicianPath(item.id, item.name, preservedQuery)} style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>
-                      View Profile
+                      {t('viewProfile')}
                     </Link>
                   </div>
                 </div>
@@ -672,13 +674,13 @@ function PhysicianProfilePageContent() {
 
         <aside className='pp-side'>
           <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '14px' }}>
-            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>About This Physician</h3>
-            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Doctor:</strong> {physician.name}</p>
-            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Specialty:</strong> {physician.specialty}</p>
-            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {physician.experienceYears} years</p>
-	            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatPhysicianRating(physician)}</p>
-            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Languages:</strong> {physician.languages.join(', ')}</p>
-            <p style={{ margin: '0 0 12px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {physician.hospital}</p>
+            <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('aboutThisPhysician')}</h3>
+            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('doctor')}</strong> {physician.name}</p>
+            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('specialty')}</strong> {physician.specialty}</p>
+            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('experience')}</strong> {physician.experienceYears} years</p>
+	            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('rating')}</strong> {formatPhysicianRating(physician)}</p>
+            <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('languages')}</strong> {physician.languages.join(', ')}</p>
+            <p style={{ margin: '0 0 12px', fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('hospital')}</strong> {physician.hospital}</p>
           </section>
         </aside>
       </div>

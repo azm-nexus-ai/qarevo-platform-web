@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -60,6 +61,7 @@ function validate(form: CoverageForm) {
   return errors
 }
 function LeftPanel() {
+  const t = useTranslations('onboarding.coverage')
   return (
     <div
       style={{
@@ -115,11 +117,11 @@ function LeftPanel() {
 
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
-            Coverage, handled carefully.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Privacy stays in focus.</span>
+            {t('coverageHandledCarefully')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('privacyStaysInFocus')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Record your intended funding route and review the privacy information before continuing.
+            {t('recordYourIntendedFundingRoute')}
           </p>
         </div>
       </div>
@@ -150,10 +152,11 @@ function SectionHeader({ title, body }: { title: string; body: string }) {
 }
 
 function TextField({ label, value, onChange, placeholder, error, hint }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; hint?: string }) {
+  const t = useTranslations('onboarding.coverage')
   const id = useId()
   return (
     <div className='cv-field'>
-      <label htmlFor={id}>{label} <span className='cv-required'>(Required)</span></label>
+      <label htmlFor={id}>{label} <span className='cv-required'>{t('required')}</span></label>
       <input id={id} required aria-invalid={!!error} autoComplete='off' value={value} placeholder={placeholder}
         aria-describedby={[hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined}
         onChange={event => onChange(event.target.value)} />
@@ -164,6 +167,7 @@ function TextField({ label, value, onChange, placeholder, error, hint }: { label
 }
 
 export default function InsurancePrivacyConsentPage() {
+  const t = useTranslations('onboarding.coverage')
   const router = useRouter()
   const formRef = useRef<HTMLFormElement>(null)
   const [draftStorage] = useState(createAccountDraftStorage)
@@ -308,12 +312,12 @@ export default function InsurancePrivacyConsentPage() {
         <form ref={formRef} className='cv-card' onSubmit={submit} noValidate aria-busy={submitting || !ready}>
           <fieldset className='cv-root' disabled={!ready || submitting}>
             <div className='cv-progress'>
-              <div><p className='cv-eyebrow'>Profile Setup</p><p>{returning ? 'Profile complete' : 'Step 5 of 6'}</p></div>
+              <div><p className='cv-eyebrow'>{t('profileSetup')}</p><p>{returning ? 'Profile complete' : 'Step 5 of 6'}</p></div>
               <div><p className='cv-eyebrow'>{returning ? 'Up to date' : '83% Complete'}</p><p>{returning ? 'Review or correct at any time' : 'Approximately 1 Minute'}</p></div>
             </div>
             <header>
-              <h1>Coverage & Privacy</h1>
-              <p className='cv-lede'>Tell us how you intend to fund care and confirm the required acknowledgements. You can correct these details later.</p>
+              <h1>{t('coveragePrivacy')}</h1>
+              <p className='cv-lede'>{t('tellUsHowYouIntend')}</p>
             </header>
             <div role='status' className={`cv-pill${savedNotice ? ' saved' : ''}`}>
               <Ico p={savedNotice ? ICONS.check : ICONS.activity} size={11} sw={2} color='currentColor' />{pill}
@@ -321,13 +325,13 @@ export default function InsurancePrivacyConsentPage() {
 
             {loadError && <div role='alert' className='cv-note danger'>
               <p>{loadError}</p>
-              <button type='button' className='cv-inline-button' onClick={() => setReloadKey(n => n + 1)}>Try again</button>
+              <button type='button' className='cv-inline-button' onClick={() => setReloadKey(n => n + 1)}>{t('tryAgain')}</button>
             </div>}
             {returning && !savedNotice && <div className='cv-note'>
-              <p><strong>Your profile is complete.</strong> Update your coverage or acknowledgements below and save. The required acknowledgements stay required.</p>
-              <p><Link href='/patient/dashboard'>Continue to your dashboard</Link> without changes.</p>
+              <p><strong>{t('yourProfileIsComplete')}</strong> {t('updateYourCoverageOrAcknowledgements')}</p>
+              <p><Link href='/patient/dashboard'>{t('continueToYourDashboard')}</Link> {t('withoutChanges')}</p>
             </div>}
-            {savedNotice && <div role='status' className='cv-note'><p><strong>{savedNotice}</strong></p><p><Link href='/patient/dashboard'>Continue to your dashboard</Link></p></div>}
+            {savedNotice && <div role='status' className='cv-note'><p><strong>{savedNotice}</strong></p><p><Link href='/patient/dashboard'>{t('continueToYourDashboard')}</Link></p></div>}
             {earlierStep && <div role='note' className='cv-note warn'>
               <p>Your {STEP_LABELS[earlierStep]} is not saved yet. You can fill in this step now, but your profile completes only after every step is saved.</p>
               <p><Link href={onboardingPath(earlierStep)}>Continue with {STEP_LABELS[earlierStep]}</Link></p>
@@ -336,13 +340,13 @@ export default function InsurancePrivacyConsentPage() {
             <ValidationSummary errors={shown} />
             {submitError && <div role='alert' className='cv-note danger'>
               <p>{submitError}</p>
-              {conflict && <button type='button' className='cv-inline-button' onClick={reloadSaved}>Reload saved details</button>}
+              {conflict && <button type='button' className='cv-inline-button' onClick={reloadSaved}>{t('reloadSavedDetails')}</button>}
             </div>}
 
             <section className='cv-section' aria-labelledby='cv-funding-title'>
-              <SectionHeader title='Funding' body='Choose how you intend to fund consultations. This records your preference; it is not an eligibility check.' />
+              <SectionHeader title={t('funding')} body='Choose how you intend to fund consultations. This records your preference; it is not an eligibility check.' />
               <fieldset className='cv-options' aria-invalid={!!shown.insurance_type || undefined} aria-describedby={shown.insurance_type ? 'coverage-type-error' : undefined}>
-                <legend id='cv-funding-title'>Funding type (Required)</legend>
+                <legend id='cv-funding-title'>{t('fundingTypeRequired')}</legend>
                 <div className='cv-option-grid'>
                   {FUNDING_OPTIONS.map(option => <label key={option.value} className={`cv-option${form.insurance_type === option.value ? ' chosen' : ''}`}>
                     <input type='radio' name='funding-type' value={option.value} checked={form.insurance_type === option.value} onChange={() => update('insurance_type', option.value)} />
@@ -353,7 +357,7 @@ export default function InsurancePrivacyConsentPage() {
               </fieldset>
               {form.insurance_type && <p className='cv-notice'>{form.insurance_type === 'SELF_PAY' ? SELF_PAY_NOTICE : INSURANCE_VERIFICATION_NOTICE}</p>}
               {form.insurance_type && form.insurance_type !== 'SELF_PAY' && <div className='cv-fields'>
-                <TextField label='Insurance provider' value={form.provider} onChange={value => update('provider', value)} placeholder='Insurer name' hint='The full insurer name, at least 2 characters.' error={shown.provider} />
+                <TextField label={t('insuranceProvider')} value={form.provider} onChange={value => update('provider', value)} placeholder={t('insurerName')} hint='The full insurer name, at least 2 characters.' error={shown.provider} />
                 <TextField label={form.insurance_type === 'GKV' ? 'Insurance number (KVNR)' : 'Private policy number'} value={form.insurance_number} onChange={value => update('insurance_number', value)}
                   hint={form.insurance_type === 'GKV' ? 'One capital letter followed by 9 digits. Only the format is checked, not your coverage.' : '3–50 characters: letters, numbers, spaces, slash, full stop or hyphen.'}
                   placeholder={form.insurance_type === 'GKV' ? 'A123456789' : 'As shown on your policy'} error={shown.insurance_number} />
@@ -361,29 +365,29 @@ export default function InsurancePrivacyConsentPage() {
             </section>
 
             <section className='cv-section' aria-labelledby='cv-acks-title'>
-              <SectionHeader title='Acknowledgements' body='Required before you can use the platform, and kept on record with the date you gave them.' />
+              <SectionHeader title={t('acknowledgements')} body='Required before you can use the platform, and kept on record with the date you gave them.' />
               <fieldset className='cv-acks' style={{ margin: 0, minWidth: 0 }}>
-                <legend id='cv-acks-title' style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', padding: '0 4px' }}>Development test acknowledgements</legend>
-                <p>The legal documents are drafts awaiting company details, technical alignment and legal approval. These acknowledgements are not consent to process real patient information. Do not enter real medical or insurance details.</p>
+                <legend id='cv-acks-title' style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', padding: '0 4px' }}>{t('developmentTestAcknowledgements')}</legend>
+                <p>{t('theLegalDocumentsAreDrafts')}</p>
                 {TEST_ACKNOWLEDGEMENTS.map(([key, label]) => {
                   const missing = submitted && !form.consents[key]
                   return <label key={key} className='cv-check'>
                     <input type='checkbox' required aria-invalid={missing} aria-describedby={missing ? `ack-${key}-error` : undefined} checked={form.consents[key]}
                       onChange={event => update('consents', { ...form.consents, [key]: event.target.checked })} />
-                    <span>{label} <strong>(Required)</strong>{missing && <span id={`ack-${key}-error`} role='alert' className='field-error'>Confirm this acknowledgement to continue.</span>}</span>
+                    <span>{label} <strong>{t('required')}</strong>{missing && <span id={`ack-${key}-error`} role='alert' className='field-error'>{t('confirmThisAcknowledgementToContinue')}</span>}</span>
                   </label>
                 })}
               </fieldset>
               <label className='cv-check cv-optional'>
                 <input type='checkbox' checked={form.consents.marketing} onChange={event => update('consents', { ...form.consents, marketing: event.target.checked })} />
-                <span>Test the optional marketing preference. This stores a preference for this test account. (Optional)</span>
+                <span>{t('testTheOptionalMarketingPreference')}</span>
               </label>
             </section>
 
             <div className='cv-actions'>
               <div className='cv-secondary-links'>
-                <Link className='cv-link' href='/auth/profile-setup/medical-history-allergies'>Back</Link>
-                {ready && !loadError && <button type='button' className='cv-link' style={{ background: 'none', border: 0, padding: 0, font: 'inherit', cursor: 'pointer', minHeight: 44 }} onClick={reloadSaved}>Discard changes</button>}
+                <Link className='cv-link' href='/auth/profile-setup/medical-history-allergies'>{t('back')}</Link>
+                {ready && !loadError && <button type='button' className='cv-link' style={{ background: 'none', border: 0, padding: 0, font: 'inherit', cursor: 'pointer', minHeight: 44 }} onClick={reloadSaved}>{t('discardChanges')}</button>}
               </div>
               <button type='submit' className='cv-submit' disabled={submitting || !ready}>{submitting ? 'Saving…' : returning ? 'Save changes' : 'Complete Profile'}</button>
             </div>

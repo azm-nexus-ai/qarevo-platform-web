@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -88,6 +89,7 @@ interface FieldProps {
 }
 
 function Field({ label, placeholder, type = 'text', value, onChange, error, hint, success, optional, autoComplete, icon, rightSlot, disabled, onBlur }: FieldProps) {
+  const t = useTranslations('auth.doctorRegister')
   const [focused, setFocused] = useState(false)
   const id = useId()
 
@@ -122,7 +124,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, hint
         <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
           {label}{!optional && ' (Required)'}
         </label>
-        {optional && <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 400 }}>Optional</span>}
+        {optional && <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 400 }}>{t('optional')}</span>}
       </div>
       <div style={{ position: 'relative' }}>
         {icon && (
@@ -208,6 +210,7 @@ function Checkbox({ checked, onChange, children }: { checked: boolean; onChange:
 
 // Main page
 export default function DoctorRegisterPage() {
+  const t = useTranslations('auth.doctorRegister')
   const router = useRouter()
 
   const [firstName, setFirstName] = useState('')
@@ -401,7 +404,7 @@ export default function DoctorRegisterPage() {
         <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1.2px)', backgroundSize: '22px 22px', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label='Qarevo Health home'>
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('qarevoHealthHome')}>
             <Image
               src='/brand/Untitled design - 2026-08-03T165058.603.png'
               alt='Qarevo Health'
@@ -416,11 +419,11 @@ export default function DoctorRegisterPage() {
 
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
           <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
-            Join Qarevo as<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>a Physician</span>
+            {t('joinQarevoAs')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('aPhysician')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Create your physician account and start providing virtual consultations with clinical intelligence support.
+            {t('createYourPhysicianAccountAnd')}
           </p>
         </div>
 
@@ -439,7 +442,7 @@ export default function DoctorRegisterPage() {
           {/* Back link */}
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back
+            {t('back')}
           </Link>
 
           {/* Form card */}
@@ -456,10 +459,10 @@ export default function DoctorRegisterPage() {
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
                 <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
-                  Physician Registration
+                  {t('physicianRegistration')}
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                  Create a test clinician account to explore the development platform
+                  {t('createATestClinicianAccount')}
                 </p>
               </div>
               <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -480,7 +483,7 @@ export default function DoctorRegisterPage() {
               {/* Name fields */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field
-                  label="First Name"
+                  label={t('firstName')}
                   placeholder="John"
                   value={firstName}
                   onChange={setFirstName}
@@ -488,7 +491,7 @@ export default function DoctorRegisterPage() {
                   onBlur={() => setTouched({ ...touched, firstName: true })}
                 />
                 <Field
-                  label="Last Name"
+                  label={t('lastName')}
                   placeholder="Doe"
                   value={lastName}
                   onChange={setLastName}
@@ -498,15 +501,15 @@ export default function DoctorRegisterPage() {
               </div>
 
               <Field
-                label="Middle Name"
-                placeholder="Optional"
+                label={t('middleName')}
+                placeholder={t('optional')}
                 value={middleName}
                 onChange={setMiddleName}
                 optional
               />
 
               <Field
-                label="Username"
+                label={t('username')}
                 placeholder="dr.john.doe"
                 value={username}
                 onChange={(value) => {
@@ -530,7 +533,7 @@ export default function DoctorRegisterPage() {
               />
 
               <Field
-                label="Email Address"
+                label={t('emailAddress')}
                 placeholder="doctor@example.com"
                 type="email"
                 value={email}
@@ -542,8 +545,8 @@ export default function DoctorRegisterPage() {
               />
 
               <Field
-                label="Password"
-                placeholder="Create a strong password"
+                label={t('password')}
+                placeholder={t('createAStrongPassword')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={setPassword}
@@ -567,7 +570,7 @@ export default function DoctorRegisterPage() {
               {/* Phone fields */}
               <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '12px' }}>
                 <Field
-                  label="Country Code"
+                  label={t('countryCode')}
                   placeholder="+49"
                   value={countryCode}
                   onChange={setCountryCode}
@@ -575,7 +578,7 @@ export default function DoctorRegisterPage() {
                   onBlur={() => setTouched({ ...touched, countryCode: true })}
                 />
                 <Field
-                  label="Phone Number"
+                  label={t('phoneNumber')}
                   hint="Digits only; enter the country code in the separate field."
                   placeholder="1234567890"
                   value={phone}
@@ -588,8 +591,8 @@ export default function DoctorRegisterPage() {
               {/* Professional information */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field
-                  label="Date of Birth"
-                  placeholder="Select date of birth"
+                  label={t('dateOfBirth')}
+                  placeholder={t('selectDateOfBirth')}
                   type="date"
                   value={dateOfBirth}
                   onChange={setDateOfBirth}
@@ -598,7 +601,7 @@ export default function DoctorRegisterPage() {
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                    Gender
+                    {t('gender')}
                   </label>
                   <select
                     value={gender}
@@ -616,10 +619,10 @@ export default function DoctorRegisterPage() {
                       outline: 'none',
                     }}
                   >
-                    <option value="">Select gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
+                    <option value="">{t('selectGender')}</option>
+                    <option value="Male">{t('male')}</option>
+                    <option value="Female">{t('female')}</option>
+                    <option value="Other">{t('other')}</option>
                   </select>
                   {genderErr && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{genderErr}</p>}
                 </div>
@@ -627,8 +630,8 @@ export default function DoctorRegisterPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                  Medical Specialty
-                  <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 400, marginLeft: '4px' }}>Optional</span>
+                  {t('medicalSpecialty')}
+                  <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 400, marginLeft: '4px' }}>{t('optional')}</span>
                 </label>
                 <select
                   value={specialty}
@@ -650,41 +653,41 @@ export default function DoctorRegisterPage() {
                     outline: 'none',
                   }}
                 >
-                  <option value="">Select specialty (optional)</option>
-                  <option value="GENERAL_MEDICINE">General Medicine</option>
-                  <option value="FAMILY_MEDICINE">Family Medicine</option>
-                  <option value="INTERNAL_MEDICINE">Internal Medicine</option>
-                  <option value="EMERGENCY_MEDICINE">Emergency Medicine</option>
-                  <option value="GENERAL_SURGERY">General Surgery</option>
-                  <option value="CARDIOLOGY">Cardiology</option>
-                  <option value="NEUROLOGY">Neurology</option>
-                  <option value="DERMATOLOGY">Dermatology</option>
-                  <option value="PEDIATRICS">Pediatrics</option>
-                  <option value="GYNECOLOGY">Gynecology</option>
-                  <option value="ONCOLOGY">Oncology</option>
-                  <option value="PSYCHIATRY">Psychiatry</option>
-                  <option value="RADIOLOGY">Radiology</option>
-                  <option value="ANESTHESIOLOGY">Anesthesiology</option>
-                  <option value="GASTROENTEROLOGY">Gastroenterology</option>
-                  <option value="NEPHROLOGY">Nephrology</option>
-                  <option value="PULMONOLOGY">Pulmonology</option>
-                  <option value="UROLOGY">Urology</option>
-                  <option value="OPHTHALMOLOGY">Ophthalmology</option>
-                  <option value="ENT">ENT (Otolaryngology)</option>
-                  <option value="ENDOCRINOLOGY">Endocrinology</option>
-                  <option value="HEMATOLOGY">Hematology</option>
-                  <option value="RHEUMATOLOGY">Rheumatology</option>
-                  <option value="INFECTIOUS_DISEASE">Infectious Disease</option>
-                  <option value="GERIATRICS">Geriatrics</option>
-                  <option value="SPORTS_MEDICINE">Sports Medicine</option>
-                  <option value="PLASTIC_SURGERY">Plastic Surgery</option>
-                  <option value="OTHER">Other (specify below)</option>
+                  <option value="">{t('selectSpecialtyOptional')}</option>
+                  <option value="GENERAL_MEDICINE">{t('generalMedicine')}</option>
+                  <option value="FAMILY_MEDICINE">{t('familyMedicine')}</option>
+                  <option value="INTERNAL_MEDICINE">{t('internalMedicine')}</option>
+                  <option value="EMERGENCY_MEDICINE">{t('emergencyMedicine')}</option>
+                  <option value="GENERAL_SURGERY">{t('generalSurgery')}</option>
+                  <option value="CARDIOLOGY">{t('cardiology')}</option>
+                  <option value="NEUROLOGY">{t('neurology')}</option>
+                  <option value="DERMATOLOGY">{t('dermatology')}</option>
+                  <option value="PEDIATRICS">{t('pediatrics')}</option>
+                  <option value="GYNECOLOGY">{t('gynecology')}</option>
+                  <option value="ONCOLOGY">{t('oncology')}</option>
+                  <option value="PSYCHIATRY">{t('psychiatry')}</option>
+                  <option value="RADIOLOGY">{t('radiology')}</option>
+                  <option value="ANESTHESIOLOGY">{t('anesthesiology')}</option>
+                  <option value="GASTROENTEROLOGY">{t('gastroenterology')}</option>
+                  <option value="NEPHROLOGY">{t('nephrology')}</option>
+                  <option value="PULMONOLOGY">{t('pulmonology')}</option>
+                  <option value="UROLOGY">{t('urology')}</option>
+                  <option value="OPHTHALMOLOGY">{t('ophthalmology')}</option>
+                  <option value="ENT">{t('entOtolaryngology')}</option>
+                  <option value="ENDOCRINOLOGY">{t('endocrinology')}</option>
+                  <option value="HEMATOLOGY">{t('hematology')}</option>
+                  <option value="RHEUMATOLOGY">{t('rheumatology')}</option>
+                  <option value="INFECTIOUS_DISEASE">{t('infectiousDisease')}</option>
+                  <option value="GERIATRICS">{t('geriatrics')}</option>
+                  <option value="SPORTS_MEDICINE">{t('sportsMedicine')}</option>
+                  <option value="PLASTIC_SURGERY">{t('plasticSurgery')}</option>
+                  <option value="OTHER">{t('otherSpecifyBelow')}</option>
                 </select>
                 {isOtherSpecialty && (
                   <Field
-                    label="Please specify your specialty"
+                    label={t('pleaseSpecifyYourSpecialty')}
                     error={specialtyErr || undefined}
-                    placeholder="e.g., Sports Medicine, Palliative Care"
+                    placeholder={t('eGSportsMedicinePalliative')}
                     value={customSpecialty}
                     onChange={setCustomSpecialty}
                   />
@@ -693,7 +696,7 @@ export default function DoctorRegisterPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field
-                  label="Years of Experience"
+                  label={t('yearsOfExperience')}
                   error={experienceErr || undefined}
                   hint="Whole years from 0 to 80."
                   placeholder="e.g., 5"
@@ -702,8 +705,8 @@ export default function DoctorRegisterPage() {
                   optional
                 />
                 <Field
-                  label="License Number"
-                  placeholder="Medical license number"
+                  label={t('licenseNumber')}
+                  placeholder={t('medicalLicenseNumber')}
                   value={licenseNumber}
                   onChange={setLicenseNumber}
                   optional
@@ -715,7 +718,7 @@ export default function DoctorRegisterPage() {
                   checked={isIndependent}
                   onChange={() => setIsIndependent(!isIndependent)}
                 >
-                  I am an independent practitioner
+                  {t('iAmAnIndependentPractitioner')}
                 </Checkbox>
               </div>
 
@@ -725,11 +728,11 @@ export default function DoctorRegisterPage() {
                   checked={consentAccepted}
                   onChange={() => { setConsentAccepted(!consentAccepted); setAuthError('') }}
                 >
-                  I will use synthetic information only in this development test. The <Link href="/terms" style={{ color: T.link, textDecoration: 'underline' }}>Terms of Service</Link> and <Link href="/privacy" style={{ color: T.link, textDecoration: 'underline' }}>Privacy Policy</Link> are awaiting approval. This does not authorise real-patient care. (Required)
+                  {t('iWillUseSyntheticInformation')} <Link href="/terms" style={{ color: T.link, textDecoration: 'underline' }}>{t('termsOfService')}</Link> {t('and')} <Link href="/privacy" style={{ color: T.link, textDecoration: 'underline' }}>{t('privacyPolicy')}</Link> {t('areAwaitingApprovalThisDoes')}
                 </Checkbox>
               </div>
 
-              {submitted && !consentAccepted && <p className="field-error" role="alert">Acknowledge the development test conditions before continuing.</p>}
+              {submitted && !consentAccepted && <p className="field-error" role="alert">{t('acknowledgeTheDevelopmentTestConditions')}</p>}
               {/* Submit button */}
               <button
                 type="submit"
@@ -767,7 +770,7 @@ export default function DoctorRegisterPage() {
             <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '24px 0 0', letterSpacing: '-0.01em' }}>
               Already have an account?{' '}
               <Link href="/auth/doctor/login" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>
-                Sign In
+                {t('signIn')}
               </Link>
             </p>
           </div>

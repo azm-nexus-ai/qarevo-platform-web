@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useSearchParams, usePathname } from 'next/navigation'
@@ -139,6 +140,7 @@ function normalizeTimeline(value: Record<string, unknown>): TimelineEvent {
 }
 
 function DownloadRecordPicker({ records, onChoose, onClose }: { records: MedicalRecord[]; onChoose: (record: MedicalRecord) => void; onClose: () => void }) {
+  const t = useTranslations('patientRecords')
   const dialogRef = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     const dialog = dialogRef.current
@@ -147,14 +149,15 @@ function DownloadRecordPicker({ records, onChoose, onClose }: { records: Medical
     return () => { if (dialog.open) dialog.close() }
   }, [])
   const close = () => { if (dialogRef.current?.open) dialogRef.current.close(); onClose() }
-  return <dialog ref={dialogRef} aria-label='Choose a record to download' onCancel={event => { event.preventDefault(); close() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
-    <h2 className='portal-h2'>Choose a record to download</h2><p className='mb-5 text-sm leading-6 text-muted'>Request access to one attachment at a time. Files are downloaded individually.</p>
+  return <dialog ref={dialogRef} aria-label={t('chooseARecordToDownload')} onCancel={event => { event.preventDefault(); close() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
+    <h2 className='portal-h2'>{t('chooseARecordToDownload')}</h2><p className='mb-5 text-sm leading-6 text-muted'>{t('requestAccessToOneAttachment')}</p>
     <div className='grid gap-3'>{records.map(record => <PortalButton key={record.id} type='button' style={{ flexDirection: 'column', alignItems: 'flex-start', whiteSpace: 'normal', overflowWrap: 'anywhere', textAlign: 'left' }} onClick={() => { if (dialogRef.current?.open) dialogRef.current.close(); onChoose(record) }}><span className='font-semibold'>{record.title}</span><span className='mt-1 text-xs font-normal text-secondary'>{record.date} · {record.provider} · {record.fileType || 'Attachment'}{record.fileSize ? ` · ${record.fileSize}` : ''}</span></PortalButton>)}</div>
-    <div className='mt-5 flex justify-end'><PortalButton autoFocus type='button' onClick={close}>Close record selection</PortalButton></div>
+    <div className='mt-5 flex justify-end'><PortalButton autoFocus type='button' onClick={close}>{t('closeRecordSelection')}</PortalButton></div>
   </dialog>
 }
 
 function UploadRecordModal({ onClose, onResolved }: { onClose: () => void; onResolved: (message: string) => void }) {
+  const t = useTranslations('patientRecords')
   const captureAction = usePortalAction(), scope = readAccountScope('patient'), path = usePathname(), query = useSearchParams().toString()
   const dialog = useRef<HTMLDialogElement>(null), pending = useRef(false), attempt = useRef<MedicalUploadAttempt | null>(null), controller = useRef<AbortController | null>(null)
   const [values, setValues] = useState<MedicalUploadFields>({ title: '', record_type: 'Medical Document', description: '', provider_name: '', record_date: '' })
@@ -195,17 +198,18 @@ function UploadRecordModal({ onClose, onResolved }: { onClose: () => void; onRes
   }
   const field = (key: keyof MedicalUploadFields, label: string, required: boolean, max: number, multiline = false) => <div><label htmlFor={'medical-upload-' + key} className='block text-sm font-semibold text-ink'>{label} ({required ? 'Required' : 'Optional'})</label>{multiline ? <textarea id={'medical-upload-' + key} className='mt-2 min-h-24 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' maxLength={max} rows={3} value={values[key]} onChange={event => update(key, event.target.value)} aria-required={required} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key] ? 'medical-upload-' + key + '-error' : undefined} /> : <input autoFocus={key === 'title'} type={key === 'record_date' ? 'date' : 'text'} id={'medical-upload-' + key} className='mt-2 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' maxLength={max} value={values[key]} onChange={event => update(key, event.target.value)} aria-required={required} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key] ? 'medical-upload-' + key + '-error' : undefined} />}{errors[key] && <p id={'medical-upload-' + key + '-error'} role='alert' className='mt-2 text-sm text-danger'>{errors[key]}</p>}</div>
   return <dialog ref={dialog} aria-labelledby='medical-upload-heading' onCancel={event => { event.preventDefault(); close() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
-    <h2 id='medical-upload-heading' className='portal-h2'>Upload Medical Record</h2><p className='mb-5 text-sm leading-7 text-secondary'>Required fields are labelled. Supported formats: PDF, DOC, DOCX, PNG, JPEG and WEBP. Maximum 3 MB per file in this development environment.</p>
+    <h2 id='medical-upload-heading' className='portal-h2'>{t('uploadMedicalRecord')}</h2><p className='mb-5 text-sm leading-7 text-secondary'>{t('requiredFieldsAreLabelledSupported')}</p>
     <form noValidate onSubmit={event => { event.preventDefault(); void upload() }} aria-busy={busy}><fieldset disabled={busy} className='grid min-w-0 gap-5'>
-      <div className='grid min-w-0 gap-5 sm:grid-cols-2'>{field('title', 'Document Name', true, 255)}<div><label htmlFor='medical-upload-record_type' className='block text-sm font-semibold text-ink'>Record Type (Required)</label><select aria-required='true' id='medical-upload-record_type' className='mt-2 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' value={values.record_type} onChange={event => update('record_type', event.target.value)}>{MEDICAL_DOCUMENT_TYPES.map(type => <option key={type}>{type}</option>)}</select>{errors.record_type && <p role='alert' className='mt-2 text-sm text-danger'>{errors.record_type}</p>}</div>{field('record_date', 'Date of Record', true, 10)}{field('provider_name', 'Provider / Facility', false, 255)}</div>{field('description', 'Description', false, 5000, true)}
-      <div><label className='block text-sm font-semibold text-ink' htmlFor='medical-upload-file'>File (Required)</label><input id='medical-upload-file' type='file' aria-required='true' accept={MEDICAL_FILE_ACCEPT} aria-label='Choose medical document' aria-invalid={Boolean(errors.file)} aria-describedby='medical-upload-help medical-upload-file-error' className='mt-2 block min-h-11 w-full min-w-0 rounded-xl border border-theme bg-surface px-3 py-2 text-sm text-ink' onChange={changeFile} /><p id='medical-upload-help' className='mt-2 break-all text-sm text-secondary'>{file ? file.name : 'Choose a file of 3 MB or smaller.'}</p>{errors.file && <p id='medical-upload-file-error' role='alert' className='mt-2 text-sm text-danger'>{errors.file}</p>}</div>
-      {error && <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='text-sm leading-7 text-danger'>{error}</p><p className='mt-2 text-sm leading-7 text-secondary'>Retry keeps the same attempt when the file and submitted details are unchanged. Changed content or details create a new upload intent. If you close this dialog, review saved records before uploading again.</p><SupportReference requestId={requestId} /></div>}
-      <div className='flex flex-wrap gap-3'><PortalButton type='submit' tone='primary'>{error && attempt.current && !changed ? 'Retry upload' : changed && attempt.current ? 'Upload changed record' : 'Upload Record'}</PortalButton><PortalButton type='button' onClick={close}>Cancel</PortalButton></div>
-    </fieldset>{busy && <p role='status' className='mt-4 text-sm leading-7 text-secondary'>Uploading and confirming your record… Keep this dialog open.</p>}</form>
+      <div className='grid min-w-0 gap-5 sm:grid-cols-2'>{field('title', 'Document Name', true, 255)}<div><label htmlFor='medical-upload-record_type' className='block text-sm font-semibold text-ink'>{t('recordTypeRequired')}</label><select aria-required='true' id='medical-upload-record_type' className='mt-2 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' value={values.record_type} onChange={event => update('record_type', event.target.value)}>{MEDICAL_DOCUMENT_TYPES.map(type => <option key={type}>{type}</option>)}</select>{errors.record_type && <p role='alert' className='mt-2 text-sm text-danger'>{errors.record_type}</p>}</div>{field('record_date', 'Date of Record', true, 10)}{field('provider_name', 'Provider / Facility', false, 255)}</div>{field('description', 'Description', false, 5000, true)}
+      <div><label className='block text-sm font-semibold text-ink' htmlFor='medical-upload-file'>{t('fileRequired')}</label><input id='medical-upload-file' type='file' aria-required='true' accept={MEDICAL_FILE_ACCEPT} aria-label={t('chooseMedicalDocument')} aria-invalid={Boolean(errors.file)} aria-describedby='medical-upload-help medical-upload-file-error' className='mt-2 block min-h-11 w-full min-w-0 rounded-xl border border-theme bg-surface px-3 py-2 text-sm text-ink' onChange={changeFile} /><p id='medical-upload-help' className='mt-2 break-all text-sm text-secondary'>{file ? file.name : 'Choose a file of 3 MB or smaller.'}</p>{errors.file && <p id='medical-upload-file-error' role='alert' className='mt-2 text-sm text-danger'>{errors.file}</p>}</div>
+      {error && <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='text-sm leading-7 text-danger'>{error}</p><p className='mt-2 text-sm leading-7 text-secondary'>{t('retryKeepsTheSameAttempt')}</p><SupportReference requestId={requestId} /></div>}
+      <div className='flex flex-wrap gap-3'><PortalButton type='submit' tone='primary'>{error && attempt.current && !changed ? 'Retry upload' : changed && attempt.current ? 'Upload changed record' : 'Upload Record'}</PortalButton><PortalButton type='button' onClick={close}>{t('cancel')}</PortalButton></div>
+    </fieldset>{busy && <p role='status' className='mt-4 text-sm leading-7 text-secondary'>{t('uploadingAndConfirmingYourRecord')}</p>}</form>
   </dialog>
 }
 
 function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRequest }: { record: MedicalRecord; onClose: () => void; onPreview: () => void; onDownload: () => void; onDeleteRequest: () => void }) {
+  const t = useTranslations('patientRecords')
   return (
     <ModalOverlay onClose={onClose} width="640px">
       <div style={{ padding: '24px 28px', borderBottom: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -214,36 +218,36 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
           <h2 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{record.title}</h2>
           <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>{record.date} • {record.uploadedBy === 'patient' ? 'Reported provider: ' : ''}{record.provider} ({record.specialty})</p>
         </div>
-        <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: "1px solid var(--border)", borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
+        <button onClick={onClose} aria-label={t('close')} style={{ background: 'none', border: "1px solid var(--border)", borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
       </div>
 
       <div style={{ padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {(record.type === 'Lab Result' || record.sourceType === 'lab-request') && <LabResultReviewStatus review={record.resultReview} fileId={record.reviewFileId} />}
-        {record.sourceType === 'consultation-summary' && <div><h3 className='portal-h3'>Published consultation record</h3><p className='text-sm leading-7 text-secondary'>{record.revision ? `Last recorded revision ${record.revision}. ` : ''}{summaryPublicationTime(record.publishedAt) ? `Published ${summaryPublicationTime(record.publishedAt)}. ` : 'Publication time is available in the summary. '}Open the summary for the latest clinician-published version.</p>{!record.sourceHref && <p className='mt-3 text-sm text-secondary'>This summary link is unavailable. Refresh records or open the consultation in your appointments.</p>}</div>}
+        {record.sourceType === 'consultation-summary' && <div><h3 className='portal-h3'>{t('publishedConsultationRecord')}</h3><p className='text-sm leading-7 text-secondary'>{record.revision ? `Last recorded revision ${record.revision}. ` : ''}{summaryPublicationTime(record.publishedAt) ? `Published ${summaryPublicationTime(record.publishedAt)}. ` : 'Publication time is available in the summary. '}Open the summary for the latest clinician-published version.</p>{!record.sourceHref && <p className='mt-3 text-sm text-secondary'>{t('thisSummaryLinkIsUnavailable')}</p>}</div>}
         {record.summary && (
           <div>
-            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Summary</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{t('summary')}</h3>
             <div style={{ padding: '16px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>{record.summary}</div>
           </div>
         )}
 
         {record.clinicalNotes && (
           <div>
-            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Clinical Notes</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{t('clinicalNotes')}</h3>
             <div style={{ padding: '16px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", fontSize: '14px', color: T.slate, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{record.clinicalNotes}</div>
           </div>
         )}
 
         {record.recommendations && (
           <div>
-            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Recommendations</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{t('recommendations')}</h3>
             <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(15,158,119,0.05)', border: '1px solid rgba(15,158,119,0.1)', fontSize: '14px', color: T.green, lineHeight: 1.6 }}>{record.recommendations}</div>
           </div>
         )}
 
         {record.fileType && (
           <div>
-            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>Attachments</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{t('attachments')}</h3>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '12px', background: "var(--surface)", border: "1px solid var(--border)", boxShadow: '0 2px 8px rgba(4,53,77,0.04)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(32,181,223,0.1)', color: T.link, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -256,10 +260,10 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {record.canPreview && (
-                  <HoverBtn onClick={onPreview} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>Preview</HoverBtn>
+                  <HoverBtn onClick={onPreview} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>{t('preview')}</HoverBtn>
                 )}
                 {record.canDownload && (
-                  <HoverBtn onClick={onDownload} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: 'none', background: T.blue, color: '#fff', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>Download</HoverBtn>
+                  <HoverBtn onClick={onDownload} base={{ padding: '0 12px', minHeight: '36px', borderRadius: '8px', border: 'none', background: T.blue, color: '#fff', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>{t('download')}</HoverBtn>
                 )}
               </div>
             </div>
@@ -270,12 +274,12 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
       <div style={{ padding: '20px 28px', borderTop: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           {record.canDelete && (
-            <button onClick={onDeleteRequest} style={{ background: 'none', border: 'none', color: T.red, fontSize: '13px', fontWeight: 700, cursor: 'pointer', padding: '8px 0', textDecoration: 'underline' }}>Delete Record</button>
+            <button onClick={onDeleteRequest} style={{ background: 'none', border: 'none', color: T.red, fontSize: '13px', fontWeight: 700, cursor: 'pointer', padding: '8px 0', textDecoration: 'underline' }}>{t('deleteRecord')}</button>
           )}
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           {record.sourceHref && <Link href={record.sourceHref} className='inline-flex min-h-11 items-center rounded-xl border border-theme bg-surface px-4 py-2 text-sm font-semibold text-ink hover:bg-surface-subtle'>{record.sourceType === 'consultation-summary' ? 'View consultation summary' : record.sourceType === 'medication' ? 'View medication instructions' : 'View lab request'}</Link>}
-          <HoverBtn onClick={onClose} base={{ padding: '0 20px', minHeight: '44px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)", color: T.navy, fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>Close</HoverBtn>
+          <HoverBtn onClick={onClose} base={{ padding: '0 20px', minHeight: '44px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)", color: T.navy, fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>{t('close')}</HoverBtn>
         </div>
       </div>
     </ModalOverlay>
@@ -283,6 +287,7 @@ function RecordDetailsModal({ record, onClose, onPreview, onDownload, onDeleteRe
 }
 
 function PreviewModal({ preview, dialog, onClose, onDownload, onRetry, onEmbedError }: { preview: PreviewState; dialog: React.RefObject<HTMLDialogElement | null>; onClose: () => void; onDownload: () => void; onRetry: () => void; onEmbedError: (access: SecureDocumentAccess) => void }) {
+  const t = useTranslations('patientRecords')
   const { record, access, loading, error } = preview
   const format = access ? documentPreviewType(access.contentType) : null
   useEffect(() => {
@@ -293,27 +298,29 @@ function PreviewModal({ preview, dialog, onClose, onDownload, onRetry, onEmbedEr
     return () => { if (node?.open) node.close() }
   }, [dialog])
   return <dialog ref={dialog} aria-label={`${record.title} preview`} onCancel={event => { event.preventDefault(); onClose() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-4xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
-    <div className='flex flex-col gap-4 border-b border-theme pb-5 sm:flex-row sm:items-start sm:justify-between'><div data-preview-heading-panel className='w-full min-w-0 sm:w-auto sm:flex-1'><h2 className='portal-h2 break-words'>{access?.filename || record.title}</h2><p className='text-sm leading-6 text-secondary'>{record.date} · {record.uploadedBy === 'patient' ? 'Reported provider: ' : ''}{record.provider}</p></div><div className='flex w-full shrink-0 flex-wrap gap-3 sm:w-auto'>{record.canDownload && <PortalButton type='button' onClick={onDownload}>Download</PortalButton>}<PortalButton data-preview-close type='button' aria-label='Close preview' onClick={onClose}>Close</PortalButton></div></div>
+    <div className='flex flex-col gap-4 border-b border-theme pb-5 sm:flex-row sm:items-start sm:justify-between'><div data-preview-heading-panel className='w-full min-w-0 sm:w-auto sm:flex-1'><h2 className='portal-h2 break-words'>{access?.filename || record.title}</h2><p className='text-sm leading-6 text-secondary'>{record.date} · {record.uploadedBy === 'patient' ? 'Reported provider: ' : ''}{record.provider}</p></div><div className='flex w-full shrink-0 flex-wrap gap-3 sm:w-auto'>{record.canDownload && <PortalButton type='button' onClick={onDownload}>{t('download')}</PortalButton>}<PortalButton data-preview-close type='button' aria-label={t('closePreview')} onClick={onClose}>{t('close')}</PortalButton></div></div>
     <div className='min-w-0 pt-5' aria-busy={loading}>
-      {loading ? <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm text-secondary'>Loading secure preview…</p>
-        : preview.expired ? <div role='status' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-7'>This preview link has expired. Request fresh access to view this file again.</p><PortalButton type='button' onClick={onRetry}>Request fresh preview access</PortalButton></div>
-        : error ? <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-3 font-semibold'>Preview unavailable</p><p className='text-sm leading-7'>{error}</p><SupportReference requestId={preview.requestId} /><PortalButton type='button' onClick={onRetry}>Retry preview</PortalButton></div>
-        : preview.unsupported ? <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm leading-7 text-secondary'>This file format cannot be previewed safely here. Use Download to request an attachment link.</p>
-        : access && format ? <><p className='mb-4 text-sm leading-7 text-secondary'>Preview access expires at <time dateTime={new Date(access.expiresAt).toISOString()}>{new Date(access.expiresAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>. Use Download if your browser cannot display this file.</p>{format === 'image' ? <img src={access.downloadUrl} referrerPolicy='no-referrer' alt={record.title} onError={() => onEmbedError(access)} className='mx-auto max-h-[65dvh] max-w-full object-contain' /> : <iframe src={access.downloadUrl} referrerPolicy='no-referrer' title={record.title} onError={() => onEmbedError(access)} className='h-[65dvh] min-h-64 w-full rounded-xl border border-theme bg-surface' />}</>
+      {loading ? <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm text-secondary'>{t('loadingSecurePreview')}</p>
+        : preview.expired ? <div role='status' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-7'>{t('thisPreviewLinkHasExpired')}</p><PortalButton type='button' onClick={onRetry}>{t('requestFreshPreviewAccess')}</PortalButton></div>
+        : error ? <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-3 font-semibold'>{t('previewUnavailable')}</p><p className='text-sm leading-7'>{error}</p><SupportReference requestId={preview.requestId} /><PortalButton type='button' onClick={onRetry}>{t('retryPreview')}</PortalButton></div>
+        : preview.unsupported ? <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm leading-7 text-secondary'>{t('thisFileFormatCannotBe')}</p>
+        : access && format ? <><p className='mb-4 text-sm leading-7 text-secondary'>{t('previewAccessExpiresAt')} <time dateTime={new Date(access.expiresAt).toISOString()}>{new Date(access.expiresAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>{t('useDownloadIfYourBrowser')}</p>{format === 'image' ? <img src={access.downloadUrl} referrerPolicy='no-referrer' alt={record.title} onError={() => onEmbedError(access)} className='mx-auto max-h-[65dvh] max-w-full object-contain' /> : <iframe src={access.downloadUrl} referrerPolicy='no-referrer' title={record.title} onError={() => onEmbedError(access)} className='h-[65dvh] min-h-64 w-full rounded-xl border border-theme bg-surface' />}</>
         : <div className='grid gap-4'><h3 className='portal-h3'>{record.title}</h3>{[record.summary, record.clinicalNotes, record.recommendations].filter(Boolean).map((text, index) => <p key={`${record.id}-preview-text-${index}`} className='break-words rounded-xl border border-theme bg-surface-subtle p-4 text-sm leading-7 text-ink'>{text}</p>)}</div>}
     </div>
   </dialog>
 }
 
 function DeleteRecordModal({ record, busy, error, requestId, onClose, onConfirm }: { record: MedicalRecord; busy: boolean; error: string; requestId: string | null; onClose: () => void; onConfirm: () => void }) {
+  const t = useTranslations('patientRecords')
   const dialog = useRef<HTMLDialogElement>(null)
   useEffect(() => { const node = dialog.current; node?.showModal(); return () => { node?.close() } }, [])
-  return <dialog ref={dialog} aria-labelledby='medical-delete-title' onCancel={event => { event.preventDefault(); if (!busy) onClose() }} className='m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'><h2 id='medical-delete-title' className='portal-h2'>Delete medical record?</h2><p className='mb-5 break-words text-sm leading-7 text-secondary'>Remove “{record.title}” from your record list. You cannot restore it here. This does not confirm permanent storage erasure. Previously issued file links may remain usable until their existing expiry (up to one hour).</p>{error && <div role='alert' className='mb-4 rounded-xl border border-theme bg-surface-subtle p-3'><p className='text-sm leading-7 text-danger'>{error}</p><p className='mt-2 text-sm leading-7 text-secondary'>Retry this same record to confirm its removal. Previously saved removal is safe to confirm again.</p><SupportReference requestId={requestId} /></div>}{busy && <p role='status' className='mb-4 text-sm text-secondary'>Confirming record removal…</p>}<div className='flex flex-wrap gap-3'><PortalButton autoFocus type='button' disabled={busy} onClick={onClose}>Cancel</PortalButton><PortalButton tone='danger' disabled={busy} onClick={onConfirm}>{busy ? 'Deleting…' : error ? 'Retry delete' : 'Delete'}</PortalButton></div></dialog>
+  return <dialog ref={dialog} aria-labelledby='medical-delete-title' onCancel={event => { event.preventDefault(); if (!busy) onClose() }} className='m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'><h2 id='medical-delete-title' className='portal-h2'>{t('deleteMedicalRecord')}</h2><p className='mb-5 break-words text-sm leading-7 text-secondary'>Remove “{record.title}” from your record list. You cannot restore it here. This does not confirm permanent storage erasure. Previously issued file links may remain usable until their existing expiry (up to one hour).</p>{error && <div role='alert' className='mb-4 rounded-xl border border-theme bg-surface-subtle p-3'><p className='text-sm leading-7 text-danger'>{error}</p><p className='mt-2 text-sm leading-7 text-secondary'>{t('retryThisSameRecordTo')}</p><SupportReference requestId={requestId} /></div>}{busy && <p role='status' className='mb-4 text-sm text-secondary'>{t('confirmingRecordRemoval')}</p>}<div className='flex flex-wrap gap-3'><PortalButton autoFocus type='button' disabled={busy} onClick={onClose}>{t('cancel')}</PortalButton><PortalButton tone='danger' disabled={busy} onClick={onConfirm}>{busy ? 'Deleting…' : error ? 'Retry delete' : 'Delete'}</PortalButton></div></dialog>
 }
 
 // ─── Main Page Inner ───────────────────────────────────────────────────────────
 
 function MedicalRecordsPageInner() {
+  const t = useTranslations('patientRecords')
   const captureAction = usePortalAction()
   const accountScope = readAccountScope('patient'), renderedPath = usePathname(), renderedQuery = useSearchParams().toString()
   const isCurrentRecordsPage = () => !!accountScope && accountScope === readAccountScope('patient') && currentPortal() === 'patient' && window.location.pathname === renderedPath && new URLSearchParams(window.location.search).toString() === renderedQuery
@@ -517,9 +524,9 @@ function MedicalRecordsPageInner() {
 
   return (
     <PatientPortalShell
-      eyebrow="Patient Platform"
-      title="Medical Records"
-      description="Securely access and manage your healthcare records, consultation history, and clinical documents in one place."
+      eyebrow={t('patientPlatform')}
+      title={t('medicalRecords')}
+      description={t('securelyAccessAndManageYour')}
       headerActions={
         <>
           <PortalButton disabled={resource.refreshing} onClick={resource.retry}>{resource.refreshing ? 'Refreshing records…' : 'Refresh records'}</PortalButton>
@@ -529,14 +536,14 @@ function MedicalRecordsPageInner() {
             base={{ minHeight: '44px', padding: '0 16px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(4,53,77,0.06)', whiteSpace: 'nowrap' }}
             on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
           >
-            Choose a record to download
+            {t('chooseARecordToDownload')}
           </HoverBtn>
           <HoverBtn
             onClick={openUpload}
             base={{ minHeight: '44px', padding: '0 18px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 16px rgba(32,181,223,0.3)', whiteSpace: 'nowrap' }}
             on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.34)' }}
           >
-            Upload Medical Record
+            {t('uploadMedicalRecord')}
           </HoverBtn>
         </>
       }
@@ -544,19 +551,19 @@ function MedicalRecordsPageInner() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Important Medical Info */}
           <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(20px)', borderRadius: '20px', border: "1px solid var(--border)", padding: '20px', boxShadow: Sh.card }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Important Medical Info</h3>
-            {healthResource.error && <div role='alert'><p>Medical profile could not be loaded.</p><PortalButton onClick={healthResource.retry}>Retry medical profile</PortalButton></div>}
+            <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('importantMedicalInfo')}</h3>
+            {healthResource.error && <div role='alert'><p>{t('medicalProfileCouldNotBe')}</p><PortalButton onClick={healthResource.retry}>{t('retryMedicalProfile')}</PortalButton></div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: "1px solid var(--border)", paddingBottom: '8px' }}>
-                <span style={{ fontSize: '13px', color: T.slate }}>Blood Group</span>
+                <span style={{ fontSize: '13px', color: T.slate }}>{t('bloodGroup')}</span>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: healthInfo?.blood_type ? T.red : T.slate2 }}>{healthInfo?.blood_type || (healthResource.loading ? 'Loading…' : healthResource.error ? 'Unavailable' : 'Not set')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: "1px solid var(--border)", paddingBottom: '8px' }}>
-                <span style={{ fontSize: '13px', color: T.slate }}>Known Allergies</span>
+                <span style={{ fontSize: '13px', color: T.slate }}>{t('knownAllergies')}</span>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.allergies || (healthResource.loading ? 'Loading…' : healthResource.error ? 'Unavailable' : 'Not recorded')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: "1px solid var(--border)", paddingBottom: '8px' }}>
-                <span style={{ fontSize: '13px', color: T.slate }}>Conditions</span>
+                <span style={{ fontSize: '13px', color: T.slate }}>{t('conditions')}</span>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy, textAlign: 'right' }}>{healthInfo?.medical_conditions || (healthResource.loading ? 'Loading…' : healthResource.error ? 'Unavailable' : 'Not recorded')}</span>
               </div>
             </div>
@@ -564,9 +571,9 @@ function MedicalRecordsPageInner() {
 
           {/* Timeline */}
           <div style={{ background: "var(--surface-glass)", backdropFilter: 'blur(20px)', borderRadius: '20px', border: "1px solid var(--border)", padding: '20px', boxShadow: Sh.card }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>Care Timeline</h3>
+            <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('careTimeline')}</h3>
             {timeline.length === 0 ? (
-              <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>Your uploaded records and clinical documents will build this timeline.</p>
+              <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{t('yourUploadedRecordsAndClinical')}</p>
             ) : (
               <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px', paddingLeft: '8px' }}>
                 <div style={{ position: 'absolute', left: '12px', top: '10px', bottom: '10px', width: '2px', background: "var(--surface-hover)" }} />
@@ -586,10 +593,10 @@ function MedicalRecordsPageInner() {
           <div style={{ background: 'linear-gradient(135deg, rgba(15,158,119,0.05) 0%, rgba(32,181,223,0.05) 100%)', borderRadius: '20px', border: '1px solid rgba(15,158,119,0.15)', padding: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <Ico p={ICONS.lock} size={16} sw={2} color={T.green} />
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>Secure & Private</h4>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{t('securePrivate')}</h4>
             </div>
-            <p style={{ margin: '0 0 12px', fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>Your medical records are encrypted and stored securely. Only authorized professionals can access them.</p>
-            <Link href={PATIENT_ROUTES.settings} style={{ fontSize: "13px", fontWeight: 700, color: T.link, textDecoration: 'none' }}>Privacy Settings →</Link>
+            <p style={{ margin: '0 0 12px', fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>{t('yourMedicalRecordsAreEncrypted')}</p>
+            <Link href={PATIENT_ROUTES.settings} style={{ fontSize: "13px", fontWeight: 700, color: T.link, textDecoration: 'none' }}>{t('privacySettings')}</Link>
           </div>
         </div>
       }
@@ -636,7 +643,7 @@ function MedicalRecordsPageInner() {
             </span>
             <input
               type="search"
-              placeholder="Search by document name, physician, or specialty..."
+              placeholder={t('searchByDocumentNamePhysician')}
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{ width: '100%', height: '46px', borderRadius: '14px', border: "1px solid var(--border)", padding: '0 16px 0 42px', fontSize: '14px', color: T.navy, background: "var(--surface)", outline: 'none' }}
@@ -667,11 +674,11 @@ function MedicalRecordsPageInner() {
         </div>
 
         {/* Record List */}
-        {resource.error && <div role='alert' className='mb-4 rounded-xl border border-theme bg-surface-subtle p-4 text-ink'><p>{resource.errorMessage}</p><SupportReference requestId={resource.errorRequestId} /><PortalButton onClick={resource.retry}>Retry medical records</PortalButton></div>}
+        {resource.error && <div role='alert' className='mb-4 rounded-xl border border-theme bg-surface-subtle p-4 text-ink'><p>{resource.errorMessage}</p><SupportReference requestId={resource.errorRequestId} /><PortalButton onClick={resource.retry}>{t('retryMedicalRecords')}</PortalButton></div>}
         <div className="mr-card-grid">
           {loadingRecords ? (
             <div style={{ padding: '48px 24px', textAlign: 'center', background: "var(--surface-hover)", borderRadius: '16px', border: "1px dashed var(--border)" }}>
-              <p role='status' style={{ margin: 0, fontSize: '14px', color: T.slate }}>Loading medical records...</p>
+              <p role='status' style={{ margin: 0, fontSize: '14px', color: T.slate }}>{t('loadingMedicalRecords')}</p>
             </div>
           ) : resource.error ? null : filteredRecords.length === 0 ? (
             <div style={{ padding: '48px 24px', textAlign: 'center', background: "var(--surface-hover)", borderRadius: '16px', border: "1px dashed var(--border)" }}>
@@ -683,9 +690,9 @@ function MedicalRecordsPageInner() {
                 {search ? 'Try adjusting your search terms or filters.' : 'Your consultation summaries, prescriptions, lab results, and other healthcare documents will appear here.'}
               </p>
               {search ? (
-                <HoverBtn onClick={() => { setSearch(''); setActiveTab('All Records') }} base={{ padding: '0 20px', minHeight: '40px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>Clear Filters</HoverBtn>
+                <HoverBtn onClick={() => { setSearch(''); setActiveTab('All Records') }} base={{ padding: '0 20px', minHeight: '40px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>{t('clearFilters')}</HoverBtn>
               ) : (
-                <HoverBtn onClick={openUpload} base={{ padding: '0 20px', minHeight: '40px', borderRadius: '10px', border: 'none', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>Upload Medical Record</HoverBtn>
+                <HoverBtn onClick={openUpload} base={{ padding: '0 20px', minHeight: '40px', borderRadius: '10px', border: 'none', background: T.blue, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>{t('uploadMedicalRecord')}</HoverBtn>
               )}
             </div>
           ) : (
@@ -706,14 +713,14 @@ function MedicalRecordsPageInner() {
                 {record.sourceType === 'consultation-summary' && <p className='mb-3 text-sm leading-6 text-secondary'>{record.revision ? `Last recorded revision ${record.revision}. ` : ''}{summaryPublicationTime(record.publishedAt) ? `Published ${summaryPublicationTime(record.publishedAt)}.` : 'Open the summary for its publication details.'}</p>}
                 {(record.type === 'Lab Result' || record.sourceType === 'lab-request') && <div className='mb-3'><LabResultReviewStatus review={record.resultReview} fileId={record.reviewFileId} /></div>}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 'auto' }}>
-                  {record.sourceType === 'consultation-summary' && record.sourceHref && <Link href={record.sourceHref} className='portal-button portal-button-primary q-button q-button-primary'>View consultation summary</Link>}
-                  {record.sourceType === 'consultation-summary' && !record.sourceHref && <p className='text-sm leading-6 text-secondary'>This summary link is unavailable. Refresh records or open your appointments.</p>}
+                  {record.sourceType === 'consultation-summary' && record.sourceHref && <Link href={record.sourceHref} className='portal-button portal-button-primary q-button q-button-primary'>{t('viewConsultationSummary')}</Link>}
+                  {record.sourceType === 'consultation-summary' && !record.sourceHref && <p className='text-sm leading-6 text-secondary'>{t('thisSummaryLinkIsUnavailable2')}</p>}
                   <HoverBtn
                     onClick={() => { if (recordId) handledRecordLink.current = `${accountScope}:${recordId}`; closePreview(); setSelectedRecord(record) }}
                     base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 4px rgba(4,53,77,0.02)' }}
                     on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
                   >
-                    View Details
+                    {t('viewDetails')}
                   </HoverBtn>
                   {record.canPreview && (
                     <HoverBtn
@@ -733,7 +740,7 @@ function MedicalRecordsPageInner() {
                       base={{ padding: '0 14px', minHeight: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: 'transparent', color: T.slate, fontSize: "13px", fontWeight: 600, cursor: 'pointer' }}
                       on={{ background: "var(--surface-hover)", color: T.navy, transform: 'translateY(-1px)' }}
                     >
-                      Download
+                      {t('download')}
                     </HoverBtn>
                   )}
                 </div>
@@ -776,4 +783,5 @@ function MedicalRecordsRoute() {
   const path = usePathname(), query = useSearchParams().toString(), scope = useSyncExternalStore(subscribeMedicalAccount, () => readAccountScope('patient'), () => null)
   return <MedicalRecordsPageInner key={JSON.stringify([scope, path, query])} />
 }
-export default function PatientMedicalRecordsPage() { return <Suspense fallback={<p role='status'>Loading medical records…</p>}><MedicalRecordsRoute /></Suspense> }
+export default function PatientMedicalRecordsPage() {
+  const t = useTranslations('patientRecords'); return <Suspense fallback={<p role='status'>{t('loadingMedicalRecords2')}</p>}><MedicalRecordsRoute /></Suspense> }

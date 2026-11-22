@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
@@ -18,6 +19,7 @@ import Ico from '@/components/ui/Ico'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 
 export default function PatientEpisodeDetailPage() {
+  const t = useTranslations('patientEpisode')
   const params = useParams()
   const router = useRouter()
   const episodeId = params.episodeId as string
@@ -62,9 +64,9 @@ export default function PatientEpisodeDetailPage() {
   if (loading) {
     return (
       <PatientPortalShell
-        eyebrow="Episode Details"
-        title="Loading..."
-        description="Please wait while we load your episode information."
+        eyebrow={t('episodeDetails')}
+        title={t('loading')}
+        description={t('pleaseWaitWhileWeLoad')}
       >
         <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 20px' }}>
           <div style={{
@@ -84,9 +86,9 @@ export default function PatientEpisodeDetailPage() {
   if (error || !episode) {
     return (
       <PatientPortalShell
-        eyebrow="Episode Details"
-        title="Error"
-        description="We encountered an issue loading your episode."
+        eyebrow={t('episodeDetails')}
+        title={t('error')}
+        description={t('weEncounteredAnIssueLoading')}
       >
         <div style={{ padding: '40px 20px', textAlign: 'center' }}>
           <p style={{ color: T.red, marginBottom: '20px' }}>{error || 'Episode not found'}</p>
@@ -103,7 +105,7 @@ export default function PatientEpisodeDetailPage() {
               cursor: 'pointer',
             }}
           >
-            Return to Dashboard
+            {t('returnToDashboard')}
           </button>
         </div>
       </PatientPortalShell>
@@ -123,16 +125,16 @@ export default function PatientEpisodeDetailPage() {
         .status-badge.pending { background: rgba(245,158,11,0.1); color: '#f59e0b'; }
       `}</style>
       <PatientPortalShell
-        eyebrow="Episode Details"
-        title="Your Care Episode"
-        description="View your episode details, intake information, and clinical timeline."
+        eyebrow={t('episodeDetails')}
+        title={t('yourCareEpisode')}
+        description={t('viewYourEpisodeDetailsIntake')}
       >
         {/* Episode Overview */}
         <section className="episode-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
             <div>
               <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Episode ID
+                {t('episodeId')}
               </p>
               <p style={{ margin: 0, fontSize: '14px', color: T.navy, fontWeight: 600 }}>
                 {episode.id}
@@ -146,7 +148,7 @@ export default function PatientEpisodeDetailPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '16px' }}>
             <div style={{ padding: '12px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
               <div style={{ fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                Pack ID
+                {t('packId')}
               </div>
               <div style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>
                 {episode.pack_id}
@@ -154,7 +156,7 @@ export default function PatientEpisodeDetailPage() {
             </div>
             <div style={{ padding: '12px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
               <div style={{ fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                Flow Type
+                {t('flowType')}
               </div>
               <div style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>
                 {episode.flow_type}
@@ -162,7 +164,7 @@ export default function PatientEpisodeDetailPage() {
             </div>
             <div style={{ padding: '12px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
               <div style={{ fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                Created
+                {t('created')}
               </div>
               <div style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>
                 {new Date(episode.created_at).toLocaleDateString()}
@@ -176,10 +178,10 @@ export default function PatientEpisodeDetailPage() {
           <section className="episode-card">
             <div style={{ marginBottom: '16px' }}>
               <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Intake Information
+                {t('intakeInformation')}
               </p>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.navy }}>
-                Your Intake Responses
+                {t('yourIntakeResponses')}
               </h2>
             </div>
             <div style={{
@@ -202,13 +204,13 @@ export default function PatientEpisodeDetailPage() {
           <section className="episode-card">
             <div style={{ marginBottom: '16px' }}>
               <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                AI-Structured Clinical Data
+                {t('aiStructuredClinicalData')}
               </p>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.navy }}>
                 Structured Fields ({fields.total_count})
               </h2>
               <p style={{ margin: '8px 0 0', fontSize: '13px', color: T.slate }}>
-                These fields were structured from your intake by AI and reviewed by your doctor.
+                {t('theseFieldsWereStructuredFrom')}
               </p>
             </div>
             <div style={{ display: 'grid', gap: '12px' }}>
@@ -264,7 +266,7 @@ export default function PatientEpisodeDetailPage() {
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '8px' }}>
                       <Ico p={ICONS.zap} size={12} color={T.blue} />
                       <span style={{ fontSize: "13px", color: T.link, fontWeight: 600 }}>
-                        AI-generated
+                        {t('aiGenerated')}
                       </span>
                     </div>
                   )}
@@ -284,7 +286,7 @@ export default function PatientEpisodeDetailPage() {
           <section className="episode-card">
             <div style={{ marginBottom: '20px' }}>
               <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Clinical Timeline
+                {t('clinicalTimeline')}
               </p>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.navy }}>
                 Episode Activity ({timeline.total_count} events)
@@ -353,10 +355,10 @@ export default function PatientEpisodeDetailPage() {
             <div style={{ textAlign: 'center', padding: '40px 20px' }}>
               <Ico p={ICONS.calendar} size={48} color={T.slate2} />
               <p style={{ margin: '16px 0 8px', fontSize: '14px', color: T.navy, fontWeight: 600 }}>
-                No Timeline Events Yet
+                {t('noTimelineEventsYet')}
               </p>
               <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>
-                Timeline events will appear here as your episode progresses.
+                {t('timelineEventsWillAppearHere')}
               </p>
             </div>
           </section>

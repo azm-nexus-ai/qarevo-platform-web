@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { buildBookingQueryParams, CONSULTATION_PRICING_PENDING } from '@/lib/booking'
 
 import Link from 'next/link'
@@ -107,6 +108,7 @@ function formatDoctorRating(doctor: PatientDoctor) {
 }
 
 function FindDoctorPageContent() {
+  const t = useTranslations('patientFindDoctor')
   const bookingParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -340,7 +342,7 @@ function FindDoctorPageContent() {
       <div className='fd-shell'>
         <aside id='patient-primary-sidebar' className='fd-left'>
           <div className='fd-sidebar portal-sidebar-content' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '16px' }}>
-            <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
+            <section aria-label={t('patientSummary')} style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}>
                   <ProfileImage name={userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : ''} />
@@ -349,12 +351,12 @@ function FindDoctorPageContent() {
                   <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>
                     {userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'}
                   </p>
-                  <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Care Plan: Active</p>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{t('carePlanActive')}</p>
                 </div>
               </div>
             </section>
 
-            <nav aria-label='Patient navigation'>
+            <nav aria-label={t('patientNavigation')}>
               <div className='fd-nav-list'>
                 {navItems.map((item) => {
                   const isActive = isPatientNavActive(pathname, item.href)
@@ -390,18 +392,18 @@ function FindDoctorPageContent() {
             <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${T.borderFaint}` }}>
               <Link href={PATIENT_ROUTES.logout} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '11px', textDecoration: 'none', color: "var(--link)", fontSize: '13px', fontWeight: 600 }}>
                 <Ico p={ICONS.arrowSm} size={15} sw={1.8} color='#348CEA' />
-                Logout
+                {t('logout')}
               </Link>
             </div>
           </div>
         </aside>
 
-        <section className='fd-main' aria-label='Find a doctor'>
+        <section className='fd-main' aria-label={t('findADoctor')}>
           <header style={{ ...Glass.nav, borderRadius: '20px', border: "1px solid var(--border)", padding: '14px 14px 12px', marginBottom: '14px' }}>
             <div className='fd-head-row'>
               <div>
-                <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '25px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Find the Right Doctor</h1>
-                <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>Search thousands of verified healthcare professionals across multiple specialties.</p>
+                <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '25px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>{t('findTheRightDoctor')}</h1>
+                <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>{t('searchThousandsOfVerifiedHealthcare')}</p>
               </div>
               <button
                 type='button'
@@ -415,7 +417,7 @@ function FindDoctorPageContent() {
 
           <section style={{ ...Glass.aiCard, borderRadius: '20px', padding: '16px', marginBottom: '14px', boxShadow: Sh.card }}>
             <label htmlFor='doctor-global-search' style={{ display: 'block', marginBottom: '8px', fontSize: "13px", color: T.slate2, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Global Search
+              {t('globalSearch')}
             </label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: q ? "var(--link)" : T.slate2 }}>
@@ -434,20 +436,20 @@ function FindDoctorPageContent() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') applySearch(q)
                 }}
-                placeholder='Search by doctor name, specialty, condition or hospital...'
+                placeholder={t('searchByDoctorNameSpecialty')}
                 style={{ width: '100%', minHeight: '52px', borderRadius: '14px', border: `1px solid ${q ? 'rgba(32,181,223,0.45)' : "var(--border)"}`, background: "var(--surface-glass)", color: T.navy, fontSize: '14px', padding: '0 130px 0 44px', boxShadow: q ? '0 0 0 4px rgba(32,181,223,0.1)' : 'none', transition: 'all 0.16s ease' }}
               />
               <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button type='button' aria-label='Voice search placeholder' style={{ width: '34px', height: '34px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate, cursor: 'pointer' }}>
+                <button type='button' aria-label={t('voiceSearchPlaceholder')} style={{ width: '34px', height: '34px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate, cursor: 'pointer' }}>
                   <Ico p={ICONS.activity} size={14} sw={1.8} />
                 </button>
-                <span style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", color: "var(--link)", fontWeight: 700, letterSpacing: '0.03em' }}>AI Search</span>
+                <span style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", color: "var(--link)", fontWeight: 700, letterSpacing: '0.03em' }}>{t('aiSearch')}</span>
               </div>
             </div>
 
             {searchFocused && (
               <div style={{ marginTop: '10px', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-glass)", boxShadow: '0 10px 24px rgba(4,53,77,0.12)', padding: '10px' }}>
-                <p style={{ margin: '0 0 6px', fontSize: "13px", color: T.slate2, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent searches</p>
+                <p style={{ margin: '0 0 6px', fontSize: "13px", color: T.slate2, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('recentSearches')}</p>
                 <div style={{ display: 'grid', gap: '6px' }}>
                   {(searchSuggestions.length > 0 ? searchSuggestions : recentSearches).map((item) => (
                     <button
@@ -466,7 +468,7 @@ function FindDoctorPageContent() {
 
           <section style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <p style={{ margin: 0, fontSize: "13px", color: T.slate2, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Quick Specialties</p>
+              <p style={{ margin: 0, fontSize: "13px", color: T.slate2, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('quickSpecialties')}</p>
               <button
                 type='button'
                 onClick={() => setShowAllSpecialties((prev) => !prev)}
@@ -508,27 +510,27 @@ function FindDoctorPageContent() {
             <aside className={`fd-filter-panel ${showFiltersMobile ? 'fd-open' : ''}`}>
               <section style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h2 className='portal-h2'>Smart Filters</h2>
-                  <button type='button' onClick={resetFilters} style={{ border: 'none', background: 'transparent', color: "var(--link)", fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>Reset</button>
+                  <h2 className='portal-h2'>{t('smartFilters')}</h2>
+                  <button type='button' onClick={resetFilters} style={{ border: 'none', background: 'transparent', color: "var(--link)", fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>{t('reset')}</button>
                 </div>
 
                 <div style={{ display: 'grid', gap: '10px' }}>
                   <label style={{ fontSize: "13px", color: T.slate2 }}>
-                    Availability
+                    {t('availability')}
                     <select value={availability} onChange={(e) => { setAvailability(e.target.value as typeof availability); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-	                      <option value='any'>Any</option>
-	                      <option value='today'>Available Today</option>
-	                      <option value='tomorrow'>Available Tomorrow</option>
-	                      <option value='this-week'>This Week</option>
+	                      <option value='any'>{t('any')}</option>
+	                      <option value='today'>{t('availableToday')}</option>
+	                      <option value='tomorrow'>{t('availableTomorrow')}</option>
+	                      <option value='this-week'>{t('thisWeek')}</option>
                     </select>
                   </label>
 
                   <label style={{ fontSize: "13px", color: T.slate2 }}>
-                    Consultation Type
+                    {t('consultationType')}
                     <select value={consultationType} onChange={(e) => { setConsultationType(e.target.value as typeof consultationType); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-                      <option value='any'>Any</option>
-                      <option value='video'>Video Consultation</option>
-                      <option value='physical'>Physical Visit</option>
+                      <option value='any'>{t('any')}</option>
+                      <option value='video'>{t('videoConsultation')}</option>
+                      <option value='physical'>{t('physicalVisit')}</option>
                     </select>
                   </label>
 
@@ -559,42 +561,42 @@ function FindDoctorPageContent() {
                   {showAdvancedFilters && (
                     <div style={{ display: 'grid', gap: '10px', marginTop: '8px', paddingTop: '8px', borderTop: `1px solid ${T.borderFaint}` }}>
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
-                        Gender
+                        {t('gender')}
                         <select value={gender} onChange={(e) => { setGender(e.target.value as typeof gender); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-                          <option value='any'>Any</option>
-                          <option value='female'>Female</option>
-                          <option value='male'>Male</option>
+                          <option value='any'>{t('any')}</option>
+                          <option value='female'>{t('female')}</option>
+                          <option value='male'>{t('male')}</option>
                         </select>
                       </label>
 
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
-                        Language
+                        {t('language')}
                         <select value={language} onChange={(e) => { setLanguage(e.target.value as typeof language); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           {LANGUAGE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
                         </select>
                       </label>
 
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
-                        Experience
+                        {t('experience')}
                         <select value={experience} onChange={(e) => { setExperience(e.target.value as typeof experience); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-                          <option value='any'>Any</option>
-                          <option value='0-5'>0-5 years</option>
-                          <option value='6-10'>6-10 years</option>
-                          <option value='11+'>11+ years</option>
+                          <option value='any'>{t('any')}</option>
+                          <option value='0-5'>{t('t05Years')}</option>
+                          <option value='6-10'>{t('t610Years')}</option>
+                          <option value='11+'>{t('t11Years')}</option>
                         </select>
                       </label>
 
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
-                        Insurance Accepted
+                        {t('insuranceAccepted')}
                         <select value={insurance} onChange={(e) => { setInsurance(e.target.value as typeof insurance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           {INSURANCE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
                         </select>
                       </label>
 
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
-                        Rating
+                        {t('rating')}
                         <select value={rating} onChange={(e) => { setRating(e.target.value as typeof rating); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-                          <option value='any'>Any</option>
+                          <option value='any'>{t('any')}</option>
                           <option value='4.0'>4.0+</option>
                           <option value='4.5'>4.5+</option>
                           <option value='4.8'>4.8+</option>
@@ -602,32 +604,32 @@ function FindDoctorPageContent() {
                       </label>
 
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
-                        Price Range
+                        {t('priceRange')}
                         <select value={price} onChange={(e) => { setPrice(e.target.value as typeof price); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-                          <option value='any'>Any</option>
-                          <option value='under-130'>Under $130</option>
+                          <option value='any'>{t('any')}</option>
+                          <option value='under-130'>{t('under130')}</option>
                           <option value='130-180'>$130 - $180</option>
                           <option value='180+'>$180+</option>
                         </select>
                       </label>
 
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
-                        Distance
+                        {t('distance')}
                         <select value={distance} onChange={(e) => { setDistance(e.target.value as typeof distance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-                          <option value='any'>Any</option>
-                          <option value='under-5'>Under 5 km</option>
-                          <option value='under-10'>Under 10 km</option>
-                          <option value='under-25'>Under 25 km</option>
+                          <option value='any'>{t('any')}</option>
+                          <option value='under-5'>{t('under5Km')}</option>
+                          <option value='under-10'>{t('under10Km')}</option>
+                          <option value='under-25'>{t('under25Km')}</option>
                         </select>
                       </label>
 
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
-                        Sort By
+                        {t('sortBy')}
                         <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-                          <option value='highest-rated'>Highest Rated</option>
-                          <option value='nearest'>Nearest</option>
-                          <option value='most-experienced'>Most Experienced</option>
-                          <option value='available-today'>Available Today</option>
+                          <option value='highest-rated'>{t('highestRated')}</option>
+                          <option value='nearest'>{t('nearest')}</option>
+                          <option value='most-experienced'>{t('mostExperienced')}</option>
+                          <option value='available-today'>{t('availableToday')}</option>
                         </select>
                       </label>
                     </div>
@@ -641,15 +643,15 @@ function FindDoctorPageContent() {
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <h2 className='portal-h2'>
-                      <span style={{ color: "var(--link)" }}>Recommended for You</span>
+                      <span style={{ color: "var(--link)" }}>{t('recommendedForYou')}</span>
                     </h2>
-                    <span style={{ fontSize: "13px", color: T.slate2 }}>Based on your preferences</span>
+                    <span style={{ fontSize: "13px", color: T.slate2 }}>{t('basedOnYourPreferences')}</span>
                   </div>
                   <div className='fd-results' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
                     {recommendedDoctors.slice(0, 3).map((physician) => (
                       <div key={physician.id} style={{ position: 'relative' }}>
                         <div style={{ position: 'absolute', top: '-8px', left: '-8px', background: 'linear-gradient(135deg, var(--primary-end) 0%, #20B5DF 100%)', color: '#fff', fontSize: "13px", fontWeight: 700, padding: '4px 10px', borderRadius: '999px', boxShadow: '0 2px 8px rgba(52,140,234,0.3)' }}>
-                          Recommended
+                          {t('recommended')}
                         </div>
                         <DoctorCard
                           name={physician.name}
@@ -665,13 +667,13 @@ function FindDoctorPageContent() {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <h2 className='portal-h2'>Featured Physicians</h2>
+                <h2 className='portal-h2'>{t('featuredPhysicians')}</h2>
                 <span style={{ fontSize: "13px", color: T.slate2 }}>{totalDoctors} doctors</span>
               </div>
               {loadError && (
                 <div role='alert' style={{ marginBottom: '10px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface)', color: T.slate, padding: '10px 12px', fontSize: "13px" }}>
                   {loadError}
-                  <button type='button' onClick={()=>setReload(value=>value+1)} style={{ minHeight:44, marginLeft:12, color:'var(--link)' }}>Retry physician search</button>
+                  <button type='button' onClick={()=>setReload(value=>value+1)} style={{ minHeight:44, marginLeft:12, color:'var(--link)' }}>{t('retryPhysicianSearch')}</button>
                 </div>
               )}
 
@@ -685,8 +687,8 @@ function FindDoctorPageContent() {
                     <div style={{ width: '68px', height: '68px', borderRadius: '18px', margin: '0 auto 12px', background: 'rgba(165,224,218,0.35)', border: "1px solid var(--border)", color: "var(--link)", display: 'grid', placeItems: 'center' }}>
                       <Ico p={ICONS.search} size={30} sw={1.6} />
                     </div>
-                    <h3 className='portal-h3'>No physicians found.</h3>
-                    <p style={{ margin: '0 0 14px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>Try adjusting your filters or searching another specialty.</p>
+                    <h3 className='portal-h3'>{t('noPhysiciansFound')}</h3>
+                    <p style={{ margin: '0 0 14px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>{t('tryAdjustingYourFiltersOr')}</p>
                     <HoverBtn
                       base={{
                         minHeight: '42px',
@@ -703,7 +705,7 @@ function FindDoctorPageContent() {
                       on={{ background: '#348CEA', transform: 'translateY(-1px)' }}
                       onClick={resetFilters}
                     >
-                      Reset Filters
+                      {t('resetFilters')}
                     </HoverBtn>
                   </article>
                 ) : (
@@ -730,13 +732,13 @@ function FindDoctorPageContent() {
                       />
 
                       <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
-                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Hospital:</strong> {doctor.hospital}</p>
-                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Experience:</strong> {doctor.experienceYears} years</p>
-                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Rating:</strong> {formatDoctorRating(doctor)}</p>
-                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Next Slot:</strong> {doctor.nextAvailable}</p>
-                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Distance:</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : 'Not available'}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('hospital')}</strong> {doctor.hospital}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('experience2')}</strong> {doctor.experienceYears} years</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('rating2')}</strong> {formatDoctorRating(doctor)}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('nextSlot')}</strong> {doctor.nextAvailable}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('distance2')}</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : 'Not available'}</p>
                         {doctor.services && doctor.services.length > 0 && (
-                          <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Fee:</strong> {CONSULTATION_PRICING_PENDING}</p>
+                          <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('fee')}</strong> {CONSULTATION_PRICING_PENDING}</p>
                         )}
                       </div>
 
@@ -749,10 +751,10 @@ function FindDoctorPageContent() {
 
                       <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <Link href={buildProfileHref(doctor, 'view', bookingParams, { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>
-                          View Profile
+                          {t('viewProfile')}
                         </Link>
                         <Link href={buildBookingHref(doctor, bookingParams, { consultationType, insurance })} style={{ minHeight: '40px', padding: '0 14px', borderRadius: '11px', textDecoration: 'none', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.3)', display: 'inline-flex', alignItems: 'center' }}>
-	                          Book Now
+	                          {t('bookNow')}
 	                        </Link>
                       </div>
                     </article>
@@ -769,7 +771,7 @@ function FindDoctorPageContent() {
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
                     style={{ minHeight: '36px', padding: '0 12px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: hasPreviousPage && !loading ? 'pointer' : 'not-allowed', opacity: hasPreviousPage && !loading ? 1 : 0.5 }}
                   >
-                    Previous
+                    {t('previous')}
                   </button>
                   <button
                     type='button'
@@ -777,7 +779,7 @@ function FindDoctorPageContent() {
                     onClick={() => setPage((current) => current + 1)}
                     style={{ minHeight: '36px', padding: '0 12px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: hasNextPage && !loading ? 'pointer' : 'not-allowed', opacity: hasNextPage && !loading ? 1 : 0.5 }}
                   >
-                    Next
+                    {t('next')}
                   </button>
                 </div>
               </div>
@@ -785,13 +787,13 @@ function FindDoctorPageContent() {
               <div style={{ height: '14px' }} />
 
               <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-                <h3 className='portal-h3'>Trust Signals</h3>
+                <h3 className='portal-h3'>{t('trustSignals')}</h3>
                 <div style={{ display: 'grid', gap: '8px' }}>
-                  <TrustCard label='Verified Physicians' sub='Every doctor is identity-verified.' icon={ICONS.check} accent='#20B5DF' />
-                  <TrustCard label='Licensed Professionals' sub='Credentials are clinically reviewed.' icon={ICONS.shield} accent='#348CEA' />
-                  <TrustCard label='Secure Consultations' sub='Encrypted and privacy-first sessions.' icon={ICONS.lock} accent='#04354D' />
-                  <TrustCard label='Patient Reviewed' sub='Transparent ratings from real patients.' icon={ICONS.heart} accent='#20B5DF' />
-                  <TrustCard label='AI-Assisted Matching' sub='Recommendations are context aware.' icon={ICONS.cpu} accent='#A5E0DA' />
+                  <TrustCard label={t('verifiedPhysicians')} sub='Every doctor is identity-verified.' icon={ICONS.check} accent='#20B5DF' />
+                  <TrustCard label={t('licensedProfessionals')} sub='Credentials are clinically reviewed.' icon={ICONS.shield} accent='#348CEA' />
+                  <TrustCard label={t('secureConsultations')} sub='Encrypted and privacy-first sessions.' icon={ICONS.lock} accent='#04354D' />
+                  <TrustCard label={t('patientReviewed')} sub='Transparent ratings from real patients.' icon={ICONS.heart} accent='#20B5DF' />
+                  <TrustCard label={t('aiAssistedMatching')} sub='Recommendations are context aware.' icon={ICONS.cpu} accent='#A5E0DA' />
                 </div>
               </section>
             </section>
@@ -801,15 +803,15 @@ function FindDoctorPageContent() {
         <aside id='patient-secondary-sidebar' className='fd-right'>
           <div className='portal-sidebar-content portal-sidebar-stack'>
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 className='portal-h3'>Search Insights</h3>
-              <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>Use specialty plus condition to improve match quality. Example: Cardiology and Hypertension.</p>
+              <h3 className='portal-h3'>{t('searchInsights')}</h3>
+              <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>{t('useSpecialtyPlusConditionTo')}</p>
             </section>
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
-              <h3 className='portal-h3'>Saved Doctors</h3>
+              <h3 className='portal-h3'>{t('savedDoctors')}</h3>
               <div style={{ marginTop: '10px', display: 'grid', gap: '8px' }}>
                 {Object.entries(favorites).filter(([, val]) => val).length === 0 ? (
-                  <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>Tap the heart icon on any doctor card to save favorites.</p>
+                  <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>{t('tapTheHeartIconOn')}</p>
                 ) : (
                   physicians.filter((p) => favorites[p.id]).map((p) => (
                     <Link key={p.id} href={buildProfileHref(p, 'view', bookingParams, { q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sort: sortBy })} style={{ textDecoration: 'none', border: "1px solid var(--border)", borderRadius: '11px', padding: '9px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: T.navy, fontSize: "13px", fontWeight: 600 }}>
@@ -828,5 +830,6 @@ function FindDoctorPageContent() {
 }
 
 export default function FindDoctorPage() {
-  return <Suspense fallback={<p role='status' className='p-6 text-sm text-muted'>Loading doctor selection…</p>}><FindDoctorPageContent /></Suspense>
+  const t = useTranslations('patientFindDoctor')
+  return <Suspense fallback={<p role='status' className='p-6 text-sm text-muted'>{t('loadingDoctorSelection')}</p>}><FindDoctorPageContent /></Suspense>
 }

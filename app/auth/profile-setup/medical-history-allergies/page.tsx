@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useId, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import Link from 'next/link'
@@ -214,6 +215,7 @@ function HealthVisual() {
 }
 
 function LeftPanel() {
+  const t = useTranslations('onboarding.medical')
   return (
     <div style={{ width: '380px', flexShrink: 0, background: LEFT_BG, position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '44px', overflow: 'hidden' }}>
       <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1.2px)', backgroundSize: '22px 22px', pointerEvents: 'none' }} />
@@ -230,11 +232,11 @@ function LeftPanel() {
         <HealthVisual />
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
-            Your health story, organized.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Built to support safer care.</span>
+            {t('yourHealthStoryOrganized')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('builtToSupportSaferCare')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Your profile helps physicians understand your medical background, avoid medication conflicts, and personalize every consultation.
+            {t('yourProfileHelpsPhysiciansUnderstand')}
           </p>
         </div>
       </div>
@@ -289,6 +291,7 @@ function ChipButton({ label, active, onClick, tone = 'default' }: { label: strin
 }
 
 function Field({ label, placeholder, value, onChange, error, success, type = 'text', autoComplete, optional }: { label: string; placeholder: string; value: string; onChange: (value: string) => void; error?: string; success?: boolean; type?: string; autoComplete?: string; optional?: boolean }) {
+  const t = useTranslations('onboarding.medical')
   const [focused, setFocused] = useState(false)
   const id = useId()
 
@@ -298,7 +301,7 @@ function Field({ label, placeholder, value, onChange, error, success, type = 'te
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span> : <span>(Required)</span>}
+        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>{t('optional')}</span> : <span>{t('required')}</span>}
       </label>
       <input id={id} type={type} value={value} placeholder={placeholder} autoComplete={autoComplete} onChange={(event) => onChange(event.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={{ width: '100%', minHeight: '44px', padding: '11px 12px', borderRadius: '11px', border: `1.5px solid ${border}`, background, color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', transition: 'all 0.15s ease' }} />
       {(error || success) && <p style={{ margin: 0, fontSize: "13px", color: error ? T.red : T.green, lineHeight: 1.45 }}>{error || 'Looks good.'}</p>}
@@ -307,6 +310,7 @@ function Field({ label, placeholder, value, onChange, error, success, type = 'te
 }
 
 function TextAreaField({ label, placeholder, value, onChange, error, optional }: { label: string; placeholder: string; value: string; onChange: (value: string) => void; error?: string; optional?: boolean }) {
+  const t = useTranslations('onboarding.medical')
   const [focused, setFocused] = useState(false)
   const id = useId()
   const border = error ? 'rgba(220,38,38,0.55)' : focused ? 'rgba(32,181,223,0.45)' : 'rgba(4,53,77,0.1)'
@@ -314,7 +318,7 @@ function TextAreaField({ label, placeholder, value, onChange, error, optional }:
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span> : <span>(Required)</span>}
+        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>{t('optional')}</span> : <span>{t('required')}</span>}
       </label>
       <textarea id={id} required={!optional} aria-invalid={!!error} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: `1.5px solid ${border}`, background: focused ? "var(--surface)" : "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', transition: 'all 0.15s ease' }} />
       {error ? <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.45 }}>{error}</p> : null}
@@ -338,24 +342,25 @@ function SectionStatus({ title, description, status, error }: { title: string; d
 }
 
 function SurgeryCard({ entry, onChange, onRemove, canRemove }: { entry: SurgeryEntry; onChange: (next: SurgeryEntry) => void; onRemove: () => void; canRemove: boolean }) {
+  const t = useTranslations('onboarding.medical')
   return (
     <div style={{ padding: '16px', borderRadius: '16px', background: "var(--surface-glass)", border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.7fr', gap: '12px' }}>
-        <Field label='Procedure Name' placeholder='Appendectomy' value={entry.procedureName} onChange={(value) => onChange({ ...entry, procedureName: value })} autoComplete='off' />
-        <Field label='Hospital / Clinic' placeholder='St. Mary Hospital' value={entry.hospital} onChange={(value) => onChange({ ...entry, hospital: value })} autoComplete='organization' />
+        <Field label={t('procedureName')} placeholder={t('appendectomy')} value={entry.procedureName} onChange={(value) => onChange({ ...entry, procedureName: value })} autoComplete='off' />
+        <Field label={t('hospitalClinic')} placeholder={t('stMaryHospital')} value={entry.hospital} onChange={(value) => onChange({ ...entry, hospital: value })} autoComplete='organization' />
         <div>
-          <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em', display: 'block', marginBottom: '6px' }}>Year</label>
+          <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em', display: 'block', marginBottom: '6px' }}>{t('year')}</label>
           <select value={entry.year} onChange={(event) => onChange({ ...entry, year: event.target.value })} style={{ width: '100%', minHeight: '44px', padding: '11px 12px', borderRadius: '11px', border: `1.5px solid ${entry.year ? 'rgba(9,173,112,0.5)' : "var(--border)"}`, background: entry.year ? "var(--success-soft)" : "var(--surface-glass)", color: entry.year ? T.navy : T.slate2, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}>
-            <option value=''>Select year</option>
+            <option value=''>{t('selectYear')}</option>
             {SURGERY_YEARS.map((year) => <option key={year} value={year}>{year}</option>)}
           </select>
         </div>
       </div>
       <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: "13px", color: T.slate2, lineHeight: 1.5 }}>Add only procedures that matter to your physician’s safety review.</span>
+        <span style={{ fontSize: "13px", color: T.slate2, lineHeight: 1.5 }}>{t('addOnlyProceduresThatMatter')}</span>
         {canRemove ? (
           <button type='button' onClick={onRemove} style={{ background: 'none', border: 'none', padding: 0, color: T.red, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>
-            Remove
+            {t('remove')}
           </button>
         ) : null}
       </div>
@@ -364,24 +369,25 @@ function SurgeryCard({ entry, onChange, onRemove, canRemove }: { entry: SurgeryE
 }
 
 function MedicationCard({ entry, onChange, onRemove, canRemove }: { entry: MedicationEntry; onChange: (next: MedicationEntry) => void; onRemove: () => void; canRemove: boolean }) {
+  const t = useTranslations('onboarding.medical')
   return (
     <div style={{ padding: '16px', borderRadius: '16px', background: "var(--surface-glass)", border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.9fr 0.9fr', gap: '12px' }}>
-        <Field label='Medication Name' placeholder='Metformin' value={entry.medicationName} onChange={(value) => onChange({ ...entry, medicationName: value })} autoComplete='off' />
-        <Field label='Dosage' placeholder='500 mg' value={entry.dosage} onChange={(value) => onChange({ ...entry, dosage: value })} autoComplete='off' />
+        <Field label={t('medicationName')} placeholder={t('metformin')} value={entry.medicationName} onChange={(value) => onChange({ ...entry, medicationName: value })} autoComplete='off' />
+        <Field label={t('dosage')} placeholder={t('t500Mg')} value={entry.dosage} onChange={(value) => onChange({ ...entry, dosage: value })} autoComplete='off' />
         <div>
-          <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em', display: 'block', marginBottom: '6px' }}>Frequency</label>
+          <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em', display: 'block', marginBottom: '6px' }}>{t('frequency')}</label>
           <select value={entry.frequency} onChange={(event) => onChange({ ...entry, frequency: event.target.value })} style={{ width: '100%', minHeight: '44px', padding: '11px 12px', borderRadius: '11px', border: `1.5px solid ${entry.frequency ? 'rgba(9,173,112,0.5)' : "var(--border)"}`, background: entry.frequency ? "var(--success-soft)" : "var(--surface-glass)", color: entry.frequency ? T.navy : T.slate2, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}>
-            <option value=''>Select frequency</option>
+            <option value=''>{t('selectFrequency')}</option>
             {FREQUENCY_OPTIONS.map((frequency) => <option key={frequency} value={frequency}>{frequency}</option>)}
           </select>
         </div>
       </div>
       <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'end' }}>
-        <Field label='Purpose' placeholder='Blood sugar support' value={entry.purpose} onChange={(value) => onChange({ ...entry, purpose: value })} optional />
+        <Field label={t('purpose')} placeholder={t('bloodSugarSupport')} value={entry.purpose} onChange={(value) => onChange({ ...entry, purpose: value })} optional />
         {canRemove ? (
           <button type='button' onClick={onRemove} style={{ background: 'none', border: 'none', padding: '0 0 10px', color: T.red, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>
-            Remove
+            {t('remove')}
           </button>
         ) : null}
       </div>
@@ -390,6 +396,7 @@ function MedicationCard({ entry, onChange, onRemove, canRemove }: { entry: Medic
 }
 
 export default function MedicalHistoryAllergiesPage() {
+  const t = useTranslations('onboarding.medical')
   const router = useRouter()
   const [draftStorage] = useState(createAccountDraftStorage)
   const [draftReady, setDraftReady] = useState(false)
@@ -549,7 +556,7 @@ export default function MedicalHistoryAllergiesPage() {
         <div style={{ width: '100%', maxWidth: '860px' }}>
           <Link href='/auth/profile-setup/contact-information' style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back
+            {t('back')}
           </Link>
 
           <form className='hp-card' onSubmit={handleSubmit} noValidate style={{ background: "var(--surface-glass)", backdropFilter: 'blur(34px) saturate(200%)', WebkitBackdropFilter: 'blur(34px) saturate(200%)', borderRadius: '24px', border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)', padding: '36px 32px', animation: 'fadeUp 0.3s ease' }}>
@@ -557,18 +564,18 @@ export default function MedicalHistoryAllergiesPage() {
             <fieldset disabled={!draftReady || submitting} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div style={{ padding: '12px 14px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 4 of 6</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('profileSetup')}</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('step4Of6')}</p>
               </div>
               <div>
                 <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{progress}% Complete</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>About 2 Minutes</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('about2Minutes')}</p>
               </div>
             </div>
 
             <header style={{ marginBottom: '16px' }}>
-              <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>Your Health Profile</h1>
-              <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>This information helps your healthcare providers understand your medical background and provide safer, more personalized care.</p>
+              <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>{t('yourHealthProfile')}</h1>
+              <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>{t('thisInformationHelpsYourHealthcare')}</p>
             </header>
 
             <div style={{ marginBottom: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 11px', borderRadius: '100px', background: savedTick ? T.greenLight : "var(--surface-hover)", border: `1px solid ${savedTick ? 'rgba(9,173,112,0.25)' : "var(--border)"}` }}>
@@ -583,38 +590,38 @@ export default function MedicalHistoryAllergiesPage() {
             ) : null}
 
             <div style={{ marginBottom: '18px' }}>
-              <SectionHeader title='Medical History' body='Select the conditions that best describe your health background. You can choose more than one.' />
+              <SectionHeader title={t('medicalHistory')} body='Select the conditions that best describe your health background. You can choose more than one.' />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
                 {MEDICAL_HISTORY_OPTIONS.map((option) => (
                   <ChipButton key={option} label={option} active={form.medicalHistory.includes(option)} onClick={() => toggleSelection('medicalHistory', option)} tone={option === 'None' ? 'warning' : 'default'} />
                 ))}
               </div>
               {form.medicalHistory.includes('Other') ? (
-                <TextAreaField label='Other Condition' placeholder='Tell us about any other condition that matters for your care' value={form.medicalHistoryOther} onChange={(value) => updateField('medicalHistoryOther', value)} error={(submitted || !!form.medicalHistoryOther) && errors.medicalHistoryOther ? errors.medicalHistoryOther : undefined} />
+                <TextAreaField label={t('otherCondition')} placeholder={t('tellUsAboutAnyOther')} value={form.medicalHistoryOther} onChange={(value) => updateField('medicalHistoryOther', value)} error={(submitted || !!form.medicalHistoryOther) && errors.medicalHistoryOther ? errors.medicalHistoryOther : undefined} />
               ) : null}
               {submitted && errors.medicalHistory ? <p style={{ margin: '10px 0 0', fontSize: "13px", color: T.red }}>{errors.medicalHistory}</p> : null}
-              {submitted && !errors.medicalHistory && !errors.medicalHistoryOther ? <p style={{ margin: '10px 0 0', fontSize: "13px", color: T.green }}>Medical history captured.</p> : null}
+              {submitted && !errors.medicalHistory && !errors.medicalHistoryOther ? <p style={{ margin: '10px 0 0', fontSize: "13px", color: T.green }}>{t('medicalHistoryCaptured')}</p> : null}
             </div>
 
             <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
-              <SectionStatus title='Past Surgeries' description='Have you had any previous surgeries? Add only procedures that would help a physician understand your background.' status={form.surgeriesStatus === 'yes' ? 'Details provided' : form.surgeriesStatus === 'no' ? 'No previous surgeries' : 'Please choose one option'} error={submitted && !!errors.surgeries} />
+              <SectionStatus title={t('pastSurgeries')} description={t('haveYouHadAnyPrevious')} status={form.surgeriesStatus === 'yes' ? 'Details provided' : form.surgeriesStatus === 'no' ? 'No previous surgeries' : 'Please choose one option'} error={submitted && !!errors.surgeries} />
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <ChipButton label='No' active={form.surgeriesStatus === 'no'} onClick={() => setForm((previous) => ({ ...previous, surgeriesStatus: 'no', surgeries: [] }))} />
-                <ChipButton label='Yes' active={form.surgeriesStatus === 'yes'} onClick={() => setForm((previous) => ({ ...previous, surgeriesStatus: 'yes', surgeries: previous.surgeries.length ? previous.surgeries : [createSurgeryEntry()] }))} />
+                <ChipButton label={t('no')} active={form.surgeriesStatus === 'no'} onClick={() => setForm((previous) => ({ ...previous, surgeriesStatus: 'no', surgeries: [] }))} />
+                <ChipButton label={t('yes')} active={form.surgeriesStatus === 'yes'} onClick={() => setForm((previous) => ({ ...previous, surgeriesStatus: 'yes', surgeries: previous.surgeries.length ? previous.surgeries : [createSurgeryEntry()] }))} />
               </div>
               {form.surgeriesStatus === 'yes' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {form.surgeries.map((entry) => (
                     <SurgeryCard key={entry.id} entry={entry} onChange={(next) => setForm((previous) => ({ ...previous, surgeries: previous.surgeries.map((item) => (item.id === entry.id ? next : item)) }))} onRemove={() => setForm((previous) => ({ ...previous, surgeries: previous.surgeries.filter((item) => item.id !== entry.id) }))} canRemove={form.surgeries.length > 1} />
                   ))}
-                  <HoverBtn base={{ width: 'fit-content', alignSelf: 'flex-start', padding: '9px 14px', borderRadius: '999px', border: '1px solid rgba(32,181,223,0.18)', background: 'rgba(234,241,255,0.78)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer' }} on={{ background: 'rgba(234,241,255,0.96)', transform: 'translateY(-1px)' }} onClick={addSurgery}>Add Another Surgery</HoverBtn>
+                  <HoverBtn base={{ width: 'fit-content', alignSelf: 'flex-start', padding: '9px 14px', borderRadius: '999px', border: '1px solid rgba(32,181,223,0.18)', background: 'rgba(234,241,255,0.78)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer' }} on={{ background: 'rgba(234,241,255,0.96)', transform: 'translateY(-1px)' }} onClick={addSurgery}>{t('addAnotherSurgery')}</HoverBtn>
                 </div>
               ) : null}
               {submitted && errors.surgeries ? <p style={{ margin: '10px 0 0', fontSize: "13px", color: T.red }}>{errors.surgeries}</p> : null}
             </div>
 
             <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
-              <SectionStatus title='Allergies' description='Tell us about any allergies so we can help reduce avoidable risks during treatment.' status={form.allergies.includes('No Known Allergies') ? 'No known allergies selected' : 'Allergy details provided'} error={submitted && !!errors.allergies} />
+              <SectionStatus title={t('allergies')} description={t('tellUsAboutAnyAllergies')} status={form.allergies.includes('No Known Allergies') ? 'No known allergies selected' : 'Allergy details provided'} error={submitted && !!errors.allergies} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                 {ALLERGY_OPTIONS.map((option) => (
                   <ChipButton key={option} label={option} active={form.allergies.includes(option)} onClick={() => toggleSelection('allergies', option)} tone={option === 'No Known Allergies' ? 'warning' : 'default'} />
@@ -623,7 +630,7 @@ export default function MedicalHistoryAllergiesPage() {
               {form.allergies.filter((item) => item !== 'No Known Allergies').length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   {form.allergies.filter((item) => item !== 'No Known Allergies').map((allergy) => (
-                    <TextAreaField key={allergy} label={`${allergy} details`} placeholder='Describe the reaction, severity, or anything helpful for your physician' value={form.allergyDetails[allergy] || ''} onChange={(value) => setForm((previous) => ({ ...previous, allergyDetails: { ...previous.allergyDetails, [allergy]: value } }))} optional={allergy !== 'Other'} error={submitted && allergy === 'Other' && !form.allergyDetails.Other?.trim() ? 'Please share the details for the other allergy.' : undefined} />
+                    <TextAreaField key={allergy} label={`${allergy} details`} placeholder={t('describeTheReactionSeverityOr')} value={form.allergyDetails[allergy] || ''} onChange={(value) => setForm((previous) => ({ ...previous, allergyDetails: { ...previous.allergyDetails, [allergy]: value } }))} optional={allergy !== 'Other'} error={submitted && allergy === 'Other' && !form.allergyDetails.Other?.trim() ? 'Please share the details for the other allergy.' : undefined} />
                   ))}
                 </div>
               ) : null}
@@ -631,24 +638,24 @@ export default function MedicalHistoryAllergiesPage() {
             </div>
 
             <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
-              <SectionStatus title='Current Medications' description='Add the medicines you are currently taking so we can help prevent interactions and support accurate review.' status={form.currentMedicationsMode === 'taking' ? 'Medication list in progress' : form.currentMedicationsMode === 'none' ? 'No current medication selected' : 'Please choose one option'} error={submitted && !!errors.medications} />
+              <SectionStatus title={t('currentMedications')} description={t('addTheMedicinesYouAre')} status={form.currentMedicationsMode === 'taking' ? 'Medication list in progress' : form.currentMedicationsMode === 'none' ? 'No current medication selected' : 'Please choose one option'} error={submitted && !!errors.medications} />
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <ChipButton label="I'm Not Taking Any Medication" active={form.currentMedicationsMode === 'none'} onClick={() => setForm((previous) => ({ ...previous, currentMedicationsMode: 'none', medications: [] }))} tone='warning' />
-                <ChipButton label='I Am Taking Medication' active={form.currentMedicationsMode === 'taking'} onClick={() => setForm((previous) => ({ ...previous, currentMedicationsMode: 'taking', medications: previous.medications.length ? previous.medications : [createMedicationEntry()] }))} />
+                <ChipButton label={t('iAmTakingMedication')} active={form.currentMedicationsMode === 'taking'} onClick={() => setForm((previous) => ({ ...previous, currentMedicationsMode: 'taking', medications: previous.medications.length ? previous.medications : [createMedicationEntry()] }))} />
               </div>
               {form.currentMedicationsMode === 'taking' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {form.medications.map((entry) => (
                     <MedicationCard key={entry.id} entry={entry} onChange={(next) => setForm((previous) => ({ ...previous, medications: previous.medications.map((item) => (item.id === entry.id ? next : item)) }))} onRemove={() => setForm((previous) => ({ ...previous, medications: previous.medications.filter((item) => item.id !== entry.id) }))} canRemove={form.medications.length > 1} />
                   ))}
-                  <HoverBtn base={{ width: 'fit-content', alignSelf: 'flex-start', padding: '9px 14px', borderRadius: '999px', border: '1px solid rgba(32,181,223,0.18)', background: 'rgba(234,241,255,0.78)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer' }} on={{ background: 'rgba(234,241,255,0.96)', transform: 'translateY(-1px)' }} onClick={addMedication}>Add Another Medication</HoverBtn>
+                  <HoverBtn base={{ width: 'fit-content', alignSelf: 'flex-start', padding: '9px 14px', borderRadius: '999px', border: '1px solid rgba(32,181,223,0.18)', background: 'rgba(234,241,255,0.78)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer' }} on={{ background: 'rgba(234,241,255,0.96)', transform: 'translateY(-1px)' }} onClick={addMedication}>{t('addAnotherMedication')}</HoverBtn>
                 </div>
               ) : null}
               {submitted && errors.medications ? <p style={{ margin: '10px 0 0', fontSize: "13px", color: T.red }}>{errors.medications}</p> : null}
             </div>
 
             <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
-              <SectionStatus title='Family Medical History' description='Choose conditions that run in your family. This helps physicians understand hereditary risk factors.' status={form.familyHistory.includes('None Known') ? 'No known family history selected' : 'Family history captured'} error={submitted && !!errors.familyHistory} />
+              <SectionStatus title={t('familyMedicalHistory')} description={t('chooseConditionsThatRunIn')} status={form.familyHistory.includes('None Known') ? 'No known family history selected' : 'Family history captured'} error={submitted && !!errors.familyHistory} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {FAMILY_HISTORY_OPTIONS.map((option) => (
                   <ChipButton key={option} label={option} active={form.familyHistory.includes(option)} onClick={() => toggleSelection('familyHistory', option)} tone={option === 'None Known' ? 'warning' : 'default'} />
@@ -662,8 +669,8 @@ export default function MedicalHistoryAllergiesPage() {
                 <Ico p={ICONS.info} size={13} sw={1.75} color={T.blue} />
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Why is this important?</p>
-                <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>Your health information allows physicians to better understand your medical background, avoid medication conflicts, and provide safer, more personalized treatment recommendations.</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('whyIsThisImportant')}</p>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{t('yourHealthInformationAllowsPhysicians')}</p>
               </div>
             </div>
 
@@ -674,7 +681,7 @@ export default function MedicalHistoryAllergiesPage() {
               </button>
 
               <Link href='/auth/profile-setup/contact-information' style={{ textAlign: 'center', color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                Back
+                {t('back')}
               </Link>
             </div>
           </fieldset></form>

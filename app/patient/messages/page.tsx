@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { getApiErrorDetail } from '@/lib/api'
 
 import Image from 'next/image'
@@ -56,13 +57,14 @@ function ContactAvatar({ name, avatar, size = 44, online = false }: { name: stri
 }
 
 function ReplyPreview({ message, onClear }: { message: PortalMessage; onClear: () => void }) {
+  const t = useTranslations('patientMessages')
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.16)' }}>
       <div style={{ flex: 1, minWidth: 0, borderLeft: `3px solid ${T.blue}`, paddingLeft: '10px' }}>
         <p style={{ margin: '0 0 2px', color: T.navy, fontSize: "13px", fontWeight: 800 }}>{message.senderId === 'patient' ? 'Replying to you' : 'Replying to doctor'}</p>
         <p style={{ margin: 0, color: T.slate, fontSize: "13px", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.text || message.attachmentName || 'Message'}</p>
       </div>
-      <button type="button" aria-label="Cancel reply" onClick={onClear} style={{ width: '30px', height: '30px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", display: 'grid', placeItems: 'center', color: T.slate, cursor: 'pointer' }}>
+      <button type="button" aria-label={t('cancelReply')} onClick={onClear} style={{ width: '30px', height: '30px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", display: 'grid', placeItems: 'center', color: T.slate, cursor: 'pointer' }}>
         <Ico p={ICONS.x} size={15} sw={2} />
       </button>
     </div>
@@ -81,11 +83,12 @@ function saveBlob(blob: Blob, filename: string) {
 }
 
 function NoticeDialog({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {
+  const t = useTranslations('patientMessages')
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="message-notice-title" style={{ position: 'fixed', inset: 0, zIndex: 320, display: 'grid', placeItems: 'center', padding: '20px' }}>
-      <button type="button" aria-label="Close notice" onClick={onClose} style={{ position: 'absolute', inset: 0, border: 'none', background: "var(--surface-hover)", backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', cursor: 'default' }} />
+      <button type="button" aria-label={t('closeNotice')} onClick={onClose} style={{ position: 'absolute', inset: 0, border: 'none', background: "var(--surface-hover)", backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', cursor: 'default' }} />
       <section style={{ position: 'relative', width: '100%', maxWidth: '430px', borderRadius: '20px', border: "1px solid var(--border)", background: "var(--surface-glass)", boxShadow: Sh.float, padding: '24px' }}>
-        <button type="button" aria-label="Close" onClick={onClose} style={{ position: 'absolute', right: '14px', top: '14px', width: '36px', height: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+        <button type="button" aria-label={t('close')} onClick={onClose} style={{ position: 'absolute', right: '14px', top: '14px', width: '36px', height: '36px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
           <Ico p={ICONS.x} size={18} sw={2} />
         </button>
         <h2 id="message-notice-title" style={{ margin: '0 42px 8px 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '19px', fontWeight: 800, color: T.navy }}>{title}</h2>
@@ -106,11 +109,12 @@ function ContactDetailsDialog({
   onClose: () => void
   onViewProfile: () => void
 }) {
+  const t = useTranslations('patientMessages')
   return (
     <div className="msg-contact-details-modal" role="dialog" aria-modal="true" aria-labelledby="contact-details-title" style={{ position: 'fixed', inset: 0, zIndex: 320, placeItems: 'center', padding: '20px' }}>
-      <button type="button" aria-label="Close contact details" onClick={onClose} style={{ position: 'absolute', inset: 0, border: 'none', background: "var(--surface-hover)", backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', cursor: 'default' }} />
+      <button type="button" aria-label={t('closeContactDetails')} onClick={onClose} style={{ position: 'absolute', inset: 0, border: 'none', background: "var(--surface-hover)", backdropFilter: 'blur(7px)', WebkitBackdropFilter: 'blur(7px)', cursor: 'default' }} />
       <section style={{ position: 'relative', width: '100%', maxWidth: '420px', borderRadius: '22px', border: "1px solid var(--border)", background: "var(--surface-glass)", boxShadow: Sh.float, padding: '26px' }}>
-        <button type="button" aria-label="Close" onClick={onClose} style={{ position: 'absolute', right: '14px', top: '14px', width: '38px', height: '38px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '0 6px 18px rgba(4,53,77,0.08)' }}>
+        <button type="button" aria-label={t('close')} onClick={onClose} style={{ position: 'absolute', right: '14px', top: '14px', width: '38px', height: '38px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '0 6px 18px rgba(4,53,77,0.08)' }}>
           <Ico p={ICONS.x} size={18} sw={2} />
         </button>
         <div style={{ display: 'grid', justifyItems: 'center', textAlign: 'center', gap: '12px', padding: '18px 12px 20px', borderBottom: "1px solid var(--border)" }}>
@@ -126,12 +130,12 @@ function ContactDetailsDialog({
         <div style={{ display: 'grid', gap: '12px', paddingTop: '18px' }}>
           {profileHref ? (
             <HoverBtn onClick={onViewProfile} base={{ width: '100%', minHeight: '44px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 800, cursor: 'pointer' }} on={{ border: '1px solid rgba(32,181,223,0.3)', color: T.link }}>
-              View Doctor Profile
+              {t('viewDoctorProfile')}
             </HoverBtn>
           ) : null}
           <div style={{ borderRadius: '16px', background: 'rgba(32,181,223,0.07)', border: '1px solid rgba(32,181,223,0.13)', padding: '14px' }}>
-            <p style={{ margin: '0 0 5px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>Conversation access</p>
-            <p style={{ margin: 0, color: T.slate, fontSize: "13px", lineHeight: 1.55 }}>Only you and authorized care-team users connected to this conversation can view these messages and attachments.</p>
+            <p style={{ margin: '0 0 5px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{t('conversationAccess')}</p>
+            <p style={{ margin: 0, color: T.slate, fontSize: "13px", lineHeight: 1.55 }}>{t('onlyYouAndAuthorizedCare')}</p>
           </div>
         </div>
       </section>
@@ -152,6 +156,7 @@ function NewMessageModal({
   onClose: () => void
   onSend: (contactId: string, message: string) => Promise<void>
 }) {
+  const t = useTranslations('patientMessages')
   const [recipient, setRecipient] = useState('')
   const [message, setMessage] = useState('')
 
@@ -167,16 +172,16 @@ function NewMessageModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="New Message"
+        aria-label={t('newMessage')}
         style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '520px', background: "var(--surface-glass)", backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '28px' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>New Message</h2>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: "1px solid var(--border)", borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
+          <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{t('newMessage')}</h2>
+          <button onClick={onClose} aria-label={t('close')} style={{ background: 'none', border: "1px solid var(--border)", borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.slate2 }}>To:</label>
+          <label style={{ display: 'block', margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.slate2 }}>{t('to')}</label>
           <select
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
@@ -190,17 +195,17 @@ function NewMessageModal({
           </select>
           {contacts.length === 0 ? (
             <p style={{ margin: '8px 0 0', color: T.slate2, fontSize: "13px", lineHeight: 1.5 }}>
-              You can start a message after a doctor is connected through an appointment, consultation, or existing care conversation.
+              {t('youCanStartAMessage')}
             </p>
           ) : null}
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.slate2 }}>Message:</label>
+          <label style={{ display: 'block', margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.slate2 }}>{t('message')}</label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type your message..."
+            placeholder={t('typeYourMessage')}
             rows={5}
             style={{ width: '100%', padding: '14px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '14px', outline: 'none', resize: 'none' }}
           />
@@ -223,6 +228,7 @@ function NewMessageModal({
 // ─── Main Page Inner ───────────────────────────────────────────────────────────
 
 function MessagesPageInner() {
+  const t = useTranslations('patientMessages')
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialContactId = searchParams.get('contactId')
@@ -444,16 +450,16 @@ function MessagesPageInner() {
 
   return (
     <PatientPortalShell
-      eyebrow="Patient Platform"
-      title="Messages"
-      description="Stay connected with your physicians and care team."
+      eyebrow={t('patientPlatform')}
+      title={t('messages')}
+      description={t('stayConnectedWithYourPhysicians')}
       headerActions={
         <HoverBtn
           onClick={() => setIsComposing(true)}
           base={{ minHeight: '44px', padding: '0 18px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 16px rgba(32,181,223,0.3)', whiteSpace: 'nowrap' }}
           on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.34)' }}
         >
-          + New Message
+          {t('newMessage2')}
         </HoverBtn>
       }
     >
@@ -606,7 +612,7 @@ function MessagesPageInner() {
               </span>
               <input
                 type="search"
-                placeholder="Search names or messages..."
+                placeholder={t('searchNamesOrMessages')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{ width: '100%', height: '40px', borderRadius: '11px', border: "1px solid var(--border)", padding: '0 12px 0 38px', fontSize: '13.5px', color: T.navy, background: "var(--surface)", outline: 'none' }}
@@ -640,7 +646,7 @@ function MessagesPageInner() {
           <div className="msg-list-scroll">
             {loading ? (
               <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>Loading conversations...</p>
+                <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>{t('loadingConversations')}</p>
               </div>
             ) : filteredConversations.length === 0 ? (
               <div style={{ padding: '32px 20px', textAlign: 'center' }}>
@@ -694,10 +700,10 @@ function MessagesPageInner() {
               <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 700 }}>Page {conversationMeta.page}</span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button type="button" disabled={!conversationMeta.hasPrevious || loading} onClick={() => setConversationPage((current) => Math.max(1, current - 1))} style={{ minHeight: '32px', padding: '0 10px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: conversationMeta.hasPrevious && !loading ? 'pointer' : 'not-allowed', opacity: conversationMeta.hasPrevious && !loading ? 1 : 0.48 }}>
-                  Prev
+                  {t('prev')}
                 </button>
                 <button type="button" disabled={!conversationMeta.hasNext || loading} onClick={() => setConversationPage((current) => current + 1)} style={{ minHeight: '32px', padding: '0 10px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: conversationMeta.hasNext && !loading ? 'pointer' : 'not-allowed', opacity: conversationMeta.hasNext && !loading ? 1 : 0.48 }}>
-                  Next
+                  {t('next')}
                 </button>
               </div>
             </div>
@@ -740,7 +746,7 @@ function MessagesPageInner() {
                   base={{ marginLeft: 'auto', minHeight: '38px', padding: '0 12px', borderRadius: '11px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
                   on={{ border: '1px solid rgba(32,181,223,0.3)', color: T.link, transform: 'translateY(-1px)' }}
                 >
-                  Details
+                  {t('details')}
                 </HoverBtn>
               </div>
 
@@ -810,7 +816,7 @@ function MessagesPageInner() {
                             </div>
                           </div>
                           <button type="button" onClick={() => handleDownloadAttachment(msg)} style={{ minHeight: '34px', borderRadius: '10px', border: '1px solid rgba(32,181,223,0.18)', background: "var(--surface)", color: T.link, fontSize: "13px", fontWeight: 800, cursor: 'pointer' }}>
-                            Download
+                            {t('download')}
                           </button>
                         </div>
                       )}
@@ -818,7 +824,7 @@ function MessagesPageInner() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', padding: '0 4px' }}>
                         <span style={{ fontSize: "13px", color: T.slate2 }}>{msg.timestamp}</span>
                         <button type="button" onClick={() => setReplyToMessage(msg)} style={{ border: 'none', background: 'transparent', color: T.link, fontSize: "13px", fontWeight: 800, cursor: 'pointer', padding: '2px 4px' }}>
-                          Reply
+                          {t('reply')}
                         </button>
                         {isPatient && msg.isRead && (
                           <Ico p={ICONS.check} size={12} sw={2.5} color={T.blue} />
@@ -836,8 +842,8 @@ function MessagesPageInner() {
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
                   <button
                     type="button"
-                    aria-label="Add attachment"
-                    title="Add attachment"
+                    aria-label={t('addAttachment')}
+                    title={t('addAttachment')}
                     onClick={() => fileInputRef.current?.click()}
                     style={{ width: '48px', height: '48px', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
                   >
@@ -853,7 +859,7 @@ function MessagesPageInner() {
 
                   <textarea
                     className="msg-composer-input"
-                    placeholder="Type your message..."
+                    placeholder={t('typeYourMessage')}
                     value={newMessageText}
                     onChange={(e) => setNewMessageText(e.target.value)}
                     onKeyDown={(e) => {
@@ -866,7 +872,7 @@ function MessagesPageInner() {
 
                   <HoverBtn
                     onClick={handleSendMessage}
-                    title="Send message"
+                    title={t('sendMessage')}
                     base={{ width: '48px', height: '48px', borderRadius: '14px', border: 'none', background: newMessageText.trim() || selectedAttachment ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", color: newMessageText.trim() || selectedAttachment ? '#fff' : T.slate2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: newMessageText.trim() || selectedAttachment ? 'pointer' : 'not-allowed', flexShrink: 0, boxShadow: newMessageText.trim() || selectedAttachment ? '0 4px 12px rgba(32,181,223,0.3)' : 'none' }}
                     on={newMessageText.trim() || selectedAttachment ? { transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(52,140,234,0.35)' } : {}}
                   >
@@ -877,7 +883,7 @@ function MessagesPageInner() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', padding: '9px 10px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.16)' }}>
                     <Ico p={ICONS.paperclip} size={15} sw={1.8} color={T.blue} />
                     <span style={{ flex: 1, minWidth: 0, color: T.navy, fontSize: "13px", fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedAttachment.name}</span>
-                    <button type="button" aria-label="Remove attachment" onClick={() => { setSelectedAttachment(null); if (fileInputRef.current) fileInputRef.current.value = '' }} style={{ width: '28px', height: '28px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+                    <button type="button" aria-label={t('removeAttachment')} onClick={() => { setSelectedAttachment(null); if (fileInputRef.current) fileInputRef.current.value = '' }} style={{ width: '28px', height: '28px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
                       <Ico p={ICONS.x} size={14} sw={2} />
                     </button>
                   </div>
@@ -889,16 +895,16 @@ function MessagesPageInner() {
               <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(32,181,223,0.1)', border: '1px solid rgba(32,181,223,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', color: T.link }}>
                 <Ico p={ICONS.ema} size={28} sw={1.5} />
               </div>
-              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 700, color: T.navy }}>Your Secure Inbox</h3>
+              <h3 style={{ margin: '0 0 10px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 700, color: T.navy }}>{t('yourSecureInbox')}</h3>
               <p style={{ margin: '0 0 24px', fontSize: '14px', color: T.slate, maxWidth: '300px', lineHeight: 1.6 }}>
-                Select a conversation from the list to view your messages or start a new conversation.
+                {t('selectAConversationFromThe')}
               </p>
               <HoverBtn
                 onClick={() => setIsComposing(true)}
                 base={{ minHeight: '44px', padding: '0 20px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 5px 16px rgba(32,181,223,0.28)' }}
                 on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.32)' }}
               >
-                + Start a Conversation
+                {t('startAConversation')}
               </HoverBtn>
             </div>
           )}
@@ -907,7 +913,7 @@ function MessagesPageInner() {
         {detailsOpen && activeConversation ? (
           <aside className="msg-details-panel">
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-              <button type="button" aria-label="Close contact details" onClick={() => setDetailsOpen(false)} style={{ width: '36px', height: '36px', borderRadius: '11px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '0 6px 18px rgba(4,53,77,0.08)' }}>
+              <button type="button" aria-label={t('closeContactDetails')} onClick={() => setDetailsOpen(false)} style={{ width: '36px', height: '36px', borderRadius: '11px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '0 6px 18px rgba(4,53,77,0.08)' }}>
                 <Ico p={ICONS.x} size={17} sw={2} />
               </button>
             </div>
@@ -924,12 +930,12 @@ function MessagesPageInner() {
             <div style={{ display: 'grid', gap: '12px', paddingTop: '16px' }}>
               {activeContactProfileHref ? (
                 <HoverBtn onClick={() => router.push(activeContactProfileHref)} base={{ width: '100%', minHeight: '42px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '13px', fontWeight: 800, cursor: 'pointer' }} on={{ border: '1px solid rgba(32,181,223,0.3)', color: T.link }}>
-                  View Doctor Profile
+                  {t('viewDoctorProfile')}
                 </HoverBtn>
               ) : null}
               <div style={{ borderRadius: '14px', background: 'rgba(32,181,223,0.07)', border: '1px solid rgba(32,181,223,0.13)', padding: '12px' }}>
-                <p style={{ margin: '0 0 4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>Conversation access</p>
-                <p style={{ margin: 0, color: T.slate, fontSize: "13px", lineHeight: 1.5 }}>Only you and authorized care-team users connected to this conversation can view these messages and attachments.</p>
+                <p style={{ margin: '0 0 4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{t('conversationAccess')}</p>
+                <p style={{ margin: 0, color: T.slate, fontSize: "13px", lineHeight: 1.5 }}>{t('onlyYouAndAuthorizedCare')}</p>
               </div>
             </div>
           </aside>

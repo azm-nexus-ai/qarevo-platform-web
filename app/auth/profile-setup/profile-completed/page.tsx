@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePatientResource } from '@/lib/use-patient-resource'
 import { onboardingPath, type OnboardingStatus } from '@/lib/patient-onboarding'
@@ -48,6 +49,7 @@ function CompletionVisual() {
 }
 
 function LeftPanel() {
+  const t = useTranslations('onboarding.completed')
   return (
     <div
       style={{
@@ -78,11 +80,11 @@ function LeftPanel() {
         <CompletionVisual />
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
-            Onboarding complete.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your profile is ready.</span>
+            {t('onboardingComplete')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('yourProfileIsReady')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            You’ve finished setting up your patient profile. You can now explore the development platform.
+            {t('youVeFinishedSettingUp')}
           </p>
         </div>
       </div>
@@ -109,10 +111,11 @@ function LeftPanel() {
 }
 
 export default function ProfileCompletedPage() {
+  const t = useTranslations('onboarding.completed')
   const progress = usePatientResource<OnboardingStatus>('/api/v1/patient/settings/onboarding')
-  if (progress.loading) return <main style={{ padding: 36 }}><p role='status'>Checking your saved profile…</p></main>
-  if (progress.error) return <main style={{ padding: 36 }}><h1>We couldn’t confirm your saved profile</h1><p role='alert'>Please try again before continuing.</p><button onClick={progress.retry}>Try again</button></main>
-  if (!progress.data?.complete) return <main style={{ padding: 36 }}><h1>Your profile still needs a saved step</h1><Link href={onboardingPath(progress.data?.next_step || 'personal')}>Continue profile</Link></main>
+  if (progress.loading) return <main style={{ padding: 36 }}><p role='status'>{t('checkingYourSavedProfile')}</p></main>
+  if (progress.error) return <main style={{ padding: 36 }}><h1>{t('weCouldnTConfirmYour')}</h1><p role='alert'>{t('pleaseTryAgainBeforeContinuing')}</p><button onClick={progress.retry}>{t('tryAgain')}</button></main>
+  if (!progress.data?.complete) return <main style={{ padding: 36 }}><h1>{t('yourProfileStillNeedsA')}</h1><Link href={onboardingPath(progress.data?.next_step || 'personal')}>{t('continueProfile')}</Link></main>
 
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
@@ -134,12 +137,12 @@ export default function ProfileCompletedPage() {
           <section className='pc-card' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(34px) saturate(200%)', WebkitBackdropFilter: 'blur(34px) saturate(200%)', borderRadius: '24px', border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)', padding: '36px 32px' }}>
             <div style={{ padding: '12px 14px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 6 of 6</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('profileSetup')}</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('step6Of6')}</p>
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>100% Complete</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Welcome to Qarevo Health</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('t100Complete')}</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('welcomeToQarevoHealth')}</p>
               </div>
             </div>
 
@@ -147,7 +150,7 @@ export default function ProfileCompletedPage() {
               <div style={{ width: '64px', height: '64px', borderRadius: '18px', margin: '0 auto 14px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 4px 16px rgba(32,181,223,0.35), inset 0 1px 0 rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Ico p={ICONS.check} size={26} sw={1.8} color='#fff' />
               </div>
-              <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>Profile Completed</h1>
+              <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>{t('profileCompleted')}</h1>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>
                 Your profile information has been saved. This development environment is for synthetic testing; legal approval and clinical launch checks remain outstanding.
               </p>
@@ -174,9 +177,9 @@ export default function ProfileCompletedPage() {
                 <Ico p={ICONS.info} size={13} sw={1.75} color={T.blue} />
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>What happens next?</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('whatHappensNext')}</p>
                 <p style={{ margin: 0, fontSize: "13px", color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>
-                  Your profile is now ready. Continue to your dashboard to begin exploring your care experience.
+                  {t('yourProfileIsNowReady')}
                 </p>
               </div>
             </div>
@@ -187,7 +190,7 @@ export default function ProfileCompletedPage() {
                 onClick={() => markOnboardingCompleted()}
                 style={{ width: '100%', minHeight: '48px', borderRadius: '13px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)' }}
               >
-                Continue to Dashboard
+                {t('continueToDashboard')}
                 <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
               </Link>
             </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Suspense, useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -149,6 +150,7 @@ function SecurityOrb() {
 }
 
 function LeftPanel() {
+  const t = useTranslations('auth.resetPassword')
   return (
     <div
       style={{
@@ -246,8 +248,8 @@ function LeftPanel() {
               margin: '0 0 10px',
             }}
           >
-            Security first.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your records stay protected.</span>
+            {t('securityFirst')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('yourRecordsStayProtected')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Protecting your medical information is Qarevo Health&apos;s highest priority. Create a strong password to safely restore account access.
@@ -369,6 +371,7 @@ function PasswordField({
   autoComplete: string
   disabled?: boolean
 }) {
+  const t = useTranslations('auth.resetPassword')
   const [focused, setFocused] = useState(false)
 
   const bdr = error
@@ -390,7 +393,7 @@ function PasswordField({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label} <span aria-hidden="true">(Required)</span>
+        {label} <span aria-hidden="true">{t('required')}</span>
       </label>
       <div style={{ position: 'relative' }}>
         <span
@@ -491,13 +494,14 @@ function RuleItem({ met, label }: { met: boolean; label: string }) {
 }
 
 function PasswordGuide({ password, confirmPassword }: { password: string; confirmPassword: string }) {
+  const t = useTranslations('auth.resetPassword')
   const { rules, score, label, color } = getStrength(password)
   const match = password.length > 0 && confirmPassword.length > 0 && password === confirmPassword
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px 14px 12px', borderRadius: '12px', background: "var(--surface-hover)", border: `1px solid ${T.borderFaint}` }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-        <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate, letterSpacing: '-0.01em' }}>Password Strength</span>
+        <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate, letterSpacing: '-0.01em' }}>{t('passwordStrength')}</span>
         <span style={{ fontSize: "13px", fontWeight: 700, color, letterSpacing: '-0.005em' }}>{label}</span>
       </div>
 
@@ -517,11 +521,11 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
       </div>
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-        <RuleItem met={rules.min8} label='At least 8 characters' />
-        <RuleItem met={rules.upper} label='One uppercase letter' />
-        <RuleItem met={rules.lower} label='One lowercase letter' />
-        <RuleItem met={rules.number} label='One number' />
-        <RuleItem met={rules.special} label='One special character' />
+        <RuleItem met={rules.min8} label={t('atLeast8Characters')} />
+        <RuleItem met={rules.upper} label={t('oneUppercaseLetter')} />
+        <RuleItem met={rules.lower} label={t('oneLowercaseLetter')} />
+        <RuleItem met={rules.number} label={t('oneNumber')} />
+        <RuleItem met={rules.special} label={t('oneSpecialCharacter')} />
       </div>
 
       {confirmPassword.length > 0 ? (
@@ -534,6 +538,7 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
 }
 
 function ResetPasswordPageContent() {
+  const t = useTranslations('auth.resetPassword')
   const captureAction = usePortalAction()
   const portal = recoveryPortal(usePathname())
   const [token, setToken] = useState<string | null>(null)
@@ -685,7 +690,7 @@ function ResetPasswordPageContent() {
             }}
           >
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back to Sign In
+            {t('backToSignIn')}
           </Link>
 
           <section
@@ -703,7 +708,7 @@ function ResetPasswordPageContent() {
           >
             {!updated ? (
               <>
-                {token === null ? <p role='status'>Opening your recovery link…</p> : !token ? (
+                {token === null ? <p role='status'>{t('openingYourRecoveryLink')}</p> : !token ? (
                   <div style={{ textAlign: 'center', padding: '20px 0' }}>
                     <div
                       style={{
@@ -731,7 +736,7 @@ function ResetPasswordPageContent() {
                         margin: '0 0 8px',
                       }}
                     >
-                      Invalid Reset Link
+                      {t('invalidResetLink')}
                     </h1>
                     <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
                       The password reset link is missing or invalid. Reopen the full link from your newest reset email. Refreshing this page removes the link from memory; request a new email only if the original link has expired.
@@ -758,7 +763,7 @@ function ResetPasswordPageContent() {
                         textDecoration: 'none',
                       }}
                     >
-                      Request New Reset Link
+                      {t('requestNewResetLink')}
                       <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
                     </Link>
                   </div>
@@ -780,7 +785,7 @@ function ResetPasswordPageContent() {
                           {portal.resetTitle}
                         </h1>
                         <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: 0, letterSpacing: '-0.01em' }}>
-                          Enter a secure new password for your Qarevo Health account.
+                          {t('enterASecureNewPassword')}
                         </p>
                       </div>
                       <div
@@ -808,7 +813,7 @@ function ResetPasswordPageContent() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <PasswordField
                           id={newId}
-                          label='New Password'
+                          label={t('newPassword')}
                           value={newPassword}
                           onChange={setNewPassword}
                           show={showNew}
@@ -821,7 +826,7 @@ function ResetPasswordPageContent() {
 
                         <PasswordField
                           id={confirmId}
-                          label='Confirm New Password'
+                          label={t('confirmNewPassword')}
                           value={confirmPassword}
                           onChange={setConfirmPassword}
                           show={showConfirm}
@@ -876,11 +881,11 @@ function ResetPasswordPageContent() {
                                   display: 'inline-block',
                                 }}
                               />
-                              Updating password…
+                              {t('updatingPassword')}
                             </>
                           ) : (
                             <>
-                              Update Password
+                              {t('updatePassword')}
                               <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
                             </>
                           )}
@@ -888,10 +893,10 @@ function ResetPasswordPageContent() {
 
                         <div style={{ textAlign: 'center', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           <Link href={portal.signIn} style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                            Back to Sign In
+                            {t('backToSignIn')}
                           </Link>
                           <Link href='/' style={{ color: T.link, fontSize: '13.5px', fontWeight: 700, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                            Return to Home
+                            {t('returnToHome')}
                           </Link>
                         </div>
                       </div>
@@ -929,11 +934,11 @@ function ResetPasswordPageContent() {
                     margin: '0 0 8px',
                   }}
                 >
-                  Password Updated Successfully
+                  {t('passwordUpdatedSuccessfully')}
                 </h1>
 
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
-                  Your password has been successfully updated. Your previous sessions have been signed out and the password-attempt lockout has been cleared. Continue to your sign-in portal with your new password.
+                  {t('yourPasswordHasBeenSuccessfully')}
                 </p>
 
                 <Link
@@ -958,7 +963,7 @@ function ResetPasswordPageContent() {
                     textDecoration: 'none',
                   }}
                 >
-                  Continue to Sign In
+                  {t('continueToSignIn')}
                   <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
                 </Link>
               </div>
@@ -984,11 +989,11 @@ function ResetPasswordPageContent() {
           <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
             Review the status of our{' '}
             <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
-              Terms
+              {t('terms')}
             </Link>{' '}
             and{' '}
             <Link href='/privacy' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
-              Privacy Policy
+              {t('privacyPolicy')}
             </Link>
           </p>
         </div>

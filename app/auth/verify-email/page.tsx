@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -34,7 +35,7 @@ function useCountdown(initial: number) {
 // ─── Envelope illustration ─────────────────────────────────────────────────────
 function EnvelopeScene({ verified }: { verified: boolean }) {
   const [phase, setPhase] = useState(0)
-  useEffect(() => { const t = setInterval(() => setPhase(p => (p + 1) % 4), 2400); return () => clearInterval(t) }, [])
+  useEffect(() => { const timer = setInterval(() => setPhase(p => (p + 1) % 4), 2400); return () => clearInterval(timer) }, [])
   const glow = phase % 2 === 0
 
   return (
@@ -167,6 +168,7 @@ function EnvelopeScene({ verified }: { verified: boolean }) {
 
 // ─── OTP input ─────────────────────────────────────────────────────────────────
 function OtpInput({ email, onStart, onComplete }: { email: string; onStart: () => void; onComplete: () => void }) {
+  const t = useTranslations('auth.verifyEmail')
   const captureAction = usePortalAction()
   const [values, setValues] = useState(['', '', '', '', '', ''])
   const refs = useRef<(HTMLInputElement | null)[]>([])
@@ -271,12 +273,12 @@ function OtpInput({ email, onStart, onComplete }: { email: string; onStart: () =
       {success && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
           <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
-          <span style={{ fontSize: "13px", color: T.teal, fontWeight: 600, letterSpacing: '-0.005em' }}>Code verified — activating your account…</span>
+          <span style={{ fontSize: "13px", color: T.teal, fontWeight: 600, letterSpacing: '-0.005em' }}>{t('codeVerifiedActivatingYourAccount')}</span>
         </div>
       )}
       {loading && (
         <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, margin: '8px 0 0', letterSpacing: '-0.005em' }}>
-          Verifying code...
+          {t('verifyingCode')}
         </p>
       )}
     </div>
@@ -345,6 +347,7 @@ function TipRow({ icon, title, body }: { icon: string | readonly string[]; title
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function VerifyEmailPage() {
+  const t = useTranslations('auth.verifyEmail')
   const router = useRouter()
   const captureAction = usePortalAction()
   const { secs, done: canResend, restart } = useCountdown(60)
@@ -444,7 +447,7 @@ export default function VerifyEmailPage() {
             {/* Headline */}
             <div style={{ textAlign: 'center', marginBottom: '24px' }}>
               <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
-                Verify Your Email Address
+                {t('verifyYourEmailAddress')}
               </h1>
               <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.72, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
                 {"A verification email has been sent to"}
@@ -457,21 +460,21 @@ export default function VerifyEmailPage() {
 
             {!email && (
               <div role="alert" style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
-                We could not find the email from your sign-up session. Please return to sign up and enter your email again.
+                {t('weCouldNotFindThe')}
               </div>
             )}
 
             {/* Tab switcher: link vs code */}
             <div style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '13px', background: "var(--surface-hover)", marginBottom: '24px' }}>
-              {(['link', 'code'] as const).map(t => (
-                <button key={t} className="tab-btn" onClick={() => setTab(t)} style={{
+              {(['link', 'code'] as const).map(option => (
+                <button key={option} className="tab-btn" onClick={() => setTab(option)} style={{
                   flex: 1, padding: '9px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                  background: tab === t ? "var(--surface)" : 'transparent',
-                  boxShadow: tab === t ? '0 1px 6px rgba(4,53,77,0.1), inset 0 1px 0 rgba(255,255,255,0.9)' : 'none',
+                  background: tab === option ? "var(--surface)" : 'transparent',
+                  boxShadow: tab === option ? '0 1px 6px rgba(4,53,77,0.1), inset 0 1px 0 rgba(255,255,255,0.9)' : 'none',
                   fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
-                  color: tab === t ? T.navy : T.slate2, letterSpacing: '-0.01em',
+                  color: tab === option ? T.navy : T.slate2, letterSpacing: '-0.01em',
                 }}>
-                  {t === 'link' ? 'Verify via link' : 'Enter code manually'}
+                  {option === 'link' ? t('verifyViaLink') : t('enterCodeManually')}
                 </button>
               ))}
             </div>
@@ -480,7 +483,7 @@ export default function VerifyEmailPage() {
             {tab === 'link' && (
               <div>
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, lineHeight: 1.68, margin: '0 0 20px', letterSpacing: '-0.01em' }}>
-                  Click the secure verification link in your email to activate your Qarevo Health account. Your medical data remains protected until verification is complete.
+                  {t('clickTheSecureVerificationLink')}
                 </p>
 
                 {/* Open Email App */}
@@ -495,7 +498,7 @@ export default function VerifyEmailPage() {
                   <svg width="16" height="14" viewBox="0 0 20 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="1" y="1" width="18" height="16" rx="3"/><path d="M1 5l9 7 9-7"/>
                   </svg>
-                  Open Email App
+                  {t('openEmailApp')}
                   <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
                 </button>
 
@@ -508,7 +511,7 @@ export default function VerifyEmailPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}>
                   <Ico p={ICONS.lock} size={13} sw={1.75} color={T.blue} />
-                  Enter Verification Code
+                  {t('enterVerificationCode')}
                 </button>
               </div>
             )}
@@ -517,7 +520,7 @@ export default function VerifyEmailPage() {
             {tab === 'code' && (
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, lineHeight: 1.65, margin: '0 0 20px', letterSpacing: '-0.01em' }}>
-                  Enter the 6-digit code from your verification email.
+                  {t('enterThe6DigitCode')}
                 </p>
                 {email ? (
                   <OtpInput email={email} onStart={() => setVerificationEmail(email)} onComplete={() => setVerified(true)} />
@@ -530,7 +533,7 @@ export default function VerifyEmailPage() {
                     letterSpacing: '-0.015em', cursor: 'pointer', textDecoration: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                   }}>
-                    Return to Sign Up
+                    {t('returnToSignUp')}
                   </Link>
                 )}
               </div>
@@ -540,7 +543,7 @@ export default function VerifyEmailPage() {
             {resendOk && (
               <div style={{ padding: '10px 14px', borderRadius: '10px', background: T.greenLight, border: `1px solid rgba(9,173,112,0.25)`, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', animation: 'slideToast 0.28s ease both', overflow: 'hidden' }}>
                 <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
-                <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>Verification email requested. Check your inbox and spam folder.</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>{t('verificationEmailRequestedCheckYour')}</span>
               </div>
             )}
 
@@ -563,7 +566,7 @@ export default function VerifyEmailPage() {
               }}>
                 {resendPending ? 'Requesting verification email…' : !canResend
                   ? <><span style={{ width: '11px', height: '11px', border: `1.5px solid ${T.slate2}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block', flexShrink: 0 }} />Resend in {secs}s</>
-                  : <><Ico p={ICONS.arrowFwd} size={12} sw={2} />Resend Email</>}
+                  : <><Ico p={ICONS.arrowFwd} size={12} sw={2} />{t('resendEmail')}</>}
               </button>
               <Link href="/auth/sign-up" style={{
                 flex: 1, padding: '10px 14px', borderRadius: '11px',
@@ -573,7 +576,7 @@ export default function VerifyEmailPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}>
                 <Ico p={ICONS.ema} size={12} sw={1.75} />
-                Change Email
+                {t('changeEmail')}
               </Link>
             </div>
 
@@ -581,7 +584,7 @@ export default function VerifyEmailPage() {
 
           {/* Help accordion */}
           <div style={{ marginBottom: '18px' }}>
-            <p style={{ fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 9px 4px' }}>Need help?</p>
+            <p style={{ fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 9px 4px' }}>{t('needHelp')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <TipRow
                 icon={ICONS.search}
@@ -640,14 +643,14 @@ export default function VerifyEmailPage() {
             {/* Confirmed badge */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 14px', borderRadius: '100px', background: T.greenLight, border: '1px solid rgba(9,173,112,0.25)', marginBottom: '18px', animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both' }}>
               <Ico p={ICONS.check} size={10} sw={3} color={T.green} />
-              <span style={{ fontSize: "13px", fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>Email Verified</span>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>{t('emailVerified')}</span>
             </div>
 
             <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 10px' }}>
-              Your account is now active
+              {t('yourAccountIsNowActive')}
             </h1>
             <p style={{ fontSize: '14.5px', color: T.slate, lineHeight: 1.72, margin: '0 0 28px', letterSpacing: '-0.01em' }}>
-              Welcome to Qarevo Health. Your patient portal is secured and fully activated. All medical records are protected with end-to-end encryption.
+              {t('welcomeToQarevoHealthYour')}
             </p>
 
             {/* CTA */}
@@ -659,7 +662,7 @@ export default function VerifyEmailPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               boxShadow: '0 4px 14px rgba(9,173,112,0.38), inset 0 1px 0 rgba(255,255,255,0.16)',
             }}>
-              Continue
+              {t('continue')}
               <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
             </button>
 
@@ -736,11 +739,11 @@ export default function VerifyEmailPage() {
 
       {/* Footer */}
       <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '22px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-        <Link href="/terms"   style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
+        <Link href="/terms"   style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('terms')}</Link>
         {' · '}
-        <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
+        <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('privacyPolicy')}</Link>
         {' · '}
-        <Link href="/support" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Support</Link>
+        <Link href="/support" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('support')}</Link>
       </p>
 
       {/* Email modal */}
