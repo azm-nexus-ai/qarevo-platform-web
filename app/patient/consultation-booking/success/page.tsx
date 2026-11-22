@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -13,6 +14,7 @@ type SavedAppointment = {
 }
 
 function SavedBooking({ id }: { id: string }) {
+  const t = useTranslations('bookingSuccess')
   const [appointment, setAppointment] = useState<SavedAppointment | null>(null)
   const [loading, setLoading] = useState(!!id)
   const [error, setError] = useState('')
@@ -45,32 +47,32 @@ function SavedBooking({ id }: { id: string }) {
     const anchor = document.createElement('a'); anchor.href=url; anchor.download='qarevo-appointment.ics'; anchor.click()
     setTimeout(()=>URL.revokeObjectURL(url),0)
   }
-  return <PatientPortalShell eyebrow='Consultation booking' title={title} description='Your saved appointment is the source of truth. Review its details and prepare for your consultation.'>
+  return <PatientPortalShell eyebrow={t('consultationBooking')} title={title} description={t('yourSavedAppointmentIsThe')}>
     <section aria-busy={loading} className='rounded-3xl border border-theme bg-surface p-5 md:p-8'>
-      {loading && <p role='status'>Checking your saved appointment…</p>}
-      {!loading && !id && <p role='alert'>No saved appointment was selected. Open your appointments list to check whether your booking was completed.</p>}
-      {error && <div role='alert'><p>{error}</p><button className='mt-4 min-h-11 rounded-xl border border-theme px-4 text-link' onClick={()=>{setError(''); setAppointment(null); setLoading(true); setRevision(value=>value+1)}}>Retry loading booking</button></div>}
+      {loading && <p role='status'>{t('checkingYourSavedAppointment')}</p>}
+      {!loading && !id && <p role='alert'>{t('noSavedAppointmentWasSelected')}</p>}
+      {error && <div role='alert'><p>{error}</p><button className='mt-4 min-h-11 rounded-xl border border-theme px-4 text-link' onClick={()=>{setError(''); setAppointment(null); setLoading(true); setRevision(value=>value+1)}}>{t('retryLoadingBooking')}</button></div>}
       {appointment && <>
         <p className='text-sm font-semibold text-muted'>Saved status: {appointment.status?.replaceAll('_',' ') || 'Unavailable'}</p>
         <h2 className='mt-3 text-2xl font-semibold tracking-tight'>{appointment.provider_name || 'Assigned clinician'}</h2>
         {appointment.specialty && <p className='mt-2 text-muted'>{appointment.specialty}</p>}
         <dl className='my-6 grid gap-5 sm:grid-cols-2'>
-          <div><dt className='text-sm text-muted'>Starts</dt><dd className='mt-1 font-medium'>{formatDate(appointment.start_at)}</dd></div>
-          <div><dt className='text-sm text-muted'>Ends</dt><dd className='mt-1 font-medium'>{formatDate(appointment.end_at)}</dd></div>
-          <div><dt className='text-sm text-muted'>Time zone</dt><dd className='mt-1'>{zone}</dd></div>
-          <div><dt className='text-sm text-muted'>Appointment ID</dt><dd className='mt-1 break-all'>{appointment.id}</dd></div>
+          <div><dt className='text-sm text-muted'>{t('starts')}</dt><dd className='mt-1 font-medium'>{formatDate(appointment.start_at)}</dd></div>
+          <div><dt className='text-sm text-muted'>{t('ends')}</dt><dd className='mt-1 font-medium'>{formatDate(appointment.end_at)}</dd></div>
+          <div><dt className='text-sm text-muted'>{t('timeZone')}</dt><dd className='mt-1'>{zone}</dd></div>
+          <div><dt className='text-sm text-muted'>{t('appointmentId')}</dt><dd className='mt-1 break-all'>{appointment.id}</dd></div>
         </dl>
-        {confirmed && <><p className='max-w-2xl text-muted'>Your appointment is saved and available in your appointments list. Keep identification, medication details and any questions ready. Check your camera and microphone before joining.</p>
+        {confirmed && <><p className='max-w-2xl text-muted'>{t('yourAppointmentIsSavedAnd')}</p>
           <div className='mt-5 flex flex-wrap gap-3'>
-            <Link className='inline-flex min-h-11 items-center rounded-xl border border-theme px-4 text-link' href={`/patient/appointment-details?appointmentId=${encodeURIComponent(appointment.id)}`}>View appointment details</Link>
-            <button className='min-h-11 rounded-xl border border-theme px-4 text-link' onClick={downloadCalendar}>Download calendar event</button>
-            <Link className='inline-flex min-h-11 items-center rounded-xl border border-theme px-4 text-link' href='/patient/video-consultation/device-check'>Check camera and microphone</Link>
+            <Link className='inline-flex min-h-11 items-center rounded-xl border border-theme px-4 text-link' href={`/patient/appointment-details?appointmentId=${encodeURIComponent(appointment.id)}`}>{t('viewAppointmentDetails')}</Link>
+            <button className='min-h-11 rounded-xl border border-theme px-4 text-link' onClick={downloadCalendar}>{t('downloadCalendarEvent')}</button>
+            <Link className='inline-flex min-h-11 items-center rounded-xl border border-theme px-4 text-link' href='/patient/video-consultation/device-check'>{t('checkCameraAndMicrophone')}</Link>
           </div>
         </>}
       </>}
-      <nav aria-label='Booking navigation' className='mt-8 flex flex-wrap gap-4 border-t border-theme pt-6'>
-        <Link className='inline-flex min-h-11 items-center text-link' href={PATIENT_ROUTES.appointments}>View my appointments</Link>
-        <Link className='inline-flex min-h-11 items-center text-link' href={PATIENT_ROUTES.dashboard}>Back to dashboard</Link>
+      <nav aria-label={t('bookingNavigation')} className='mt-8 flex flex-wrap gap-4 border-t border-theme pt-6'>
+        <Link className='inline-flex min-h-11 items-center text-link' href={PATIENT_ROUTES.appointments}>{t('viewMyAppointments')}</Link>
+        <Link className='inline-flex min-h-11 items-center text-link' href={PATIENT_ROUTES.dashboard}>{t('backToDashboard')}</Link>
       </nav>
     </section>
   </PatientPortalShell>
@@ -84,5 +86,6 @@ function BookingConfirmation() {
 }
 
 export default function SuccessPage() {
-  return <Suspense fallback={<p role='status'>Opening your booking…</p>}><BookingConfirmation /></Suspense>
+  const t = useTranslations('bookingSuccess')
+  return <Suspense fallback={<p role='status'>{t('openingYourBooking')}</p>}><BookingConfirmation /></Suspense>
 }

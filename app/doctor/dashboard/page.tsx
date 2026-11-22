@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 import '@/components/doctor/doctor-clinical.css'
 
 import { useEffect, useState } from 'react'
@@ -155,6 +156,7 @@ function ActivityCard({ title, items, type, onNavigate }: { title: string; items
 }
 
 function ClinicalEpisodeCard({ episodes, onNavigate }: { episodes: DoctorEpisodeSummary[]; onNavigate: (href: string) => void }) {
+  const t = useTranslations('doctorDashboard')
   return (
     <div style={{
       background: "var(--surface-glass)",
@@ -167,16 +169,16 @@ function ClinicalEpisodeCard({ episodes, onNavigate }: { episodes: DoctorEpisode
     }}>
       <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Clinical Workflow Episodes</h3>
-          <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate2 }}>CWS intake and AI draft status for assigned patients</p>
+          <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{t('clinicalWorkflowEpisodes')}</h3>
+          <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate2 }}>{t('cwsIntakeAndAiDraft')}</p>
         </div>
         <button type="button" onClick={() => onNavigate('/doctor/workspace')} style={{ border: 'none', background: 'transparent', color: T.link, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
-          Open Workspace →
+          {t('openWorkspace')}
         </button>
       </div>
       <div style={{ padding: '16px 24px 24px' }}>
         {episodes.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: T.slate2, fontSize: '13px' }}>No assigned clinical workflow episodes</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: T.slate2, fontSize: '13px' }}>{t('noAssignedClinicalWorkflowEpisodes')}</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {episodes.map((episode) => (
@@ -219,6 +221,7 @@ function ClinicalEpisodeCard({ episodes, onNavigate }: { episodes: DoctorEpisode
 }
 
 export default function DoctorDashboard() {
+  const t = useTranslations('doctorDashboard')
   const router = useRouter()
   const [dashboardData, setDashboardData] = useState<DoctorDashboardResponse | null>(null)
   const [episodeData, setEpisodeData] = useState<DoctorEpisodeListResponse | null>(null)
@@ -268,7 +271,7 @@ export default function DoctorDashboard() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '280px', color: T.slate2 }}>
-        Loading doctor dashboard...
+        {t('loadingDoctorDashboard')}
       </div>
     )
   }
@@ -288,15 +291,15 @@ export default function DoctorDashboard() {
       {/* Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
         <StatCard title="Today's Appointments" value={dashboardData.stats.today_appointments} icon={ICONS.calendar} color={T.blue} href="/doctor/appointments" onNavigate={router.push} />
-        <StatCard title="Pending Patients" value={dashboardData.stats.pending_patients} icon={ICONS.user} color={T.amber} href="/doctor/patients" onNavigate={router.push} />
-        <StatCard title="Assigned Episodes" value={dashboardData.stats.assigned_episodes} icon={ICONS.cpu} color={T.cyan} href="/doctor/workspace" onNavigate={router.push} />
-        <StatCard title="AI Drafts Ready" value={dashboardData.stats.episodes_with_ai_ready} icon={ICONS.zap} color={T.green} href="/doctor/workspace" onNavigate={router.push} />
+        <StatCard title={t('pendingPatients')} value={dashboardData.stats.pending_patients} icon={ICONS.user} color={T.amber} href="/doctor/patients" onNavigate={router.push} />
+        <StatCard title={t('assignedEpisodes')} value={dashboardData.stats.assigned_episodes} icon={ICONS.cpu} color={T.cyan} href="/doctor/workspace" onNavigate={router.push} />
+        <StatCard title={t('aiDraftsReady')} value={dashboardData.stats.episodes_with_ai_ready} icon={ICONS.zap} color={T.green} href="/doctor/workspace" onNavigate={router.push} />
       </div>
 
       {/* Recent Activity */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '16px' }}>
-        <ActivityCard title="Recent Appointments" items={dashboardData.recent_appointments} type="appointments" onNavigate={router.push} />
-        <ActivityCard title="Recent Consultations" items={dashboardData.recent_consultations} type="consultations" onNavigate={router.push} />
+        <ActivityCard title={t('recentAppointments')} items={dashboardData.recent_appointments} type="appointments" onNavigate={router.push} />
+        <ActivityCard title={t('recentConsultations')} items={dashboardData.recent_consultations} type="consultations" onNavigate={router.push} />
       </div>
 
       <ClinicalEpisodeCard episodes={episodeData?.episodes || []} onNavigate={router.push} />

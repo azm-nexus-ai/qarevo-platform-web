@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -105,6 +106,7 @@ function WellnessShield() {
 }
 
 function LeftPanel() {
+  const t = useTranslations('auth.forgotPassword')
   return (
     <div
       style={{
@@ -202,11 +204,11 @@ function LeftPanel() {
               margin: '0 0 10px',
             }}
           >
-            Recover access safely.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your care remains protected.</span>
+            {t('recoverAccessSafely')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('yourCareRemainsProtected')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Request a single-use recovery link. After changing your password, sign in again through your patient, clinician or administrator portal.
+            {t('requestASingleUseRecovery')}
           </p>
         </div>
       </div>
@@ -315,6 +317,7 @@ function EmailField({
   success: boolean
   disabled?: boolean
 }) {
+  const t = useTranslations('auth.forgotPassword')
   const id = useId()
   const [focused, setFocused] = useState(false)
 
@@ -337,7 +340,7 @@ function EmailField({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        Email Address <span aria-hidden="true">(Required)</span>
+        {t('emailAddress')} <span aria-hidden="true">{t('required')}</span>
       </label>
       <div style={{ position: 'relative' }}>
         <span
@@ -361,7 +364,7 @@ function EmailField({
           aria-describedby={error ? `${id}-error` : undefined}
           type='email'
           value={value}
-          placeholder='Enter your registered email address'
+          placeholder={t('enterYourRegisteredEmailAddress')}
           autoComplete='email'
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
@@ -395,6 +398,7 @@ function EmailField({
 }
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations('auth.forgotPassword')
   const portal = recoveryPortal(usePathname())
   const [resendAfter, setResendAfter] = useState(0)
   useEffect(() => {
@@ -523,7 +527,7 @@ export default function ForgotPasswordPage() {
             }}
           >
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back to Sign In
+            {t('backToSignIn')}
           </Link>
 
           <section
@@ -636,11 +640,11 @@ export default function ForgotPasswordPage() {
                               display: 'inline-block',
                             }}
                           />
-                          Sending secure link…
+                          {t('sendingSecureLink')}
                         </>
                       ) : (
                         <>
-                          Send Reset Link
+                          {t('sendResetLink')}
                           <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
                         </>
                       )}
@@ -648,12 +652,12 @@ export default function ForgotPasswordPage() {
 
                     <div style={{ textAlign: 'center', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <Link href={portal.signIn} style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                        Back to Sign In
+                        {t('backToSignIn')}
                       </Link>
                       {portal.kind === 'patient' && <p style={{ margin: 0, fontSize: '13.5px', color: T.slate2, letterSpacing: '-0.01em' }}>
                         Need a new account?{' '}
                         <Link href='/auth/sign-up' style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>
-                          Create New Account
+                          {t('createNewAccount')}
                         </Link>
                       </p>}
                     </div>
@@ -691,13 +695,13 @@ export default function ForgotPasswordPage() {
                       margin: '0 0 8px',
                     }}
                   >
-                    Check your email
+                    {t('checkYourEmail')}
                   </h1>
                   <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
                     If an eligible account exists, we will attempt to send reset instructions. Check your inbox and spam folder. Use the newest email; requesting another link replaces earlier links. If you refreshed the reset page, reopen the full link from the email.
                   </p>
                   <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>
-                    Requested for <span style={{ fontWeight: 700, color: T.navy }}>{sentTo}</span>
+                    {t('requestedFor')} <span style={{ fontWeight: 700, color: T.navy }}>{sentTo}</span>
                   </p>
                 </div>
 
@@ -726,7 +730,7 @@ export default function ForgotPasswordPage() {
                       boxShadow: '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)',
                     }}
                   >
-                    Back to Sign In
+                    {t('backToSignIn')}
                     <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
                   </Link>
 
@@ -768,7 +772,7 @@ export default function ForgotPasswordPage() {
                             display: 'inline-block',
                           }}
                         />
-                        Resending…
+                        {t('resending')}
                       </>
                     ) : (
                       resendAfter > 0 ? `Resend available in ${resendAfter}s` : 'Resend Email'
@@ -796,7 +800,7 @@ export default function ForgotPasswordPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    Change Email Address
+                    {t('changeEmailAddress')}
                   </button>
 
                   <Link
@@ -811,7 +815,7 @@ export default function ForgotPasswordPage() {
                       paddingTop: '4px',
                     }}
                   >
-                    Back to Sign In
+                    {t('backToSignIn')}
                   </Link>
                 </div>
               </div>
@@ -837,11 +841,11 @@ export default function ForgotPasswordPage() {
           <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
             Review the status of our{' '}
             <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
-              Terms
+              {t('terms')}
             </Link>{' '}
             and{' '}
             <Link href='/privacy' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
-              Privacy Policy
+              {t('privacyPolicy')}
             </Link>
           </p>
         </div>

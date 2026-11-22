@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -56,6 +57,7 @@ interface FieldProps {
 }
 
 function Field({ label, placeholder, type = 'text', value, onChange, error, hint, success, optional, autoComplete, icon, rightSlot, disabled, onBlur }: FieldProps) {
+  const t = useTranslations('auth.signUp')
   const [focused, setFocused] = useState(false)
   const id = useId()
 
@@ -90,7 +92,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, hint
         <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
           {label}
         </label>
-        {optional && <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 400 }}>Optional</span>}
+        {optional && <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 400 }}>{t('optional')}</span>}
       </div>
       <div style={{ position: 'relative' }}>
         {hasLeft && (
@@ -249,6 +251,7 @@ function Checkbox({ checked, onChange, children, error }: { checked: boolean; on
 // ─── Decorative left column ────────────────────────────────────────────────────
 
 function LeftDecor() {
+  const t = useTranslations('auth.signUp')
   return (
     <div style={{
       width: '360px', flexShrink: 0,
@@ -274,7 +277,7 @@ function LeftDecor() {
       <div style={{ position: 'relative', zIndex: 1, width: '100%' }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '48px' }}>
-          <Link href='/' aria-label='Qarevo Health home' style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <Link href='/' aria-label={t('qarevoHealthHome')} style={{ display: 'inline-flex', alignItems: 'center' }}>
             <Image
               src='/brand/Untitled design - 2026-08-03T165058.603.png'
               alt='Qarevo Health'
@@ -321,11 +324,11 @@ function LeftDecor() {
 
         {/* Text */}
         <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.2, margin: '0 0 12px', textAlign: 'center' }}>
-          Create your patient account<br />
-          <span style={{ color: 'rgba(147,197,253,0.9)' }}>with Qarevo Health</span>
+          {t('createYourPatientAccount')}<br />
+          <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('withQarevoHealth')}</span>
         </h2>
         <p style={{ fontSize: '13.5px', color: "rgba(255,255,255,0.78)", lineHeight: 1.7, margin: '0 0 32px', textAlign: 'center', letterSpacing: '-0.01em' }}>
-          Explore the patient experience using synthetic information in our development environment.
+          {t('exploreThePatientExperienceUsing')}
         </p>
 
         {/* Social proof strip */}
@@ -350,6 +353,7 @@ const PHONE_RE = /^\+?[0-9\s\-().]{6,20}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function SignUpPage() {
+  const t = useTranslations('auth.signUp')
   const router = useRouter()
 
   const [form, setForm] = useState({
@@ -366,7 +370,7 @@ export default function SignUpPage() {
   const [submitError, setSubmitError] = useState('')
 
   const set = (k: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [k]: v }))
-  const touch = (k: keyof typeof form) => setTouched(t => ({ ...t, [k]: true }))
+  const touch = (k: keyof typeof form) => setTouched(previous => ({ ...previous, [k]: true }))
 
   // Validation
   const errors = {
@@ -441,7 +445,7 @@ export default function SignUpPage() {
 
   const toggleTerms = () => {
     clearSubmitError()
-    setTerms(t => !t)
+    setTerms(value => !value)
   }
 
   const togglePrivacy = () => {
@@ -476,7 +480,7 @@ export default function SignUpPage() {
           {/* Back link */}
           <Link href="/auth" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back
+            {t('back')}
           </Link>
 
           {/* Card */}
@@ -492,10 +496,10 @@ export default function SignUpPage() {
             {/* Header */}
             <div style={{ marginBottom: '28px' }}>
               <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 8px' }}>
-                Create your Qarevo Account
+                {t('createYourQarevoAccount')}
               </h1>
               <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                Secure access to intelligent healthcare built around you.
+                {t('secureAccessToIntelligentHealthcare')}
               </p>
             </div>
 
@@ -504,7 +508,7 @@ export default function SignUpPage() {
 
                 {/* Email */}
                 <Field
-                  label="Email Address"
+                  label={t('emailAddress')}
                   placeholder="emma@example.com"
                   type="email"
                   value={form.email}
@@ -519,7 +523,7 @@ export default function SignUpPage() {
                 {/* Password + strength */}
                 <div onBlur={() => touch('password')}>
                   <PasswordField
-                    label="Password"
+                    label={t('password')}
                     value={form.password}
                     onChange={update('password')}
                     error={errors.password}
@@ -530,7 +534,7 @@ export default function SignUpPage() {
                 {/* Confirm password */}
                 <div onBlur={() => touch('confirmPassword')}>
                   <PasswordField
-                    label="Confirm Password"
+                    label={t('confirmPassword')}
                     value={form.confirmPassword}
                     onChange={update('confirmPassword')}
                     error={errors.confirmPassword}
@@ -542,15 +546,15 @@ export default function SignUpPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px', borderRadius: '12px', background: "var(--surface-hover)", border: `1px solid ${agreementError ? 'rgba(220,38,38,0.3)' : T.borderFaint}` }}>
                   <Checkbox checked={terms} onChange={toggleTerms} error={submitted && !terms}>
                     I understand this is a development test. Read the{' '}
-                    <Link href="/terms" style={{ color: T.link, fontWeight: 600, textDecoration: 'none' }}>terms status</Link> (Required)
+                    <Link href="/terms" style={{ color: T.link, fontWeight: 600, textDecoration: 'none' }}>{t('termsStatus')}</Link> {t('required')}
                   </Checkbox>
                   <Checkbox checked={privacy} onChange={togglePrivacy} error={submitted && !privacy}>
                     I will use synthetic test information only. Read the{' '}
-                    <Link href="/privacy" style={{ color: T.link, fontWeight: 600, textDecoration: 'none' }}>privacy status</Link>
+                    <Link href="/privacy" style={{ color: T.link, fontWeight: 600, textDecoration: 'none' }}>{t('privacyStatus')}</Link>
                     {' '}(Required). Approved privacy and care consent texts are not yet published.
                   </Checkbox>
                   <Checkbox checked={marketing} onChange={toggleMarketing} error={false}>
-                    Store my optional test marketing preference (Optional)
+                    {t('storeMyOptionalTestMarketing')}
                   </Checkbox>
                 </div>
 
@@ -581,7 +585,7 @@ export default function SignUpPage() {
                 {/* Sign-in link */}
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '4px 0 0', letterSpacing: '-0.01em' }}>
                   Already have an account?{' '}
-                  <Link href="/auth/sign-in" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>Sign In</Link>
+                  <Link href="/auth/sign-in" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>{t('signIn')}</Link>
                 </p>
               </div>
             </form>
@@ -611,6 +615,7 @@ export default function SignUpPage() {
 
 function SubmitButton({ loading, disabled, onClick }: { loading: boolean; disabled: boolean; onClick?: () => void
 }) {
+  const t = useTranslations('auth.signUp')
   const [h, setH] = useState(false)
   return (
     <button
@@ -636,8 +641,8 @@ function SubmitButton({ loading, disabled, onClick }: { loading: boolean; disabl
       }}
     >
       {loading
-        ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Creating account…</>
-        : <>Create Account <Ico p={ICONS.arrowFwd} size={15} sw={2.2} /></>}
+        ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> {t('creatingAccount')}</>
+        : <>{t('createAccount')} <Ico p={ICONS.arrowFwd} size={15} sw={2.2} /></>}
     </button>
   )
 }

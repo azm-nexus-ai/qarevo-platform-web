@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 import { readPortalIdentity } from '@/lib/portal-scope'
 import ProfileImage from '@/components/patient/ProfileImage'
 import PatientNotifications from '@/components/notifications/PatientNotifications'
@@ -354,6 +355,7 @@ function topButtonBase(): CSSProperties {
 }
 
 export default function PatientDashboardPage() {
+  const t = useTranslations('patientDashboard')
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState<PatientDashboardSearchResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -901,7 +903,7 @@ export default function PatientDashboardPage() {
       <div className='pd-shell'>
         <aside id='patient-primary-sidebar' className='pd-left'>
           <div className='pd-sidebar portal-sidebar-content' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)', borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '16px' }}>
-            <section aria-label='Patient summary' style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
+            <section aria-label={t('patientSummary')} style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}><ProfileImage name={displayPatientName}/></div>
                 <div>
@@ -911,7 +913,7 @@ export default function PatientDashboardPage() {
               </div>
             </section>
 
-            <nav aria-label='Patient navigation'>
+            <nav aria-label={t('patientNavigation')}>
               <div className='pd-mobile-nav'>
                 {sideNavItems.map((item) => {
                   const isActive = isPatientNavActive(pathname, item.href)
@@ -955,13 +957,13 @@ export default function PatientDashboardPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '11px', border: 'none', background: 'transparent', color: "var(--link)", fontSize: '13px', fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}
               >
                 <Ico p={ICONS.arrowSm} size={15} sw={1.8} color='#348CEA' />
-                Logout
+                {t('logout')}
               </button>
             </div>
           </div>
         </aside>
 
-        <section className='pd-main' aria-label='Patient dashboard home'>
+        <section className='pd-main' aria-label={t('patientDashboardHome')}>
           <header style={{ ...Glass.nav, position: 'relative', zIndex: 90, overflow: 'visible', borderRadius: '20px', border: "1px solid var(--border)", padding: '14px 14px 12px', marginBottom: '14px' }}>
             <div className='pd-dashboard-header-row'>
               <div className='pd-greeting-block'>
@@ -969,7 +971,7 @@ export default function PatientDashboardPage() {
                   <span className='pd-greeting-kicker'>{greeting}</span>
                   <span className='pd-greeting-name'>{patientName || 'Patient'} <span aria-hidden='true'>👋</span></span>
                 </h1>
-                <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>How are you feeling today?</p>
+                <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>{t('howAreYouFeelingToday')}</p>
               </div>
               <div className='pd-head-row pd-toolbar'>
                 <label className='pd-search' htmlFor='dashboard-search' style={{ width: '100%', position: 'relative', zIndex: 120, display: 'block', minWidth: 0 }}>
@@ -979,7 +981,7 @@ export default function PatientDashboardPage() {
                   <input
                     id='dashboard-search'
                     type='search'
-                    placeholder='Search doctors, records, prescriptions...'
+                    placeholder={t('searchDoctorsRecordsPrescriptions')}
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value)
@@ -991,13 +993,13 @@ export default function PatientDashboardPage() {
                       if (e.key === 'Enter' && searchResults[0]) handleSearchResult(searchResults[0].href)
                     }}
                     style={{ width: '100%', height: '38px', borderRadius: '11px', border: `1px solid ${search ? 'rgba(32,181,223,0.45)' : "var(--border)"}`, padding: '0 12px 0 38px', fontSize: '13px', color: T.navy, background: "var(--surface-glass)", boxShadow: search ? '0 0 0 3px rgba(32,181,223,0.1)' : 'none', transition: 'all 0.16s ease' }}
-                    aria-label='Global search'
+                    aria-label={t('globalSearch')}
                     autoComplete='off'
                   />
                   {searchOpen && search.trim().length >= 2 && (
                     <div
                       role='listbox'
-                      aria-label='Dashboard search results'
+                      aria-label={t('dashboardSearchResults')}
                       style={{
                         position: 'absolute',
                         top: '46px',
@@ -1015,7 +1017,7 @@ export default function PatientDashboardPage() {
                     >
                       {searching && (
                         <div style={{ padding: '12px', fontSize: "13px", color: T.slate }}>
-                          Searching...
+                          {t('searching')}
                         </div>
                       )}
                       {!searching && searchError && (
@@ -1025,7 +1027,7 @@ export default function PatientDashboardPage() {
                       )}
                       {!searching && !searchError && searchResults.length === 0 && (
                         <div style={{ padding: '12px', fontSize: "13px", color: T.slate }}>
-                          No matching doctors, records, or prescriptions.
+                          {t('noMatchingDoctorsRecordsOr')}
                         </div>
                       )}
                       {!searching && !searchError && searchResults.map((result) => (
@@ -1064,7 +1066,7 @@ export default function PatientDashboardPage() {
 
                 <HoverBtn
                   ariaLabel='Open help and support'
-                  title='Help and support'
+                  title={t('helpAndSupport')}
                   onClick={() => router.push(PATIENT_ROUTES.support)}
                   base={topButtonBase()}
                   on={{ background: 'rgba(32,181,223,0.12)', color: "var(--link)", transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(4,53,77,0.1)' }}
@@ -1073,24 +1075,24 @@ export default function PatientDashboardPage() {
                 </HoverBtn>
                 <HoverBtn
                   ariaLabel='Open messages'
-                  title='Messages'
+                  title={t('messages')}
                   onClick={() => router.push(PATIENT_ROUTES.messages)}
                   base={topButtonBase()}
                   on={{ background: 'rgba(32,181,223,0.12)', color: "var(--link)", transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(4,53,77,0.1)' }}
                 >
                   <Ico p={ICONS.message} size={16} sw={1.8} />
                 </HoverBtn>
-                <button type='button' className='pd-profile-avatar' aria-label='Open profile settings' onClick={() => router.push(PATIENT_ROUTES.settings)} style={{ width: '42px', height: '42px', borderRadius: '50%', border: "1px solid var(--border)", background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))', color: T.navy, fontWeight: 700, cursor: 'pointer' }}><ProfileImage name={displayPatientName}/></button>
+                <button type='button' className='pd-profile-avatar' aria-label={t('openProfileSettings')} onClick={() => router.push(PATIENT_ROUTES.settings)} style={{ width: '42px', height: '42px', borderRadius: '50%', border: "1px solid var(--border)", background: 'linear-gradient(135deg, rgba(32,181,223,0.2), rgba(52,140,234,0.3))', color: T.navy, fontWeight: 700, cursor: 'pointer' }}><ProfileImage name={displayPatientName}/></button>
               </div>
             </div>
           </header>
-          {dashboardLoading ? <section role='status' aria-live='polite' style={{ padding: 32, background: "var(--surface)", borderRadius: 20 }}>Loading your dashboard…</section> : dashboardError ? <section role='alert' style={{ padding: 32, background: "var(--surface)", borderRadius: 20 }}><h2>We couldn’t load your dashboard</h2><p>Your records have not been changed.</p><button onClick={() => setReload(value => value + 1)}>Try again</button></section> : <>
+          {dashboardLoading ? <section role='status' aria-live='polite' style={{ padding: 32, background: "var(--surface)", borderRadius: 20 }}>{t('loadingYourDashboard')}</section> : dashboardError ? <section role='alert' style={{ padding: 32, background: "var(--surface)", borderRadius: 20 }}><h2>{t('weCouldnTLoadYour')}</h2><p>{t('yourRecordsHaveNotBeen')}</p><button onClick={() => setReload(value => value + 1)}>{t('tryAgain')}</button></section> : <>
 
 
           <section style={{ ...Glass.aiCard, position: 'relative', zIndex: specialtyMenuOpen ? 260 : 1, overflow: 'visible', borderRadius: '22px', padding: '22px', marginBottom: '14px', boxShadow: Sh.float }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '18px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ maxWidth: '620px' }}>
-                <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: "var(--link)" }}>Your Care Journey</p>
+                <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: "var(--link)" }}>{t('yourCareJourney')}</p>
                 <h2 className='portal-h2'>
                   Welcome back, {displayPatientName}. {hasCareActivity ? 'Your care overview is ready.' : 'Start by choosing a physician.'}
                 </h2>
@@ -1102,7 +1104,7 @@ export default function PatientDashboardPage() {
               <div style={{ minWidth: '250px', flex: 1 }}>
                 <div style={{ borderRadius: '16px', padding: '14px', background: "var(--surface-glass)", border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 24px rgba(4,53,77,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '9px' }}>
-                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: T.slate2 }}>Care activity</p>
+                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: T.slate2 }}>{t('careActivity')}</p>
                     <span style={{ ...Glass.chip, padding: '4px 10px', borderRadius: '999px', fontSize: "13px", color: hasCareActivity ? '#0F9E77' : T.slate, fontWeight: 700 }}>{hasCareActivity ? 'Active' : 'New'}</span>
                   </div>
                   <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{hasCareActivity ? 'Care activity is being tracked from your appointments and records.' : 'No care activity has been recorded yet.'}</p>
@@ -1136,7 +1138,7 @@ export default function PatientDashboardPage() {
                 }}
               >
                 <Ico p={ICONS.steth} size={15} sw={1.8} color='#fff' />
-                Find a Doctor
+                {t('findADoctor')}
               </HoverBtn>
 
               <HoverBtn
@@ -1165,7 +1167,7 @@ export default function PatientDashboardPage() {
                 }}
               >
                 <Ico p={ICONS.calendar} size={15} sw={1.8} color='#348CEA' />
-                Book Consultation
+                {t('bookConsultation')}
               </HoverBtn>
 
               <HoverBtn
@@ -1194,14 +1196,14 @@ export default function PatientDashboardPage() {
                 }}
               >
                 <Ico p={ICONS.lightning} size={15} sw={1.8} color='#348CEA' />
-                Book Next Available
+                {t('bookNextAvailable')}
               </HoverBtn>
 
               <div ref={specialtyMenuRef} className='pd-specialty-wrap' style={{ position: 'relative' }}>
                 <HoverBtn
                   className='pd-specialty-trigger'
                   ariaLabel='Book by specialty'
-                  title='Book by specialty'
+                  title={t('bookBySpecialty')}
                   onClick={() => setSpecialtyMenuOpen((open) => !open)}
                   base={{
                     minHeight: '38px',
@@ -1231,7 +1233,7 @@ export default function PatientDashboardPage() {
                   <Ico p={ICONS.chevronDown} size={12} sw={1.8} color='currentColor' />
                 </HoverBtn>
                 {specialtyMenuOpen && (
-                  <div className='pd-specialty-menu' role='menu' aria-label='Book by specialty options'>
+                  <div className='pd-specialty-menu' role='menu' aria-label={t('bookBySpecialtyOptions')}>
                     {bookingSpecialties.map((specialty) => (
                       <button
                         key={specialty}
@@ -1250,7 +1252,7 @@ export default function PatientDashboardPage() {
             </div>
           </section>
 
-          <SectionCard title='Health Summary' sub='A quick snapshot of your care status.'>
+          <SectionCard title={t('healthSummary')} sub='A quick snapshot of your care status.'>
             <div className='pd-summary-grid'>
               {displaySummaryCards.map((item) => <SummaryTile key={item.label} item={item} />)}
             </div>
@@ -1258,7 +1260,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Quick Actions' sub='Fast access to your most-used healthcare services.'>
+          <SectionCard title={t('quickActions')} sub='Fast access to your most-used healthcare services.'>
             <div className='pd-actions-grid'>
               {displayQuickActions.map((action) => <QuickActionTile key={action.label} action={action} />)}
             </div>
@@ -1266,7 +1268,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={false} title='Today’s Health Snapshot' sub='A live read of your care journey, focus areas, and next steps.'>
+          <SectionCard collapsible defaultOpen={false} title={t('todaySHealthSnapshot')} sub='A live read of your care journey, focus areas, and next steps.'>
             <div className='pd-snapshot-grid'>
               {snapshotCards.map((item) => (
                 <div key={item.label} className='pd-snapshot-card'>
@@ -1281,9 +1283,9 @@ export default function PatientDashboardPage() {
           <div style={{ height: '14px' }} />
 
           <SectionCard
-            title='Upcoming Appointments'
+            title={t('upcomingAppointments')}
             sub='Your next scheduled consultations and follow-up care.'
-            action={hasUpcomingAppointment ? <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: "13px", color: T.link, fontWeight: 700 }}><span className='pd-notice-dot' /> Scheduled</span> : undefined}
+            action={hasUpcomingAppointment ? <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: "13px", color: T.link, fontWeight: 700 }}><span className='pd-notice-dot' /> {t('scheduled')}</span> : undefined}
           >
             {hasUpcomingAppointment && primaryPhysician && currentAppointment ? (
               <div className='pd-appointment-grid' style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
@@ -1292,30 +1294,30 @@ export default function PatientDashboardPage() {
                   <h3 className='portal-h3'>{primaryPhysician.value || 'Physician'}</h3>
                   <p style={{ margin: '0 0 10px', fontSize: '13px', color: T.slate2 }}>{primaryPhysician.sub || 'Specialty'} · Virtual consultation</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Date:</strong> {currentAppointment.sub?.split(' at ')[0] || 'Scheduled'}</p>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Time:</strong> {currentAppointment.sub?.split(' at ')[1] || currentAppointment.sub || 'TBD'}</p>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Type:</strong> Consultation</p>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>Status:</strong> Booked</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('date')}</strong> {currentAppointment.sub?.split(' at ')[0] || 'Scheduled'}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('time')}</strong> {currentAppointment.sub?.split(' at ')[1] || currentAppointment.sub || 'TBD'}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('type')}</strong> {t('consultation')}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('status')}</strong> {t('booked')}</p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <HoverBtn onClick={() => router.push('/patient/video-consultation/waiting-room')} base={{ minHeight: '42px', borderRadius: '11px', padding: '0 14px', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, letterSpacing: '-0.01em', boxShadow: '0 4px 12px rgba(32,181,223,0.3)', cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>Join Consultation</HoverBtn>
-                  <HoverBtn onClick={() => router.push(PATIENT_ROUTES.appointmentDetails)} base={{ minHeight: '42px', borderRadius: '11px', padding: '0 14px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>View Details</HoverBtn>
+                  <HoverBtn onClick={() => router.push('/patient/video-consultation/waiting-room')} base={{ minHeight: '42px', borderRadius: '11px', padding: '0 14px', border: 'none', background: '#20B5DF', color: '#fff', fontSize: '13px', fontWeight: 700, letterSpacing: '-0.01em', boxShadow: '0 4px 12px rgba(32,181,223,0.3)', cursor: 'pointer' }} on={{ background: '#348CEA', transform: 'translateY(-1px)' }}>{t('joinConsultation')}</HoverBtn>
+                  <HoverBtn onClick={() => router.push(PATIENT_ROUTES.appointmentDetails)} base={{ minHeight: '42px', borderRadius: '11px', padding: '0 14px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 700, letterSpacing: '-0.01em', cursor: 'pointer' }} on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}>{t('viewDetails')}</HoverBtn>
                 </div>
               </div>
             ) : (
-              <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: "13px", fontWeight: 700 }}>Find a Doctor</Link>}>
-                No appointments are scheduled yet.
+              <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: "13px", fontWeight: 700 }}>{t('findADoctor')}</Link>}>
+                {t('noAppointmentsAreScheduledYet')}
               </EmptyState>
             )}
           </SectionCard>
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayCarePlans.length > 0} status={countLabel(displayCarePlans.length, 'plan')} title='Care Plans' sub='Care plans and recorded progress.'>
+          <SectionCard collapsible defaultOpen={displayCarePlans.length > 0} status={countLabel(displayCarePlans.length, 'plan')} title={t('carePlans')} sub='Care plans and recorded progress.'>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayCarePlans.length === 0 && (
-                <EmptyState>No active care plans yet. They will appear here after a consultation or clinical workflow assignment.</EmptyState>
+                <EmptyState>{t('noActiveCarePlansYet')}</EmptyState>
               )}
               {displayCarePlans.map((plan, index) => (
                 <div key={`${plan.name}:${index}`} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
@@ -1330,7 +1332,7 @@ export default function PatientDashboardPage() {
                     <div style={{ width: `${plan.progress}%`, height: '100%', borderRadius: 'inherit', background: 'linear-gradient(90deg, #20B5DF 0%, var(--primary-end) 100%)' }} />
                   </div>}
                   <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate }}>{plan.tasks}</p>
-                  {plan.reviewNeeded && <p className='mt-2 text-sm leading-7 text-secondary'>Clinician review needed for some saved care-plan fields.</p>}
+                  {plan.reviewNeeded && <p className='mt-2 text-sm leading-7 text-secondary'>{t('clinicianReviewNeededForSome')}</p>}
                 </div>
               ))}
             </div>
@@ -1338,16 +1340,16 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Medications' sub='Clinician instructions and separate patient-reported adherence.'>
+          <SectionCard title={t('medications')} sub='Clinician instructions and separate patient-reported adherence.'>
             <PatientMedicationCards records={dashboardData?.medications ?? []} onUpdated={setDashboardData} />
           </SectionCard>
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayLabData.length > 0} status={countLabel(displayLabData.length, 'result')} title='Lab Results & Diagnostics' sub='Latest lab information shared with your care team.'>
+          <SectionCard collapsible defaultOpen={displayLabData.length > 0} status={countLabel(displayLabData.length, 'result')} title={t('labResultsDiagnostics')} sub='Latest lab information shared with your care team.'>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayLabData.length === 0 && (
-                <EmptyState>No lab requests or results are available yet.</EmptyState>
+                <EmptyState>{t('noLabRequestsOrResults')}</EmptyState>
               )}
               {displayLabData.map((item) => (
                 <div key={item.title} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
@@ -1357,8 +1359,8 @@ export default function PatientDashboardPage() {
                     <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>{item.detail}</p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <HoverBtn onClick={() => router.push(PATIENT_ROUTES.labRequests)} base={{ minHeight: '36px', borderRadius: '10px', padding: '0 12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>View Reports</HoverBtn>
-                    <HoverBtn onClick={() => router.push(PATIENT_ROUTES.medicalRecords)} base={{ minHeight: '36px', borderRadius: '10px', padding: '0 12px', border: 'none', background: 'linear-gradient(135deg, #20B5DF 0%, var(--primary-end) 100%)', color: '#fff', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>Download</HoverBtn>
+                    <HoverBtn onClick={() => router.push(PATIENT_ROUTES.labRequests)} base={{ minHeight: '36px', borderRadius: '10px', padding: '0 12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>{t('viewReports')}</HoverBtn>
+                    <HoverBtn onClick={() => router.push(PATIENT_ROUTES.medicalRecords)} base={{ minHeight: '36px', borderRadius: '10px', padding: '0 12px', border: 'none', background: 'linear-gradient(135deg, #20B5DF 0%, var(--primary-end) 100%)', color: '#fff', fontSize: "13px", fontWeight: 700, cursor: 'pointer' }} on={{ transform: 'translateY(-1px)' }}>{t('download')}</HoverBtn>
                   </div>
                 </div>
               ))}
@@ -1367,10 +1369,10 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayReferrals.length > 0} status={countLabel(displayReferrals.length, 'referral')} title='Referrals & Specialist Care' sub='Track ongoing specialist recommendations and bookings.'>
+          <SectionCard collapsible defaultOpen={displayReferrals.length > 0} status={countLabel(displayReferrals.length, 'referral')} title={t('referralsSpecialistCare')} sub='Track ongoing specialist recommendations and bookings.'>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayReferrals.length === 0 && (
-                <EmptyState>No referrals have been created yet.</EmptyState>
+                <EmptyState>{t('noReferralsHaveBeenCreated')}</EmptyState>
               )}
               {displayReferrals.map((item) => (
                 <div key={item.name} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
@@ -1388,11 +1390,11 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayMetrics.length > 0} status={countLabel(displayMetrics.length, 'measurement')} title='Health Metrics' sub='Recorded measurements; no clinical interpretation is inferred.'>
-            {healthError && <p role='alert'>Health measurements could not be loaded. <button onClick={() => setReload(value => value + 1)}>Try again</button></p>}
+          <SectionCard collapsible defaultOpen={displayMetrics.length > 0} status={countLabel(displayMetrics.length, 'measurement')} title={t('healthMetrics')} sub='Recorded measurements; no clinical interpretation is inferred.'>
+            {healthError && <p role='alert'>{t('healthMeasurementsCouldNotBe')} <button onClick={() => setReload(value => value + 1)}>{t('tryAgain')}</button></p>}
             <div style={{ display: 'grid', gap: '10px' }}>
               {!healthError && displayMetrics.length === 0 && (
-                <EmptyState>No health metrics have been added yet.</EmptyState>
+                <EmptyState>{t('noHealthMetricsHaveBeen')}</EmptyState>
               )}
               {displayMetrics.map((item) => {
 
@@ -1414,11 +1416,11 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Messages' sub='Recent conversations from your care team and support channels.'>
+          <SectionCard title={t('messages')} sub='Recent conversations from your care team and support channels.'>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayMessageThreads.length === 0 && (
-                <EmptyState action={<Link href={PATIENT_ROUTES.messages} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: "13px", fontWeight: 700 }}>Open Messages</Link>}>
-                  No conversations yet.
+                <EmptyState action={<Link href={PATIENT_ROUTES.messages} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: "13px", fontWeight: 700 }}>{t('openMessages')}</Link>}>
+                  {t('noConversationsYet')}
                 </EmptyState>
               )}
               {displayMessageThreads.map((message) => (
@@ -1438,10 +1440,10 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Medical Documents' sub='Quick access to the records that support your ongoing care.'>
+          <SectionCard title={t('medicalDocuments')} sub='Quick access to the records that support your ongoing care.'>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
               {displayDocs.length === 0 && (
-                <EmptyState>No medical documents are available yet.</EmptyState>
+                <EmptyState>{t('noMedicalDocumentsAreAvailable')}</EmptyState>
               )}
               {displayDocs.map((doc) => (
                 <Link key={doc.name} href={doc.href} style={{ textDecoration: 'none', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '12px' }}>
@@ -1454,10 +1456,10 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayTimelineItems.length > 0} status={countLabel(displayTimelineItems.length, 'event')} title='Health Timeline' sub='A visual story of your care journey from onboarding to recovery.'>
+          <SectionCard collapsible defaultOpen={displayTimelineItems.length > 0} status={countLabel(displayTimelineItems.length, 'event')} title={t('healthTimeline')} sub='A visual story of your care journey from onboarding to recovery.'>
             <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '10px' }}>
               {displayTimelineItems.length === 0 && (
-                <EmptyState>Your care timeline will start after your first appointment, document, or clinical update.</EmptyState>
+                <EmptyState>{t('yourCareTimelineWillStart')}</EmptyState>
               )}
               {displayTimelineItems.map((item, index) => (
                 <li key={`${item.title}-${item.sub}-${item.time}-${index}`} style={{ display: 'grid', gridTemplateColumns: '18px minmax(0, 1fr)', gap: '10px', alignItems: 'start' }}>
@@ -1476,7 +1478,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={false} title='Health Information' sub='Your vital signs and medical details from your profile.' action={<Link href='/patient/settings' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 600, textDecoration: 'none' }}>Update in Settings →</Link>}>
+          <SectionCard collapsible defaultOpen={false} title={t('healthInformation')} sub='Your vital signs and medical details from your profile.' action={<Link href='/patient/settings' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 600, textDecoration: 'none' }}>{t('updateInSettings')}</Link>}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
               {[
                 { label: 'Blood Pressure', value: healthInfo.blood_pressure || 'Not set' },
@@ -1494,10 +1496,10 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={false} title='Personal Wellness' sub='Daily habits that shape your long-term health.'>
+          <SectionCard collapsible defaultOpen={false} title={t('personalWellness')} sub='Daily habits that shape your long-term health.'>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
               {displayWellnessCards.length === 0 && (
-                <EmptyState>No wellness check-ins have been recorded yet.</EmptyState>
+                <EmptyState>{t('noWellnessCheckInsHave')}</EmptyState>
               )}
               {displayWellnessCards.map((item) => (
                 <div key={item.title} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
@@ -1511,7 +1513,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={false} title='Optional AI assistance' sub='Drafting support remains subject to clinician review.'>
+          <SectionCard collapsible defaultOpen={false} title={t('optionalAiAssistance')} sub='Drafting support remains subject to clinician review.'>
             <div style={{ borderRadius: '16px', overflow: 'hidden', border: "1px solid var(--border)", background: "var(--surface-glass)" }}>
               {displayAIInsights.length === 0 && (
                 <EmptyState>{text(dashboardData?.ai_insights_message, 'Optional AI drafting supports clinician review. Care recommendations are shared through your clinician-approved care record.')}</EmptyState>
@@ -1533,12 +1535,12 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={(recentDoctors ?? []).length > 0} status={countLabel((recentDoctors ?? []).length, 'doctor')} title='Quick Re-Booking' sub='Book with doctors you have seen before for faster care.' action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>Find new doctor →</Link>}>
+          <SectionCard collapsible defaultOpen={(recentDoctors ?? []).length > 0} status={countLabel((recentDoctors ?? []).length, 'doctor')} title={t('quickReBooking')} sub='Book with doctors you have seen before for faster care.' action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>{t('findNewDoctor')}</Link>}>
             <div style={{ display: 'grid', gap: '10px' }}>
               <div className='pd-doctor-carousel'>
                 {(recentDoctors ?? []).length === 0 && (
-                  <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: "13px", fontWeight: 700 }}>Find a Doctor</Link>}>
-                    No recent bookings yet. Book your first consultation to see quick re-booking options here.
+                  <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: "13px", fontWeight: 700 }}>{t('findADoctor')}</Link>}>
+                    {t('noRecentBookingsYetBook')}
                   </EmptyState>
                 )}
                 {(recentDoctors ?? []).map((doc) => (
@@ -1547,7 +1549,7 @@ export default function PatientDashboardPage() {
                     <div className='pd-doctor-footer'>
                       <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : 'No ratings'} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
                       <div className='pd-doctor-actions'>
-                        <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>Book Now</Link>
+                        <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>{t('bookNow')}</Link>
                       </div>
                     </div>
                   </div>
@@ -1558,12 +1560,12 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title='Find a physician' sub='Listed by rating, without a clinical recommendation.' action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>Open discovery →</Link>}>
+          <SectionCard title={t('findAPhysician')} sub='Listed by rating, without a clinical recommendation.' action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>{t('openDiscovery')}</Link>}>
             <div style={{ display: 'grid', gap: '10px' }}>
               <div className='pd-doctor-carousel'>
-                {doctorsLoading ? <p role='status'>Loading physicians…</p> : doctorsError ? <p role='alert'>Physicians could not be loaded. <button onClick={() => setReload(value => value + 1)}>Try again</button></p> : (recommendedDoctors ?? []).length === 0 && (
-                  <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: "13px", fontWeight: 700 }}>Open Discovery</Link>}>
-                    No verified physicians are available from the API yet.
+                {doctorsLoading ? <p role='status'>{t('loadingPhysicians')}</p> : doctorsError ? <p role='alert'>{t('physiciansCouldNotBeLoaded')} <button onClick={() => setReload(value => value + 1)}>{t('tryAgain')}</button></p> : (recommendedDoctors ?? []).length === 0 && (
+                  <EmptyState action={<Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: "13px", fontWeight: 700 }}>{t('openDiscovery2')}</Link>}>
+                    {t('noVerifiedPhysiciansAreAvailable')}
                   </EmptyState>
                 )}
                 {(recommendedDoctors ?? []).map((doc) => (
@@ -1572,8 +1574,8 @@ export default function PatientDashboardPage() {
                     <div className='pd-doctor-footer'>
                       <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : 'No ratings'} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
                       <div className='pd-doctor-actions'>
-                        <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=view')} style={{ color: T.navy }}>View Profile</Link>
-                        <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>Book</Link>
+                        <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=view')} style={{ color: T.navy }}>{t('viewProfile')}</Link>
+                        <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>{t('book')}</Link>
                       </div>
                     </div>
                   </div>
@@ -1586,7 +1588,7 @@ export default function PatientDashboardPage() {
 
         {!dashboardLoading && !dashboardError && <aside id='patient-secondary-sidebar' className='pd-right'>
           <div className='portal-sidebar-content portal-sidebar-stack'>
-            <SectionCard collapsible defaultOpen={todayScheduleItems.length > 0} status={todayScheduleItems.length ? `${todayScheduleItems.length} today` : 'Nothing scheduled today'} title='Today’s Schedule' sub='The key moments and commitments for the day.'>
+            <SectionCard collapsible defaultOpen={todayScheduleItems.length > 0} status={todayScheduleItems.length ? `${todayScheduleItems.length} today` : 'Nothing scheduled today'} title={t('todaySSchedule')} sub='The key moments and commitments for the day.'>
               {todayScheduleItems.length ? (
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {todayScheduleItems.map((item) => (
@@ -1598,15 +1600,15 @@ export default function PatientDashboardPage() {
                   ))}
                 </div>
               ) : (
-                <EmptyState>No schedule items yet.</EmptyState>
+                <EmptyState>{t('noScheduleItemsYet')}</EmptyState>
               )}
             </SectionCard>
 
-            <SectionCard title='Notifications' sub='Recent account and care updates.'>
+            <SectionCard title={t('notifications')} sub='Recent account and care updates.'>
               <PatientNotifications compact />
             </SectionCard>
 
-            <SectionCard collapsible defaultOpen={false} title='Care Progress' sub='How your current plan is tracking.'>
+            <SectionCard collapsible defaultOpen={false} title={t('careProgress')} sub='How your current plan is tracking.'>
               {careProgress !== null ? (
                 <div style={{ borderRadius: '14px', padding: '14px', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.22) 100%)', border: "1px solid var(--border)" }}>
                   <div style={{ marginBottom: '8px', height: '8px', borderRadius: '999px', background: "var(--surface-hover)", overflow: 'hidden' }}>
@@ -1615,22 +1617,22 @@ export default function PatientDashboardPage() {
                   <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.55 }}>Recorded progress averages {careProgress}% across {recordedPlanProgress.length} plan(s). No progress is inferred for other plans.</p>
                 </div>
               ) : (
-                <EmptyState>No care plan progress yet.</EmptyState>
+                <EmptyState>{t('noCarePlanProgressYet')}</EmptyState>
               )}
             </SectionCard>
 
-            <SectionCard collapsible defaultOpen={false} title='Contact your care team' sub='Use your messages to contact your care team.'>
+            <SectionCard collapsible defaultOpen={false} title={t('contactYourCareTeam')} sub='Use your messages to contact your care team.'>
               <div style={{ borderRadius: '14px', padding: '14px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
-                <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 700, color: T.navy }}>Messages</p>
-                <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>Responses depend on your care team’s availability.</p>
+                <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{t('messages')}</p>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{t('responsesDependOnYourCare')}</p>
               </div>
             </SectionCard>
 
-            <SectionCard collapsible defaultOpen={false} title='Primary Actions' sub='Jump directly into the services you use most.'>
+            <SectionCard collapsible defaultOpen={false} title={t('primaryActions')} sub='Jump directly into the services you use most.'>
               <div style={{ display: 'grid', gap: '8px' }}>
-                <Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.28)' }}>Book New Appointment</Link>
-                <Link href={PATIENT_ROUTES.messages} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: "var(--surface-glass)", color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: "1px solid var(--border)" }}>Contact Care Team</Link>
-                <Link href={PATIENT_ROUTES.medicalRecords} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: "var(--surface-glass)", color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: "1px solid var(--border)" }}>View Medical Records</Link>
+                <Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.28)' }}>{t('bookNewAppointment')}</Link>
+                <Link href={PATIENT_ROUTES.messages} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: "var(--surface-glass)", color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: "1px solid var(--border)" }}>{t('contactCareTeam')}</Link>
+                <Link href={PATIENT_ROUTES.medicalRecords} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: "var(--surface-glass)", color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: "1px solid var(--border)" }}>{t('viewMedicalRecords')}</Link>
               </div>
             </SectionCard>
           </div>

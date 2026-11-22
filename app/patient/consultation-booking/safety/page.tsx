@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -12,6 +13,7 @@ import {
 type Answer = 'yes' | 'no' | ''
 
 function SafetyScreenContent() {
+  const t = useTranslations('bookingSafety')
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = safeBookingReturn(searchParams.get('next'))
@@ -65,25 +67,25 @@ function SafetyScreenContent() {
     return <Shell>
       <div role='alert' className='notice danger'>
         <p>{loadError}</p>
-        <p><strong>If this is an emergency, call 112 now.</strong> For urgent care outside surgery hours, call 116117.</p>
-        <button className='secondary' onClick={() => setRevision(n => n + 1)}>Try again</button>
+        <p><strong>{t('ifThisIsAnEmergency')}</strong> {t('forUrgentCareOutsideSurgery')}</p>
+        <button className='secondary' onClick={() => setRevision(n => n + 1)}>{t('tryAgain')}</button>
       </div>
     </Shell>
   }
 
-  if (!screen) return <Shell><p role='status'>Loading safety questions…</p></Shell>
+  if (!screen) return <Shell><p role='status'>{t('loadingSafetyQuestions')}</p></Shell>
 
   if (!screen.available) {
     return <Shell>
       {screen.required ? <div role='alert' className='notice danger'>
-        <h2>Online booking is paused</h2>
-        <p>We cannot check your symptoms safely right now, so new appointments cannot be booked online.</p>
-        <p><strong>If this is an emergency, call 112 now.</strong> For urgent care outside surgery hours, call 116117.</p>
-        <Link className='secondary' href='/patient/dashboard'>Back to your dashboard</Link>
+        <h2>{t('onlineBookingIsPaused')}</h2>
+        <p>{t('weCannotCheckYourSymptoms')}</p>
+        <p><strong>{t('ifThisIsAnEmergency')}</strong> {t('forUrgentCareOutsideSurgery')}</p>
+        <Link className='secondary' href='/patient/dashboard'>{t('backToYourDashboard')}</Link>
       </div> : <div className='notice'>
-        <h2>No safety questions are published here yet</h2>
-        <p>This development environment has no approved safety screen. In a live environment, booking stops until one is published.</p>
-        <button className='primary' onClick={() => router.replace(next)}>Continue to appointment times</button>
+        <h2>{t('noSafetyQuestionsArePublished')}</h2>
+        <p>{t('thisDevelopmentEnvironmentHasNo')}</p>
+        <button className='primary' onClick={() => router.replace(next)}>{t('continueToAppointmentTimes')}</button>
       </div>}
     </Shell>
   }
@@ -95,10 +97,10 @@ function SafetyScreenContent() {
         <h2 id='outcome-title' ref={outcomeHeading} tabIndex={-1}>{guidance?.title || 'A video consultation is not the right next step'}</h2>
         <p className='outcome-body'>{guidance?.body || 'Please seek care in person.'}</p>
         {guidance?.action_href && guidance.action_label && <a className='call' href={guidance.action_href}>{guidance.action_label}</a>}
-        <p className='fine'>Your answers have been saved. Online booking is not available for this concern.</p>
+        <p className='fine'>{t('yourAnswersHaveBeenSaved')}</p>
         <div className='actions'>
-          <Link className='secondary' href='/patient/dashboard'>Back to your dashboard</Link>
-          <button className='link' onClick={() => { setResult(null); setAnswers({}); setAttempted(false) }}>I answered by mistake</button>
+          <Link className='secondary' href='/patient/dashboard'>{t('backToYourDashboard')}</Link>
+          <button className='link' onClick={() => { setResult(null); setAnswers({}); setAttempted(false) }}>{t('iAnsweredByMistake')}</button>
         </div>
       </section>
     </Shell>
@@ -108,7 +110,7 @@ function SafetyScreenContent() {
     <form noValidate onSubmit={submit} aria-busy={submitting}>
       <h2 className='form-title'>{screen.title}</h2>
       {screen.intro && <p className='intro'>{screen.intro}</p>}
-      <p className='emergency-line'><strong>In an emergency, call 112 now.</strong> Do not wait for an online appointment.</p>
+      <p className='emergency-line'><strong>{t('inAnEmergencyCall112')}</strong> {t('doNotWaitForAn')}</p>
       {attempted && unanswered.length > 0 && <div ref={summary} tabIndex={-1} role='alert' className='notice danger'>
         Answer every question with yes or no. {unanswered.length === 1 ? '1 question is' : `${unanswered.length} questions are`} still open.
       </div>}
@@ -127,13 +129,13 @@ function SafetyScreenContent() {
                   {value === 'yes' ? 'Yes' : 'No'}
                 </label>)}
               </div>
-              {missing && <p className='missing'>Choose yes or no.</p>}
+              {missing && <p className='missing'>{t('chooseYesOrNo')}</p>}
             </fieldset>
           </li>
         })}
       </ol>
       <div className='actions'>
-        <Link className='secondary' href='/patient/dashboard'>Cancel</Link>
+        <Link className='secondary' href='/patient/dashboard'>{t('cancel')}</Link>
         <button className='primary' type='submit' disabled={submitting}>{submitting ? 'Checking…' : 'Continue'}</button>
       </div>
     </form>
@@ -141,11 +143,12 @@ function SafetyScreenContent() {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('bookingSafety')
   return <main className='safety-screen'>
     <header>
-      <p className='eyebrow'>Before you book</p>
-      <h1>A few safety questions</h1>
-      <p className='lede'>Some symptoms need emergency or in-person care rather than a video appointment. Your answers help us send you to the right place.</p>
+      <p className='eyebrow'>{t('beforeYouBook')}</p>
+      <h1>{t('aFewSafetyQuestions')}</h1>
+      <p className='lede'>{t('someSymptomsNeedEmergencyOr')}</p>
     </header>
     <div className='card'>{children}</div>
     <style jsx global>{`
@@ -191,7 +194,8 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 export default function SafetyScreenPage() {
-  return <Suspense fallback={<main className='safety-screen'><p role='status'>Loading safety questions…</p></main>}>
+  const t = useTranslations('bookingSafety')
+  return <Suspense fallback={<main className='safety-screen'><p role='status'>{t('loadingSafetyQuestions')}</p></main>}>
     <SafetyScreenContent />
   </Suspense>
 }

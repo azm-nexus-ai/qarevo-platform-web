@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { getApiErrorDetail } from '@/lib/api'
 
 import Link from 'next/link'
@@ -66,6 +67,7 @@ function doctorToBookingFallback(doctor: PatientDoctor | null) {
 }
 
 function ReviewPageContent() {
+  const t = useTranslations('bookingReview')
   const router = useRouter()
   const searchParams = useSearchParams()
   const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
@@ -207,7 +209,7 @@ function ReviewPageContent() {
           <aside style={{ display: 'grid', gap: '12px' }}>
             <section style={{ ...Glass.nav, borderRadius: '20px', border: "1px solid var(--border)", padding: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Booking Progress</p>
+                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('bookingProgress')}</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.link }}>80%</p>
               </div>
               <div style={{ width: '100%', height: '6px', borderRadius: '999px', background: "var(--surface-hover)", marginBottom: '12px', overflow: 'hidden' }}>
@@ -232,15 +234,15 @@ function ReviewPageContent() {
             <section style={{ ...Glass.pill, borderRadius: '20px', border: "1px solid var(--border)", padding: '18px' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 9px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px' }}>
                 <Ico p={ICONS.lock} size={11} sw={2.2} color={T.blue} />
-                Protected review
+                {t('protectedReview')}
               </div>
               <h2 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{physicianData.name}</h2>
               <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
               <div style={{ display: 'grid', gap: '7px', fontSize: "13px", color: T.slate2 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Consultation</span><strong style={{ color: T.navy }}>{readLabel(service)}</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Date</span><strong style={{ color: T.navy }}>{date}</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Time</span><strong style={{ color: T.navy }}>{slot}</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Fee</span><strong style={{ color: T.navy }}>{formatFee(fee)}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('consultation')}</span><strong style={{ color: T.navy }}>{readLabel(service)}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('date')}</span><strong style={{ color: T.navy }}>{date}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('time')}</span><strong style={{ color: T.navy }}>{slot}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('fee')}</span><strong style={{ color: T.navy }}>{formatFee(fee)}</strong></div>
               </div>
               {doctorLoadError && (
                 <div style={{ marginTop: '10px', borderRadius: '12px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(254,242,242,0.9)', color: '#B91C1C', padding: '10px 11px', fontSize: "13px", fontWeight: 700, lineHeight: 1.5 }}>
@@ -255,17 +257,17 @@ function ReviewPageContent() {
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
                   <Ico p={ICONS.check} size={11} sw={2.2} color={T.blue} />
-                  Final review
+                  {t('finalReview')}
                 </div>
-                <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Review Your Appointment</h1>
-                <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7, maxWidth: '760px' }}>Please review every detail before confirming your booking. This final step is designed to give you complete clarity, confidence, and reassurance.</p>
+                <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('reviewYourAppointment')}</h1>
+                <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7, maxWidth: '760px' }}>{t('pleaseReviewEveryDetailBefore')}</p>
               </div>
             </header>
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ marginBottom: '12px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Physician Summary</p>
-                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your care team at a glance</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('physicianSummary')}</p>
+                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('yourCareTeamAtA')}</h2>
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ width: '84px', height: '84px', borderRadius: '18px', overflow: 'hidden', border: "1px solid var(--border)", background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', display: 'grid', placeItems: 'center' }}>
@@ -278,7 +280,7 @@ function ReviewPageContent() {
                 <div style={{ flex: 1, minWidth: '220px' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
                     <Ico p={ICONS.check} size={10} sw={2.2} color={T.blue} />
-                    Verified Physician
+                    {t('verifiedPhysician')}
                   </div>
                   <h3 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
                   <p style={{ margin: '0 0 6px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
@@ -293,8 +295,8 @@ function ReviewPageContent() {
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ marginBottom: '12px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment Details</p>
-                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your selected consultation details</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('appointmentDetails')}</p>
+                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('yourSelectedConsultationDetails')}</h2>
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' }}>
                 {[
@@ -317,8 +319,8 @@ function ReviewPageContent() {
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ marginBottom: '12px' }}>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Information</p>
-                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Your details are ready for review</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('patientInformation')}</p>
+                <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('yourDetailsAreReadyFor')}</h2>
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' }}>
                 {[
@@ -333,15 +335,15 @@ function ReviewPageContent() {
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{value}</p>
                   </div>
                 ))}
-                <p style={{ gridColumn: '1 / -1' }}>Intake is loaded securely from your saved episode. Use Back to Intake to review your entries.</p>
+                <p style={{ gridColumn: '1 / -1' }}>{t('intakeIsLoadedSecurelyFrom')}</p>
               </div>
             </section>
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'grid', gap: '10px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation Preparation</p>
-                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A calm, ready experience</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('consultationPreparation')}</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('aCalmReadyExperience')}</h2>
                 </div>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {['Join the consultation 5 minutes early', 'Ensure a stable internet connection', 'Upload any remaining medical documents', 'Prepare questions for your physician', 'Keep previous prescriptions available'].map((tip) => (
@@ -357,8 +359,8 @@ function ReviewPageContent() {
             <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Cancellation Policy</p>
-                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Clear, flexible terms</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('cancellationPolicy')}</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('clearFlexibleTerms')}</h2>
                 </div>
                 <button type='button' onClick={() => setShowPolicy((value) => !value)} style={{ border: 'none', background: 'none', color: T.link, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>{showPolicy ? 'Hide' : 'Show Details'}</button>
               </div>
@@ -377,15 +379,15 @@ function ReviewPageContent() {
                   ))}
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.7 }}>This is a synthetic development booking. No payment is collected. Pricing, insurance agreements and cancellation terms must be approved before a commercial pilot.</p>
+                <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.7 }}>{t('thisIsASyntheticDevelopment')}</p>
               )}
             </section>
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'grid', gap: '10px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consent & Agreements</p>
-                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Review your test booking</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('consentAgreements')}</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('reviewYourTestBooking')}</h2>
                 </div>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)", cursor: 'pointer' }}>
                   <input
@@ -394,7 +396,7 @@ function ReviewPageContent() {
                     onChange={() => setAgreed((value) => !value)}
                     style={{ marginTop: '2px', accentColor: T.blue }}
                   />
-                  <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>I have reviewed my synthetic booking information and want to continue the development test. (Required)</span>
+                  <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{t('iHaveReviewedMySynthetic')}</span>
                 </label>
               </div>
             </section>
@@ -412,7 +414,7 @@ function ReviewPageContent() {
                   )}
                 </div>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Booking Summary</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('bookingSummary')}</p>
                   <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
                 </div>
               </div>
@@ -467,7 +469,7 @@ function ReviewPageContent() {
 
               <Link href={backHref} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: '10px', color: T.slate2, textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
                 <Ico p={ICONS.arrowSm} size={13} sw={2} style={{ transform: 'rotate(180deg)' }} />
-                Back
+                {t('back')}
               </Link>
             </section>
 
@@ -489,13 +491,14 @@ function ReviewPageContent() {
 }
 
 function ReviewPageFallback() {
+  const t = useTranslations('bookingReview')
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG }}>
       <div style={{ maxWidth: '1460px', margin: '0 auto', padding: '24px 20px 40px' }}>
         <div style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '24px' }}>
-          <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preparing your review</p>
-          <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Loading your appointment summary</h1>
-          <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>We are bringing over the latest slot and consultation details.</p>
+          <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('preparingYourReview')}</p>
+          <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('loadingYourAppointmentSummary')}</h1>
+          <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>{t('weAreBringingOverThe')}</p>
         </div>
       </div>
     </main>

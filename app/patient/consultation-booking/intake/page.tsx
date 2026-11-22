@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -28,6 +29,7 @@ function doctorToBookingFallback(doctor: PatientDoctor | null) {
 }
 
 function IntakePageContent() {
+  const t = useTranslations('bookingIntake')
   const router = useRouter()
   const searchParams = useSearchParams()
   const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
@@ -190,7 +192,7 @@ function IntakePageContent() {
         <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
           <p role="alert" style={{ color: 'var(--danger)', marginBottom: '20px', fontSize: '14px' }}>{doctorLoadError}</p>
           <PortalButton onClick={handleBack}>
-            Go Back
+            {t('goBack')}
           </PortalButton>
         </div>
       </main>
@@ -202,13 +204,13 @@ function IntakePageContent() {
       <header style={{ background: "var(--surface)", borderBottom: '1px solid var(--border-subtle)', padding: '16px 24px' }}>
         <div className="portal-form-heading-row" style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button aria-label="Back to appointment time" disabled={isSubmitting} onClick={handleBack} style={{ minWidth: 44, minHeight: 44, padding: '8px', borderRadius: '8px', background: "var(--canvas)", border: 'none', cursor: 'pointer' }}>
+            <button aria-label={t('backToAppointmentTime')} disabled={isSubmitting} onClick={handleBack} style={{ minWidth: 44, minHeight: 44, padding: '8px', borderRadius: '8px', background: "var(--canvas)", border: 'none', cursor: 'pointer' }}>
               <span style={{ fontSize: '20px', color: "var(--text-muted)" }}>←</span>
             </button>
-            <h1 style={{ margin: 0, fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: 700, color: "var(--text)" }}>Intake Information</h1>
+            <h1 style={{ margin: 0, fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: 700, color: "var(--text)" }}>{t('intakeInformation')}</h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: "var(--text-muted)" }}>
-            <span>Step 2 of 3</span>
+            <span>{t('step2Of3')}</span>
             <div style={{ display: 'flex', gap: '4px' }}>
               <div style={{ width: '24px', height: '4px', background: 'var(--action-primary)', borderRadius: '2px' }} />
               <div style={{ width: '24px', height: '4px', background: 'var(--action-primary)', borderRadius: '2px' }} />
@@ -220,7 +222,7 @@ function IntakePageContent() {
 
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 24px' }}>
         <div className="portal-form-card" style={{ ...Glass.pill, borderRadius: 'var(--radius-lg)' }}>
-          <h2 className="portal-h2">Tell us about your health concern</h2>
+          <h2 className="portal-h2">{t('tellUsAboutYourHealth')}</h2>
           <p style={{ color: "var(--text-muted)", marginBottom: '24px', fontSize: '14px' }}>
             Please provide details about your medical condition so Dr. {physicianData.name} can prepare for your consultation.
           </p>
@@ -233,11 +235,11 @@ function IntakePageContent() {
           )}
 
           <form aria-busy={isSubmitting} id="clinical-intake-form" noValidate onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <p className="field-hint">Development testing only. Use synthetic information. The legal documents are drafts awaiting approval.</p>
+            <p className="field-hint">{t('developmentTestingOnlyUseSynthetic')}</p>
             {attempted && <ValidationSummary errors={errors} />}
             <div>
               <label htmlFor="chief-complaint" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Chief Complaint (Required)
+                {t('chiefComplaintRequired')}
               </label>
               <textarea
                 id="chief-complaint"
@@ -246,7 +248,7 @@ function IntakePageContent() {
                 maxLength={2000}
                 value={chiefComplaint}
                 onChange={(e) => setChiefComplaint(e.target.value)}
-                placeholder="What is the main reason for your visit? (e.g., a sore throat, a lingering cough, a question about your medication)"
+                placeholder={t('whatIsTheMainReason')}
                 required
                 style={{ width: '100%', minHeight: '100px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
@@ -256,28 +258,28 @@ function IntakePageContent() {
 
             <div>
               <label htmlFor="symptoms" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Symptoms (Optional, up to 5,000 characters)
+                {t('symptomsOptionalUpTo5')}
               </label>
               <textarea
                 id="symptoms"
                 maxLength={5000}
                 value={symptoms}
                 onChange={(e) => setSymptoms(e.target.value)}
-                placeholder="Describe your symptoms in detail (e.g., throbbing pain, nausea, dizziness)"
+                placeholder={t('describeYourSymptomsInDetail')}
                 style={{ width: '100%', minHeight: '80px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
             </div>
 
             <div>
               <label htmlFor="medical-history" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Medical History (Optional, up to 5,000 characters)
+                {t('medicalHistoryOptionalUpTo')}
               </label>
               <textarea
                 id="medical-history"
                 maxLength={5000}
                 value={medicalHistory}
                 onChange={(e) => setMedicalHistory(e.target.value)}
-                placeholder="Any relevant medical history, previous conditions, or ongoing treatments"
+                placeholder={t('anyRelevantMedicalHistoryPrevious')}
                 style={{ width: '100%', minHeight: '80px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
             </div>
@@ -285,7 +287,7 @@ function IntakePageContent() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
                 <label htmlFor="reported-duration" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Duration (Optional, up to 500 characters)
+                {t('durationOptionalUpTo500')}
               </label>
                 <input
                   type="text"
@@ -293,14 +295,14 @@ function IntakePageContent() {
                 maxLength={500}
                 value={reportedDuration}
                   onChange={(e) => setReportedDuration(e.target.value)}
-                  placeholder="e.g., 3 days, 2 weeks"
+                  placeholder={t('eG3Days2')}
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                 />
               </div>
 
               <div>
                 <label htmlFor="reported-location" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Location (Optional, up to 500 characters)
+                {t('locationOptionalUpTo500')}
               </label>
                 <input
                   type="text"
@@ -308,7 +310,7 @@ function IntakePageContent() {
                 maxLength={500}
                 value={reportedLocation}
                   onChange={(e) => setReportedLocation(e.target.value)}
-                  placeholder="e.g., left side of head, lower back"
+                  placeholder={t('eGLeftSideOf')}
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                 />
               </div>
@@ -317,7 +319,7 @@ function IntakePageContent() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
                 <label htmlFor="reported-onset" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Onset (Optional, up to 500 characters)
+                {t('onsetOptionalUpTo500')}
               </label>
                 <input
                   type="text"
@@ -325,14 +327,14 @@ function IntakePageContent() {
                 maxLength={500}
                 value={reportedOnset}
                   onChange={(e) => setReportedOnset(e.target.value)}
-                  placeholder="e.g., sudden, gradual"
+                  placeholder={t('eGSuddenGradual')}
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                 />
               </div>
 
               <div>
                 <label htmlFor="reported-severity" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Severity (Optional)
+                {t('severityOptional')}
               </label>
                 <select
                   id="reported-severity"
@@ -340,46 +342,46 @@ function IntakePageContent() {
                   onChange={(e) => setReportedSeverity(e.target.value)}
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                 >
-                  <option value="">Select severity</option>
-                  <option value="mild">Mild</option>
-                  <option value="moderate">Moderate</option>
-                  <option value="severe">Severe</option>
+                  <option value="">{t('selectSeverity')}</option>
+                  <option value="mild">{t('mild')}</option>
+                  <option value="moderate">{t('moderate')}</option>
+                  <option value="severe">{t('severe')}</option>
                 </select>
               </div>
             </div>
 
             <div>
               <label htmlFor="associated-factors" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
-                Associated Factors (Optional, up to 5,000 characters)
+                {t('associatedFactorsOptionalUpTo')}
               </label>
               <textarea
                 id="associated-factors"
                 maxLength={5000}
                 value={associatedFactors}
                 onChange={(e) => setAssociatedFactors(e.target.value)}
-                placeholder="Anything that makes it better or worse (e.g., rest, movement, certain foods)"
+                placeholder={t('anythingThatMakesItBetter')}
                 style={{ width: '100%', minHeight: '60px', resize: 'vertical', padding: '12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
               />
             </div>
 
             <fieldset aria-describedby="funding-summary" style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 18px', margin: 0, background: 'var(--surface-subtle)' }}>
-              <legend style={{ fontWeight: 700, fontSize: '15px', padding: '0 6px' }}>How this consultation is paid</legend>
+              <legend style={{ fontWeight: 700, fontSize: '15px', padding: '0 6px' }}>{t('howThisConsultationIsPaid')}</legend>
               {savedInsurance === undefined ? (
-                <p role="status" style={{ margin: 0, fontSize: '14px', color: 'var(--text-muted)' }}>Checking your saved insurance…</p>
+                <p role="status" style={{ margin: 0, fontSize: '14px', color: 'var(--text-muted)' }}>{t('checkingYourSavedInsurance')}</p>
               ) : funding.needsSelfPayConfirmation ? (
                 <div style={{ display: 'grid', gap: 12 }}>
                   <p id="funding-summary" style={{ margin: 0, fontSize: '14px', lineHeight: 1.6 }}>
                     {insuranceLoadFailed ? 'We could not load your saved insurance. ' : 'You have not added a health insurer. '}
-                    This consultation will be billed to you as <strong>self-pay</strong>.
+                    This consultation will be billed to you as <strong>{t('selfPay')}</strong>.
                   </p>
                   <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--text-muted)' }}>{selfPayPricingBasis(physicianData.consultationFee)}</p>
                   <p style={{ margin: 0, fontSize: '13px' }}>
-                    <Link href="/patient/settings" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--link, var(--action-primary))', fontWeight: 600 }}>Add your insurance</Link>
+                    <Link href="/patient/settings" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--link, var(--action-primary))', fontWeight: 600 }}>{t('addYourInsurance')}</Link>
                     <span style={{ color: 'var(--text-muted)' }}> (opens in a new tab; this page updates when you come back)</span>
                   </p>
                   <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <input type="checkbox" checked={selfPayConfirmed} onChange={e => setSelfPayConfirmed(e.target.checked)} aria-invalid={attempted && Boolean(errors.selfPay)} aria-describedby="selfPay-hint selfPay-error" />
-                    <span>I understand this consultation is self-pay and accept the pricing basis above. (Required)</span>
+                    <span>{t('iUnderstandThisConsultationIs')}</span>
                   </label>
                   <FieldFeedback name="selfPay" error={attempted ? errors.selfPay : undefined} hint="You can still add insurance before you continue." />
                 </div>
@@ -393,12 +395,12 @@ function IntakePageContent() {
             <div>
               <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <input type="checkbox" checked={processingConsent} onChange={e => setProcessingConsent(e.target.checked)} aria-invalid={attempted && Boolean(errors.processing)} aria-describedby="processing-hint processing-error" />
-                <span>I agree to processing this synthetic intake for development testing. (Required)</span>
+                <span>{t('iAgreeToProcessingThis')}</span>
               </label>
               <FieldFeedback name="processing" error={attempted ? errors.processing : undefined} hint="This is a development acknowledgement, not acceptance of final legal terms. See the draft status on the privacy page." />
               <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 16 }}>
                 <input type="checkbox" checked={aiConsent} onChange={e => setAiConsent(e.target.checked)} />
-                <span>Allow optional AI assistance to prepare a draft for clinician review. Declining does not prevent clinician-led care.</span>
+                <span>{t('allowOptionalAiAssistanceTo')}</span>
               </label>
             </div>
             <div className="portal-form-actions">
@@ -408,7 +410,7 @@ function IntakePageContent() {
                 disabled={isSubmitting}
                 onClick={handleBack}
               >
-                Back
+                {t('back')}
               </PortalButton>
               <PortalButton
                 type="submit"
@@ -426,10 +428,11 @@ function IntakePageContent() {
 }
 
 function IntakePageFallback() {
+  const t = useTranslations('bookingIntake')
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'grid', placeItems: 'center' }}>
       <div style={{ textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: '14px', color: "var(--text-muted)" }}>Loading intake form...</p>
+        <p style={{ margin: 0, fontSize: '14px', color: "var(--text-muted)" }}>{t('loadingIntakeForm')}</p>
       </div>
     </main>
   )

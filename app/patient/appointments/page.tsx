@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import DoctorAvatar from '@/components/cards/DoctorAvatar'
 import { Suspense, useEffect, useRef, useState } from 'react'
@@ -146,6 +147,7 @@ function SCard({ children, style }: { children: React.ReactNode; style?: React.C
 // ─── Today banner ──────────────────────────────────────────────────────────────
 
 function TodayBanner({ appt, onJoin, onDetails }: { appt: Appointment; onJoin: () => void; onDetails: () => void }) {
+  const t = useTranslations('patientAppointments')
   const [countdown, setCountdown] = useState('Checking appointment time…')
 
   useEffect(() => {
@@ -191,7 +193,7 @@ function TodayBanner({ appt, onJoin, onDetails }: { appt: Appointment; onJoin: (
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ margin: '0 0 2px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.slate2 }}>Starts in</p>
+            <p style={{ margin: '0 0 2px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.slate2 }}>{t('startsIn')}</p>
             <p style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.link }}>{countdown}</p>
           </div>
           <HoverBtn
@@ -200,14 +202,14 @@ function TodayBanner({ appt, onJoin, onDetails }: { appt: Appointment; onJoin: (
             on={{ transform: 'translateY(-1px)', boxShadow: '0 10px 24px rgba(52,140,234,0.35)' }}
           >
             <Ico p={ICONS.video} size={14} sw={1.8} color="#fff" />
-            Join Consultation
+            {t('joinConsultation')}
           </HoverBtn>
           <HoverBtn
             onClick={onDetails}
             base={{ minHeight: '40px', padding: '0 16px', borderRadius: '11px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
             on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
           >
-            View Details
+            {t('viewDetails')}
           </HoverBtn>
         </div>
       </div>
@@ -224,6 +226,7 @@ function UpcomingCard({ appt, onJoin, onDetails, onReschedule, onCancel }: {
   onReschedule: () => void
   onCancel: () => void
 }) {
+  const t = useTranslations('patientAppointments')
   const showJoin = Boolean(appt.consultationId) && appt.consultationType === 'Video Consultation'
 
   return (
@@ -247,7 +250,7 @@ function UpcomingCard({ appt, onJoin, onDetails, onReschedule, onCancel }: {
             <span style={{ fontSize: "13px", color: T.slate }}>· {appt.duration}</span>
           </div>
           <div style={{ fontSize: "13px", color: T.slate2 }}>
-            Ref: <span style={{ fontWeight: 600, color: T.slate, fontFamily: 'monospace' }}>{appt.bookingRef}</span>
+            {t('ref')} <span style={{ fontWeight: 600, color: T.slate, fontFamily: 'monospace' }}>{appt.bookingRef}</span>
           </div>
         </div>
         <div className='appt-card-actions' style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
@@ -258,7 +261,7 @@ function UpcomingCard({ appt, onJoin, onDetails, onReschedule, onCancel }: {
               on={{ transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(52,140,234,0.34)' }}
             >
               <Ico p={ICONS.video} size={12} sw={1.8} color="#fff" />
-              Join Consultation
+              {t('joinConsultation')}
             </HoverBtn>
           )}
           <HoverBtn
@@ -266,21 +269,21 @@ function UpcomingCard({ appt, onJoin, onDetails, onReschedule, onCancel }: {
             base={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
             on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
           >
-            View Details
+            {t('viewDetails')}
           </HoverBtn>
           <HoverBtn
             onClick={onReschedule}
             base={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate, fontSize: "13px", fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
             on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
           >
-            Reschedule
+            {t('reschedule')}
           </HoverBtn>
           <button
             type="button"
             onClick={onCancel}
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: "13px", color: T.red, fontWeight: 600, padding: '4px 0', textDecoration: 'underline', textUnderlineOffset: '2px' }}
           >
-            Cancel Appointment
+            {t('cancelAppointment')}
           </button>
         </div>
       </div>
@@ -289,6 +292,7 @@ function UpcomingCard({ appt, onJoin, onDetails, onReschedule, onCancel }: {
 }
 
 function PastCard({ appt, onReview }: { appt: Appointment; onReview: (appt: Appointment) => void }) {
+  const t = useTranslations('patientAppointments')
   const router = useRouter()
   return (
     <SCard style={{ padding: '18px' }}>
@@ -314,19 +318,19 @@ function PastCard({ appt, onReview }: { appt: Appointment; onReview: (appt: Appo
             {appt.hasSummary && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '999px', background: 'rgba(15,158,119,0.1)', color: T.green, fontSize: "13px", fontWeight: 600 }}>
                 <Ico p={ICONS.check} size={10} sw={1.8} color={T.green} />
-                Summary
+                {t('summary')}
               </span>
             )}
             {appt.hasPrescription && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 600 }}>
                 <Ico p={ICONS.pill} size={10} sw={1.8} color={T.blue} />
-                Prescription
+                {t('prescription')}
               </span>
             )}
             {appt.hasLabRequest && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '999px', background: 'rgba(52,140,234,0.1)', color: "var(--link)", fontSize: "13px", fontWeight: 600 }}>
                 <Ico p={ICONS.activity} size={10} sw={1.8} color='#348CEA' />
-                Lab Request
+                {t('labRequest')}
               </span>
             )}
           </div>
@@ -336,14 +340,14 @@ function PastCard({ appt, onReview }: { appt: Appointment; onReview: (appt: Appo
             href={`${PATIENT_ROUTES.appointmentDetails}?appointmentId=${encodeURIComponent(appt.id)}`}
             style={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap', textDecoration: 'none' }}
           >
-            View Details
+            {t('viewDetails')}
           </Link>
           {appt.hasPrescription && (
             <Link
               href={PATIENT_ROUTES.prescriptions}
               style={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap', textDecoration: 'none' }}
             >
-              View Prescription
+              {t('viewPrescription')}
             </Link>
           )}
           {!appt.hasReviewed && (
@@ -352,7 +356,7 @@ function PastCard({ appt, onReview }: { appt: Appointment; onReview: (appt: Appo
               base={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: "13px", fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(32,181,223,0.24)' }}
               on={{ transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(52,140,234,0.3)' }}
             >
-              Write Review
+              {t('writeReview')}
             </HoverBtn>
           )}
           <HoverBtn
@@ -360,7 +364,7 @@ function PastCard({ appt, onReview }: { appt: Appointment; onReview: (appt: Appo
             base={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate, fontSize: "13px", fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
             on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
           >
-            Book Follow-Up
+            {t('bookFollowUp')}
           </HoverBtn>
         </div>
       </div>
@@ -371,6 +375,7 @@ function PastCard({ appt, onReview }: { appt: Appointment; onReview: (appt: Appo
 // ─── Cancelled card ────────────────────────────────────────────────────────────
 
 function CancelledCard({ appt }: { appt: Appointment }) {
+  const t = useTranslations('patientAppointments')
   const router = useRouter()
   return (
     <SCard style={{ padding: '18px', opacity: 0.88 }}>
@@ -401,7 +406,7 @@ function CancelledCard({ appt }: { appt: Appointment }) {
           )}
           {appt.paymentStatus === 'Refunded' && (
             <span style={{ display: 'inline-block', marginTop: '8px', padding: '3px 9px', borderRadius: '999px', background: 'rgba(15,158,119,0.1)', color: T.green, fontSize: "13px", fontWeight: 700 }}>
-              Payment Refunded
+              {t('paymentRefunded')}
             </span>
           )}
         </div>
@@ -410,14 +415,14 @@ function CancelledCard({ appt }: { appt: Appointment }) {
             href={`${PATIENT_ROUTES.appointmentDetails}?appointmentId=${encodeURIComponent(appt.id)}`}
             style={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap', textDecoration: 'none' }}
           >
-            View Details
+            {t('viewDetails')}
           </Link>
           <HoverBtn
             onClick={() => router.push(PATIENT_ROUTES.findDoctor)}
             base={{ minHeight: '38px', padding: '0 14px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: "13px", fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(32,181,223,0.24)' }}
             on={{ transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(52,140,234,0.3)' }}
           >
-            Book Again
+            {t('bookAgain')}
           </HoverBtn>
         </div>
       </div>
@@ -475,6 +480,7 @@ function EmptyState({ tab, onAction }: { tab: Tab; onAction: () => void }) {
 // ─── Cancel Modal ──────────────────────────────────────────────────────────────
 
 function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose: () => void; onConfirm: (reason: string) => Promise<void> }) {
+  const t = useTranslations('patientAppointments')
   const dialog = useRef<HTMLDialogElement>(null)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
@@ -496,13 +502,13 @@ function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose:
     aria-labelledby="cancel-appointment-title" className="qarevo-cancel-dialog">
     <style>{`.qarevo-cancel-dialog { margin: auto; width: min(460px, calc(100% - 24px)); padding: 28px; border: 1px solid var(--border); border-radius: 24px; background: var(--surface); color: var(--ink); } .qarevo-cancel-dialog::backdrop { background: #061b2abb; backdrop-filter: blur(4px); }`}</style>
     <form onSubmit={confirm} aria-busy={busy}>
-      <h2 id="cancel-appointment-title" className="text-xl font-semibold">Cancel appointment?</h2>
+      <h2 id="cancel-appointment-title" className="text-xl font-semibold">{t('cancelAppointment2')}</h2>
       <p className="mt-3 text-muted">{appt.physician} · {appt.date} · {appt.time}</p>
-      <label htmlFor="cancel-reason" className="mt-5 block font-medium">Reason for cancellation — optional</label>
+      <label htmlFor="cancel-reason" className="mt-5 block font-medium">{t('reasonForCancellationOptional')}</label>
       <textarea id="cancel-reason" maxLength={500} value={reason} onChange={event => setReason(event.target.value)} className="mt-2 min-h-24 w-full rounded-xl border border-theme bg-surface-subtle p-3" />
       {error && <p role="alert" className="mt-3 text-red-700 dark:text-red-300">{error}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
-        <button type="button" disabled={busy} onClick={onClose} className="min-h-11 rounded-xl border border-theme px-4">Keep appointment</button>
+        <button type="button" disabled={busy} onClick={onClose} className="min-h-11 rounded-xl border border-theme px-4">{t('keepAppointment')}</button>
         <button type="submit" disabled={busy} className="min-h-11 rounded-xl border border-theme px-4 font-semibold text-red-700 dark:text-red-300">{busy ? 'Cancelling…' : 'Cancel appointment'}</button>
       </div>
     </form>
@@ -513,8 +519,8 @@ function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose:
 
 function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   useEffect(() => {
-    const t = setTimeout(onDismiss, 4000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(onDismiss, 4000)
+    return () => clearTimeout(timer)
   }, [onDismiss])
 
   return (
@@ -530,6 +536,7 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 // ─── Page Inner ────────────────────────────────────────────────────────────────
 
 function AppointmentsPageInner() {
+  const t = useTranslations('patientAppointments')
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('upcoming')
   const [upcoming, setUpcoming] = useState<Appointment[]>([])
@@ -663,20 +670,20 @@ function AppointmentsPageInner() {
       on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 22px rgba(52,140,234,0.34)' }}
     >
       <Ico p={ICONS.calendar} size={14} sw={1.8} color="#fff" />
-      + Book Consultation
+      {t('bookConsultation')}
     </HoverBtn>
   )
 
   if (loading) {
     return (
       <PatientPortalShell
-        eyebrow="Patient Platform"
-        title="Appointments"
-        description="Manage your upcoming consultations, view past appointments, and keep track of your healthcare schedule."
+        eyebrow={t('patientPlatform')}
+        title={t('appointments')}
+        description={t('manageYourUpcomingConsultationsView')}
         headerActions={bookButton}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '280px', color: T.slate2 }}>
-          Loading your appointments...
+          {t('loadingYourAppointments')}
         </div>
       </PatientPortalShell>
     )
@@ -717,9 +724,9 @@ function AppointmentsPageInner() {
       `}</style>
 
       <PatientPortalShell
-        eyebrow="Patient Platform"
-        title="Appointments"
-        description="Manage your upcoming consultations, view past appointments, and keep track of your healthcare schedule."
+        eyebrow={t('patientPlatform')}
+        title={t('appointments')}
+        description={t('manageYourUpcomingConsultationsView')}
         headerActions={bookButton}
       >
         {/* Tabs */}
@@ -756,7 +763,7 @@ function AppointmentsPageInner() {
               )}
               {upcoming.length > 0 && (
                 <SCard>
-                  <h2 className="portal-h2">Upcoming Consultations</h2>
+                  <h2 className="portal-h2">{t('upcomingConsultations')}</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {upcoming.map(appt => (
                       <UpcomingCard
@@ -782,7 +789,7 @@ function AppointmentsPageInner() {
             <>
               {past.length > 0 ? (
                 <SCard>
-                  <h2 style={{ margin: '0 0 14px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Completed Appointments</h2>
+                  <h2 style={{ margin: '0 0 14px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{t('completedAppointments')}</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {past.map(appt => <PastCard key={appt.id} appt={appt} onReview={setReviewTarget} />)}
                   </div>
@@ -798,7 +805,7 @@ function AppointmentsPageInner() {
             <>
               {cancelled.length > 0 ? (
                 <SCard>
-                  <h2 style={{ margin: '0 0 14px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Cancelled Appointments</h2>
+                  <h2 style={{ margin: '0 0 14px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{t('cancelledAppointments')}</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {cancelled.map(appt => <CancelledCard key={appt.id} appt={appt} />)}
                   </div>

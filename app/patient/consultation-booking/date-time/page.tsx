@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Suspense, useMemo, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
@@ -119,6 +120,7 @@ function doctorToBookingFallback(doctor: PatientDoctor | null) {
 }
 
 function DateTimeSelectionPageContent() {
+  const t = useTranslations('bookingDateTime')
   const router = useRouter()
   const searchParams = useSearchParams()
   useSafetyScreenGate()
@@ -350,9 +352,9 @@ function DateTimeSelectionPageContent() {
         <h1 id='booking-doctor-title' className='text-xl font-bold text-ink'>{missing ? 'Choose a doctor to continue' : failed ? 'Doctor details unavailable' : 'Checking your selected doctor'}</h1>
         <p className='mt-3 text-sm leading-relaxed text-muted' role={failed ? 'alert' : 'status'}>{missing ? 'Choose a doctor before selecting an appointment time. Your saved account information and intake remain available.' : failed ? doctorLoadError : 'Loading the doctor’s current details and appointment calendar…'}</p>
         <div className='mt-6 flex flex-wrap gap-3'>
-          {failed && <button type='button' className='q-button q-button-primary' onClick={() => setDoctorReload(value => value + 1)}>Retry doctor details</button>}
+          {failed && <button type='button' className='q-button q-button-primary' onClick={() => setDoctorReload(value => value + 1)}>{t('retryDoctorDetails')}</button>}
           <ActionLink href={discoveryHref} pendingLabel='Opening doctor selection…' tone={missing ? 'primary' : 'secondary'}>{missing ? 'Choose a doctor' : 'Choose another doctor'}</ActionLink>
-          <ActionLink href='/patient/dashboard'>Return to dashboard</ActionLink>
+          <ActionLink href='/patient/dashboard'>{t('returnToDashboard')}</ActionLink>
         </div>
       </section>
     </main>
@@ -376,13 +378,13 @@ function DateTimeSelectionPageContent() {
         `}</style>
         <button type='button' onClick={handleBack} style={{ minHeight: '42px', marginBottom: '12px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 14px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", boxShadow: '0 10px 24px rgba(4,53,77,0.08)', color: T.navy, fontFamily: 'inherit', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
           <Ico p={ICONS.arrowBack} size={15} sw={2} color={T.navy} />
-          Back
+          {t('back')}
         </button>
         <div className='dt-grid'>
           <aside style={{ display: 'grid', gap: '12px' }}>
             <section style={{ ...Glass.nav, borderRadius: '20px', border: "1px solid var(--border)", padding: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Booking Progress</p>
+                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('bookingProgress')}</p>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.link }}>60%</p>
               </div>
               <div style={{ width: '100%', height: '6px', borderRadius: '999px', background: "var(--surface-hover)", marginBottom: '12px', overflow: 'hidden' }}>
@@ -407,7 +409,7 @@ function DateTimeSelectionPageContent() {
             <section style={{ ...Glass.pill, borderRadius: '20px', border: "1px solid var(--border)", padding: '18px' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 9px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px' }}>
                 <Ico p={ICONS.lock} size={11} sw={2.2} color={T.blue} />
-                Protected scheduling
+                {t('protectedScheduling')}
               </div>
               <h2 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{physicianData.name}</h2>
               {doctorLoadError && (
@@ -417,12 +419,12 @@ function DateTimeSelectionPageContent() {
               )}
               <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
               <div style={{ display: 'grid', gap: '7px', fontSize: "13px", color: T.slate2 }}>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Consultation</span><strong style={{ color: T.navy }}>{readLabel(selectedServiceType)}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Duration</span><strong style={{ color: T.navy }}>{displayDuration}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Working hours</span><strong style={{ color: T.navy }}>{formatWorkingTime(workingHours?.start)} - {formatWorkingTime(workingHours?.end)}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Days</span><strong style={{ color: T.navy }}>{availableDays.length ? availableDays.join(', ') : 'Not configured'}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Fee</span><strong style={{ color: T.navy }}>{formatFee()}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>Insurance</span><strong style={{ color: T.green }}>{insurance}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('consultation')}</span><strong style={{ color: T.navy }}>{readLabel(selectedServiceType)}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('duration')}</span><strong style={{ color: T.navy }}>{displayDuration}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('workingHours')}</span><strong style={{ color: T.navy }}>{formatWorkingTime(workingHours?.start)} - {formatWorkingTime(workingHours?.end)}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('days')}</span><strong style={{ color: T.navy }}>{availableDays.length ? availableDays.join(', ') : 'Not configured'}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('fee')}</span><strong style={{ color: T.navy }}>{formatFee()}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('insurance')}</span><strong style={{ color: T.green }}>{insurance}</strong></div>
               </div>
             </section>
           </aside>
@@ -433,14 +435,14 @@ function DateTimeSelectionPageContent() {
                 <div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: 'rgba(32,181,223,0.1)', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
                     <Ico p={ICONS.calendar} size={11} sw={2.2} color={T.blue} />
-                    Premium scheduling
+                    {t('premiumScheduling')}
                   </div>
-                  <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose Your Appointment</h1>
-                  <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7, maxWidth: '760px' }}>Select your preferred consultation date and time. Availability updates smoothly so you can book with confidence and clarity.</p>
+                  <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('chooseYourAppointment')}</h1>
+                  <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7, maxWidth: '760px' }}>{t('selectYourPreferredConsultationDate')}</p>
                 </div>
                 <button type='button' onClick={handleBack} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', background: 'transparent', color: T.link, fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
                   <Ico p={ICONS.arrowBack} size={14} sw={1.8} color={T.blue} />
-                  Back to Consultation Options
+                  {t('backToConsultationOptions')}
                 </button>
               </div>
             </header>
@@ -459,7 +461,7 @@ function DateTimeSelectionPageContent() {
 	                  style={{ borderRadius: '999px', border: '1px solid rgba(32,181,223,0.34)', background: 'linear-gradient(135deg, rgba(32,181,223,0.12) 0%, rgba(52,140,234,0.12) 100%)', color: T.link, fontSize: '14px', fontWeight: 700, padding: '12px 16px', cursor: firstAvailableDay ? 'pointer' : 'not-allowed', opacity: firstAvailableDay ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px' }}
                 >
                   <Ico p={ICONS.check} size={12} sw={2.2} color={T.blue} />
-                  First Available
+                  {t('firstAvailable')}
                 </button>
 	                {quickShortcuts.map((shortcut) => {
 	                  const active = selectedDateKey === formatDateKey(shortcut.date)
@@ -480,8 +482,8 @@ function DateTimeSelectionPageContent() {
 
               <div style={{ display: 'grid', gap: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Consultation Type</p>
-                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose consultation type</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('consultationType')}</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('chooseConsultationType')}</h2>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
@@ -515,8 +517,8 @@ function DateTimeSelectionPageContent() {
                 </div>
 
                 <div>
-                  <label htmlFor='booking-appointment-date' style={{ display: 'block', margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment date</label>
-                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose your preferred appointment date</h2>
+                  <label htmlFor='booking-appointment-date' style={{ display: 'block', margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('appointmentDate')}</label>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('chooseYourPreferredAppointmentDate')}</h2>
                 </div>
 
                 <input
@@ -580,8 +582,8 @@ function DateTimeSelectionPageContent() {
             <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Time Slots</p>
-                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Choose a premium appointment window</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('timeSlots')}</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('chooseAPremiumAppointmentWindow')}</h2>
                 </div>
 	                <div style={{ padding: '8px 12px', borderRadius: '999px', background: 'rgba(165,224,218,0.24)', color: T.teal, fontSize: "13px", fontWeight: 700 }}>Timezone: {workingHours?.timezone ?? 'Doctor timezone'}</div>
               </div>
@@ -612,11 +614,11 @@ function DateTimeSelectionPageContent() {
 	              <div style={{ display: 'grid', gap: '12px' }}>
 	                {(loadingAvailability || loadingSlots) ? (
 	                  <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', color: T.slate, fontSize: '13px', fontWeight: 600 }}>
-	                    Loading real doctor slots...
+	                    {t('loadingRealDoctorSlots')}
 	                  </div>
 	                ) : slotGroups.length === 0 ? (
 	                  <div style={{ borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>
-                    No appointment slots are open for this date. Choose one of the doctor configured days.
+                    {t('noAppointmentSlotsAreOpen')}
 	                  </div>
 	                ) : slotGroups.map((group) => (
 	                  <div key={group.label}>
@@ -635,7 +637,7 @@ function DateTimeSelectionPageContent() {
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                               <span style={{ fontSize: '13px', fontWeight: 700 }}>{slot}</span>
-                              {active ? <span style={{ padding: '4px 7px', borderRadius: '999px', background: T.blueLight, color: T.link, fontSize: "13px", fontWeight: 700 }}>Selected</span> : disabled ? <span style={{ fontSize: "13px", fontWeight: 700, color: T.slate2 }}>Booked</span> : <span style={{ fontSize: "13px", fontWeight: 700, color: T.green }}>Available</span>}
+                              {active ? <span style={{ padding: '4px 7px', borderRadius: '999px', background: T.blueLight, color: T.link, fontSize: "13px", fontWeight: 700 }}>{t('selected')}</span> : disabled ? <span style={{ fontSize: "13px", fontWeight: 700, color: T.slate2 }}>{t('booked')}</span> : <span style={{ fontSize: "13px", fontWeight: 700, color: T.green }}>{t('available')}</span>}
                             </div>
                           </button>
                         )
@@ -675,7 +677,7 @@ function DateTimeSelectionPageContent() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.navy }}>Select Time Slot</h3>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.navy }}>{t('selectTimeSlot')}</h3>
                     <button
                       type='button'
                       onClick={() => setShowTimeSheet(false)}
@@ -705,7 +707,7 @@ function DateTimeSelectionPageContent() {
                               >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                                   <span style={{ fontSize: '15px', fontWeight: 700 }}>{slot}</span>
-                                  {active ? <span style={{ padding: '6px 10px', borderRadius: '999px', background: T.blueLight, color: T.link, fontSize: "13px", fontWeight: 700 }}>Selected</span> : disabled ? <span style={{ fontSize: "13px", fontWeight: 700, color: T.slate2 }}>Booked</span> : <span style={{ fontSize: "13px", fontWeight: 700, color: T.green }}>Available</span>}
+                                  {active ? <span style={{ padding: '6px 10px', borderRadius: '999px', background: T.blueLight, color: T.link, fontSize: "13px", fontWeight: 700 }}>{t('selected')}</span> : disabled ? <span style={{ fontSize: "13px", fontWeight: 700, color: T.slate2 }}>{t('booked')}</span> : <span style={{ fontSize: "13px", fontWeight: 700, color: T.green }}>{t('available')}</span>}
                                 </div>
                               </button>
                             )
@@ -733,10 +735,10 @@ function DateTimeSelectionPageContent() {
               <div style={{ display: 'grid', gap: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   <div>
-                    <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Appointment Details</p>
-                    <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Everything needed for a smooth visit</h2>
+                    <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('appointmentDetails')}</p>
+                    <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('everythingNeededForASmooth')}</h2>
                   </div>
-                  <div style={{ padding: '8px 12px', borderRadius: '999px', background: 'rgba(32,181,223,0.08)', color: T.link, fontSize: "13px", fontWeight: 700 }}>Clinician calendar timezone</div>
+                  <div style={{ padding: '8px 12px', borderRadius: '999px', background: 'rgba(32,181,223,0.08)', color: T.link, fontSize: "13px", fontWeight: 700 }}>{t('clinicianCalendarTimezone')}</div>
                 </div>
 
 	                <div className='dt-detail-grid'>
@@ -760,8 +762,8 @@ function DateTimeSelectionPageContent() {
             <section style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '18px' }}>
               <div style={{ display: 'grid', gap: '10px' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preparation Tips</p>
-                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>A calm, ready experience</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('preparationTips')}</p>
+                  <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('aCalmReadyExperience')}</h2>
                 </div>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {['Prepare your medical documents', 'Ensure internet connectivity', 'Join 5 minutes early', 'Find a quiet location', 'Keep previous prescriptions nearby'].map((tip) => (
@@ -786,7 +788,7 @@ function DateTimeSelectionPageContent() {
                   )}
                 </div>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Booking Summary</p>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('bookingSummary')}</p>
                   <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
                 </div>
               </div>
@@ -808,7 +810,7 @@ function DateTimeSelectionPageContent() {
                 ))}
               </div>
 
-              {!canContinue && <p className='field-error' role='status'>Select an available appointment time before continuing. If none are available, choose another date or clinician.</p>}
+              {!canContinue && <p className='field-error' role='status'>{t('selectAnAvailableAppointmentTime')}</p>}
 	              <HoverBtn
 	                onClick={() => {
 	                  if (canContinue) router.push(continueHref)
@@ -834,13 +836,13 @@ function DateTimeSelectionPageContent() {
                 }}
                 on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 18px rgba(32,181,223,0.28)' }}
               >
-                Continue
+                {t('continue')}
                 <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
               </HoverBtn>
 
               <button type='button' onClick={handleBack} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: '10px', border: 'none', background: 'transparent', color: T.slate2, fontFamily: 'inherit', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
                 <Ico p={ICONS.arrowSm} size={13} sw={2} style={{ transform: 'rotate(180deg)' }} />
-                Back
+                {t('back')}
               </button>
             </section>
 
@@ -862,13 +864,14 @@ function DateTimeSelectionPageContent() {
 }
 
 function DateTimeSelectionPageFallback() {
+  const t = useTranslations('bookingDateTime')
   return (
     <main style={{ minHeight: '100vh', background: PAGE_BG }}>
       <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '24px 20px 40px' }}>
         <div style={{ background: "var(--surface-glass)", borderRadius: '24px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '24px' }}>
-          <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Loading scheduling options</p>
-          <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>Preparing your appointment slots</h1>
-          <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>We are loading the next available windows for your selected consultation.</p>
+          <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('loadingSchedulingOptions')}</p>
+          <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('preparingYourAppointmentSlots')}</h1>
+          <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.7 }}>{t('weAreLoadingTheNext')}</p>
         </div>
       </div>
     </main>
