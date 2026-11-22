@@ -40,7 +40,10 @@ export function usePatientNotifications() {
   // The first page follows new events: every 30 s while visible and whenever another view changes read state.
   useEffect(() => {
     if (before !== null) return
-    const tick = () => { if (document.visibilityState === 'visible' && !changingPage.current) refresh() }
+    const tick = (event?: Event) => {
+      if (event instanceof CustomEvent && event.detail?.source === 'patient-panel') return
+      if (document.visibilityState === 'visible' && !changingPage.current) refresh()
+    }
     const timer = window.setInterval(tick, 30_000)
     window.addEventListener(NOTIFICATIONS_CHANGED, tick)
     return () => { window.clearInterval(timer); window.removeEventListener(NOTIFICATIONS_CHANGED, tick) }
@@ -73,7 +76,9 @@ export function usePatientNotifications() {
       if (!saved || saved.id !== id || !saved.isRead || saved.source !== notice.source || saved.eventType !== notice.eventType || saved.sourceId !== notice.sourceId || saved.href !== notice.href) throw new Error('The read status could not be confirmed. Please retry.')
       const visibleIds = new Set(parsed?.items.map(item => item.id))
       setMutation(previous => ({ page, confirmed: [...new Set([...(previous?.page === page ? previous.confirmed.filter(value => visibleIds.has(value)) : []), id])], pendingId: null, errorId: null, error: '' }))
-      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED))
+      refresh()
+      // Tell the bell; this panel ignores its own signal (it has just refreshed).
+      window.dispatchEvent(new CustomEvent(NOTIFICATIONS_CHANGED, { detail: { source: 'patient-panel' } }))
     } catch (error) {
       if (!action.isCurrent() || currentPage.current !== page || controller.signal.aborted) return
       setMutation(previous => ({ page, confirmed: previous?.page === page ? previous.confirmed : [], pendingId: null, errorId: id, error: getApiErrorDetail(error) || 'The read status could not be saved. Please retry.' }))
