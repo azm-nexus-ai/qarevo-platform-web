@@ -71,3 +71,12 @@ for (const leavePage of [false, true]) test(`provider start ${leavePage ? 'does 
   assert.equal(redirects.length,leavePage?0:1)
   if(!leavePage){assert.equal(saved[0].value.state,'synthetic-state');assert.match(saved[0].value.verifier,/^[A-Za-z0-9_-]{43}$/)}
 })
+
+test('a malformed provider answer is rejected instead of crashing the sign-in page', () => {
+  const { api } = providersFor('patient')
+  for (const value of [{}, null, { google: {}, apple: {} }, { google: { enabled: 'yes' }, apple: { enabled: true } }]) {
+    assert.throws(() => api.socialAvailability(value), /could not be verified/)
+  }
+  assert.equal(JSON.stringify(api.socialAvailability({ google: { enabled: true, message: null }, apple: { enabled: false, message: 'Pending' } })),
+    JSON.stringify({ google: { enabled: true, message: null }, apple: { enabled: false, message: 'Pending' } }))
+})

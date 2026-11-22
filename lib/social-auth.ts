@@ -9,7 +9,19 @@ function base64url(bytes: Uint8Array) { return btoa(String.fromCharCode(...bytes
 export async function socialProviders() {
   const portal = currentPortal()
   if (portal === 'admin') return { google: { enabled: false, message: 'Social sign-in is unavailable for administrators.' }, apple: { enabled: false, message: 'Social sign-in is unavailable for administrators.' } }
-  return apiGet<SocialAvailability>(`/api/v1/auth/social/providers?portal=${portal === 'doctor' ? 'PROVIDER' : 'PATIENT'}`)
+  return socialAvailability(await apiGet<unknown>(`/api/v1/auth/social/providers?portal=${portal === 'doctor' ? 'PROVIDER' : 'PATIENT'}`))
+}
+/** A malformed answer is an unavailable provider check, never a crashed sign-in page. */
+export function socialAvailability(value: unknown): SocialAvailability {
+  const row = value && typeof value === 'object' ? value as Record<string, unknown> : null
+  const one = (item: unknown) => {
+    const entry = item && typeof item === 'object' ? item as Record<string, unknown> : null
+    if (!entry || typeof entry.enabled !== 'boolean') return null
+    return { enabled: entry.enabled, message: typeof entry.message === 'string' ? entry.message.slice(0, 300) : null }
+  }
+  const google = one(row?.google), apple = one(row?.apple)
+  if (!google || !apple) throw new Error('Sign-in provider availability could not be verified.')
+  return { google, apple }
 }
 export async function beginSocial(provider: SocialProvider, portal: SocialPortal, currentPassword?: string, canContinue: () => boolean = () => true) {
   const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)))
