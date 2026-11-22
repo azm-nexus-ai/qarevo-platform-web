@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { getApiErrorDetail } from '@/lib/api'
 import '@/components/doctor/doctor-clinical.css'
 
@@ -15,6 +16,7 @@ import {
 } from '@/lib/api'
 
 export default function AppointmentDetailPage() {
+  const t = useTranslations('doctorAppointment');
   const router = useRouter()
   const params = useParams()
   const appointmentId = params.appointmentId as string
@@ -103,7 +105,7 @@ export default function AppointmentDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted">Loading appointment details...</div>
+        <div className="text-muted">{t('loadingAppointmentDetails')}</div>
       </div>
     )
   }
@@ -116,7 +118,7 @@ export default function AppointmentDetailPage() {
           onClick={handleBack}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
         >
-          Back to Appointments
+          {t('backToAppointments')}
         </button>
       </div>
     )
@@ -133,10 +135,10 @@ export default function AppointmentDetailPage() {
             onClick={handleBack}
             className="p-2 hover:bg-surface-subtle rounded-lg transition-colors flex-shrink-0"
           >
-            ← Back
+            {t('back')}
           </button>
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-ink truncate">Appointment Details</h1>
+            <h1 className="text-2xl font-bold text-ink truncate">{t('appointmentDetails')}</h1>
             <p className="text-muted mt-1 text-sm truncate">ID: {appointmentData.appointment_id}</p>
           </div>
         </div>
@@ -146,7 +148,7 @@ export default function AppointmentDetailPage() {
               onClick={handleGoToConsultation}
               className="clinical-action clinical-action--primary"
             >
-              Go to Consultation
+              {t('goToConsultation')}
             </button>
           )}
           {appointmentData.episode_id && (
@@ -165,7 +167,7 @@ export default function AppointmentDetailPage() {
       {/* Patient Information */}
       <div className="bg-surface rounded-lg shadow-sm border border-theme">
         <div className="p-6 border-b border-theme">
-          <h3 className="text-lg font-semibold text-ink">Patient Information</h3>
+          <h3 className="text-lg font-semibold text-ink">{t('patientInformation')}</h3>
         </div>
         <div className="p-6">
           <div className="flex items-start space-x-4 flex-col sm:flex-row">
@@ -179,16 +181,16 @@ export default function AppointmentDetailPage() {
               <div className="mt-2 space-y-1">
                 {appointmentData.patient_email && (
                   <p className="text-sm text-secondary">
-                    <span className="font-medium">Email:</span> {appointmentData.patient_email}
+                    <span className="font-medium">{t('email')}</span> {appointmentData.patient_email}
                   </p>
                 )}
                 {appointmentData.patient_phone && (
                   <p className="text-sm text-secondary">
-                    <span className="font-medium">Phone:</span> {appointmentData.patient_phone}
+                    <span className="font-medium">{t('phone')}</span> {appointmentData.patient_phone}
                   </p>
                 )}
                 <p className="text-sm text-secondary">
-                  <span className="font-medium">Patient ID:</span> {appointmentData.patient_id}
+                  <span className="font-medium">{t('patientId')}</span> {appointmentData.patient_id}
                 </p>
               </div>
             </div>
@@ -199,48 +201,48 @@ export default function AppointmentDetailPage() {
       {/* Appointment Details */}
       <div className="bg-surface rounded-lg shadow-sm border border-theme">
         <div className="p-6 border-b border-theme">
-          <h3 className="text-lg font-semibold text-ink">Appointment Details</h3>
+          <h3 className="text-lg font-semibold text-ink">{t('appointmentDetails')}</h3>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <p className="text-sm font-medium text-secondary">Status</p>
+              <p className="text-sm font-medium text-secondary">{t('status')}</p>
               <p className="mt-1 text-ink">{appointmentData.status.replace('_', ' ').toUpperCase()}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Consultation Modality</p>
+              <p className="text-sm font-medium text-secondary">{t('consultationModality')}</p>
               <p className="mt-1 text-ink">{appointmentData.consultation_modality || 'Not specified'}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Start Time</p>
+              <p className="text-sm font-medium text-secondary">{t('startTime')}</p>
               <p className="mt-1 text-ink">{formatDate(appointmentData.start_at)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">End Time</p>
+              <p className="text-sm font-medium text-secondary">{t('endTime')}</p>
               <p className="mt-1 text-ink">{formatDate(appointmentData.end_at)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Consultation ID</p>
+              <p className="text-sm font-medium text-secondary">{t('consultationId')}</p>
               <p className="mt-1 text-ink">{appointmentData.consultation_id || 'None'}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Consultation Status</p>
+              <p className="text-sm font-medium text-secondary">{t('consultationStatus')}</p>
               <p className="mt-1 text-ink">{appointmentData.consultation_status || 'None'}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Created At</p>
+              <p className="text-sm font-medium text-secondary">{t('createdAt')}</p>
               <p className="mt-1 text-ink">{formatDate(appointmentData.created_at)}</p>
             </div>
             {appointmentData.cancelled_at && (
               <div>
-                <p className="text-sm font-medium text-secondary">Cancelled At</p>
+                <p className="text-sm font-medium text-secondary">{t('cancelledAt')}</p>
                 <p className="mt-1 text-ink">{formatDate(appointmentData.cancelled_at)}</p>
               </div>
             )}
           </div>
           {appointmentData.status.toLowerCase() === 'cancelled' && appointmentData.cancellation_reason && (
             <div className="mt-6 pt-6 border-t border-theme">
-              <p className="text-sm font-medium text-secondary">Cancellation Reason</p>
+              <p className="text-sm font-medium text-secondary">{t('cancellationReason')}</p>
               <p className="mt-1 text-ink">{appointmentData.cancellation_reason}</p>
             </div>
           )}
@@ -252,10 +254,10 @@ export default function AppointmentDetailPage() {
         <div className="bg-surface rounded-lg shadow-sm border border-theme">
           <div className="p-6 border-b border-theme">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-ink">Patient Intake Information</h3>
+              <h3 className="text-lg font-semibold text-ink">{t('patientIntakeInformation')}</h3>
               {appointmentData.ai_draft_ready && (
                 <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                  AI Draft Ready
+                  {t('aiDraftReady')}
                 </span>
               )}
             </div>
@@ -264,12 +266,12 @@ export default function AppointmentDetailPage() {
             {appointmentData.chief_complaint ? (
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-secondary">Chief Complaint</p>
+                  <p className="text-sm font-medium text-secondary">{t('chiefComplaint')}</p>
                   <p className="mt-1 text-ink">{appointmentData.chief_complaint}</p>
                 </div>
                 {appointmentData.intake_submitted_at && (
                   <div>
-                    <p className="text-sm font-medium text-secondary">Intake Submitted</p>
+                    <p className="text-sm font-medium text-secondary">{t('intakeSubmitted')}</p>
                     <p className="mt-1 text-ink">{formatDate(appointmentData.intake_submitted_at)}</p>
                   </div>
                 )}
@@ -278,7 +280,7 @@ export default function AppointmentDetailPage() {
                     onClick={handleGoToEpisode}
                     className="clinical-action clinical-action--ai"
                   >
-                    View Full Intake & AI Draft →
+                    {t('viewFullIntakeAiDraft')}
                   </button>
                 </div>
               </div>
@@ -294,7 +296,7 @@ export default function AppointmentDetailPage() {
       {/* Status Update */}
       <div className="bg-surface rounded-lg shadow-sm border border-theme">
         <div className="p-6 border-b border-theme">
-          <h3 className="text-lg font-semibold text-ink">Update Status</h3>
+          <h3 className="text-lg font-semibold text-ink">{t('updateStatus')}</h3>
         </div>
         <div className="p-6">
           <div className="flex items-center space-x-4 flex-col sm:flex-row w-full">
@@ -304,13 +306,13 @@ export default function AppointmentDetailPage() {
               disabled={updatingStatus}
               className="px-4 py-2 border border-theme rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 w-full sm:w-auto"
             >
-              <option value="booked">Booked</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="no_show">No Show</option>
+              <option value="booked">{t('booked')}</option>
+              <option value="completed">{t('completed')}</option>
+              <option value="cancelled">{t('cancelled')}</option>
+              <option value="no_show">{t('noShow')}</option>
             </select>
             {updatingStatus && (
-              <span className="text-sm text-muted">Updating...</span>
+              <span className="text-sm text-muted">{t('updating')}</span>
             )}
           </div>
         </div>

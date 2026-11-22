@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { currentPortal } from '@/lib/portal-scope'
@@ -72,6 +73,7 @@ const inputStyle = {
 } as const
 
 function DoctorLabOrdersPageContent() {
+  const t = useTranslations('doctorLabOrders');
   const router = useRouter()
   const renderedScope = readAccountScope('doctor'), renderedPath = usePathname()
   const parameters = useSearchParams()
@@ -384,11 +386,11 @@ function DoctorLabOrdersPageContent() {
         @media (max-width: 700px) { .dl-card { padding: 16px; border-radius: 18px; } .dl-btn { width: 100%; } .dl-header { display: grid; } }
       `}</style>
 
-      {(linked.target || linked.invalid) && <section aria-label='Selected lab result' className='dl-card'>
-        <h2 className='portal-h2'>Result selected from notifications</h2>
+      {(linked.target || linked.invalid) && <section aria-label={t('selectedLabResult')} className='dl-card'>
+        <h2 className='portal-h2'>{t('resultSelectedFromNotifications')}</h2>
         <p className='text-sm leading-7 text-secondary'>{linked.invalid ? 'This result link is invalid. Open an update from your notification inbox.' : !patientsReady ? 'Confirming access to the selected patient…' : lookupPatientId === linked.target?.patientId && !selectedAuthorized ? 'The selected patient is not available to this clinician account.' : selectedPatientId !== linked.target?.patientId ? 'Choose the selected patient to view this order. Unsaved changes must be resolved first.' : loading ? 'Loading the selected order…' : error ? 'The selected result could not be confirmed. Refresh the order list to retry.' : !linkedOrder ? 'The selected order is no longer available to this account.' : !linkedFileMatches ? linkedOrder.result_file_id ? 'This notification refers to a different upload. The current result shown below is a separate file; it has not been opened automatically.' : 'The referenced result file is no longer available. No file has been opened automatically.' : 'The exact file from this notification is selected. Use Open selected result below to request access. Opening this file does not record review.'}</p>
-        <div className='mt-3 flex flex-wrap gap-3'>{linkedOrder && <button className='dl-btn' onClick={() => { const order = document.getElementById(`lab-order-${linkedOrder.id}`); order?.focus(); order?.scrollIntoView({ block: 'center' }) }}>Jump to selected order</button>}<Link href='/doctor/notifications' className='portal-button portal-button-secondary q-button q-button-secondary'>Back to result updates</Link>
-          {patientsReady && linked.target && selectedPatientId !== linked.target.patientId && <button className='dl-btn' disabled={saving} onClick={() => handlePatientChange(linked.target!.patientId)}>Show selected patient</button>}
+        <div className='mt-3 flex flex-wrap gap-3'>{linkedOrder && <button className='dl-btn' onClick={() => { const order = document.getElementById(`lab-order-${linkedOrder.id}`); order?.focus(); order?.scrollIntoView({ block: 'center' }) }}>{t('jumpToSelectedOrder')}</button>}<Link href='/doctor/notifications' className='portal-button portal-button-secondary q-button q-button-secondary'>{t('backToResultUpdates')}</Link>
+          {patientsReady && linked.target && selectedPatientId !== linked.target.patientId && <button className='dl-btn' disabled={saving} onClick={() => handlePatientChange(linked.target!.patientId)}>{t('showSelectedPatient')}</button>}
         </div>
       </section>}
 
@@ -396,22 +398,22 @@ function DoctorLabOrdersPageContent() {
 
       <div className='dl-header'>
         <div>
-          <p className='dl-eyebrow' style={{ margin: 0 }}>Doctor workspace</p>
-          <h1 style={{ margin: '6px 0 4px', fontSize: '28px', fontWeight: 800, color: T.navy }}>Lab Orders</h1>
-          <p style={{ margin: 0, fontSize: '14px', color: T.slate }}>Create, update, and track patient lab requests that appear in the patient portal.</p>
+          <p className='dl-eyebrow' style={{ margin: 0 }}>{t('doctorWorkspace')}</p>
+          <h1 style={{ margin: '6px 0 4px', fontSize: '28px', fontWeight: 800, color: T.navy }}>{t('labOrders')}</h1>
+          <p style={{ margin: 0, fontSize: '14px', color: T.slate }}>{t('createUpdateAndTrackPatient')}</p>
         </div>
-        <button className='dl-btn primary' type='button' onClick={() => setShowAddForm(true)} disabled={!selectedPatientId || !selectedAuthorized || saving} aria-expanded={showAddForm}>Order Lab Test</button>
+        <button className='dl-btn primary' type='button' onClick={() => setShowAddForm(true)} disabled={!selectedPatientId || !selectedAuthorized || saving} aria-expanded={showAddForm}>{t('orderLabTest')}</button>
       </div>
 
       {error && <div role='alert' className='dl-card' style={{ color: T.red, border: '1px solid rgba(220,38,38,0.2)' }}>{error}</div>}
 
       <ClinicalPatientDirectory selectLabel='Select patient' selectedId={selectedPatientId} selectedPatient={selectedPatient?.id === selectedPatientId ? selectedPatient : null} disabled={saving || Boolean(reviewSelection)} isCurrent={isRenderedContext} onSelect={handlePatientChange} />
-      {lookupPatientId && <section className='dl-card'>{selectedDirectory.refreshing && <p role='status'>Confirming access to the selected patient…</p>}{!selectedDirectory.loading && !selectedAuthorized && <div role='alert'><p>{selectedDirectory.errorMessage || 'The selected patient is unavailable to this clinician account. Clinical actions are blocked until access is confirmed.'}</p><button className='dl-btn' disabled={selectedDirectory.refreshing} onClick={selectedDirectory.retry}>Retry selected patient access</button></div>}</section>}
+      {lookupPatientId && <section className='dl-card'>{selectedDirectory.refreshing && <p role='status'>{t('confirmingAccessToTheSelected')}</p>}{!selectedDirectory.loading && !selectedAuthorized && <div role='alert'><p>{selectedDirectory.errorMessage || 'The selected patient is unavailable to this clinician account. Clinical actions are blocked until access is confirmed.'}</p><button className='dl-btn' disabled={selectedDirectory.refreshing} onClick={selectedDirectory.retry}>{t('retrySelectedPatientAccess')}</button></div>}</section>}
 
-      {uncertainCreate && <p role='alert' className='dl-card'>The earlier create has an unknown outcome. Reload and review the saved orders, then close and explicitly discard this draft before starting a new create.</p>}
-      {createRecovery && !uncertainCreate && <section role='alert' className='dl-card'><p>This order may already have been saved. Retry unchanged details to recover the same creation. Changed details require refreshing and reviewing the saved orders, then explicitly discarding this draft before starting a new creation.</p><button className='dl-btn' type='button' disabled={saving || loading} onClick={() => fetchLabTests()}>Refresh saved orders</button></section>}
-      {editorConflict && <section role='alert' className='dl-card'><p>This order changed after you opened it. Your unsaved entries and original version remain here. Refresh and review the current order, then discard and reopen the edits before saving.</p><button className='dl-btn' disabled={saving || loading} onClick={() => fetchLabTests()}>Reload changed order</button></section>}
-      {quickRecovery.map(id => { const attempt = quickWrites.current.get(id); return <section role='alert' className='dl-card' key={id}><p className='mb-2 font-semibold'>{attempt?.label || 'Lab order'}</p><p>The quick action could not be confirmed against the original order version. Refresh and review the saved list before discarding this attempt. Nothing is retried automatically.</p><div className='mt-3 flex flex-wrap gap-3'><button className='dl-btn' disabled={saving || loading} onClick={() => fetchLabTests()}>Reload action outcome</button><button className='dl-btn' disabled={saving || loading || !selectedAuthorized || ordersReadFailed.current || !attempt || ordersReadEpoch.current <= attempt.reviewEpoch} onClick={() => discardQuickWrite(id)}>Discard stale action</button></div></section> })}
+      {uncertainCreate && <p role='alert' className='dl-card'>{t('theEarlierCreateHasAn')}</p>}
+      {createRecovery && !uncertainCreate && <section role='alert' className='dl-card'><p>{t('thisOrderMayAlreadyHave')}</p><button className='dl-btn' type='button' disabled={saving || loading} onClick={() => fetchLabTests()}>{t('refreshSavedOrders')}</button></section>}
+      {editorConflict && <section role='alert' className='dl-card'><p>{t('thisOrderChangedAfterYou')}</p><button className='dl-btn' disabled={saving || loading} onClick={() => fetchLabTests()}>{t('reloadChangedOrder')}</button></section>}
+      {quickRecovery.map(id => { const attempt = quickWrites.current.get(id); return <section role='alert' className='dl-card' key={id}><p className='mb-2 font-semibold'>{attempt?.label || 'Lab order'}</p><p>{t('theQuickActionCouldNot')}</p><div className='mt-3 flex flex-wrap gap-3'><button className='dl-btn' disabled={saving || loading} onClick={() => fetchLabTests()}>{t('reloadActionOutcome')}</button><button className='dl-btn' disabled={saving || loading || !selectedAuthorized || ordersReadFailed.current || !attempt || ordersReadEpoch.current <= attempt.reviewEpoch} onClick={() => discardQuickWrite(id)}>{t('discardStaleAction')}</button></div></section> })}
       {showAddForm && selectedPatientId && selectedAuthorized && (
         <section className='dl-card'>
           <div className='dl-header' style={{ marginBottom: '14px' }}>
@@ -419,45 +421,45 @@ function DoctorLabOrdersPageContent() {
               <p className='dl-eyebrow' style={{ margin: 0 }}>{editingId ? 'Edit request' : 'New request'}</p>
               <h2 style={{ margin: '5px 0 0', color: T.navy }}>{editingId ? 'Update lab order' : 'Order a lab test'}</h2>
             </div>
-            <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ cancel: true }) : resetForm()} disabled={saving || ((uncertainCreate || createRecovery) && !creationResetReady) || (editorConflict && !writeResetReady)}>Cancel</button>
+            <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ cancel: true }) : resetForm()} disabled={saving || ((uncertainCreate || createRecovery) && !creationResetReady) || (editorConflict && !writeResetReady)}>{t('cancel')}</button>
           </div>
           <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div className='dl-grid'>
-            <label className='dl-field'><span>Test title (required)</span><input style={inputStyle} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder='Complete Blood Count' /></label>
-            <label className='dl-field'><span>Category</span><input style={inputStyle} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder='Blood Test' /></label>
-            <label className='dl-field'><span>Specific test</span><input style={inputStyle} value={form.test} onChange={(event) => setForm({ ...form, test: event.target.value })} placeholder='CBC' /></label>
-            <label className='dl-field'><span id='doctor-lab-priority-label'>Priority</span><select aria-labelledby='doctor-lab-priority-label' style={inputStyle} value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })}><option>Routine</option><option>Urgent</option><option>High</option></select></label>
-            <label className='dl-field'><span id='doctor-lab-status-label'>Status</span><select aria-labelledby='doctor-lab-status-label' style={inputStyle} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option>Pending</option><option>Booked</option><option>Collected</option><option>Processing</option><option>Results Available</option><option>Completed</option></select></label>
-            <label className='dl-field'><span>Recommended by</span><input style={inputStyle} type='datetime-local' value={form.recommended_date} onChange={(event) => setForm({ ...form, recommended_date: event.target.value })} /></label>
-            <label className='dl-field'><span>Known appointment time</span><input style={inputStyle} type='datetime-local' value={form.scheduled_for} onChange={(event) => setForm({ ...form, scheduled_for: event.target.value })} /></label>
-            <label className='dl-field'><span>Processing time</span><input style={inputStyle} value={form.processing_time} onChange={(event) => setForm({ ...form, processing_time: event.target.value })} placeholder='24 hrs' /></label>
-            <label className='dl-field'><span>Recommended lab</span><input style={inputStyle} value={form.recommended_lab_name} onChange={(event) => setForm({ ...form, recommended_lab_name: event.target.value })} placeholder='Any accredited laboratory' /></label>
-            <label className='dl-field'><span>Recommended lab details</span><input style={inputStyle} value={form.recommended_lab_address} onChange={(event) => setForm({ ...form, recommended_lab_address: event.target.value })} placeholder='Optional address, branch, or instruction' /></label>
+            <label className='dl-field'><span>{t('testTitleRequired')}</span><input style={inputStyle} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder={t('completeBloodCount')} /></label>
+            <label className='dl-field'><span>{t('category')}</span><input style={inputStyle} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder={t('bloodTest')} /></label>
+            <label className='dl-field'><span>{t('specificTest')}</span><input style={inputStyle} value={form.test} onChange={(event) => setForm({ ...form, test: event.target.value })} placeholder={t('cbc')} /></label>
+            <label className='dl-field'><span id='doctor-lab-priority-label'>{t('priority')}</span><select aria-labelledby='doctor-lab-priority-label' style={inputStyle} value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })}><option>{t('routine')}</option><option>{t('urgent')}</option><option>{t('high')}</option></select></label>
+            <label className='dl-field'><span id='doctor-lab-status-label'>{t('status')}</span><select aria-labelledby='doctor-lab-status-label' style={inputStyle} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option>{t('pending')}</option><option>{t('booked')}</option><option>{t('collected')}</option><option>{t('processing')}</option><option>{t('resultsAvailable')}</option><option>{t('completed')}</option></select></label>
+            <label className='dl-field'><span>{t('recommendedBy')}</span><input style={inputStyle} type='datetime-local' value={form.recommended_date} onChange={(event) => setForm({ ...form, recommended_date: event.target.value })} /></label>
+            <label className='dl-field'><span>{t('knownAppointmentTime')}</span><input style={inputStyle} type='datetime-local' value={form.scheduled_for} onChange={(event) => setForm({ ...form, scheduled_for: event.target.value })} /></label>
+            <label className='dl-field'><span>{t('processingTime')}</span><input style={inputStyle} value={form.processing_time} onChange={(event) => setForm({ ...form, processing_time: event.target.value })} placeholder={t('t24Hrs')} /></label>
+            <label className='dl-field'><span>{t('recommendedLab')}</span><input style={inputStyle} value={form.recommended_lab_name} onChange={(event) => setForm({ ...form, recommended_lab_name: event.target.value })} placeholder={t('anyAccreditedLaboratory')} /></label>
+            <label className='dl-field'><span>{t('recommendedLabDetails')}</span><input style={inputStyle} value={form.recommended_lab_address} onChange={(event) => setForm({ ...form, recommended_lab_address: event.target.value })} placeholder={t('optionalAddressBranchOrInstruction')} /></label>
           </div>
           <div className='dl-grid' style={{ marginTop: '12px' }}>
-            <label className='dl-field'><span>Patient-facing description</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
-            <label className='dl-field'><span>Reason for test</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} /></label>
-            <label className='dl-field'><span>Preparation instructions</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.preparation_instructions} onChange={(event) => setForm({ ...form, preparation_instructions: event.target.value })} /></label>
+            <label className='dl-field'><span>{t('patientFacingDescription')}</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+            <label className='dl-field'><span>{t('reasonForTest')}</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} /></label>
+            <label className='dl-field'><span>{t('preparationInstructions')}</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.preparation_instructions} onChange={(event) => setForm({ ...form, preparation_instructions: event.target.value })} /></label>
           </div>
           <button className='dl-btn primary' type='button' onClick={handleSave} disabled={saving || uncertainCreate || editorConflict} style={{ marginTop: '14px' }}>
             {saving ? 'Saving...' : editingId ? 'Save Changes' : createRecovery ? 'Retry same creation' : 'Create Lab Request'}
           </button>
           </fieldset>
-          <p style={{ margin: '12px 0 0', color: T.slate2, fontSize: '13px' }}>Dates and times use your device’s local timezone. Changes remain unsaved until you save this request.</p>
+          <p style={{ margin: '12px 0 0', color: T.slate2, fontSize: '13px' }}>{t('datesAndTimesUseYour')}</p>
         </section>
       )}
 
       <section className='dl-card'>
         <div className='dl-header' style={{ marginBottom: '14px' }}>
           <div>
-            <p className='dl-eyebrow' style={{ margin: 0 }}>Patient requests</p>
-            <h2 style={{ margin: '5px 0 0', color: T.navy }}>Lab test orders</h2>
+            <p className='dl-eyebrow' style={{ margin: 0 }}>{t('patientRequests')}</p>
+            <h2 style={{ margin: '5px 0 0', color: T.navy }}>{t('labTestOrders')}</h2>
           </div>
           <button className='dl-btn' type='button' onClick={() => fetchLabTests()} disabled={!selectedPatientId || !selectedAuthorized || loading || saving}>{loading ? 'Loading...' : 'Refresh'}</button>
         </div>
-        {!selectedPatientId && <div className='dl-empty'>Choose a patient to view or create lab requests.</div>}
-        {loading && <p role='status'>Loading lab requests…</p>}
-        {selectedPatientId && selectedAuthorized && !loading && !error && labTests.length === 0 && <div className='dl-empty'>No lab requests yet for this patient.</div>}
+        {!selectedPatientId && <div className='dl-empty'>{t('chooseAPatientToView')}</div>}
+        {loading && <p role='status'>{t('loadingLabRequests')}</p>}
+        {selectedPatientId && selectedAuthorized && !loading && !error && labTests.length === 0 && <div className='dl-empty'>{t('noLabRequestsYetFor')}</div>}
         <div style={{ display: 'grid', gap: '12px' }}>
           {(selectedAuthorized ? labTests : []).map((test) => (
             <article className='dl-order' key={test.id} id={`lab-order-${test.id}`} tabIndex={linked.target?.requestId === test.id ? -1 : undefined} data-lab-order-id={test.id} data-notification-target={linked.target?.requestId === test.id ? 'true' : undefined}>
@@ -473,12 +475,12 @@ function DoctorLabOrdersPageContent() {
                   onChange={(event) => handleStatusChange(test, event.target.value)}
                   disabled={saving || showAddForm || test.can_edit !== true}
                 >
-                  <option>Pending</option>
-                  <option>Booked</option>
-                  <option>Collected</option>
-                  <option>Processing</option>
-                  <option>Results Available</option>
-                  <option>Completed</option>
+                  <option>{t('pending')}</option>
+                  <option>{t('booked')}</option>
+                  <option>{t('collected')}</option>
+                  <option>{t('processing')}</option>
+                  <option>{t('resultsAvailable')}</option>
+                  <option>{t('completed')}</option>
                 </select>
               </div>
               <div className='dl-meta'>
@@ -490,12 +492,12 @@ function DoctorLabOrdersPageContent() {
               </div>
               <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
                 <div style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
-                  <div className='dl-eyebrow'>Doctor lab guidance</div>
+                  <div className='dl-eyebrow'>{t('doctorLabGuidance')}</div>
                   <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.recommended_lab_name || 'Any accredited laboratory'}</div>
                   {test.recommended_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.recommended_lab_address}</div>}
                 </div>
                 <div style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
-                  <div className='dl-eyebrow'>Patient recorded appointment</div>
+                  <div className='dl-eyebrow'>{t('patientRecordedAppointment')}</div>
                   <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.selected_lab_name || 'Not recorded yet'}</div>
                   <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.scheduledForLabel || test.scheduled_for || 'No date recorded'}{test.home_collection ? ' - home collection' : ''}</div>
                   {test.selected_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.selected_lab_address}</div>}
@@ -504,14 +506,14 @@ function DoctorLabOrdersPageContent() {
               {test.reason && <p style={{ margin: 0, fontSize: '13px', color: T.slate }}>Reason: {test.reason}</p>}
               <LabResultReviewStatus review={test.result_review} fileId={test.result_file_id} />
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button className='dl-btn' type='button' aria-haspopup='dialog' disabled={saving || showAddForm || test.can_review_result !== true || !labReference(test.result_file_id)} onClick={() => { if (!isRenderedContext() || !labReference(test.result_file_id) || !labReference(test.id) || !labReference(patientScope.current) || test.can_review_result !== true) return; setDocumentAccess(null); setReviewSelection({ patientId: patientScope.current, orderId: test.id, fileId: test.result_file_id!, title: test.title }) }}>Record result review</button>
-                {test.can_review_result !== true && <span className='text-sm text-secondary'>Review acknowledgement is unavailable for this account or current file.</span>}
-                {test.can_edit !== true && <span className='text-sm text-secondary'>Editing and status changes are unavailable for this order.</span>}
-                {test.can_delete !== true && <span className='text-sm text-secondary'>Deletion is unavailable for this order.</span>}
+                <button className='dl-btn' type='button' aria-haspopup='dialog' disabled={saving || showAddForm || test.can_review_result !== true || !labReference(test.result_file_id)} onClick={() => { if (!isRenderedContext() || !labReference(test.result_file_id) || !labReference(test.id) || !labReference(patientScope.current) || test.can_review_result !== true) return; setDocumentAccess(null); setReviewSelection({ patientId: patientScope.current, orderId: test.id, fileId: test.result_file_id!, title: test.title }) }}>{t('recordResultReview')}</button>
+                {test.can_review_result !== true && <span className='text-sm text-secondary'>{t('reviewAcknowledgementIsUnavailableFor')}</span>}
+                {test.can_edit !== true && <span className='text-sm text-secondary'>{t('editingAndStatusChangesAre')}</span>}
+                {test.can_delete !== true && <span className='text-sm text-secondary'>{t('deletionIsUnavailableForThis')}</span>}
                 {test.result_file_id ? <button className='dl-btn' type='button' aria-haspopup='dialog' aria-label={`Open result for ${test.title}`} disabled={saving || Boolean(reviewSelection)}
                   onClick={() => setDocumentAccess(current => current ?? { patientId: patientScope.current, orderId: test.id, fileId: test.result_file_id!, title: test.title })}>{linked.target?.requestId === test.id ? linkedFileMatches ? 'Open selected result' : 'Open current result (different upload)' : 'Open result'}</button>
-                  : <span className='text-sm text-muted'>No result file available.</span>}
-                <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ edit: test }) : beginEdit(test)} disabled={saving || test.can_edit !== true}>Edit</button>
+                  : <span className='text-sm text-muted'>{t('noResultFileAvailable')}</span>}
+                <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ edit: test }) : beginEdit(test)} disabled={saving || test.can_edit !== true}>{t('edit')}</button>
                 <input
                   id={`lab-result-${test.id}`}
                   type='file'
@@ -521,11 +523,11 @@ function DoctorLabOrdersPageContent() {
                   onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleUploadResult(test, file) }}
                 />
                 <button className='dl-btn primary' type='button' disabled={saving || showAddForm || test.can_upload_result !== true} onClick={() => document.getElementById(`lab-result-${test.id}`)?.click()}>
-                  Upload Result
+                  {t('uploadResult')}
                 </button>
-                {test.can_upload_result !== true && <span className='text-sm text-secondary'>Only the ordering clinician can upload a result for this request.</span>}
-                {failedUpload?.orderId === test.id && <button className='dl-btn' type='button' disabled={saving} onClick={() => void handleUploadResult(test, failedUpload.file, failedUpload.note)}>Retry result upload</button>}
-                <button className='dl-btn danger' type='button' onClick={() => handleDelete(test)} disabled={saving || showAddForm || test.can_delete !== true}>Delete</button>
+                {test.can_upload_result !== true && <span className='text-sm text-secondary'>{t('onlyTheOrderingClinicianCan')}</span>}
+                {failedUpload?.orderId === test.id && <button className='dl-btn' type='button' disabled={saving} onClick={() => void handleUploadResult(test, failedUpload.file, failedUpload.note)}>{t('retryResultUpload')}</button>}
+                <button className='dl-btn danger' type='button' onClick={() => handleDelete(test)} disabled={saving || showAddForm || test.can_delete !== true}>{t('delete')}</button>
               </div>
             </article>
           ))}
@@ -552,5 +554,6 @@ function DoctorLabOrdersRoute() {
   return <DoctorLabOrdersPageContent key={JSON.stringify([scope, path, parameters.toString()])} />
 }
 export default function DoctorLabOrdersPage() {
-  return <Suspense fallback={<p role='status' className='text-secondary'>Loading lab orders…</p>}><DoctorLabOrdersRoute /></Suspense>
+  const t = useTranslations('doctorLabOrders');
+  return <Suspense fallback={<p role='status' className='text-secondary'>{t('loadingLabOrders')}</p>}><DoctorLabOrdersRoute /></Suspense>
 }

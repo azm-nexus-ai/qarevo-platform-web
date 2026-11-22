@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
 
 import { useEffect, useState } from 'react'
@@ -109,6 +110,7 @@ interface ConsultationServiceFormProps {
 }
 
 function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServiceFormProps) {
+  const t = useTranslations('doctorProfile');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [serviceType, setServiceType] = useState(service?.service_type || 'video')
   const [name, setName] = useState(service?.name || '')
@@ -163,33 +165,33 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
       <ValidationSummary errors={formErrors} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <div>
-          <label style={labelStyle}>Service Type</label>
+          <label style={labelStyle}>{t('serviceType')}</label>
           <select
             value={serviceType}
             onChange={(e) => setServiceType(e.target.value)}
             style={inputStyle}
           >
-            <option value="video">Video Consultation</option>
-            <option value="physical">In-Person Consultation</option>
-            <option value="phone">Phone Consultation</option>
-            <option value="chat">Chat Consultation</option>
+            <option value="video">{t('videoConsultation')}</option>
+            <option value="physical">{t('inPersonConsultation')}</option>
+            <option value="phone">{t('phoneConsultation')}</option>
+            <option value="chat">{t('chatConsultation')}</option>
           </select>
         </div>
         <div>
-          <label htmlFor="service-name" style={labelStyle}>Service Name (Required)</label>
+          <label htmlFor="service-name" style={labelStyle}>{t('serviceNameRequired')}</label>
           <input
             type="text"
             id="service-name" aria-invalid={!!formErrors.name} aria-describedby={formErrors.name ? "service-name-error" : undefined}
             value={name}
             onChange={(e) => { setName(e.target.value); setFormErrors(previous => ({ ...previous, name: "" })) } }
-            placeholder="e.g., General Video Consultation"
+            placeholder={t('eGGeneralVideoConsultation')}
             style={inputStyle}
             required
           />
           <FieldFeedback name="service-name" error={formErrors.name} />
         </div>
         <div>
-          <label htmlFor="service-price" style={labelStyle}>Price ($) (Required)</label>
+          <label htmlFor="service-price" style={labelStyle}>{t('priceRequired')}</label>
           <input
             type="number"
             min="0"
@@ -203,7 +205,7 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
           <FieldFeedback name="service-price" error={formErrors.price} />
         </div>
         <div>
-          <label htmlFor="service-duration" style={labelStyle}>Duration (min) (Required)</label>
+          <label htmlFor="service-duration" style={labelStyle}>{t('durationMinRequired')}</label>
           <input
             type="number"
             min="5"
@@ -218,21 +220,21 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
         </div>
       </div>
       <div>
-        <label style={labelStyle}>Availability</label>
+        <label style={labelStyle}>{t('availability')}</label>
         <input
           type="text"
           value={availability}
           onChange={(e) => setAvailability(e.target.value)}
-          placeholder="e.g., Today, Tomorrow, Mon-Fri"
+          placeholder={t('eGTodayTomorrowMon')}
           style={inputStyle}
         />
       </div>
       <div>
-        <label style={labelStyle}>Description</label>
+        <label style={labelStyle}>{t('description')}</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Brief description of this service"
+          placeholder={t('briefDescriptionOfThisService')}
           rows={3}
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
         />
@@ -243,7 +245,7 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
           onClick={onCancel}
           style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
         >
-          Cancel
+          {t('cancel')}
         </button>
         <button
           type="submit"
@@ -257,6 +259,7 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
 }
 
 export default function DoctorProfilePage() {
+  const t = useTranslations('doctorProfile');
   const router = useRouter()
   const [profileData, setProfileData] = useState<DoctorProfileResponse | null>(null)
   const [profileOwner, setProfileOwner] = useState<string | null>(null)
@@ -319,7 +322,7 @@ export default function DoctorProfilePage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
-        <p style={{ color: T.slate2 }}>Loading profile...</p>
+        <p style={{ color: T.slate2 }}>{t('loadingProfile')}</p>
       </div>
     )
   }
@@ -456,8 +459,8 @@ export default function DoctorProfilePage() {
       `}</style>
       {/* Header */}
       <div>
-        <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Profile</h1>
-        <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage your doctor profile information</p>
+        <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>{t('profile')}</h1>
+        <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>{t('manageYourDoctorProfileInformation')}</p>
       </div>
 
       {/* Profile Card */}
@@ -485,42 +488,42 @@ export default function DoctorProfilePage() {
             </div>
           </div>
           <button onClick={() => document.getElementById('doctor-profile-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} style={{ padding: '12px 20px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-            Edit Profile
+            {t('editProfile')}
           </button>
         </div>
 
         {/* Profile Details */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '24px' }}>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Specialty</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('specialty')}</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.specialty || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>License Number</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('licenseNumber')}</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.license_number || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('email')}</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.email}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Phone</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('phone')}</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.phone || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Location</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('location')}</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.city && profileData.state ? `${profileData.city}, ${profileData.state}` : 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Languages</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('languages')}</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.languages || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Certifications</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('certifications')}</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.certifications || 'Not provided'}</p>
           </div>
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Accepted</p>
+            <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('insuranceAccepted')}</p>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.insurance || 'Not provided'}</p>
           </div>
         </div>
@@ -538,8 +541,8 @@ export default function DoctorProfilePage() {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start', marginBottom: '22px' }}>
           <div>
-            <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Professional Profile</h2>
-            <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate2, lineHeight: 1.6 }}>Complete the clinical profile patients and care operations use for discovery, booking, and assignment.</p>
+            <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>{t('professionalProfile')}</h2>
+            <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate2, lineHeight: 1.6 }}>{t('completeTheClinicalProfilePatients')}</p>
           </div>
           <button
             type="button"
@@ -573,7 +576,7 @@ export default function DoctorProfilePage() {
             boxShadow: '0 8px 32px rgba(4,53,77,0.15)',
             animation: 'slideIn 0.3s ease'
           }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: T.navy }}>You have unsaved changes</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: T.navy }}>{t('youHaveUnsavedChanges')}</span>
             <button
               type="button"
               disabled={saving}
@@ -587,31 +590,31 @@ export default function DoctorProfilePage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px' }}>
           <div>
-            <label style={labelStyle}>Specialty</label>
-            <input value={draft.specialty} onChange={(event) => updateDraft('specialty', event.target.value)} placeholder="Cardiology" style={inputStyle} />
+            <label style={labelStyle}>{t('specialty')}</label>
+            <input value={draft.specialty} onChange={(event) => updateDraft('specialty', event.target.value)} placeholder={t('cardiology')} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>License Number</label>
-            <input value={draft.license_number} onChange={(event) => updateDraft('license_number', event.target.value)} placeholder="Medical license number" style={inputStyle} />
+            <label style={labelStyle}>{t('licenseNumber')}</label>
+            <input value={draft.license_number} onChange={(event) => updateDraft('license_number', event.target.value)} placeholder={t('medicalLicenseNumber')} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Years of Experience</label>
+            <label style={labelStyle}>{t('yearsOfExperience')}</label>
             <input type="number" min="0" value={draft.experience_years} onChange={(event) => updateDraft('experience_years', event.target.value)} placeholder="5" style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Hospital or Practice</label>
-            <input value={draft.hospital} onChange={(event) => updateDraft('hospital', event.target.value)} placeholder="Qarevo Virtual Clinic" style={inputStyle} />
+            <label style={labelStyle}>{t('hospitalOrPractice')}</label>
+            <input value={draft.hospital} onChange={(event) => updateDraft('hospital', event.target.value)} placeholder={t('qarevoVirtualClinic')} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Languages</label>
-            <input value={draft.languages} onChange={(event) => updateDraft('languages', event.target.value)} placeholder="English, German" style={inputStyle} />
+            <label style={labelStyle}>{t('languages')}</label>
+            <input value={draft.languages} onChange={(event) => updateDraft('languages', event.target.value)} placeholder={t('englishGerman')} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Phone</label>
+            <label style={labelStyle}>{t('phone')}</label>
             <input type="tel" value={draft.phone} onChange={(event) => updateDraft('phone', event.target.value)} placeholder="+49..." style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Practice Type</label>
+            <label style={labelStyle}>{t('practiceType')}</label>
             <button
               type="button"
               onClick={() => updateDraft('is_independent', !draft.is_independent)}
@@ -627,50 +630,50 @@ export default function DoctorProfilePage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px', marginTop: '16px' }}>
           <div>
-            <label style={labelStyle}>Address</label>
-            <input value={draft.address} onChange={(event) => updateDraft('address', event.target.value)} placeholder="Street address" style={inputStyle} />
+            <label style={labelStyle}>{t('address')}</label>
+            <input value={draft.address} onChange={(event) => updateDraft('address', event.target.value)} placeholder={t('streetAddress')} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Address Line 2</label>
-            <input value={draft.address_line2} onChange={(event) => updateDraft('address_line2', event.target.value)} placeholder="Suite or floor" style={inputStyle} />
+            <label style={labelStyle}>{t('addressLine2')}</label>
+            <input value={draft.address_line2} onChange={(event) => updateDraft('address_line2', event.target.value)} placeholder={t('suiteOrFloor')} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>City</label>
+            <label style={labelStyle}>{t('city')}</label>
             <input value={draft.city} onChange={(event) => updateDraft('city', event.target.value)} placeholder="Berlin" style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>State or Region</label>
+            <label style={labelStyle}>{t('stateOrRegion')}</label>
             <input value={draft.state} onChange={(event) => updateDraft('state', event.target.value)} placeholder="Berlin" style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Country</label>
-            <input value={draft.country} onChange={(event) => updateDraft('country', event.target.value)} placeholder="Germany" style={inputStyle} />
+            <label style={labelStyle}>{t('country')}</label>
+            <input value={draft.country} onChange={(event) => updateDraft('country', event.target.value)} placeholder={t('germany')} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Postal Code</label>
+            <label style={labelStyle}>{t('postalCode')}</label>
             <input value={draft.zip} onChange={(event) => updateDraft('zip', event.target.value)} placeholder="10115" style={inputStyle} />
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '16px', marginTop: '16px' }}>
           <div>
-            <label style={labelStyle}>Bio</label>
-            <textarea value={draft.about} onChange={(event) => updateDraft('about', event.target.value)} placeholder="Brief clinical background and care philosophy" rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+            <label style={labelStyle}>{t('bio')}</label>
+            <textarea value={draft.about} onChange={(event) => updateDraft('about', event.target.value)} placeholder={t('briefClinicalBackgroundAndCare')} rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </div>
           <div>
-            <label style={labelStyle}>Education</label>
-            <textarea value={draft.education} onChange={(event) => updateDraft('education', event.target.value)} placeholder="Medical school, residency, fellowships" rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+            <label style={labelStyle}>{t('education')}</label>
+            <textarea value={draft.education} onChange={(event) => updateDraft('education', event.target.value)} placeholder={t('medicalSchoolResidencyFellowships')} rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </div>
           <div>
-            <label style={labelStyle}>Certifications</label>
-            <textarea value={draft.certifications} onChange={(event) => updateDraft('certifications', event.target.value)} placeholder="Board certifications and credentials" rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+            <label style={labelStyle}>{t('certifications')}</label>
+            <textarea value={draft.certifications} onChange={(event) => updateDraft('certifications', event.target.value)} placeholder={t('boardCertificationsAndCredentials')} rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </div>
           <div>
-            <label style={labelStyle}>Insurance Accepted</label>
-            <textarea value={draft.insurance} onChange={(event) => updateDraft('insurance', event.target.value)} placeholder="Axa, Bupa, Cigna, etc." rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+            <label style={labelStyle}>{t('insuranceAccepted')}</label>
+            <textarea value={draft.insurance} onChange={(event) => updateDraft('insurance', event.target.value)} placeholder={t('axaBupaCignaEtc')} rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </div>
           <div>
-            <label style={labelStyle}>Profile Picture</label>
+            <label style={labelStyle}>{t('profilePicture')}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <input
                 type="file"
@@ -718,7 +721,7 @@ export default function DoctorProfilePage() {
                 <span style={{ fontSize: "13px", color: T.slate2 }}>{draft.avatar_file.name}</span>
               )}
             </div>
-            <p id='doctor-avatar-help' className='field-hint'>JPEG, PNG or WebP · up to 2 MB.</p>
+            <p id='doctor-avatar-help' className='field-hint'>{t('jpegPngOrWebpUp')}</p>
             <p id='doctor-avatar-error' className='field-error' role={avatarError ? 'alert' : undefined}>{avatarError}</p>
           </div>
         </div>
@@ -733,18 +736,18 @@ export default function DoctorProfilePage() {
         boxShadow: Sh.card,
         padding: '32px',
       }}>
-        <h3 style={{ margin: '0 0 20px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Availability Settings</h3>
+        <h3 style={{ margin: '0 0 20px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>{t('availabilitySettings')}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
           <div>
-            <label style={labelStyle}>Working Hours Start</label>
+            <label style={labelStyle}>{t('workingHoursStart')}</label>
             <input value={draft.working_hours_start} onChange={(event) => updateDraft('working_hours_start', event.target.value)} placeholder="09:00" style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Working Hours End</label>
+            <label style={labelStyle}>{t('workingHoursEnd')}</label>
             <input value={draft.working_hours_end} onChange={(event) => updateDraft('working_hours_end', event.target.value)} placeholder="17:00" style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Available Days</label>
+            <label style={labelStyle}>{t('availableDays')}</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px', marginTop: '8px' }}>
               {DAYS_OF_WEEK.map((day) => {
                 const isSelected = draft.available_days.split(',').includes(day.value)
@@ -786,11 +789,11 @@ export default function DoctorProfilePage() {
             </div>
           </div>
           <div>
-            <label style={labelStyle}>Timezone</label>
+            <label style={labelStyle}>{t('timezone')}</label>
             <input value={draft.timezone} onChange={(event) => updateDraft('timezone', event.target.value)} placeholder="UTC" style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Appointment Duration (min)</label>
+            <label style={labelStyle}>{t('appointmentDurationMin')}</label>
             <input value={draft.appointment_duration} onChange={(event) => updateDraft('appointment_duration', event.target.value)} placeholder="30" style={inputStyle} />
           </div>
         </div>
@@ -807,8 +810,8 @@ export default function DoctorProfilePage() {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div>
-            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>Consultation Services</h3>
-            <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate2 }}>Manage individual pricing, duration, and availability for each consultation type.</p>
+            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>{t('consultationServices')}</h3>
+            <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate2 }}>{t('manageIndividualPricingDurationAnd')}</p>
           </div>
           <button
             type="button"
@@ -818,7 +821,7 @@ export default function DoctorProfilePage() {
             }}
             style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
           >
-            Add Service
+            {t('addService')}
           </button>
         </div>
 
@@ -876,14 +879,14 @@ export default function DoctorProfilePage() {
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: T.navy }}>{service.name}</p>
                   <p style={{ margin: '0 0 2px', fontSize: '13px', color: T.slate }}>
-                    Type: <span style={{ fontWeight: 600 }}>{service.service_type}</span>
+                    {t('type')} <span style={{ fontWeight: 600 }}>{service.service_type}</span>
                   </p>
                   <p style={{ margin: '0 0 2px', fontSize: '13px', color: T.slate }}>
-                    Price: <span style={{ fontWeight: 600 }}>${service.price}</span> · Duration: <span style={{ fontWeight: 600 }}>{service.duration} min</span>
+                    {t('price')} <span style={{ fontWeight: 600 }}>${service.price}</span> {t('duration')} <span style={{ fontWeight: 600 }}>{service.duration} min</span>
                   </p>
                   {service.availability && (
                     <p style={{ margin: '0 0 2px', fontSize: '13px', color: T.slate }}>
-                      Availability: <span style={{ fontWeight: 600 }}>{service.availability}</span>
+                      {t('availability2')} <span style={{ fontWeight: 600 }}>{service.availability}</span>
                     </p>
                   )}
                   {service.description && (
@@ -899,7 +902,7 @@ export default function DoctorProfilePage() {
                     }}
                     style={{ padding: '8px 14px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 600, cursor: 'pointer' }}
                   >
-                    Edit
+                    {t('edit')}
                   </button>
                   <button
                     type="button"
@@ -917,7 +920,7 @@ export default function DoctorProfilePage() {
                     }}
                     style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(220,38,38,0.2)', background: "var(--surface-glass)", color: T.red, fontSize: "13px", fontWeight: 600, cursor: 'pointer' }}
                   >
-                    Delete
+                    {t('delete')}
                   </button>
                 </div>
               </div>
@@ -937,7 +940,7 @@ export default function DoctorProfilePage() {
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Total Consultations</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('totalConsultations')}</p>
           <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{profileData.total_consultations}</p>
         </div>
         <div style={{
@@ -949,7 +952,7 @@ export default function DoctorProfilePage() {
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Patient Rating</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('patientRating')}</p>
           <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.green }}>{profileData.patient_rating}</p>
         </div>
         <div style={{
@@ -961,7 +964,7 @@ export default function DoctorProfilePage() {
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Years Active</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('yearsActive')}</p>
           <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.link }}>{profileData.years_active}</p>
         </div>
       </div>
