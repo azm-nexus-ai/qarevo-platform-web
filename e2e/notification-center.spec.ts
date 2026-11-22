@@ -84,7 +84,7 @@ test('the full inbox filters unread items and the sidebar shows the count', asyn
 
 test('notifications read in German use German event text', async ({ page, context }) => {
   await prepare(context, 'doctor')
-  await context.addCookies([{ name: 'qarevo_locale', value: 'de', url: 'http://localhost:3000' }])
+  await context.addCookies([{ name: 'qarevo_locale', value: 'de', url: test.info().project.use.baseURL ?? 'http://localhost:3000' }])
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/doctor/notifications')
   await expect(page.getByRole('heading', { name: 'Benachrichtigungen', level: 1 })).toBeVisible()
