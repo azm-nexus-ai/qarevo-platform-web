@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { getPatientSettings } from '@/lib/api'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { isPortalIdentityEvent } from '@/lib/portal-scope'
@@ -8,6 +9,7 @@ import PortalAccountMenu from '@/components/layout/PortalAccountMenu'
 import ProfileImage from './ProfileImage'
 
 export default function PatientAccountMenu({ name }: { name?: string }) {
+  const t = useTranslations('patientShell')
   const [identity, setIdentity] = useState<{ scope: string | null; name: string } | null>(null)
   const [attempt, setAttempt] = useState(0)
   const scope = readAccountScope('patient')
@@ -24,5 +26,5 @@ export default function PatientAccountMenu({ name }: { name?: string }) {
     return () => { active = false; window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset) }
   }, [name, attempt])
   const displayName = name || (identity?.scope === scope ? identity?.name : '') || 'Patient account'
-  return <PortalAccountMenu portal='patient' name={displayName} description='Patient portal' avatar={<ProfileImage name={displayName} size={36} />} profileHref='/patient/settings' settingsHref='/patient/settings' />
+  return <PortalAccountMenu portal='patient' name={displayName} description={t('portal')} avatar={<ProfileImage name={displayName} size={36} />} profileHref='/patient/settings' settingsHref='/patient/settings' />
 }

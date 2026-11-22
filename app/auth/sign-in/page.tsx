@@ -3,6 +3,7 @@ import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/Port
 import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
 import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
 
+import { useTranslations } from 'next-intl'
 import { useState, useId, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useLoginCooldown } from '@/lib/use-login-cooldown'
@@ -37,11 +38,11 @@ const LEFT_BG = [
 ].join(', ')
 
 const TRUST_FEATURES = [
-  { icon: ICONS.lock,     label: 'Medical Records',            sub: 'View the records saved to your account' },
-  { icon: ICONS.steth,    label: 'Clinician-Led Care',         sub: 'Your clinician reviews consultation information' },
-  { icon: ICONS.video,    label: 'Consultation Appointments',   sub: 'View and manage your appointments' },
-  { icon: ICONS.shield,   label: 'Account-Based Access',      sub: 'Access your saved account information' },
-]
+  { icon: ICONS.lock, key: 'records' },
+  { icon: ICONS.steth, key: 'clinician' },
+  { icon: ICONS.video, key: 'appointments' },
+  { icon: ICONS.shield, key: 'access' },
+] as const
 
 function WellnessVisual() {
   return (
@@ -98,6 +99,7 @@ function WellnessVisual() {
 }
 
 function LeftPanel() {
+  const t = useTranslations('auth.signIn')
   return (
     <div style={{
       width: '380px', flexShrink: 0,
@@ -117,7 +119,7 @@ function LeftPanel() {
 
       {/* Logo */}
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label='Qarevo Health home'>
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('home')}>
           <Image
             src='/brand/Untitled design - 2026-08-03T165058.603.png'
             alt='Qarevo Health'
@@ -135,25 +137,25 @@ function LeftPanel() {
         <WellnessVisual />
         <div style={{ marginTop: '32px', textAlign: 'center' }}>
           <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
-            Welcome back.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Your care awaits.</span>
+            {t('panelTitle')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('panelAccent')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Access your appointments, saved medical records and clinician-approved care information.
+            {t('panelText')}
           </p>
         </div>
       </div>
 
       {/* Feature list */}
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
-        {TRUST_FEATURES.map(({ icon, label, sub }, i) => (
-          <div key={label} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', padding: '13px 0', borderTop: i === 0 ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.08)' }}>
+        {TRUST_FEATURES.map(({ icon, key }, i) => (
+          <div key={key} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', padding: '13px 0', borderTop: i === 0 ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
               <Ico p={icon} size={14} sw={1.5} color="rgba(147,197,253,0.9)" />
             </div>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{t(`features.${key}.label`)}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{t(`features.${key}.text`)}</div>
             </div>
           </div>
         ))}
@@ -232,38 +234,39 @@ const subscribeToPasskeySupport = () => () => {}
 const passkeySupported = () => window.isSecureContext && !!window.PublicKeyCredential && !!navigator.credentials?.get
 const serverPasskeySupport = () => false
 
-function getFriendlySignInError(error: unknown) {
+function getFriendlySignInError(error: unknown, t: (key: string) => string) {
   const throttle = getLoginThrottleMessage(error)
   if (throttle) return throttle
 
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
   if (error instanceof ApiError && error.status === 422 && (detail.includes('email') || detail.includes('e-mail'))) {
-    return 'Enter a valid email address. Doctor accounts should use the doctor sign-in page.'
+    return t('errors.emailDoctor')
   }
   if (detail.includes('incorrect') || detail.includes('invalid') || detail.includes('password')) {
-    return 'Incorrect email or password. Please try again.'
+    return t('errors.incorrect')
   }
   if (detail.includes('verify') || detail.includes('verification')) {
-    return 'Please verify your account before signing in.'
+    return t('errors.verify')
   }
   if (error instanceof ApiError && error.status === 401) {
-    return 'Incorrect email or password. Please try again.'
+    return t('errors.incorrect')
   }
   if (error instanceof ApiError && error.status === 422) {
-    return 'Please check your email and password, then try again.'
+    return t('errors.check')
   }
   if (error instanceof ApiError && error.status >= 500) {
-    return 'Sign in is temporarily unavailable. Please try again shortly.'
+    return t('errors.unavailable')
   }
   if (error instanceof Error && /passkey|browser|cancelled/i.test(error.message)) {
     return error.message
   }
 
-  return 'We could not sign you in right now. Please try again.'
+  return t('errors.generic')
 }
 
 export default function SignInPage() {
+  const t = useTranslations('auth.signIn')
   const router = useRouter()
   const captureAction = usePortalAction()
 
@@ -278,8 +281,8 @@ export default function SignInPage() {
   const cooldown = useLoginCooldown()
   const supportsPasskeys = useSyncExternalStore(subscribeToPasskeySupport, passkeySupported, serverPasskeySupport)
 
-  const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : ''
-  const passErr  = touched.password && password.length < 1 ? 'Password is required' : ''
+  const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? t('emailInvalid') : ''
+  const passErr  = touched.password && password.length < 1 ? t('passwordRequired') : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -299,7 +302,7 @@ export default function SignInPage() {
       cooldown.record(error)
       const wrongPortal = authenticatedPortalHandoff(error)
       setHandoff(wrongPortal)
-      setAuthError(wrongPortal ? '' : getFriendlySignInError(error))
+      setAuthError(wrongPortal ? '' : getFriendlySignInError(error, t))
     } finally {
       if (current()) setLoading(false)
     }
@@ -336,7 +339,7 @@ export default function SignInPage() {
       cooldown.record(error)
       const wrongPortal = authenticatedPortalHandoff(error)
       setHandoff(wrongPortal)
-      setAuthError(wrongPortal ? '' : getFriendlySignInError(error))
+      setAuthError(wrongPortal ? '' : getFriendlySignInError(error, t))
     } finally {
       if (current()) setPasskeyLoading(false)
     }
@@ -347,7 +350,7 @@ export default function SignInPage() {
       type="button"
       tabIndex={-1}
       onClick={() => setShowPw(s => !s)}
-      aria-label={showPw ? 'Hide password' : 'Show password'}
+      aria-label={showPw ? t('hidePassword') : t('showPassword')}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex' }}
     >
       <Ico p={showPw ? ICONS.eyeOff : ICONS.eye} size={14} sw={1.75} />
@@ -445,7 +448,7 @@ export default function SignInPage() {
           {/* Back */}
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back
+            {t('back')}
           </Link>
 
           {/* Card */}
@@ -464,10 +467,10 @@ export default function SignInPage() {
             <div className="signin-logo-row" style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
                 <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
-                  Sign in to Qarevo
+                  {t('title')}
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                  Welcome back - your care ecosystem is ready.
+                  {t('subtitle')}
                 </p>
               </div>
               <div className="signin-card-mark" style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -489,7 +492,7 @@ export default function SignInPage() {
 
                 {/* Email */}
                 <Field
-                  label="Email Address (Required)"
+                  label={t('emailLabel')}
                   placeholder="emma@example.com"
                   type="email"
                   value={email}
@@ -504,15 +507,15 @@ export default function SignInPage() {
                 {/* Password */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                    <label htmlFor="patient-password" style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>Password (Required)</label>
+                    <label htmlFor="patient-password" style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('passwordLabel')}</label>
                     <Link href="/auth/forgot-password" style={{ fontSize: "13px", fontWeight: 600, color: T.link, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                      Forgot password?
+                      {t('forgot')}
                     </Link>
                   </div>
                   <Field
                     label=""
                     inputId="patient-password"
-                    placeholder="Your password"
+                    placeholder={t('passwordPlaceholder')}
                     type={showPw ? 'text' : 'password'}
                     value={password}
                     onChange={v => { setPassword(v); setAuthError(''); setHandoff(null) }}
@@ -542,8 +545,8 @@ export default function SignInPage() {
                   }}
                 >
                   {loading
-                    ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Signing in…</>
-                    : <>Continue <Ico p={ICONS.arrowFwd} size={15} sw={2.2} /></>}
+                    ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> {t('signingIn')}</>
+                    : <>{t('continue')} <Ico p={ICONS.arrowFwd} size={15} sw={2.2} /></>}
                 </button>
 
                 <button
@@ -572,19 +575,19 @@ export default function SignInPage() {
                   }}
                 >
                   {passkeyLoading
-                    ? <><span style={{ width: '14px', height: '14px', border: "2px solid var(--border)", borderTopColor: T.blue, borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Checking passkey…</>
-                    : <><Ico p={ICONS.shield} size={15} sw={1.8} /> Sign in with passkey</>}
+                    ? <><span style={{ width: '14px', height: '14px', border: "2px solid var(--border)", borderTopColor: T.blue, borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> {t('checkingPasskey')}</>
+                    : <><Ico p={ICONS.shield} size={15} sw={1.8} /> {t('passkey')}</>}
                 </button>
                 <p id='patient-passkey-help' style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
                   {supportsPasskeys
-                    ? 'Use a passkey previously registered in patient Settings. The same session limits apply.'
-                    : 'Passkeys require a supported browser on HTTPS or localhost. Use your password to sign in.'}
+                    ? t('passkeyHint')
+                    : t('passkeyUnsupported')}
                 </p>
 
                 {/* Create account */}
                 <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '2px 0 0', letterSpacing: '-0.01em' }}>
-                  {"Don't have an account? "}
-                  <Link href="/auth/sign-up" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>Create Account</Link>
+                  {t('noAccount')}{' '}
+                  <Link href="/auth/sign-up" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>{t('createAccount')}</Link>
                 </p>
               </div>
             </form>
@@ -593,7 +596,7 @@ export default function SignInPage() {
             <div style={{ marginTop: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
                 <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
-                <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
+                <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{t('orContinue')}</span>
                 <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
               </div>
               <PortalSignInReference portal='PATIENT'/>
@@ -604,10 +607,10 @@ export default function SignInPage() {
             <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
               <div className="signin-trust-grid" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
                 {[
-                  { icon: ICONS.lock,     label: 'Account Sign-In' },
-                  { icon: ICONS.shield,   label: 'Session Expiry'  },
-                  { icon: ICONS.check,    label: 'Development Preview'    },
-                  { icon: ICONS.activity, label: 'Password Recovery' },
+                  { icon: ICONS.lock, label: t('trust.signIn') },
+                  { icon: ICONS.shield, label: t('trust.session') },
+                  { icon: ICONS.check, label: t('trust.preview') },
+                  { icon: ICONS.activity, label: t('trust.recovery') },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
@@ -620,10 +623,10 @@ export default function SignInPage() {
 
           {/* Footer */}
           <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-            By signing in you agree to our{' '}
-            <Link href="/terms" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
-            {' '}and{' '}
-            <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
+            {t('agree')}{' '}
+            <Link href="/terms" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('terms')}</Link>
+            {' '}{t('and')}{' '}
+            <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('privacy')}</Link>{t('agreeEnd')}
           </p>
         </div>
       </div>

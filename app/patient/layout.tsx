@@ -11,6 +11,9 @@ import PatientAccountMenu from '@/components/patient/PatientAccountMenu'
 import { useRouter } from 'next/navigation'
 import { isPatient, readSessionMarker, clearPortalSession } from '@/lib/api'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
+
+function PatientPortalLabel() { return <>{useTranslations('patientShell')('portal')}</> }
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -37,7 +40,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
     <>
       <PatientMobileNavigation />
       <nav aria-label="Patient appearance" className="patient-appearance-navigation">
-        <Link href='/patient/dashboard' aria-label='Qarevo Health patient dashboard' className='portal-navbar-brand'><AuthenticatedLogo width={156} /></Link><SidebarToggle role='patient' /><span className='patient-portal-label'>Patient portal</span><NotificationBell portal='patient' /><span className='portal-header-divider' aria-hidden='true' /><ThemeToggle /><LanguageSwitch /><SidebarToggle role='patient' side='right' /><PatientAccountMenu />
+        <Link href='/patient/dashboard' aria-label='Qarevo Health patient dashboard' className='portal-navbar-brand'><AuthenticatedLogo width={156} /></Link><SidebarToggle role='patient' /><span className='patient-portal-label'><PatientPortalLabel /></span><NotificationBell portal='patient' /><span className='portal-header-divider' aria-hidden='true' /><ThemeToggle /><LanguageSwitch /><SidebarToggle role='patient' side='right' /><PatientAccountMenu />
       </nav>
       {mounted ? <div className='patient-application'>{children}</div> : null}
     </>

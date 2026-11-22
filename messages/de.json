@@ -252,5 +252,156 @@
     "away": "Abwesend",
     "noHours": "Keine Sprechzeiten",
     "booked": "{count, plural, one {# Termin} other {# Termine}}"
+  },
+  "auth": {
+    "signIn": {
+      "home": "Qarevo Health Startseite",
+      "panelTitle": "Willkommen zurück.",
+      "panelAccent": "Ihre Versorgung wartet.",
+      "panelText": "Ihre Termine, gespeicherten Gesundheitsunterlagen und ärztlich freigegebenen Behandlungsinformationen an einem Ort.",
+      "features": {
+        "records": {
+          "label": "Gesundheitsunterlagen",
+          "text": "Unterlagen ansehen, die in Ihrem Konto gespeichert sind"
+        },
+        "clinician": {
+          "label": "Ärztlich geführte Versorgung",
+          "text": "Ihre Ärztin oder Ihr Arzt prüft die Informationen zur Sprechstunde"
+        },
+        "appointments": {
+          "label": "Termine für Sprechstunden",
+          "text": "Termine ansehen und verwalten"
+        },
+        "access": {
+          "label": "Kontobasierter Zugang",
+          "text": "Zugriff auf die in Ihrem Konto gespeicherten Informationen"
+        }
+      },
+      "errors": {
+        "emailDoctor": "Geben Sie eine gültige E-Mail-Adresse ein. Ärztinnen und Ärzte nutzen bitte die Anmeldung für Ärzte.",
+        "incorrect": "E-Mail-Adresse oder Passwort ist falsch. Bitte versuchen Sie es erneut.",
+        "verify": "Bitte bestätigen Sie Ihr Konto, bevor Sie sich anmelden.",
+        "check": "Bitte prüfen Sie E-Mail-Adresse und Passwort und versuchen Sie es erneut.",
+        "unavailable": "Die Anmeldung ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in Kürze erneut.",
+        "generic": "Wir konnten Sie gerade nicht anmelden. Bitte versuchen Sie es erneut."
+      },
+      "emailInvalid": "Geben Sie eine gültige E-Mail-Adresse ein",
+      "passwordRequired": "Passwort ist erforderlich",
+      "hidePassword": "Passwort verbergen",
+      "showPassword": "Passwort anzeigen",
+      "back": "Zurück",
+      "title": "Bei Qarevo anmelden",
+      "subtitle": "Willkommen zurück – Ihre Versorgung ist bereit.",
+      "emailLabel": "E-Mail-Adresse (erforderlich)",
+      "passwordLabel": "Passwort (erforderlich)",
+      "forgot": "Passwort vergessen?",
+      "passwordPlaceholder": "Ihr Passwort",
+      "signingIn": "Anmeldung läuft…",
+      "continue": "Weiter",
+      "checkingPasskey": "Passkey wird geprüft…",
+      "passkey": "Mit Passkey anmelden",
+      "passkeyHint": "Nutzen Sie einen Passkey, den Sie in den Patienteneinstellungen registriert haben. Es gelten dieselben Sitzungsgrenzen.",
+      "passkeyUnsupported": "Passkeys erfordern einen unterstützten Browser über HTTPS oder localhost. Melden Sie sich mit Ihrem Passwort an.",
+      "noAccount": "Noch kein Konto?",
+      "createAccount": "Konto erstellen",
+      "orContinue": "oder weiter mit",
+      "trust": {
+        "signIn": "Kontoanmeldung",
+        "session": "Sitzungsablauf",
+        "preview": "Entwicklungsvorschau",
+        "recovery": "Passwort-Wiederherstellung"
+      },
+      "agree": "Mit der Anmeldung stimmen Sie unseren",
+      "terms": "Nutzungsbedingungen",
+      "and": "und der",
+      "privacy": "Datenschutzerklärung",
+      "agreeEnd": " zu."
+    },
+    "doctorSignIn": {
+      "errors": {
+        "phone": "Die Bestätigung der Telefonnummer ist erforderlich. Bitte schließen Sie sie ab, um fortzufahren.",
+        "email": "Die Bestätigung der E-Mail-Adresse ist erforderlich. Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.",
+        "invalid": "E-Mail, Benutzername, Telefonnummer oder Passwort ist ungültig. Bitte prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
+        "patient": "Dies ist ein Patientenkonto. Bitte nutzen Sie die Anmeldung für Patientinnen und Patienten.",
+        "identifier": "Geben Sie eine gültige E-Mail-Adresse, einen Benutzernamen oder eine Telefonnummer ein.",
+        "check": "Bitte prüfen Sie Ihre Anmeldedaten und versuchen Sie es erneut.",
+        "unavailable": "Die Anmeldung für Ärztinnen und Ärzte ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in Kürze erneut.",
+        "generic": "Wir konnten Sie gerade nicht anmelden. Bitte versuchen Sie es erneut."
+      },
+      "required": "(erforderlich)",
+      "panelTitle": "Arztportal",
+      "panelText": "Ihr klinischer Arbeitsbereich und Ihre Sprechstunden an einem Ort.",
+      "identifierRequired": "E-Mail, Benutzername oder Telefonnummer ist erforderlich",
+      "passwordRequired": "Passwort ist erforderlich",
+      "hidePassword": "Passwort verbergen",
+      "showPassword": "Passwort anzeigen",
+      "back": "Zurück",
+      "title": "Anmeldung für Ärztinnen und Ärzte",
+      "subtitle": "Melden Sie sich an, um Ihren klinischen Arbeitsbereich zu öffnen",
+      "identifierLabel": "E-Mail, Benutzername oder Telefonnummer",
+      "passwordLabel": "Passwort",
+      "passwordPlaceholder": "Passwort eingeben",
+      "forgot": "Passwort vergessen?",
+      "authenticating": "Anmeldung läuft…",
+      "submit": "Mit Zwei-Faktor-Code anmelden",
+      "twoFactorTitle": "Zwei-Faktor-Authentifizierung erforderlich",
+      "twoFactorText": "Zu Ihrer Sicherheit bestätigen Sie nach der Eingabe Ihrer Zugangsdaten Ihre Identität mit einem Code per E-Mail oder SMS.",
+      "newPhysician": "Neu bei Qarevo?",
+      "createAccount": "Konto erstellen"
+    },
+    "adminSignIn": {
+      "errors": {
+        "email": "Geben Sie eine gültige E-Mail-Adresse ein.",
+        "incorrect": "E-Mail-Adresse oder Passwort ist falsch.",
+        "notAdmin": "Dieses Konto ist nicht für die Administration freigegeben.",
+        "unavailable": "Die Anmeldung zur Administration ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in Kürze erneut.",
+        "generic": "Wir konnten Sie gerade nicht anmelden. Bitte versuchen Sie es erneut."
+      },
+      "emailInvalid": "Geben Sie eine gültige E-Mail-Adresse ein",
+      "passwordRequired": "Passwort ist erforderlich",
+      "hidePassword": "Passwort verbergen",
+      "showPassword": "Passwort anzeigen",
+      "title": "Anmeldung zur Administration",
+      "subtitle": "Melden Sie sich mit Ihren Administrationsdaten an.",
+      "emailLabel": "E-Mail-Adresse (erforderlich)",
+      "passwordLabel": "Passwort (erforderlich)",
+      "signingIn": "Anmeldung läuft…",
+      "submit": "Anmelden",
+      "backToSite": "Zurück zur Website"
+    },
+    "practice": {
+      "title": "Anmeldung im Praxisportal",
+      "description": "Melden Sie sich mit Ihrem bestehenden Passwort an und bestätigen Sie dann Ihr Postfach. Ihre Sitzungen als Patientin, Ärztin oder Administration bleiben getrennt.",
+      "codeInvalid": "Geben Sie den sechsstelligen Code aus Ihrer E-Mail ein.",
+      "emailInvalid": "Geben Sie eine gültige E-Mail-Adresse ein.",
+      "passwordInvalid": "Geben Sie Ihr Passwort ein (höchstens 128 Zeichen).",
+      "verified": "Anmeldung im Praxisportal bestätigt.",
+      "codeRequested": "Wenn diese Angaben Zugang zu einer Praxis haben, wurde ein Code angefordert. Prüfen Sie Ihren Posteingang und den Spam-Ordner.",
+      "emailLabel": "E-Mail-Adresse (erforderlich)",
+      "passwordLabel": "Passwort (erforderlich)",
+      "hidePassword": "Passwort verbergen",
+      "showPassword": "Passwort anzeigen",
+      "hide": "Verbergen",
+      "show": "Anzeigen",
+      "codeIntro": "Geben Sie den Code ein, den wir an Ihr Postfach gesendet haben. Codes sind fünf Minuten gültig. Ob ein Konto existiert, geben wir nicht bekannt.",
+      "codeLabel": "Bestätigungscode (erforderlich)",
+      "codeExpired": "Dieser Code ist abgelaufen. Starten Sie neu, um einen neuen Code anzufordern.",
+      "confirming": "Wird bestätigt…",
+      "verify": "Bestätigen und Praxisportal öffnen",
+      "continue": "Sicher fortfahren",
+      "codeResent": "Wenn die Anmeldung berechtigt ist, wurde erneut ein Code angefordert. Die Zustellung ist nicht bestätigt.",
+      "resendIn": "Erneut senden in {seconds} s",
+      "resend": "Code erneut senden",
+      "startAgain": "Neu starten",
+      "forgot": "Passwort vergessen?",
+      "register": "Neue Praxis registrieren"
+    }
+  },
+  "patientShell": {
+    "loading": "Wird geladen…",
+    "summary": "Patientenübersicht",
+    "account": "Patientenkonto",
+    "logout": "Abmelden",
+    "portal": "Patientenportal"
   }
 }

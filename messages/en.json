@@ -252,5 +252,156 @@
     "away": "Away",
     "noHours": "No hours",
     "booked": "{count, plural, one {# appointment} other {# appointments}}"
+  },
+  "auth": {
+    "signIn": {
+      "home": "Qarevo Health home",
+      "panelTitle": "Welcome back.",
+      "panelAccent": "Your care awaits.",
+      "panelText": "Access your appointments, saved medical records and clinician-approved care information.",
+      "features": {
+        "records": {
+          "label": "Medical Records",
+          "text": "View the records saved to your account"
+        },
+        "clinician": {
+          "label": "Clinician-Led Care",
+          "text": "Your clinician reviews consultation information"
+        },
+        "appointments": {
+          "label": "Consultation Appointments",
+          "text": "View and manage your appointments"
+        },
+        "access": {
+          "label": "Account-Based Access",
+          "text": "Access your saved account information"
+        }
+      },
+      "errors": {
+        "emailDoctor": "Enter a valid email address. Doctor accounts should use the doctor sign-in page.",
+        "incorrect": "Incorrect email or password. Please try again.",
+        "verify": "Please verify your account before signing in.",
+        "check": "Please check your email and password, then try again.",
+        "unavailable": "Sign in is temporarily unavailable. Please try again shortly.",
+        "generic": "We could not sign you in right now. Please try again."
+      },
+      "emailInvalid": "Enter a valid email address",
+      "passwordRequired": "Password is required",
+      "hidePassword": "Hide password",
+      "showPassword": "Show password",
+      "back": "Back",
+      "title": "Sign in to Qarevo",
+      "subtitle": "Welcome back - your care ecosystem is ready.",
+      "emailLabel": "Email Address (Required)",
+      "passwordLabel": "Password (Required)",
+      "forgot": "Forgot password?",
+      "passwordPlaceholder": "Your password",
+      "signingIn": "Signing in…",
+      "continue": "Continue",
+      "checkingPasskey": "Checking passkey…",
+      "passkey": "Sign in with passkey",
+      "passkeyHint": "Use a passkey previously registered in patient Settings. The same session limits apply.",
+      "passkeyUnsupported": "Passkeys require a supported browser on HTTPS or localhost. Use your password to sign in.",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create Account",
+      "orContinue": "or continue with",
+      "trust": {
+        "signIn": "Account Sign-In",
+        "session": "Session Expiry",
+        "preview": "Development Preview",
+        "recovery": "Password Recovery"
+      },
+      "agree": "By signing in you agree to our",
+      "terms": "Terms",
+      "and": "and",
+      "privacy": "Privacy Policy",
+      "agreeEnd": "."
+    },
+    "doctorSignIn": {
+      "errors": {
+        "phone": "Phone verification is required. Please complete phone verification to continue.",
+        "email": "Email verification is required. Please verify your email first.",
+        "invalid": "Invalid email, username, phone, or password. Please check your credentials and try again.",
+        "patient": "This is a patient account. Please use the patient login page instead.",
+        "identifier": "Enter a valid email, username, or phone number.",
+        "check": "Please check your sign-in details and try again.",
+        "unavailable": "Doctor sign-in is temporarily unavailable. Please try again shortly.",
+        "generic": "We could not sign you in right now. Please try again."
+      },
+      "required": "(Required)",
+      "panelTitle": "Physician Portal",
+      "panelText": "Access your clinical workspace and manage your patient consultations.",
+      "identifierRequired": "Email, username, or phone is required",
+      "passwordRequired": "Password is required",
+      "hidePassword": "Hide password",
+      "showPassword": "Show password",
+      "back": "Back",
+      "title": "Physician Sign In",
+      "subtitle": "Enter your credentials to access your clinical workspace",
+      "identifierLabel": "Email, Username, or Phone",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "forgot": "Forgot password?",
+      "authenticating": "Authenticating...",
+      "submit": "Sign In with 2FA",
+      "twoFactorTitle": "Two-Factor Authentication Required",
+      "twoFactorText": "For your security, you'll need to verify your identity with a code sent to your email or phone after entering your credentials.",
+      "newPhysician": "New physician?",
+      "createAccount": "Create an account"
+    },
+    "adminSignIn": {
+      "errors": {
+        "email": "Enter a valid email address.",
+        "incorrect": "Incorrect email or password.",
+        "notAdmin": "This account is not authorized for admin access.",
+        "unavailable": "Admin login is temporarily unavailable. Please try again shortly.",
+        "generic": "We could not sign you in right now. Please try again."
+      },
+      "emailInvalid": "Enter a valid email address",
+      "passwordRequired": "Password is required",
+      "hidePassword": "Hide password",
+      "showPassword": "Show password",
+      "title": "Admin Sign In",
+      "subtitle": "Enter your admin credentials to access the back office.",
+      "emailLabel": "Email (Required)",
+      "passwordLabel": "Password (Required)",
+      "signingIn": "Signing in...",
+      "submit": "Sign In",
+      "backToSite": "Back to main site"
+    },
+    "practice": {
+      "title": "Practice Sign In",
+      "description": "Use your existing account password, then verify your mailbox. Your patient, clinician and platform-administrator sessions stay separate.",
+      "codeInvalid": "Enter the six-digit verification code from your email.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordInvalid": "Enter your account password (at most 128 characters).",
+      "verified": "Practice sign-in verified.",
+      "codeRequested": "If these details can access a practice workspace, a verification code has been requested. Check your inbox and spam folder.",
+      "emailLabel": "Email (Required)",
+      "passwordLabel": "Password (Required)",
+      "hidePassword": "Hide password",
+      "showPassword": "Show password",
+      "hide": "Hide",
+      "show": "Show",
+      "codeIntro": "Enter the code sent to your mailbox. Codes expire after five minutes. We do not disclose whether an account exists.",
+      "codeLabel": "Verification code (Required)",
+      "codeExpired": "This code has expired. Start again to request a new sign-in code.",
+      "confirming": "Confirming…",
+      "verify": "Verify and open practice workspace",
+      "continue": "Continue securely",
+      "codeResent": "If the sign-in request is eligible, a code has been requested again. Inbox delivery is not confirmed.",
+      "resendIn": "Resend available in {seconds}s",
+      "resend": "Resend verification code",
+      "startAgain": "Start again",
+      "forgot": "Forgot your password?",
+      "register": "Register a new practice"
+    }
+  },
+  "patientShell": {
+    "loading": "Loading...",
+    "summary": "Patient summary",
+    "account": "Patient account",
+    "logout": "Logout",
+    "portal": "Patient portal"
   }
 }

@@ -11,6 +11,7 @@ import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
 import { PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 import { getPatientSettings, isAuthError, clearPortalSession, logoutCurrentUser, type PatientSettings } from '@/lib/api'
 import { NavLabel } from '@/components/ui/NavLabel'
+import { useTranslations } from 'next-intl'
 
 type PatientPortalShellProps = {
   eyebrow?: string
@@ -31,25 +32,26 @@ type PatientPortalShellProps = {
 
 function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: string; onNavigate?: () => void; userSettings: PatientSettings | null }) {
   const router = useRouter()
+  const t = useTranslations('patientShell')
   const signOut = async () => {
     try { await logoutCurrentUser() }
     catch { console.warn('Server logout could not be confirmed.') }
     finally { onNavigate?.(); router.replace('/auth/sign-in') }
   }
-  const fullName = userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'
+  const fullName = userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : t('loading')
 
   return (
     <>
       {/* Patient card */}
       <section
-        aria-label='Patient summary'
+        aria-label={t('summary')}
         style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <ProfileImage name={fullName} size={42} />
           <div>
             <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{fullName}</p>
-            <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Patient account</p>
+            <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{t('account')}</p>
           </div>
         </div>
       </section>
@@ -105,7 +107,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
           }}
         >
           <Ico p={ICONS.arrowSm} size={15} sw={1.7} color='#348CEA' />
-          Logout
+          {t('logout')}
         </button>
       </div>
     </>

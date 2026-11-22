@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
 import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
 import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
@@ -32,7 +33,7 @@ const LEFT_BG = [
   T.brandNavy,
 ].join(', ')
 
-function getFriendlyDoctorLoginError(error: unknown) {
+function getFriendlyDoctorLoginError(error: unknown, t: (key: string) => string) {
   const throttle = getLoginThrottleMessage(error)
   if (throttle) return throttle
 
@@ -40,31 +41,31 @@ function getFriendlyDoctorLoginError(error: unknown) {
   if (detail.includes('administrator') || detail.includes('clinician_approval') || detail.includes('not active')) return getApiErrorDetail(error) || 'Administrator review is required.'
 
   if (detail.includes('phone not verified')) {
-    return 'Phone verification is required. Please complete phone verification to continue.'
+    return t('errors.phone')
   }
   if (detail.includes('email_verification_pending') || detail.includes('email verification')) {
-    return 'Email verification is required. Please verify your email first.'
+    return t('errors.email')
   }
   if (detail.includes('invalid identifier or password') || detail.includes('invalid') || detail.includes('password')) {
-    return 'Invalid email, username, phone, or password. Please check your credentials and try again.'
+    return t('errors.invalid')
   }
   if (detail.includes('use patient login endpoint') || detail.includes('patient account')) {
-    return 'This is a patient account. Please use the patient login page instead.'
+    return t('errors.patient')
   }
   if (error instanceof ApiError && error.status === 422 && detail.includes('valid email')) {
-    return 'Enter a valid email, username, or phone number.'
+    return t('errors.identifier')
   }
   if (error instanceof ApiError && error.status === 401) {
-    return 'Invalid email, username, phone, or password. Please check your credentials and try again.'
+    return t('errors.invalid')
   }
   if (error instanceof ApiError && error.status === 422) {
-    return 'Please check your sign-in details and try again.'
+    return t('errors.check')
   }
   if (error instanceof ApiError && error.status >= 500) {
-    return 'Doctor sign-in is temporarily unavailable. Please try again shortly.'
+    return t('errors.unavailable')
   }
 
-  return 'We could not sign you in right now. Please try again.'
+  return t('errors.generic')
 }
 
 // Field component
@@ -83,6 +84,7 @@ interface FieldProps {
 }
 
 function Field({ label, placeholder, type = 'text', value, onChange, error, success, icon, rightSlot, autoComplete, onBlur }: FieldProps) {
+  const t = useTranslations('auth.doctorSignIn')
   const [focused, setFocused] = useState(false)
   const id = useId()
 
@@ -114,7 +116,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label} <span>(Required)</span>
+        {label} <span>{t('required')}</span>
       </label>
       <div style={{ position: 'relative' }}>
         {icon && (
@@ -166,6 +168,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
 
 // Left panel component
 function LeftPanel() {
+  const t = useTranslations('auth.doctorSignIn')
   return (
     <div style={{
       width: '380px',
@@ -200,10 +203,10 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
         <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
-          Physician Portal
+          {t('panelTitle')}
         </h2>
         <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-          Access your clinical workspace and manage your patient consultations.
+          {t('panelText')}
         </p>
       </div>
 
@@ -220,6 +223,7 @@ function LeftPanel() {
 
 // Main page
 export default function DoctorLoginPage() {
+  const t = useTranslations('auth.doctorSignIn')
   const captureAction = usePortalAction()
   const router = useRouter()
 
@@ -237,8 +241,8 @@ export default function DoctorLoginPage() {
   const [handoff, setHandoff] = useState<PortalHandoff | null>(null)
   const cooldown = useLoginCooldown()
 
-  const identifierErr = touched.identifier && !identifier ? 'Email, username, or phone is required' : ''
-  const passErr = touched.password && !password ? 'Password is required' : ''
+  const identifierErr = touched.identifier && !identifier ? t('identifierRequired') : ''
+  const passErr = touched.password && !password ? t('passwordRequired') : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -275,7 +279,7 @@ export default function DoctorLoginPage() {
       cooldown.record(error)
       const wrongPortal = authenticatedPortalHandoff(error)
       setHandoff(wrongPortal)
-      setAuthError(wrongPortal ? '' : getFriendlyDoctorLoginError(error))
+      setAuthError(wrongPortal ? '' : getFriendlyDoctorLoginError(error, t))
     } finally {
       if (current()) setLoading(false)
     }
@@ -285,7 +289,7 @@ export default function DoctorLoginPage() {
     <button
       type="button"
       onClick={() => setShowPassword(s => !s)}
-      aria-label={showPassword ? 'Hide password' : 'Show password'}
+      aria-label={showPassword ? t('hidePassword') : t('showPassword')}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex' }}
     >
       <Ico p={showPassword ? ICONS.eyeOff : ICONS.eye} size={14} sw={1.75} />
@@ -307,7 +311,7 @@ export default function DoctorLoginPage() {
           {/* Back link */}
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back
+            {t('back')}
           </Link>
 
           {/* Form card */}
@@ -324,10 +328,10 @@ export default function DoctorLoginPage() {
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
                 <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
-                  Physician Sign In
+                  {t('title')}
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                  Enter your credentials to access your clinical workspace
+                  {t('subtitle')}
                 </p>
               </div>
               <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -347,7 +351,7 @@ export default function DoctorLoginPage() {
             {/* Form */}
             <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Field
-                label="Email, Username, or Phone"
+                label={t('identifierLabel')}
                 placeholder="doctor@example.com"
                 value={identifier}
                 onChange={setIdentifier}
@@ -358,8 +362,8 @@ export default function DoctorLoginPage() {
               />
 
               <Field
-                label="Password"
-                placeholder="Enter your password"
+                label={t('passwordLabel')}
+                placeholder={t('passwordPlaceholder')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={setPassword}
@@ -373,7 +377,7 @@ export default function DoctorLoginPage() {
               <SessionPolicyHint />
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Link href="/auth/doctor/forgot-password" style={{ fontSize: '13px', color: T.link, textDecoration: 'none', fontWeight: 500 }}>
-                  Forgot password?
+                  {t('forgot')}
                 </Link>
               </div>
 
@@ -401,7 +405,7 @@ export default function DoctorLoginPage() {
                   boxShadow: loading ? 'none' : '0 3px 10px rgba(32,181,223,0.32), 0 1px 3px rgba(32,181,223,0.2)',
                 }}
               >
-                {loading ? 'Authenticating...' : 'Sign In with 2FA'}
+                {loading ? t('authenticating') : t('submit')}
                 {!loading && <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />}
               </button>
             </form>
@@ -415,10 +419,10 @@ export default function DoctorLoginPage() {
                 <Ico p={ICONS.shield} size={16} sw={1.75} color={T.blue} />
                 <div>
                   <p style={{ margin: 0, fontSize: "13px", color: T.navy, fontWeight: 600, marginBottom: '4px' }}>
-                    Two-Factor Authentication Required
+                    {t('twoFactorTitle')}
                   </p>
                   <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.4 }}>
-                    For your security, you&apos;ll need to verify your identity with a code sent to your email or phone after entering your credentials.
+                    {t('twoFactorText')}
                   </p>
                 </div>
               </div>
@@ -426,9 +430,9 @@ export default function DoctorLoginPage() {
 
             {/* Register link */}
             <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
-              New physician?{' '}
+              {t('newPhysician')}{' '}
               <Link href="/auth/doctor-register" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>
-                Create an account
+                {t('createAccount')}
               </Link>
             </p>
           </div>

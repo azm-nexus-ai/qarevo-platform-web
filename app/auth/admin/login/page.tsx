@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import Link from 'next/link'
@@ -21,32 +22,33 @@ const PAGE_BG = [
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-function getFriendlyAdminError(error: unknown) {
+function getFriendlyAdminError(error: unknown, t: (key: string) => string) {
   const throttle = getLoginThrottleMessage(error)
   if (throttle) return throttle
 
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
   if (error instanceof ApiError && error.status === 422 && (detail.includes('email') || detail.includes('e-mail'))) {
-    return 'Enter a valid email address.'
+    return t('errors.email')
   }
   if (detail.includes('incorrect') || detail.includes('invalid') || detail.includes('password')) {
-    return 'Incorrect email or password.'
+    return t('errors.incorrect')
   }
   if (error instanceof ApiError && error.status === 401) {
-    return 'Incorrect email or password.'
+    return t('errors.incorrect')
   }
   if (error instanceof ApiError && error.status === 403) {
-    return 'This account is not authorized for admin access.'
+    return t('errors.notAdmin')
   }
   if (error instanceof ApiError && error.status >= 500) {
-    return 'Admin login is temporarily unavailable. Please try again shortly.'
+    return t('errors.unavailable')
   }
 
-  return 'We could not sign you in right now. Please try again.'
+  return t('errors.generic')
 }
 
 export default function AdminLoginPage() {
+  const t = useTranslations('auth.adminSignIn')
   const router = useRouter()
   const captureAction = usePortalAction()
 
@@ -58,8 +60,8 @@ export default function AdminLoginPage() {
   const [authError, setAuthError] = useState('')
   const cooldown = useLoginCooldown()
 
-  const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : ''
-  const passErr = touched.password && password.length < 1 ? 'Password is required' : ''
+  const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? t('emailInvalid') : ''
+  const passErr = touched.password && password.length < 1 ? t('passwordRequired') : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,7 +80,7 @@ export default function AdminLoginPage() {
     } catch (error) {
       if (!current()) return
       cooldown.record(error)
-      setAuthError(getFriendlyAdminError(error))
+      setAuthError(getFriendlyAdminError(error, t))
     } finally {
       if (current()) setLoading(false)
     }
@@ -88,7 +90,7 @@ export default function AdminLoginPage() {
     <button
       type="button"
       onClick={() => setShowPw(s => !s)}
-      aria-label={showPw ? 'Hide password' : 'Show password'}
+      aria-label={showPw ? t('hidePassword') : t('showPassword')}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex' }}
     >
       <Ico p={showPw ? ICONS.eyeOff : ICONS.eye} size={14} sw={1.75} />
@@ -124,7 +126,7 @@ export default function AdminLoginPage() {
             lineHeight: 1.2,
             margin: '0 0 8px',
           }}>
-            Admin Sign In
+            {t('title')}
           </h1>
           <p style={{
             fontSize: '14px',
@@ -132,7 +134,7 @@ export default function AdminLoginPage() {
             lineHeight: 1.5,
             margin: 0,
           }}>
-            Enter your admin credentials to access the back office.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -141,7 +143,7 @@ export default function AdminLoginPage() {
           {/* Email */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label htmlFor="admin-email" style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-              Email (Required)
+              {t('emailLabel')}
             </label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: T.slate2, display: 'flex' }}>
@@ -180,7 +182,7 @@ export default function AdminLoginPage() {
           {/* Password */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label htmlFor="admin-password" style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-              Password (Required)
+              {t('passwordLabel')}
             </label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: T.slate2, display: 'flex' }}>
@@ -257,7 +259,7 @@ export default function AdminLoginPage() {
               opacity: loading ? 0.7 : 1,
             }}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? t('signingIn') : t('submit')}
           </button>
           <Link href='/auth/admin/forgot-password' style={{ color: T.link, textAlign: 'center', padding: '10px' }}>Forgot your password?</Link>
         </form>
@@ -279,7 +281,7 @@ export default function AdminLoginPage() {
             onMouseLeave={e => e.currentTarget.style.color = T.slate2}
           >
             <Ico p={ICONS.arrowBack} size={12} sw={1.75} />
-            Back to main site
+            {t('backToSite')}
           </Link>
         </div>
       </div>
