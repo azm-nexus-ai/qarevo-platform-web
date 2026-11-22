@@ -601,3 +601,8 @@ button:disabled { cursor: not-allowed; }
 .portal-dialog-danger { border: 1px solid var(--danger); background: var(--danger); color: var(--surface); }
 .portal-dialog-secondary:focus-visible, .portal-dialog-danger:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .portal-dialog-secondary:disabled, .portal-dialog-danger:disabled { opacity: 0.7; cursor: wait; }
+
+/* People who ask for less motion get none: no colour, theme or layout transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}

@@ -28,6 +28,8 @@ async function check(page: Page, theme: 'light' | 'dark') {
     await page.getByRole('button', { name: 'Dark mode', exact: true }).filter({ visible: true }).first().click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   }
+  // Measure the settled page: no colour or theme transition may still be running.
+  await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== 'running'))
   const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
   const serious = result.violations.filter(item => item.impact === 'serious' || item.impact === 'critical')
   expect(serious.map(item => `${item.id}: ${item.nodes.slice(0, 3).map(node => node.target.join(' ')).join(' | ')}`)).toEqual([])
