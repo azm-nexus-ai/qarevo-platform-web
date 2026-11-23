@@ -372,7 +372,18 @@
       "passwordLabel": "Passwort (erforderlich)",
       "signingIn": "Anmeldung läuft…",
       "submit": "Anmelden",
-      "backToSite": "Zurück zur Website"
+      "backToSite": "Zurück zur Website",
+      "mfa": {
+        "intro": "Ihr Passwort ist bestätigt. Geben Sie den 6-stelligen Anmeldecode ein, den wir an Ihre E-Mail-Adresse gesendet haben.",
+        "codeLabel": "Anmeldecode",
+        "codeRequired": "Bitte geben Sie den 6-stelligen Code ein.",
+        "verify": "Bestätigen und anmelden",
+        "checking": "Wird geprüft …",
+        "resend": "Neuen Code senden",
+        "resendIn": "Neuer Code in {seconds} s",
+        "sent": "Ein neuer Code wurde gesendet. Der vorherige Code ist nicht mehr gültig.",
+        "restart": "Erneut anmelden"
+      }
     },
     "practice": {
       "title": "Anmeldung im Praxisportal",

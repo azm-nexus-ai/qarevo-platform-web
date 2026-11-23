@@ -181,6 +181,42 @@ test('physician MFA token stays HttpOnly and is used only for verify/resend oper
   assert.equal((await run(req('/api/v1/auth/mfa/verify-email', { portal: 'doctor', method: 'POST', body: {} }), 'doctor')).status, 401);
 });
 
+test('administrator MFA challenge stays HttpOnly and only admin verify/resend use it', async () => {
+  const challenge = await run(req('/api/v1/auth/admin/login', { portal: 'admin', method: 'POST', body: {} }), 'admin', async () => Response.json({ temp_token: 'admin-mfa-secret', mfa_required: true, expires_in: 600, email_verified: true, phone_verified: false }));
+  const body = await challenge.json();
+  assert.equal(body.mfa_pending, true);
+  assert.equal(body.temp_token, undefined);
+  assert.ok(challenge.headers.getSetCookie().some(value => value.startsWith('__Host-qarevo_admin_mfa=admin-mfa-secret;') && value.endsWith('; Secure; HttpOnly')));
+  const verified = await run(req('/api/v1/auth/admin/mfa/verify', { portal: 'admin', method: 'POST', body: { code: '123456' }, cookies: cookie('admin', '; __Host-qarevo_admin_mfa=stored-admin-mfa') }), 'admin', async (_url, init) => {
+    assert.equal(init.headers.get('authorization'), 'Bearer stored-admin-mfa');
+    return Response.json({ message: 'checked' });
+  });
+  assert.equal(verified.status, 200);
+  // Another portal cannot reach the administrator step, and a patient login cannot return a challenge.
+  assert.equal((await run(req('/api/v1/auth/admin/mfa/verify', { portal: 'doctor', method: 'POST', body: {} }), 'doctor')).status, 403);
+  assert.equal((await run(req('/api/v1/auth/login', { method: 'POST', body: {} }), 'patient', async () => Response.json({ temp_token: 'x', expires_in: 60 }))).status, 502);
+});
+
+test('provider sign-up ticket stays HttpOnly and reaches only the same portal registration', async () => {
+  const finished = await run(req('/api/v1/auth/social/google/finish', { method: 'POST', body: {} }), 'patient', async () => Response.json({ registration_required: true, registration_ticket: 'signed-ticket', profile: { email: 'new@example.com' }, expires_in: 1800 }));
+  const body = await finished.json();
+  assert.equal(body.registration_ticket, undefined);
+  assert.equal(body.profile.email, 'new@example.com');
+  assert.ok(finished.headers.getSetCookie().some(value => value.startsWith('__Host-qarevo_patient_social=signed-ticket;') && value.endsWith('; Secure; HttpOnly')));
+  const withTicket = cookie('patient', '; __Host-qarevo_patient_social=stored-ticket');
+  const registered = await run(req('/api/v1/patient/register', { method: 'POST', body: {}, cookies: withTicket, headers: { 'X-Qarevo-Social-Ticket': 'injected' } }), 'patient', async (_url, init) => {
+    assert.equal(init.headers.get('x-qarevo-social-ticket'), 'stored-ticket');
+    return Response.json({ user_id: 'synthetic', message: 'ok' }, { status: 201 });
+  });
+  assert.equal(registered.status, 201);
+  assert.ok(registered.headers.getSetCookie().some(value => value.startsWith('__Host-qarevo_patient_social=;')));
+  // Other requests never carry the ticket.
+  await run(req('/api/v1/patient/settings', { cookies: withTicket }), 'patient', async (_url, init) => {
+    assert.equal(init.headers.get('x-qarevo-social-ticket'), null);
+    return Response.json({});
+  });
+});
+
 test('refresh and logout inject only their portal refresh cookie, never the supplied body token', async () => {
   for (const endpoint of ['refresh', 'logout']) {
     const response = await run(req(`/api/v1/auth/${endpoint}`, { method: 'POST', body: { refresh_token: 'injected-refresh' } }), 'patient', async (_url, init) => {

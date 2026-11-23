@@ -11,6 +11,7 @@ import { ApiError, getApiErrorDetail, getLoginThrottleMessage, loginAdmin } from
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
+import AdminCodeStep from '@/components/auth/AdminCodeStep'
 import { usePortalAction } from '@/lib/portal-action'
 
 const PAGE_BG = [
@@ -58,6 +59,8 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [touched, setTouched] = useState({ email: false, password: false })
   const [authError, setAuthError] = useState('')
+  // 'code' when the API requires the emailed second factor (ADMIN_MFA_REQUIRED).
+  const [step, setStep] = useState<'password' | 'code'>('password')
   const cooldown = useLoginCooldown()
 
   const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? t('emailInvalid') : ''
@@ -76,7 +79,9 @@ export default function AdminLoginPage() {
 
     try {
       response = await loginAdmin({ email: email.trim(), password })
-      if (current()) router.push('/admin/dashboard')
+      if (!current()) return
+      if ((response as { mfa_pending?: boolean }).mfa_pending) { setPassword(''); setStep('code'); return }
+      router.push('/admin/dashboard')
     } catch (error) {
       if (!current()) return
       cooldown.record(error)
@@ -139,6 +144,7 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Form */}
+        {step === 'code' ? <AdminCodeStep onDone={() => router.push('/admin/dashboard')} onRestart={() => { setStep('password'); setAuthError('') }} /> : (
         <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {/* Email */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -263,6 +269,7 @@ export default function AdminLoginPage() {
           </button>
           <Link href='/auth/admin/forgot-password' style={{ color: T.link, textAlign: 'center', padding: '10px' }}>Forgot your password?</Link>
         </form>
+        )}
 
         {/* Back to main site */}
         <div style={{ marginTop: '24px', textAlign: 'center' }}>
