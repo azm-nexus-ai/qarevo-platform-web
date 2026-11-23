@@ -115,15 +115,16 @@ const sideNavItems: NavItem[] = [
 
 // Hardcoded fallback arrays removed - use API data or show empty states
 
+// Fallback when the dashboard has no stored actions; labels come from ACTION_KEYS.
 const quickActions: QuickAction[] = [
-  { label: 'Book Appointment', sub: 'Schedule visit', icon: ICONS.calendar, href: PATIENT_ROUTES.findDoctor },
-  { label: 'Find a Physician', sub: 'Specialist discovery', icon: ICONS.steth, href: PATIENT_ROUTES.findDoctor },
-  { label: 'View Prescriptions', sub: 'Medication plan', icon: ICONS.heart, href: PATIENT_ROUTES.prescriptions },
-  { label: 'View Lab Requests', sub: 'Recent tests', icon: ICONS.cpu, href: PATIENT_ROUTES.labRequests },
-  { label: 'Medical Records', sub: 'View documents', icon: ICONS.shield, href: PATIENT_ROUTES.medicalRecords },
-  { label: 'Messages', sub: 'Care team chat', icon: ICONS.message, href: PATIENT_ROUTES.messages },
-  { label: 'Emergency Contacts', sub: 'Urgent support', icon: ICONS.user, href: PATIENT_ROUTES.support },
-  { label: 'Health Tracker', sub: 'Wellness insights', icon: ICONS.activity, href: PATIENT_ROUTES.dashboard },
+  { label: 'Find free appointments', sub: '', icon: ICONS.calendar, href: PATIENT_ROUTES.findDoctor },
+  { label: 'Appointments', sub: '', icon: ICONS.calendar, href: PATIENT_ROUTES.appointments },
+  { label: 'Medication and care plan', sub: '', icon: ICONS.heart, href: PATIENT_ROUTES.prescriptions },
+  { label: 'Lab orders', sub: '', icon: ICONS.cpu, href: PATIENT_ROUTES.labRequests },
+  { label: 'Health record', sub: '', icon: ICONS.shield, href: PATIENT_ROUTES.medicalRecords },
+  { label: 'Messages', sub: '', icon: ICONS.message, href: PATIENT_ROUTES.messages },
+  { label: 'Bills and payments', sub: '', icon: ICONS.info, href: PATIENT_ROUTES.billing },
+  { label: 'Help', sub: '', icon: ICONS.user, href: '/patient/help' },
 ]
 
 
@@ -144,11 +145,33 @@ const bookingSpecialties = [
   'Orthopedics',
 ]
 
-function getGreeting(): string {
+function getGreeting(): 'greetingMorning' | 'greetingAfternoon' | 'greetingEvening' {
   const hour = new Date().getHours()
-  if (hour < 12) return 'Good Morning'
-  if (hour < 18) return 'Good Afternoon'
-  return 'Good Evening'
+  if (hour < 12) return 'greetingMorning'
+  if (hour < 18) return 'greetingAfternoon'
+  return 'greetingEvening'
+}
+
+const TIMELINE_KEYS: Record<string, string> = {
+  episode_created: 'episodeCreated', intake_submitted: 'intakeSubmitted', medical_record_uploaded: 'recordUploaded',
+  appointment_booked: 'appointmentBooked', message_received: 'messageReceived', lab_result_uploaded: 'labResultUploaded',
+  lab_result_received: 'labResultReceived', lab_visit_recorded: 'labVisitRecorded', work_certificate_issued: 'workCertificateIssued',
+  doctor_assigned: 'doctorAssigned', episode_closed: 'episodeClosed', episode_transitioned: 'episodeUpdated',
+}
+
+/** Quick actions are labelled by where they lead, in the patient's language. Stored
+ *  dashboard rows carry English text written at sign-up, so it is not shown. */
+const ACTION_KEYS: Record<string, [string, string]> = {
+  '/patient/find-doctor': ['actionFindAppointments', 'actionFindAppointmentsSub'],
+  '/patient/prescriptions': ['actionMedication', 'actionMedicationSub'],
+  '/patient/prescription-care-plan': ['actionMedication', 'actionMedicationSub'],
+  '/patient/lab-requests': ['actionLabOrders', 'actionLabOrdersSub'],
+  '/patient/medical-records': ['actionRecords', 'actionRecordsSub'],
+  '/patient/messages': ['actionMessages', 'actionMessagesSub'],
+  '/patient/referrals': ['actionReferrals', 'actionReferralsSub'],
+  '/patient/billing': ['actionBilling', 'actionBillingSub'],
+  '/patient/appointments': ['actionAppointments', 'actionAppointmentsSub'],
+  '/patient/help': ['actionHelp', 'actionHelpSub'],
 }
 
 const iconLookup = ICONS as Record<string, string | readonly string[]>
@@ -464,7 +487,9 @@ export default function PatientDashboardPage() {
         setPatientName(data.patient_name || '')
         const plans = instructionList(data.care_plans ?? data.carePlans ?? []).items.map(careInstruction)
         const activePlan = plans.find(plan => plan.status?.trim().toLowerCase() === 'active') ?? plans[0]
-        setCarePlanStatus(activePlan?.status || (plans.length ? 'Status not recorded' : 'Not started'))
+        // One wording everywhere: no plan means "none recorded" (as on the plan page),
+        // never "not started" here and "active" elsewhere.
+        setCarePlanStatus(activePlan?.status?.trim() ? `status:${activePlan.status.trim()}` : plans.length ? 'unknown' : 'none')
       } catch (error) {
         if (cancelled) return
         if (isAuthError(error)) {
@@ -607,17 +632,20 @@ export default function PatientDashboardPage() {
 
   const displayQuickActions = useMemo<QuickAction[]>(() => {
     const source = dashboardArray(dashboardData, 'quick_actions', 'quickActions')
-    if (!source.length && !dashboardHasKey(dashboardData, 'quick_actions', 'quickActions')) return quickActions
+    const labelled = (action: QuickAction) => { const keys = ACTION_KEYS[action.href.split(/[?#]/)[0]]; return keys ? { ...action, label: t(keys[0]), sub: t(keys[1]) } : action }
+    if (!source.length && !dashboardHasKey(dashboardData, 'quick_actions', 'quickActions')) return quickActions.map(labelled)
     return source.map((item, index) => {
       const fallback = quickActions[index % quickActions.length]
+      const href = text(item.href, fallback.href)
+      const keys = ACTION_KEYS[href.split(/[?#]/)[0]]
       return {
-        label: text(item.label, fallback.label),
-        sub: text(item.sub ?? item.hint, fallback.sub),
+        label: keys ? t(keys[0]) : text(item.label, fallback.label),
+        sub: keys ? t(keys[1]) : text(item.sub ?? item.hint, fallback.sub),
         icon: resolveIcon(item.icon, fallback.icon),
         href: text(item.href, fallback.href),
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const displayCarePlans = useMemo<CarePlanCard[]>(() => {
     const source = dashboardArray(dashboardData, 'care_plans', 'carePlans')
@@ -731,13 +759,17 @@ export default function PatientDashboardPage() {
     if (!source.length && !dashboardHasKey(dashboardData, 'timeline_items', 'timelineItems')) return []
     return source.map((item) => {
       const fallback = { sub: '', time: '' }
+      // Known events read in the patient's language: what happened and whether
+      // anything is needed. Unknown types keep their stored title.
+      const known = TIMELINE_KEYS[text(item.event_type, '').replace('.', '_')]
+      const sub = text(item.sub ?? item.body ?? item.provider, fallback.sub)
       return {
-        title: text(item.title ?? item.event, 'Care update'),
-        sub: text(item.sub ?? item.body ?? item.provider, fallback.sub),
+        title: known ? t(`timeline.${known}`) : text(item.title ?? item.event, t('timeline.careUpdate')),
+        sub: known && t.has(`timeline.${known}Body`) ? t(`timeline.${known}Body`) : /^[A-Z][a-z]+(\.[A-Z][a-z]+)+$/.test(sub) ? '' : sub,
         time: text(item.time ?? item.date, fallback.time),
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const displayAIInsights = useMemo<AIInsightCard[]>(() => {
     const source = dashboardArray(dashboardData, 'ai_insights', 'aiInsights')
@@ -908,7 +940,7 @@ export default function PatientDashboardPage() {
                 <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}><ProfileImage name={displayPatientName}/></div>
                 <div>
                   <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{displayPatientName}</p>
-                  <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Care Plan: {carePlanStatus}</p>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{carePlanStatus === 'none' ? t('carePlanNone') : carePlanStatus === 'unknown' ? t('carePlanUnknown') : carePlanStatus.startsWith('status:') ? t('carePlanStatus', { status: carePlanStatus.slice(7) }) : t('carePlanLoading')}</p>
                 </div>
               </div>
             </section>
@@ -968,7 +1000,7 @@ export default function PatientDashboardPage() {
             <div className='pd-dashboard-header-row'>
               <div className='pd-greeting-block'>
                 <h1 className='pd-greeting-title'>
-                  <span className='pd-greeting-kicker'>{greeting}</span>
+                  <span className='pd-greeting-kicker'>{greeting ? t(greeting) : ''}</span>
                   <span className='pd-greeting-name'>{patientName || 'Patient'} <span aria-hidden='true'>👋</span></span>
                 </h1>
                 <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>{t('howAreYouFeelingToday')}</p>
@@ -1094,7 +1126,7 @@ export default function PatientDashboardPage() {
               <div style={{ maxWidth: '620px' }}>
                 <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: "var(--link)" }}>{t('yourCareJourney')}</p>
                 <h2 className='portal-h2'>
-                  Welcome back, {displayPatientName}. {hasCareActivity ? 'Your care overview is ready.' : 'Start by choosing a physician.'}
+                  {t('welcomeBack', { name: displayPatientName })} {hasCareActivity ? t('overviewReady') : t('startByFindingAppointment')}
                 </h2>
                 <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.65, color: T.slate }}>
                   {heroBody}
@@ -1105,9 +1137,9 @@ export default function PatientDashboardPage() {
                 <div style={{ borderRadius: '16px', padding: '14px', background: "var(--surface-glass)", border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 24px rgba(4,53,77,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '9px' }}>
                     <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: T.slate2 }}>{t('careActivity')}</p>
-                    <span style={{ ...Glass.chip, padding: '4px 10px', borderRadius: '999px', fontSize: "13px", color: hasCareActivity ? '#0F9E77' : T.slate, fontWeight: 700 }}>{hasCareActivity ? 'Active' : 'New'}</span>
+                    <span style={{ ...Glass.chip, padding: '4px 10px', borderRadius: '999px', fontSize: "13px", color: hasCareActivity ? '#0F9E77' : T.slate, fontWeight: 700 }}>{hasCareActivity ? t('activityActive') : t('activityNew')}</span>
                   </div>
-                  <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{hasCareActivity ? 'Care activity is being tracked from your appointments and records.' : 'No care activity has been recorded yet.'}</p>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{hasCareActivity ? t('activityTracked') : t('activityNone')}</p>
                 </div>
               </div>
             </div>

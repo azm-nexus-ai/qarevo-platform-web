@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
 
 import { useEffect, useState } from 'react'
@@ -123,7 +123,7 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
     e.preventDefault()
     const errors: Record<string, string> = {}
     if (!name.trim() || name.trim().length > 200) errors.name = 'Enter a service name (1–200 characters).'
-    if (!/^\d+$/.test(price) || !Number.isSafeInteger(Number(price))) errors.price = 'Enter a non-negative whole amount; decimal prices are not supported by the current service contract.'
+    if (!/^\d+$/.test(price) || !Number.isSafeInteger(Number(price))) errors.price = t('priceWholeEuros')
     if (!/^\d+$/.test(duration) || !Number.isSafeInteger(Number(duration)) || Number(duration) < 5) errors.duration = 'Enter a whole number of minutes, at least 5.'
     setFormErrors(errors)
     if (Object.keys(errors).length) { focusValidation(e.currentTarget); return }
@@ -260,6 +260,7 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
 
 export default function DoctorProfilePage() {
   const t = useTranslations('doctorProfile');
+  const euro = new Intl.NumberFormat(useLocale() === "de" ? "de-DE" : "en-GB", { style: "currency", currency: "EUR" })
   const router = useRouter()
   const [profileData, setProfileData] = useState<DoctorProfileResponse | null>(null)
   const [profileOwner, setProfileOwner] = useState<string | null>(null)
@@ -882,7 +883,7 @@ export default function DoctorProfilePage() {
                     {t('type')} <span style={{ fontWeight: 600 }}>{service.service_type}</span>
                   </p>
                   <p style={{ margin: '0 0 2px', fontSize: '13px', color: T.slate }}>
-                    {t('price')} <span style={{ fontWeight: 600 }}>${service.price}</span> {t('duration')} <span style={{ fontWeight: 600 }}>{service.duration} min</span>
+                    {t('price')} <span style={{ fontWeight: 600 }}>{euro.format(service.price)}</span> {t('duration')} <span style={{ fontWeight: 600 }}>{service.duration} min</span>
                   </p>
                   {service.availability && (
                     <p style={{ margin: '0 0 2px', fontSize: '13px', color: T.slate }}>

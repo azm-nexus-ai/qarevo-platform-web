@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import DoctorAvatar from '@/components/cards/DoctorAvatar'
 import { Suspense, useEffect, useRef, useState } from 'react'
@@ -92,7 +92,11 @@ type Tab = 'upcoming' | 'past' | 'cancelled'
 
 // ─── Badge ─────────────────────────────────────────────────────────────────────
 
+const STATUS_KEYS: Record<AppointmentStatus, string> = {"Unknown": "statusUnknown", "No show": "statusNoShow", "Confirmed": "statusConfirmed", "Today": "statusToday", "Starting Soon": "statusStartingSoon", "Waiting": "statusWaiting", "Rescheduled": "statusRescheduled", "Completed": "statusCompleted", "Cancelled": "statusCancelled"}
+const TYPE_KEYS: Record<ConsultationType, string> = {"Video Consultation": "typeVideo", "In-Person": "typeInPerson", "Follow-Up": "typeFollowUp", "Second Opinion": "typeSecondOpinion"}
+
 function StatusBadge({ status }: { status: AppointmentStatus }) {
+  const t = useTranslations('patientAppointments')
   const cfg: Record<AppointmentStatus, { bg: string; color: string; dot?: string }> = {
     'Unknown': { bg: 'var(--surface-subtle)', color: T.slate },
     'No show': { bg: 'var(--surface-subtle)', color: T.slate },
@@ -108,7 +112,7 @@ function StatusBadge({ status }: { status: AppointmentStatus }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, background: s.bg, color: s.color }}>
       {s.dot && <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: s.dot, flexShrink: 0 }} />}
-      {status}
+      {t(STATUS_KEYS[status])}
     </span>
   )
 }
@@ -116,11 +120,12 @@ function StatusBadge({ status }: { status: AppointmentStatus }) {
 // ─── Type badge ────────────────────────────────────────────────────────────────
 
 function TypeBadge({ type }: { type: ConsultationType }) {
+  const t = useTranslations('patientAppointments')
   const isVideo = type === 'Video Consultation'
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 600, ...Glass.chip, color: isVideo ? T.link : T.slate }}>
       <Ico p={isVideo ? ICONS.video : ICONS.steth} size={11} sw={1.8} />
-      {type}
+      {t(TYPE_KEYS[type])}
     </span>
   )
 }
@@ -148,12 +153,12 @@ function SCard({ children, style }: { children: React.ReactNode; style?: React.C
 
 function TodayBanner({ appt, onJoin, onDetails }: { appt: Appointment; onJoin: () => void; onDetails: () => void }) {
   const t = useTranslations('patientAppointments')
-  const [countdown, setCountdown] = useState('Checking appointment time…')
+  const [countdown, setCountdown] = useState(() => t('checkingTime'))
 
   useEffect(() => {
     const update = () => {
       const diff = new Date(appt.startAt).getTime() - Date.now()
-      if (diff <= 0) { setCountdown('Appointment time reached'); return }
+      if (diff <= 0) { setCountdown(t('timeReached')); return }
       const h = Math.floor(diff / 3600000)
       const m = Math.ceil((diff % 3600000) / 60000)
       setCountdown(h > 0 ? `${h}h ${m}m` : `${m}m`)
@@ -175,7 +180,7 @@ function TodayBanner({ appt, onJoin, onDetails }: { appt: Appointment; onJoin: (
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
         <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: T.blue, boxShadow: '0 0 0 3px rgba(32,181,223,0.2)', animation: 'appt-pulse 2s infinite' }} />
         <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.link }}>
-          {"Today's Appointment"}
+          {t('todaysAppointment')}
         </span>
       </div>
       <div className='appt-today-grid'>
@@ -393,12 +398,12 @@ function CancelledCard({ appt }: { appt: Appointment }) {
             <TypeBadge type={appt.consultationType} />
             <span style={{ fontSize: "13px", color: T.slate, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <Ico p={ICONS.calendar} size={12} sw={1.8} color={T.slate2} />
-              Original: {appt.date} · {appt.time}
+              {t('originalSlot', { date: appt.date, time: appt.time })}
             </span>
           </div>
           {appt.cancellationDate && (
             <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate }}>
-              Cancelled on {appt.cancellationDate}
+              {t('cancelledOn', { date: appt.cancellationDate })}
             </p>
           )}
           {appt.cancellationReason && (
@@ -433,23 +438,24 @@ function CancelledCard({ appt }: { appt: Appointment }) {
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyState({ tab, onAction }: { tab: Tab; onAction: () => void }) {
+  const t = useTranslations('patientAppointments')
   const cfg = {
     upcoming: {
       icon: ICONS.calendar,
-      title: 'No upcoming appointments',
-      desc: "You don't have any consultations scheduled yet. Find a doctor and book your first appointment.",
-      cta: 'Find a Doctor',
+      title: t('emptyUpcomingTitle'),
+      desc: t('emptyUpcomingBody'),
+      cta: t('findFreeAppointments'),
     },
     past: {
       icon: ICONS.activity,
-      title: 'No past appointments yet',
-      desc: 'Completed appointments and consultation summaries will appear here.',
+      title: t('emptyPastTitle'),
+      desc: t('emptyPastBody'),
       cta: null as string | null,
     },
     cancelled: {
       icon: ICONS.shield,
-      title: 'No cancelled appointments',
-      desc: 'Cancelled or withdrawn appointments will appear here.',
+      title: t('emptyCancelledTitle'),
+      desc: t('emptyCancelledBody'),
       cta: null as string | null,
     },
   }[tab]
@@ -494,7 +500,7 @@ function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose:
     event.preventDefault()
     if (busy) return
     setBusy(true); setError('')
-    try { await onConfirm(reason.trim() || 'Patient requested cancellation') }
+    try { await onConfirm(reason.trim() || t('defaultCancelReason')) }
     catch (error) { setError(getApiErrorDetail(error) || 'Cancellation failed. Your appointment remains booked. Please retry.') }
     finally { setBusy(false) }
   }
@@ -509,7 +515,7 @@ function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose:
       {error && <p role="alert" className="mt-3 text-red-700 dark:text-red-300">{error}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
         <button type="button" disabled={busy} onClick={onClose} className="min-h-11 rounded-xl border border-theme px-4">{t('keepAppointment')}</button>
-        <button type="submit" disabled={busy} className="min-h-11 rounded-xl border border-theme px-4 font-semibold text-red-700 dark:text-red-300">{busy ? 'Cancelling…' : 'Cancel appointment'}</button>
+        <button type="submit" disabled={busy} className="min-h-11 rounded-xl border border-theme px-4 font-semibold text-red-700 dark:text-red-300">{busy ? t('cancelling') : t('confirmCancel')}</button>
       </div>
     </form>
   </dialog>
@@ -537,6 +543,7 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 
 function AppointmentsPageInner() {
   const t = useTranslations('patientAppointments')
+  const dateLocale = useLocale() === 'de' ? 'de-DE' : 'en-GB'
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('upcoming')
   const [upcoming, setUpcoming] = useState<Appointment[]>([])
@@ -563,19 +570,19 @@ function AppointmentsPageInner() {
             const startsAt = new Date(apt.start_at)
             return {
             id: apt.id,
-            physician: apt.provider_name || 'Assigned clinician',
+            physician: apt.provider_name || t('assignedClinician'),
             providerId: apt.provider_id,
             consultationId: apt.consultation_id,
-            specialty: apt.specialty || 'Care team',
+            specialty: apt.specialty || t('careTeam'),
             hospital: 'Qarevo Health',
             imageUrl: apt.provider_image_url || undefined,
             consultationType: apt.consultation_modality === 'in_person' ? 'In-Person' : 'Video Consultation',
-            date: startsAt.toLocaleDateString('en-CA', { timeZone: userTimeZone }) === new Date().toLocaleDateString('en-CA', { timeZone: userTimeZone }) ? 'Today' : startsAt.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', timeZone: userTimeZone }),
-            time: startsAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: userTimeZone }),
-            duration: apt.end_at ? `${Math.round((new Date(apt.end_at).getTime() - startsAt.getTime()) / 60000)} min` : 'Duration unavailable',
+            date: startsAt.toLocaleDateString('en-CA', { timeZone: userTimeZone }) === new Date().toLocaleDateString('en-CA', { timeZone: userTimeZone }) ? t('today') : startsAt.toLocaleDateString(dateLocale, { month: 'short', day: 'numeric', timeZone: userTimeZone }),
+            time: startsAt.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit', timeZone: userTimeZone }),
+            duration: apt.end_at ? t('minutes', { count: Math.round((new Date(apt.end_at).getTime() - startsAt.getTime()) / 60000) }) : t('durationUnavailable'),
             status: normalizeAppointmentStatus(apt.status),
             bookingRef: `QRV-${apt.id.slice(0, 8)}`,
-            reason: 'Consultation',
+            reason: t('consultation'),
             paymentStatus: normalizePaymentStatus(apt.payment_status),
             startAt: apt.start_at,
             endAt: apt.end_at || apt.start_at,
@@ -658,9 +665,9 @@ function AppointmentsPageInner() {
   }
 
   const TABS: { key: Tab; label: string; count: number }[] = [
-    { key: 'upcoming', label: 'Upcoming', count: upcoming.length },
-    { key: 'past', label: 'Past', count: past.length },
-    { key: 'cancelled', label: 'Cancelled', count: cancelled.length },
+    { key: 'upcoming', label: t('tabUpcoming'), count: upcoming.length },
+    { key: 'past', label: t('tabPast'), count: past.length },
+    { key: 'cancelled', label: t('tabCancelled'), count: cancelled.length },
   ]
 
   const bookButton = (

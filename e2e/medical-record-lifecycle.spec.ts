@@ -129,3 +129,14 @@ test('a same-tick route change blocks a stale patient document grant', async ({ 
 test('shared attachment access errors preserve the safe support reference without fetching storage', async ({ page, context }) => {
   const state = await prepare(context); state.records = [doc()]; state.grantError = true; await page.goto('/patient/medical-records'); await card(page).getByRole('button', { name: 'Download ' + PRIVATE, exact: true }).click(); const dialog = page.getByRole('dialog', { name: 'Medical record access', exact: true }); await expect(dialog.getByRole('alert')).toContainText('file access request is temporarily unavailable'); await expect(dialog.getByRole('textbox', { name: 'Support reference', exact: true })).toHaveValue(REF); await expect(dialog.getByRole('link')).toHaveCount(0); expect(state.grants).toBe(1)
 })
+
+for (const width of [320, 390]) test(`health record fits ${width}px with a labelled document-type select and focuses the first upload error`, async ({ page, context }) => {
+  await prepare(context); await page.setViewportSize({ width, height: 690 })
+  await page.goto('/patient/medical-records')
+  await expect(page.getByLabel('Document type', { exact: true })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  const dialog = await openUpload(page)
+  await dialog.getByRole('button', { name: 'Upload Record', exact: true }).click()
+  await expect(dialog.getByLabel('Document Name (Required)', { exact: true })).toBeFocused()
+  await expect(dialog.getByText('Enter the document name.', { exact: true })).toBeVisible()
+})
