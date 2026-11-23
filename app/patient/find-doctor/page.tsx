@@ -355,9 +355,8 @@ function FindDoctorPageContent() {
                 </div>
                 <div>
                   <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>
-                    {userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : 'Loading...'}
+                    {userSettings ? [userSettings.first_name, userSettings.last_name].filter(Boolean).join(' ') : t('loadingName')}
                   </p>
-                  <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{t('carePlanActive')}</p>
                 </div>
               </div>
             </section>

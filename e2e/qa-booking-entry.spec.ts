@@ -45,7 +45,7 @@ async function bookingFixtures(context: BrowserContext) {
 test('dashboard booking opens doctor selection and continues with the chosen clinician', async ({page, context}) => {
   const {control} = await bookingFixtures(context)
   await page.goto('/patient/dashboard')
-  await page.getByRole('link', {name: /Book Appointment/}).click()
+  await page.getByRole('link', {name: /Find free appointments/}).first().click()
   await expect(page).toHaveURL(/\/patient\/find-doctor(?:\?|$)/)
   await page.getByRole('link', {name: 'Book Now', exact: true}).click()
   await expect(page.getByRole('heading', {name: 'Choose Your Appointment', exact: true})).toBeVisible()
