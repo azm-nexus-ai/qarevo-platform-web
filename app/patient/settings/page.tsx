@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import AccountSecurity from '@/components/security/AccountSecurity'
 
@@ -66,6 +67,12 @@ export default function PatientSettingsPage() {
   const [contactErrors, setContactErrors] = useState<Record<string, string>>({})
   const { theme, setTheme } = useTheme()
   const router = useRouter()
+  // Same-portal return path only (e.g. back to costs or the doctor search).
+  const [returnTo, setReturnTo] = useState('')
+  useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get('return') ?? ''
+    if (/^\/patient\/[A-Za-z0-9/_-]*(\?[A-Za-z0-9=&_%-]*)?$/.test(value)) setReturnTo(value)
+  }, [])
   const insuranceCardInputRef = useRef<HTMLInputElement | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -252,6 +259,15 @@ export default function PatientSettingsPage() {
     window.dispatchEvent(new CustomEvent('qarevo:patient-appearance-changed', { detail: appearance }))
   }, [])
 
+  // Links such as "Review insurance details" open this section directly, with its
+  // heading in view and focused, instead of the top of a long settings page.
+  useEffect(() => {
+    if (loading || loadError || window.location.hash !== '#insurance') return
+    const heading = document.getElementById('insurance-heading')
+    document.getElementById('insurance')?.scrollIntoView({ block: 'start' })
+    heading?.focus({ preventScroll: true })
+  }, [loading, loadError])
+
   useEffect(() => {
     if (loading || loadError) return
     const timer = window.setTimeout(() => {
@@ -384,10 +400,10 @@ export default function PatientSettingsPage() {
         setInsurance(created)
       }
       setShowInsuranceEdit(false)
-      setSaveMessage('Insurance information saved successfully')
+      setSaveMessage(t('insuranceSaved'))
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
-      showError(error, 'Failed to save insurance information.')
+      showError(error, t('insuranceSaveFailed'))
     }
   }
 
@@ -1067,21 +1083,26 @@ export default function PatientSettingsPage() {
               </div>
             </PortalCard>
 
-            <PortalCard className='settings-card'>
+            <PortalCard className='settings-card' id='insurance' style={{ scrollMarginTop: '96px' }}>
               <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('insuranceInformation')}</p>
-                  <h2 className='portal-h2 settings-card-title'>{t('coverageAndCardUpload')}</h2>
+                  <h2 className='portal-h2 settings-card-title' id='insurance-heading' tabIndex={-1}>{t('coverageAndCardUpload')}</h2>
                 </div>
                 <div className='flex gap-2'>
                   <PortalBadge tone={insuranceInfo.tone}>{insuranceInfo.label}</PortalBadge>
                   <PortalButton tone='secondary' onClick={() => { if (!showInsuranceEdit) openInsuranceEdit(); else setShowInsuranceEdit(false) }}>
-                    {showInsuranceEdit ? 'Cancel' : insurance ? 'Edit' : 'Add Insurance'}
+                    {showInsuranceEdit ? t('cancel') : insurance ? t('edit') : t('addInsurance')}
                   </PortalButton>
                 </div>
               </div>
 
               <p className='mb-4 text-sm leading-6 text-muted'>{insuranceInfo.notice}</p>
+              {returnTo && (
+                <p className='mb-4 text-sm'>
+                  <Link href={returnTo} style={{ color: 'var(--link)', fontWeight: 700 }}>{t('backToPreviousStep')}</Link>
+                </p>
+              )}
               {showInsuranceEdit && (
                 <div style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', marginBottom: '16px' }}>
                   <div className='settings-info-grid'>

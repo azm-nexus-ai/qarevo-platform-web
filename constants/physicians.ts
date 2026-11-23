@@ -76,7 +76,7 @@ export const QUICK_SPECIALTIES = [
   'Emergency Medicine',
 ] as const
 
-export const LANGUAGE_OPTIONS = ['Any', 'English', 'French', 'Arabic', 'Yoruba', 'Spanish'] as const
+export const LANGUAGE_OPTIONS = ['Any', 'German', 'English', 'Turkish', 'Arabic', 'Russian', 'Polish', 'Ukrainian', 'French', 'Spanish', 'Italian'] as const
 
 export const INSURANCE_OPTIONS = ['Any', 'Axa', 'Bupa', 'Cigna', 'Sanlam', 'BlueCross'] as const
 

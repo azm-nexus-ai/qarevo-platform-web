@@ -11,7 +11,6 @@ import { getOnboardingRedirectPath, readAuthFlowState } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import { PATIENT_ROUTES, PATIENT_SIDEBAR_ITEMS, isPatientNavActive } from '@/constants/patient-navigation'
 import {
-  INSURANCE_OPTIONS,
   LANGUAGE_OPTIONS,
   QUICK_SPECIALTIES,
 } from '@/constants/physicians'
@@ -25,6 +24,7 @@ import { searchPatientDoctors, getPatientSettings, getRecommendedDoctors, isAuth
 import ProfileImage from '@/components/patient/ProfileImage'
 import { physicianPath } from '@/lib/physician-slug'
 import { NavLabel } from '@/components/ui/NavLabel'
+import { useLabels } from '@/i18n/labels'
 
 function getQuickBookServiceType(
   consultationType: string,
@@ -103,9 +103,6 @@ function buildBookingHref(
   return `/patient/consultation-booking/date-time?${params.toString()}`
 }
 
-function formatDoctorRating(doctor: PatientDoctor) {
-  return doctor.reviews > 0 ? `${doctor.rating.toFixed(1)} (${doctor.reviews} reviews)` : 'No ratings yet'
-}
 
 function FindDoctorPageContent() {
   const t = useTranslations('patientFindDoctor')
@@ -115,11 +112,8 @@ function FindDoctorPageContent() {
   const [q, setQ] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
 
-  const [recentSearches, setRecentSearches] = useState<string[]>([
-    'cardiologist near me',
-    'female endocrinologist',
-    'virtual dermatology consultation',
-  ])
+  const labels = useLabels()
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
 
   const [specialty, setSpecialty] = useState<(typeof QUICK_SPECIALTIES)[number]>('All')
   const [availability, setAvailability] = useState<'any' | 'today' | 'tomorrow' | 'this-week'>('any')
@@ -130,7 +124,9 @@ function FindDoctorPageContent() {
     const service = bookingParams.get('service') ?? bookingParams.get('service_type')
     return service === 'video' || service === 'physical' ? service : 'any'
   })
-  const [insurance, setInsurance] = useState<(typeof INSURANCE_OPTIONS)[number]>('Any')
+  // The saved coverage decides bookability (the API re-checks at booking); the
+  // old free-text insurer filter matched foreign insurers and is retired.
+  const insurance = 'Any'
   const [rating, setRating] = useState<'any' | '4.0' | '4.5' | '4.8'>('any')
   const [price, setPrice] = useState<'any' | 'under-130' | '130-180' | '180+'>('any')
   const [distance, setDistance] = useState<'any' | 'under-5' | 'under-10' | 'under-25'>('any')
@@ -165,9 +161,23 @@ function FindDoctorPageContent() {
       .map((p) => `${p.name} - ${p.specialty}`)
   }, [physicians, q])
 
-  const filteredPhysicians = useMemo(() => {
-    return physicians
-  }, [physicians])
+  const filteredPhysicians = physicians
+  const coverage = userSettings ? bookingFunding(userSettings.insurance).route : 'SELF_PAY'
+  const coverageKey = ({ GKV: 'Gkv', PKV: 'Pkv', SELF_PAY: 'SelfPay' } as const)[coverage]
+  // Each criterion that narrows the result, so an empty result can say why and
+  // let the patient widen one criterion without starting again.
+  const activeFilters = [
+    q.trim() && { key: 'q', label: t('filterQuery', { query: q.trim() }), clear: () => { setQ(''); setPage(1) } },
+    specialty !== 'All' && { key: 'specialty', label: labels.specialty(specialty), clear: () => { setSpecialty('All'); setPage(1) } },
+    availability !== 'any' && { key: 'availability', label: t(availability === 'today' ? 'availableToday' : availability === 'tomorrow' ? 'availableTomorrow' : 'thisWeek'), clear: () => { setAvailability('any'); setPage(1) } },
+    consultationType !== 'any' && { key: 'type', label: t(consultationType === 'video' ? 'videoConsultation' : 'physicalVisit'), clear: () => { setConsultationType('any'); setPage(1) } },
+    gender !== 'any' && { key: 'gender', label: t(gender), clear: () => { setGender('any'); setPage(1) } },
+    language !== 'Any' && { key: 'language', label: labels.language(language), clear: () => { setLanguage('Any'); setPage(1) } },
+    experience !== 'any' && { key: 'experience', label: t('experienceFilter', { range: experience }), clear: () => { setExperience('any'); setPage(1) } },
+    rating !== 'any' && { key: 'rating', label: t('ratingFilter', { rating }), clear: () => { setRating('any'); setPage(1) } },
+    price !== 'any' && { key: 'price', label: t(price === 'under-130' ? 'under130' : price === '130-180' ? 'price130to180' : 'priceOver180'), clear: () => { setPrice('any'); setPage(1) } },
+    distance !== 'any' && { key: 'distance', label: t(distance === 'under-5' ? 'under5Km' : distance === 'under-10' ? 'under10Km' : 'under25Km'), clear: () => { setDistance('any'); setPage(1) } },
+  ].filter((item): item is { key: string; label: string; clear: () => void } => Boolean(item))
 
   useEffect(() => {
     const authFlowState = readAuthFlowState()
@@ -226,7 +236,6 @@ function FindDoctorPageContent() {
       if (language !== 'Any') params.set('language', language)
       if (experience !== 'any') params.set('experience', experience)
       if (consultationType !== 'any') params.set('consultation_type', consultationType)
-      if (insurance !== 'Any') params.set('insurance', insurance)
       if (rating !== 'any') params.set('rating', rating)
       if (price !== 'any') params.set('price', price)
       if (distance !== 'any') params.set('distance', distance)
@@ -253,11 +262,9 @@ function FindDoctorPageContent() {
           return
         }
         if (!cancelled) {
-          setPhysicians([])
-          setTotalDoctors(0)
           setHasNextPage(false)
           setHasPreviousPage(false)
-          setLoadError('Failed to load doctors. Please try again.')
+          setLoadError('failed')
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -268,7 +275,7 @@ function FindDoctorPageContent() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [q, specialty, availability, gender, language, experience, consultationType, insurance, rating, price, distance, sortBy, page, reload, userSettings])
+  }, [q, specialty, availability, gender, language, experience, consultationType, rating, price, distance, sortBy, page, reload, userSettings])
 
   function toggleFavorite(id: string) {
     setFavorites((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -290,7 +297,6 @@ function FindDoctorPageContent() {
     setLanguage('Any')
     setExperience('any')
     setConsultationType('any')
-    setInsurance('Any')
     setRating('any')
     setPrice('any')
     setDistance('any')
@@ -410,7 +416,7 @@ function FindDoctorPageContent() {
                 onClick={() => setShowFiltersMobile((prev) => !prev)}
                 style={{ minHeight: '38px', padding: '0 12px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}
               >
-                {showFiltersMobile ? 'Hide Filters' : 'Show Filters'}
+                {showFiltersMobile ? t('hideFilters') : t('showFilters')}
               </button>
             </div>
           </header>
@@ -437,14 +443,8 @@ function FindDoctorPageContent() {
                   if (e.key === 'Enter') applySearch(q)
                 }}
                 placeholder={t('searchByDoctorNameSpecialty')}
-                style={{ width: '100%', minHeight: '52px', borderRadius: '14px', border: `1px solid ${q ? 'rgba(32,181,223,0.45)' : "var(--border)"}`, background: "var(--surface-glass)", color: T.navy, fontSize: '14px', padding: '0 130px 0 44px', boxShadow: q ? '0 0 0 4px rgba(32,181,223,0.1)' : 'none', transition: 'all 0.16s ease' }}
+                style={{ width: '100%', minHeight: '52px', borderRadius: '14px', border: `1px solid ${q ? 'rgba(32,181,223,0.45)' : "var(--border)"}`, background: "var(--surface-glass)", color: T.navy, fontSize: '14px', padding: '0 14px 0 44px', textOverflow: 'ellipsis', boxShadow: q ? '0 0 0 4px rgba(32,181,223,0.1)' : 'none', transition: 'all 0.16s ease' }}
               />
-              <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button type='button' aria-label={t('voiceSearchPlaceholder')} style={{ width: '34px', height: '34px', borderRadius: '10px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate, cursor: 'pointer' }}>
-                  <Ico p={ICONS.activity} size={14} sw={1.8} />
-                </button>
-                <span style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", color: "var(--link)", fontWeight: 700, letterSpacing: '0.03em' }}>{t('aiSearch')}</span>
-              </div>
             </div>
 
             {searchFocused && (
@@ -474,7 +474,7 @@ function FindDoctorPageContent() {
                 onClick={() => setShowAllSpecialties((prev) => !prev)}
                 style={{ border: 'none', background: 'transparent', color: "var(--link)", fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}
               >
-                {showAllSpecialties ? 'Show Less' : 'View All'}
+                {showAllSpecialties ? t('showLess') : t('viewAll')}
               </button>
             </div>
             <div className='fd-specialties'>
@@ -499,7 +499,7 @@ function FindDoctorPageContent() {
                       fontWeight: active ? 700 : 500,
                     }}
                   >
-                    {item}
+                    {labels.specialty(item)}
                   </button>
                 )
               })}
@@ -555,7 +555,7 @@ function FindDoctorPageContent() {
                     }}
                   >
                     <Ico p={showAdvancedFilters ? ICONS.arrowSm : ICONS.arrowSm} size={12} sw={1.8} color={showAdvancedFilters ? '#348CEA' : T.slate2} style={{ transform: showAdvancedFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
-                    {showAdvancedFilters ? 'Hide Advanced Filters' : 'Show Advanced Filters'}
+                    {showAdvancedFilters ? t('hideAdvancedFilters') : t('showAdvancedFilters')}
                   </button>
 
                   {showAdvancedFilters && (
@@ -572,7 +572,7 @@ function FindDoctorPageContent() {
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
                         {t('language')}
                         <select value={language} onChange={(e) => { setLanguage(e.target.value as typeof language); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-                          {LANGUAGE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+                          {LANGUAGE_OPTIONS.map((item) => <option key={item} value={item}>{labels.language(item)}</option>)}
                         </select>
                       </label>
 
@@ -586,12 +586,10 @@ function FindDoctorPageContent() {
                         </select>
                       </label>
 
-                      <label style={{ fontSize: "13px", color: T.slate2 }}>
-                        {t('insuranceAccepted')}
-                        <select value={insurance} onChange={(e) => { setInsurance(e.target.value as typeof insurance); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
-                          {INSURANCE_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
-                        </select>
-                      </label>
+<p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>
+                        {t('coverageShownFor', { coverage: t(`coverage${coverageKey}`) })}{' '}
+                        <Link href='/patient/settings?section=insurance#insurance' style={{ color: 'var(--link)', fontWeight: 700 }}>{t('changeCoverage')}</Link>
+                      </p>
 
                       <label style={{ fontSize: "13px", color: T.slate2 }}>
                         {t('rating')}
@@ -608,8 +606,8 @@ function FindDoctorPageContent() {
                         <select value={price} onChange={(e) => { setPrice(e.target.value as typeof price); setPage(1) }} style={{ width: '100%', marginTop: '4px', minHeight: '36px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy }}>
                           <option value='any'>{t('any')}</option>
                           <option value='under-130'>{t('under130')}</option>
-                          <option value='130-180'>$130 - $180</option>
-                          <option value='180+'>$180+</option>
+                          <option value='130-180'>{t('price130to180')}</option>
+                          <option value='180+'>{t('priceOver180')}</option>
                         </select>
                       </label>
 
@@ -655,7 +653,7 @@ function FindDoctorPageContent() {
                         </div>
                         <DoctorCard
                           name={physician.name}
-                          specialty={physician.specialty}
+                          specialty={labels.specialty(physician.specialty)}
                           verification={physician.verification}
                           tags={physician.tags}
                           imageUrl={physician.imageUrl}
@@ -668,12 +666,16 @@ function FindDoctorPageContent() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <h2 className='portal-h2'>{t('featuredPhysicians')}</h2>
-                <span style={{ fontSize: "13px", color: T.slate2 }}>{totalDoctors} doctors</span>
+                {!loading && !loadError && <span role='status' style={{ fontSize: "13px", color: T.slate2 }}>{t('doctorsCount', { count: totalDoctors })}</span>}
               </div>
               {loadError && (
-                <div role='alert' style={{ marginBottom: '10px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface)', color: T.slate, padding: '10px 12px', fontSize: "13px" }}>
-                  {loadError}
-                  <button type='button' onClick={()=>setReload(value=>value+1)} style={{ minHeight:44, marginLeft:12, color:'var(--link)' }}>{t('retryPhysicianSearch')}</button>
+                <div role='alert' style={{ marginBottom: '10px', borderRadius: '14px', border: '1px solid var(--border)', background: 'var(--surface)', color: T.slate, padding: '14px 16px', fontSize: '14px', display: 'grid', gap: '8px' }}>
+                  <strong style={{ color: T.navy }}>{t('loadFailedTitle')}</strong>
+                  <span>{t('loadFailedBody')}</span>
+                  <span style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <button type='button' onClick={() => setReload(value => value + 1)} disabled={loading} style={{ minHeight: 44, padding: '0 14px', borderRadius: '11px', border: 'none', background: 'var(--primary)', color: 'var(--on-primary, #fff)', fontWeight: 700, cursor: 'pointer' }}>{t('retryPhysicianSearch')}</button>
+                    <Link href='/patient/help' style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', padding: '0 14px', borderRadius: '11px', border: '1px solid var(--border)', color: T.navy, fontWeight: 700, textDecoration: 'none' }}>{t('getHelp')}</Link>
+                  </span>
                 </div>
               )}
 
@@ -687,8 +689,21 @@ function FindDoctorPageContent() {
                     <div style={{ width: '68px', height: '68px', borderRadius: '18px', margin: '0 auto 12px', background: 'rgba(165,224,218,0.35)', border: "1px solid var(--border)", color: "var(--link)", display: 'grid', placeItems: 'center' }}>
                       <Ico p={ICONS.search} size={30} sw={1.6} />
                     </div>
-                    <h3 className='portal-h3'>{t('noPhysiciansFound')}</h3>
-                    <p style={{ margin: '0 0 14px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>{t('tryAdjustingYourFiltersOr')}</p>
+                    <h3 className='portal-h3'>{activeFilters.length ? t('noMatchesTitle') : t('noneBookableTitle')}</h3>
+                    <p style={{ margin: '0 0 14px', fontSize: '14px', color: T.slate, lineHeight: 1.6 }}>
+                      {activeFilters.length ? t('noMatchesBody') : t('noneBookableBody', { coverage: t(`coverage${coverageKey}`) })}
+                    </p>
+                    {activeFilters.length > 0 && (
+                      <ul aria-label={t('activeFilters')} style={{ listStyle: 'none', margin: '0 0 14px', padding: 0, display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+                        {activeFilters.map(filter => (
+                          <li key={filter.key}>
+                            <button type='button' onClick={filter.clear} aria-label={t('removeFilter', { label: filter.label })} style={{ minHeight: 36, padding: '0 12px', borderRadius: '999px', border: '1px solid var(--border)', background: 'var(--surface)', color: T.navy, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                              {filter.label} ×
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                     <HoverBtn
                       base={{
                         minHeight: '42px',
@@ -703,9 +718,9 @@ function FindDoctorPageContent() {
                         boxShadow: '0 4px 12px rgba(32,181,223,0.3)',
                       }}
                       on={{ background: '#348CEA', transform: 'translateY(-1px)' }}
-                      onClick={resetFilters}
+                      onClick={activeFilters.length ? resetFilters : () => router.push('/patient/settings?section=insurance#insurance')}
                     >
-                      {t('resetFilters')}
+                      {activeFilters.length ? t('resetFilters') : t('changeCoverage')}
                     </HoverBtn>
                   </article>
                 ) : (
@@ -716,7 +731,7 @@ function FindDoctorPageContent() {
                         <button
                           type='button'
                           onClick={() => toggleFavorite(doctor.id)}
-                          aria-label={`Toggle favorite for ${doctor.name}`}
+                          aria-label={t('toggleFavorite', { name: doctor.name })} aria-pressed={Boolean(favorites[doctor.id])}
                           style={{ width: '32px', height: '32px', borderRadius: '10px', border: "1px solid var(--border)", background: favorites[doctor.id] ? 'rgba(32,181,223,0.16)' : "var(--surface-glass)", color: favorites[doctor.id] ? "var(--link)" : T.slate2, cursor: 'pointer', transition: 'all 0.16s ease' }}
                         >
                           <Ico p={ICONS.heart} size={15} sw={1.8} />
@@ -725,7 +740,7 @@ function FindDoctorPageContent() {
 
                       <DoctorCard
                         name={doctor.name}
-                        specialty={doctor.specialty}
+                        specialty={labels.specialty(doctor.specialty)}
                         verification={doctor.verification}
                         tags={doctor.tags}
                         imageUrl={doctor.imageUrl}
@@ -733,20 +748,22 @@ function FindDoctorPageContent() {
 
                       <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('hospital')}</strong> {doctor.hospital}</p>
-                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('experience2')}</strong> {doctor.experienceYears} years</p>
-                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('rating2')}</strong> {formatDoctorRating(doctor)}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('experience2')}</strong> {t('yearsCount', { count: doctor.experienceYears })}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('rating2')}</strong> {doctor.reviews > 0 ? t('ratingValue', { rating: doctor.rating.toFixed(1), count: doctor.reviews }) : t('noRatingsYet')}</p>
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('nextSlot')}</strong> {doctor.nextAvailable}</p>
-                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('distance2')}</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : 'Not available'}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('distance2')}</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : t('notAvailable')}</p>
                         {doctor.services && doctor.services.length > 0 && (
                           <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('fee')}</strong> {CONSULTATION_PRICING_PENDING}</p>
                         )}
                       </div>
 
-                      <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate2 }}>
-                        Languages: {doctor.languages.join(', ')}
-                      </p>
+                      {doctor.languages.length > 0 && (
+                        <p style={{ margin: '8px 0 0', fontSize: "13px", color: T.slate2 }}>
+                          {t('languagesList', { languages: doctor.languages.map(labels.language).join(', ') })}
+                        </p>
+                      )}
                       <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate2 }}>
-                        Insurance: {doctor.insurance.join(', ')}
+                        {t('costStatus')} {t(`cost${coverageKey}`)}
                       </p>
 
                       <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -763,7 +780,7 @@ function FindDoctorPageContent() {
               </div>
 
               <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', borderRadius: '14px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
-                <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Page {page} · Showing {filteredPhysicians.length} of {totalDoctors}</p>
+                <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{loadError ? t('pageOnly', { page }) : t('pageSummary', { page, shown: filteredPhysicians.length, total: totalDoctors })}</p>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     type='button'
@@ -789,11 +806,10 @@ function FindDoctorPageContent() {
               <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
                 <h3 className='portal-h3'>{t('trustSignals')}</h3>
                 <div style={{ display: 'grid', gap: '8px' }}>
-                  <TrustCard label={t('verifiedPhysicians')} sub='Every doctor is identity-verified.' icon={ICONS.check} accent='#20B5DF' />
-                  <TrustCard label={t('licensedProfessionals')} sub='Credentials are clinically reviewed.' icon={ICONS.shield} accent='#348CEA' />
-                  <TrustCard label={t('secureConsultations')} sub='Encrypted and privacy-first sessions.' icon={ICONS.lock} accent='#04354D' />
-                  <TrustCard label={t('patientReviewed')} sub='Transparent ratings from real patients.' icon={ICONS.heart} accent='#20B5DF' />
-                  <TrustCard label={t('aiAssistedMatching')} sub='Recommendations are context aware.' icon={ICONS.cpu} accent='#A5E0DA' />
+                  <TrustCard label={t('verifiedPhysicians')} sub={t('trustVerifiedSub')} icon={ICONS.check} accent='#20B5DF' />
+                  <TrustCard label={t('licensedProfessionals')} sub={t('trustLicensedSub')} icon={ICONS.shield} accent='#348CEA' />
+                  <TrustCard label={t('secureConsultations')} sub={t('trustSecureSub')} icon={ICONS.lock} accent='#04354D' />
+                  <TrustCard label={t('patientReviewed')} sub={t('trustReviewedSub')} icon={ICONS.heart} accent='#20B5DF' />
                 </div>
               </section>
             </section>
