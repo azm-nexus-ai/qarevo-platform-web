@@ -78,6 +78,16 @@ type PreviewState = {
 }
 
 const CATEGORIES: RecordType[] = ['Consultation', 'Prescription', 'Lab Request', 'Lab Result', 'Diagnosis', 'Referral', 'Medical Document']
+const TYPE_KEYS: Record<string, string> = { 'All Records': 'typeAll', Consultation: 'typeConsultation', Prescription: 'typePrescription', 'Lab Request': 'typeLabRequest',
+  'Lab Result': 'typeLabResult', Diagnosis: 'typeDiagnosis', Referral: 'typeReferral', 'Medical Document': 'typeMedicalDocument' }
+// Validation messages from lib/medical-record-lifecycle in the patient's language.
+const UPLOAD_ERROR_KEYS: Record<string, string> = {
+  'Enter the document name.': 'errTitle', 'Use 255 characters or fewer for the document name.': 'errTitleLong',
+  'Choose a supported medical record type.': 'errType', 'Use 5,000 characters or fewer for the description.': 'errDescriptionLong',
+  'Use 255 characters or fewer for the provider or facility.': 'errProviderLong', 'Enter a valid date of record (YYYY-MM-DD).': 'errDate',
+  'Choose a medical document to upload.': 'errFile', 'Choose a PDF, DOC, DOCX, PNG, JPEG or WEBP file.': 'errFileType',
+}
+const UPLOAD_FIELD_ORDER = ['title', 'record_type', 'record_date', 'provider_name', 'description', 'file'] as const
 
 // ─── Modals ───────────────────────────────────────────────────────────────────
 
@@ -163,6 +173,14 @@ function UploadRecordModal({ onClose, onResolved }: { onClose: () => void; onRes
   const [values, setValues] = useState<MedicalUploadFields>({ title: '', record_type: 'Medical Document', description: '', provider_name: '', record_date: '' })
   const [file, setFile] = useState<File | null>(null), [busy, setBusy] = useState(false), [errors, setErrors] = useState<Record<string, string>>({}), [error, setError] = useState(''), [requestId, setRequestId] = useState<string | null>(null), [changed, setChanged] = useState(false)
   const validContext = () => !!scope && scope === readAccountScope('patient') && currentPortal() === 'patient' && window.location.pathname === path && new URLSearchParams(window.location.search).toString() === query
+  const message = (text?: string) => !text ? '' : UPLOAD_ERROR_KEYS[text] ? t(`upload.${UPLOAD_ERROR_KEYS[text]}`) : /3 MB/.test(text) ? t('upload.errFileSize') : text
+  // After a failed check, move to the first field that needs attention (the dialog
+  // scrolls internally on small screens, so the message would otherwise be hidden).
+  const focusFirstError = (found: Record<string, string>) => window.requestAnimationFrame(() => {
+    const first = UPLOAD_FIELD_ORDER.find(key => found[key])
+    const element = first ? document.getElementById(first === 'file' ? 'medical-upload-file' : 'medical-upload-' + first) : null
+    element?.scrollIntoView({ block: 'center' }); element?.focus()
+  })
   useEffect(() => { const node = dialog.current; node?.showModal(); return () => { controller.current?.abort(); attempt.current = null; node?.close() } }, [])
   const close = () => { if (!pending.current && validContext()) { dialog.current?.close(); onClose() } }
   const update = (field: keyof MedicalUploadFields, value: string) => { if (!pending.current && validContext()) { setValues(previous => ({ ...previous, [field]: value })); setErrors(previous => ({ ...previous, [field]: '' })); setChanged(true) } }
@@ -176,7 +194,7 @@ function UploadRecordModal({ onClose, onResolved }: { onClose: () => void; onRes
   const upload = async () => {
     if (pending.current || !validContext()) return
     const validation = medicalUploadFields(values, file); setErrors(validation.errors as Record<string, string>); setError(''); setRequestId(null)
-    if (Object.keys(validation.errors).length || !file) return
+    if (Object.keys(validation.errors).length || !file) { focusFirstError(validation.errors as Record<string, string>); return }
     pending.current = true; setBusy(true); const action = captureAction(), cancel = new AbortController(); controller.current = cancel
     const isCurrent = () => action.isCurrent() && validContext() && !cancel.signal.aborted
     try {
@@ -191,19 +209,25 @@ function UploadRecordModal({ onClose, onResolved }: { onClose: () => void; onRes
       const record = response.record && typeof response.record === 'object' && !Array.isArray(response.record) ? response.record : null
       if (!receipt || response.id !== receipt.fileId || (receipt.available ? record?.id !== receipt.fileId : response.record !== null)) throw new Error('The saved upload could not be confirmed. Retry this same file and details to recover the existing attempt.')
       attempt.current = null
-      onResolved(!receipt.available ? 'The earlier upload was recorded but is no longer available. It has not been restored.' : receipt.replayed ? 'This record was already uploaded. No second file was created.' : 'Medical record uploaded and confirmed.')
+      onResolved(!receipt.available ? t('upload.resolvedUnavailable') : receipt.replayed ? t('upload.resolvedReplayed') : t('upload.resolvedSaved'))
     } catch (failure) {
-      if (isCurrent()) { setErrors(clinicalValidationErrors(failure)); setError(getApiErrorDetail(failure) || 'The upload outcome could not be confirmed. Retry the same file and details safely.'); setRequestId(getApiErrorRequestId(failure)) }
+      if (isCurrent()) {
+        const detail = getApiErrorDetail(failure) || ''
+        setErrors(clinicalValidationErrors(failure))
+        // Say plainly that the file was not saved; the entered details stay for a retry.
+        setError(/file storage is temporarily unavailable/i.test(detail) ? t('upload.notSaved') : detail || t('upload.unconfirmed'))
+        setRequestId(getApiErrorRequestId(failure))
+      }
     } finally { pending.current = false; if (controller.current === cancel) controller.current = null; if (action.isCurrent() && validContext()) setBusy(false) }
   }
-  const field = (key: keyof MedicalUploadFields, label: string, required: boolean, max: number, multiline = false) => <div><label htmlFor={'medical-upload-' + key} className='block text-sm font-semibold text-ink'>{label} ({required ? 'Required' : 'Optional'})</label>{multiline ? <textarea id={'medical-upload-' + key} className='mt-2 min-h-24 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' maxLength={max} rows={3} value={values[key]} onChange={event => update(key, event.target.value)} aria-required={required} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key] ? 'medical-upload-' + key + '-error' : undefined} /> : <input autoFocus={key === 'title'} type={key === 'record_date' ? 'date' : 'text'} id={'medical-upload-' + key} className='mt-2 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' maxLength={max} value={values[key]} onChange={event => update(key, event.target.value)} aria-required={required} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key] ? 'medical-upload-' + key + '-error' : undefined} />}{errors[key] && <p id={'medical-upload-' + key + '-error'} role='alert' className='mt-2 text-sm text-danger'>{errors[key]}</p>}</div>
+  const field = (key: keyof MedicalUploadFields, label: string, required: boolean, max: number, multiline = false) => <div><label htmlFor={'medical-upload-' + key} className='block text-sm font-semibold text-ink'>{label} ({required ? t('upload.required') : t('upload.optional')})</label>{multiline ? <textarea id={'medical-upload-' + key} className='mt-2 min-h-24 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' maxLength={max} rows={3} value={values[key]} onChange={event => update(key, event.target.value)} aria-required={required} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key] ? 'medical-upload-' + key + '-error' : undefined} /> : <input autoFocus={key === 'title'} type={key === 'record_date' ? 'date' : 'text'} id={'medical-upload-' + key} className='mt-2 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' maxLength={max} value={values[key]} onChange={event => update(key, event.target.value)} aria-required={required} aria-invalid={Boolean(errors[key])} aria-describedby={errors[key] ? 'medical-upload-' + key + '-error' : undefined} />}{errors[key] && <p id={'medical-upload-' + key + '-error'} role='alert' className='mt-2 text-sm text-danger'>{message(errors[key])}</p>}</div>
   return <dialog ref={dialog} aria-labelledby='medical-upload-heading' onCancel={event => { event.preventDefault(); close() }} className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
     <h2 id='medical-upload-heading' className='portal-h2'>{t('uploadMedicalRecord')}</h2><p className='mb-5 text-sm leading-7 text-secondary'>{t('requiredFieldsAreLabelledSupported')}</p>
     <form noValidate onSubmit={event => { event.preventDefault(); void upload() }} aria-busy={busy}><fieldset disabled={busy} className='grid min-w-0 gap-5'>
-      <div className='grid min-w-0 gap-5 sm:grid-cols-2'>{field('title', 'Document Name', true, 255)}<div><label htmlFor='medical-upload-record_type' className='block text-sm font-semibold text-ink'>{t('recordTypeRequired')}</label><select aria-required='true' id='medical-upload-record_type' className='mt-2 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' value={values.record_type} onChange={event => update('record_type', event.target.value)}>{MEDICAL_DOCUMENT_TYPES.map(type => <option key={type}>{type}</option>)}</select>{errors.record_type && <p role='alert' className='mt-2 text-sm text-danger'>{errors.record_type}</p>}</div>{field('record_date', 'Date of Record', true, 10)}{field('provider_name', 'Provider / Facility', false, 255)}</div>{field('description', 'Description', false, 5000, true)}
-      <div><label className='block text-sm font-semibold text-ink' htmlFor='medical-upload-file'>{t('fileRequired')}</label><input id='medical-upload-file' type='file' aria-required='true' accept={MEDICAL_FILE_ACCEPT} aria-label={t('chooseMedicalDocument')} aria-invalid={Boolean(errors.file)} aria-describedby='medical-upload-help medical-upload-file-error' className='mt-2 block min-h-11 w-full min-w-0 rounded-xl border border-theme bg-surface px-3 py-2 text-sm text-ink' onChange={changeFile} /><p id='medical-upload-help' className='mt-2 break-all text-sm text-secondary'>{file ? file.name : 'Choose a file of 3 MB or smaller.'}</p>{errors.file && <p id='medical-upload-file-error' role='alert' className='mt-2 text-sm text-danger'>{errors.file}</p>}</div>
+      <div className='grid min-w-0 gap-5 sm:grid-cols-2'>{field('title', t('upload.docName'), true, 255)}<div><label htmlFor='medical-upload-record_type' className='block text-sm font-semibold text-ink'>{t('recordTypeRequired')}</label><select aria-required='true' id='medical-upload-record_type' className='mt-2 min-h-11 w-full rounded-xl border border-theme bg-surface px-3 py-2 text-ink' value={values.record_type} onChange={event => update('record_type', event.target.value)}>{MEDICAL_DOCUMENT_TYPES.map(type => <option key={type} value={type}>{t(`upload.${TYPE_KEYS[type]}`)}</option>)}</select>{errors.record_type && <p role='alert' className='mt-2 text-sm text-danger'>{message(errors.record_type)}</p>}</div>{field('record_date', t('upload.recordDate'), true, 10)}{field('provider_name', t('upload.provider'), false, 255)}</div>{field('description', t('upload.description'), false, 5000, true)}
+      <div><label className='block text-sm font-semibold text-ink' htmlFor='medical-upload-file'>{t('fileRequired')}</label><input id='medical-upload-file' type='file' aria-required='true' accept={MEDICAL_FILE_ACCEPT} aria-label={t('chooseMedicalDocument')} aria-invalid={Boolean(errors.file)} aria-describedby='medical-upload-help medical-upload-file-error' className='mt-2 block min-h-11 w-full min-w-0 rounded-xl border border-theme bg-surface px-3 py-2 text-sm text-ink' onChange={changeFile} /><p id='medical-upload-help' className='mt-2 break-all text-sm text-secondary'>{file ? t('upload.fileChosen', { name: file.name }) : t('upload.fileHint')}</p>{errors.file && <p id='medical-upload-file-error' role='alert' className='mt-2 text-sm text-danger'>{message(errors.file)}</p>}</div>
       {error && <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='text-sm leading-7 text-danger'>{error}</p><p className='mt-2 text-sm leading-7 text-secondary'>{t('retryKeepsTheSameAttempt')}</p><SupportReference requestId={requestId} /></div>}
-      <div className='flex flex-wrap gap-3'><PortalButton type='submit' tone='primary'>{error && attempt.current && !changed ? 'Retry upload' : changed && attempt.current ? 'Upload changed record' : 'Upload Record'}</PortalButton><PortalButton type='button' onClick={close}>{t('cancel')}</PortalButton></div>
+      <div className='flex flex-wrap gap-3'><PortalButton type='submit' tone='primary'>{error && attempt.current && !changed ? t('upload.retry') : changed && attempt.current ? t('upload.changed') : t('upload.save')}</PortalButton><PortalButton type='button' onClick={close}>{t('cancel')}</PortalButton></div>
     </fieldset>{busy && <p role='status' className='mt-4 text-sm leading-7 text-secondary'>{t('uploadingAndConfirmingYourRecord')}</p>}</form>
   </dialog>
 }
@@ -612,6 +636,11 @@ function MedicalRecordsPageInner() {
         @media (max-width: 500px) {
           .mr-overview-grid { grid-template-columns: 1fr; }
         }
+        /* Phones: a labelled select instead of a sideways-scrolling row of chips. */
+        @media (max-width: 640px) {
+          .mr-tabs { display: none !important; }
+          .mr-type-select { display: block !important; }
+        }
       `}</style>
 
       {/* Overview Cards */}
@@ -650,6 +679,12 @@ function MedicalRecordsPageInner() {
             />
           </div>
 
+          <div className="mr-type-select" style={{ display: 'none', fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+            <label htmlFor="mr-type">{t('upload.documentType')}</label>
+            <select id="mr-type" value={activeTab} onChange={event => setActiveTab(event.target.value as RecordType | 'All Records')} style={{ display: 'block', width: '100%', marginTop: '6px', minHeight: '44px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', padding: '0 12px' }}>
+              {['All Records', ...CATEGORIES].map(cat => <option key={cat} value={cat}>{t(`upload.${TYPE_KEYS[cat]}`)} ({counts[cat] ?? 0})</option>)}
+            </select>
+          </div>
           <div className="mr-tabs" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             {['All Records', ...CATEGORIES].map(cat => (
               <button
@@ -667,7 +702,7 @@ function MedicalRecordsPageInner() {
                   whiteSpace: 'nowrap'
                 }}
               >
-                {cat} ({counts[cat] ?? 0})
+                {t(`upload.${TYPE_KEYS[cat]}`)} ({counts[cat] ?? 0})
               </button>
             ))}
           </div>
