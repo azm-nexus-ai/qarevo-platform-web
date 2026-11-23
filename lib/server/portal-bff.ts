@@ -168,6 +168,11 @@ function routeAccess(path: string[], portal: Portal): 'public' | 'access' | 'mfa
     if (['practice/refresh', 'practice/logout'].includes(suffix)) return 'refresh';
     throw new BoundaryError(403, 'This identity operation is unavailable in the practice portal.');
   }
+  // Administrator second factor: only the admin portal's own challenge cookie.
+  if (['admin/mfa/verify', 'admin/mfa/resend'].includes(suffix)) {
+    if (portal !== 'admin') throw new BoundaryError(403, 'This verification belongs to the administrator portal.');
+    return 'mfa';
+  }
   if (MFA_PATHS.has(suffix)) {
     if (portal !== 'doctor') throw new BoundaryError(403, 'This verification belongs to the physician portal.');
     return 'mfa';
@@ -384,7 +389,11 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
         setCookie(response, `${context.prefix}refresh`, original.refresh_token, context, deadline);
         setCookie(response, `${context.prefix}mfa`, '', context, new Date(0));
       } else if (upstream.ok && typeof original.temp_token === 'string') {
-        if (portal !== 'doctor' || !['/api/v1/auth/doctor/login', '/api/v1/auth/social/google/finish', '/api/v1/auth/social/apple/finish', '/api/v1/auth/social/microsoft/finish'].includes(upstreamPath)) throw new BoundaryError(502, 'An unexpected verification challenge was returned.');
+        const challengePaths: Partial<Record<Portal, string[]>> = {
+          doctor: ['/api/v1/auth/doctor/login', '/api/v1/auth/social/google/finish', '/api/v1/auth/social/apple/finish', '/api/v1/auth/social/microsoft/finish'],
+          admin: ['/api/v1/auth/admin/login'],
+        };
+        if (!challengePaths[portal]?.includes(upstreamPath)) throw new BoundaryError(502, 'An unexpected verification challenge was returned.');
         const seconds = Number(original.expires_in);
         if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 15 * 60) throw new BoundaryError(502, 'The verification challenge could not be validated.');
         response = new Response(JSON.stringify({ ...payload, mfa_pending: true }), { status: upstream.status, headers: responseHeaders });

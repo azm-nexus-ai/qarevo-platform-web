@@ -371,7 +371,18 @@
       "passwordLabel": "Password (Required)",
       "signingIn": "Signing in...",
       "submit": "Sign In",
-      "backToSite": "Back to main site"
+      "backToSite": "Back to main site",
+      "mfa": {
+        "intro": "Your password is confirmed. Enter the 6-digit sign-in code we sent to your email address.",
+        "codeLabel": "Sign-in code",
+        "codeRequired": "Please enter the 6-digit code.",
+        "verify": "Confirm and sign in",
+        "checking": "Checking …",
+        "resend": "Send a new code",
+        "resendIn": "New code in {seconds} s",
+        "sent": "A new code was sent. The previous code no longer works.",
+        "restart": "Sign in again"
+      }
     },
     "practice": {
       "title": "Practice Sign In",
