@@ -62,6 +62,9 @@ export function getApiErrorDetail(error: unknown): string | null {
         const detail = parsed.detail ?? parsed.message ?? parsed.error;
 
         if (typeof detail === "string") {
+            // FastAPI's generic 500 text is not an explanation; callers then show
+            // their own localised message instead of "Internal server error".
+            if (/^internal server error\.?$/i.test(detail.trim())) return null;
             if (/invalid or expired access token/i.test(detail)) {
                 return "Your session has expired. Please sign in again.";
             }
@@ -1060,6 +1063,7 @@ export type DoctorConsultationInQueue = {
     status: string;
     priority: string | null;
     waiting_duration_minutes: number | null;
+    queue_state?: 'UPCOMING' | 'DUE' | 'IN_PROGRESS' | 'MISSED' | null;
 };
 
 export type DoctorWorkspaceResponse = {

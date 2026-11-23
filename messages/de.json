@@ -181,7 +181,8 @@
       "statementIssued": "Neue Monatsabrechnung verfügbar"
     },
     "labUploadsTitle": "Hochgeladene Laborbefunde",
-    "labUploadsIntro": "Befunde, die Patientinnen und Patienten zu Ihren Laboraufträgen hochgeladen haben."
+    "labUploadsIntro": "Befunde, die Patientinnen und Patienten zu Ihren Laboraufträgen hochgeladen haben.",
+    "filterUnreadPlain": "Ungelesen"
   },
   "shell": {
     "welcome": "Willkommen, {name}",
@@ -1770,7 +1771,8 @@
     "briefClinicalBackgroundAndCare": "Kurzer klinischer Hintergrund und Behandlungsansatz",
     "medicalSchoolResidencyFellowships": "Medizinstudium, Facharztausbildung, Weiterbildungen",
     "boardCertificationsAndCredentials": "Facharzttitel und Qualifikationen",
-    "axaBupaCignaEtc": "AOK, TK, Allianz usw."
+    "axaBupaCignaEtc": "AOK, TK, Allianz usw.",
+    "priceWholeEuros": "Bitte einen ganzen Eurobetrag ohne Cent eingeben (z. B. 25). Centbeträge folgen mit der Abrechnungsumstellung."
   },
   "adminAccounts": {
     "whatHappensToTheData": "Was mit den Daten geschieht",
@@ -2054,5 +2056,10 @@
       "clinicianSignIn": "Anmeldung für Ärztinnen und Ärzte",
       "forgotPassword": "Passwort vergessen?"
     }
+  },
+  "doctorWorkspace": {
+    "waitingFor": "Wartet seit {minutes} Min.",
+    "missed": "Nicht gestartet – Termin verpasst",
+    "inProgress": "Läuft"
   }
 }

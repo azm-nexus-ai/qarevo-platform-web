@@ -181,7 +181,8 @@
       "statementIssued": "New monthly statement available"
     },
     "labUploadsTitle": "Uploaded lab results",
-    "labUploadsIntro": "Results that patients uploaded for the lab requests you ordered."
+    "labUploadsIntro": "Results that patients uploaded for the lab requests you ordered.",
+    "filterUnreadPlain": "Unread"
   },
   "shell": {
     "welcome": "Welcome, {name}",
@@ -1770,7 +1771,8 @@
     "briefClinicalBackgroundAndCare": "Brief clinical background and care philosophy",
     "medicalSchoolResidencyFellowships": "Medical school, residency, fellowships",
     "boardCertificationsAndCredentials": "Board certifications and credentials",
-    "axaBupaCignaEtc": "Axa, Bupa, Cigna, etc."
+    "axaBupaCignaEtc": "Axa, Bupa, Cigna, etc.",
+    "priceWholeEuros": "Enter a whole euro amount without cents (e.g. 25). Cent amounts follow with the billing update."
   },
   "adminAccounts": {
     "whatHappensToTheData": "What happens to the data",
@@ -2054,5 +2056,10 @@
       "clinicianSignIn": "Clinician sign-in",
       "forgotPassword": "Forgot password?"
     }
+  },
+  "doctorWorkspace": {
+    "waitingFor": "Waiting {minutes} min",
+    "missed": "Not started – missed",
+    "inProgress": "In progress"
   }
 }

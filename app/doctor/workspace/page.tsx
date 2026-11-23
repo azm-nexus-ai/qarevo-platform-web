@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { getApiErrorDetail, getDoctorEpisodes, getDoctorWorkspace, isAuthError, type DoctorEpisodeListResponse, type DoctorWorkspaceResponse } from '@/lib/api'
 import ClinicalStatusBadge from '@/components/ui/ClinicalStatusBadge'
 import { PortalBadge, PortalButton } from '@/components/patient/PatientPortalPrimitives'
@@ -10,6 +11,16 @@ type PageMetadata = { page: number; filtered_count: number; has_previous: boolea
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled'
 }
+/** Due, missed or in progress. Older APIs send only minutes: more than 120 means missed. */
+function QueueState({ state, minutes }: { state?: string | null; minutes: number | null }) {
+  const t = useTranslations('doctorWorkspace')
+  const resolved = state ?? (minutes === null ? null : minutes > 120 ? 'MISSED' : 'DUE')
+  if (resolved === 'DUE' && minutes !== null) return <span className='mt-1 block text-xs font-semibold text-ink'>{t('waitingFor', { minutes })}</span>
+  if (resolved === 'MISSED') return <span className='mt-1 block text-xs text-secondary'>{t('missed')}</span>
+  if (resolved === 'IN_PROGRESS') return <span className='mt-1 block text-xs text-secondary'>{t('inProgress')}</span>
+  return null
+}
+
 function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'PT'
 }
@@ -99,7 +110,7 @@ export default function PhysicianWorkspace() {
       {!workspaceData?.consultations.length ? <div className='py-8 text-center'><h3 className='portal-h3'>{statusFilter ? `No ${selectedLabel?.toLowerCase() || 'matching'} consultations` : 'No consultations assigned'}</h3><p className='text-muted'>{statusFilter ? 'Choose All statuses to see your complete consultation history.' : 'Assigned consultations will appear here when booked.'}</p></div>
         : <div className='grid gap-3'>{workspaceData.consultations.map(consultation => <button key={consultation.consultation_id} type='button' onClick={() => router.push(`/doctor/workspace/${consultation.consultation_id}`)} className='flex w-full flex-col items-start justify-between gap-4 rounded-xl border border-theme bg-canvas p-4 text-left transition-colors hover:bg-surface-subtle sm:flex-row sm:items-center'>
           <span className='flex min-w-0 items-center gap-3'><span aria-hidden className='grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface-subtle font-semibold text-ink'>{initials(consultation.patient_name)}</span>
-            <span className='min-w-0'><span className='block font-semibold text-ink'>{consultation.patient_name}</span><span className='block text-sm text-muted'>{formatDate(consultation.scheduled_time)}</span>{consultation.waiting_duration_minutes !== null && <span className='mt-1 block text-xs text-secondary'>Waiting {consultation.waiting_duration_minutes} min</span>}</span>
+            <span className='min-w-0'><span className='block font-semibold text-ink'>{consultation.patient_name}</span><span className='block text-sm text-muted'>{formatDate(consultation.scheduled_time)}</span><QueueState state={consultation.queue_state} minutes={consultation.waiting_duration_minutes} /></span>
           </span><span className='flex shrink-0 items-center gap-3'><ClinicalStatusBadge status={consultation.status} domain='consultation' /><span aria-hidden className='text-muted'>→</span></span>
         </button>)}</div>}
       {workspaceData && <Pagination data={workspaceData} count={workspaceData.consultations.length} name='consultations' onPage={setConsultationPage} />}
