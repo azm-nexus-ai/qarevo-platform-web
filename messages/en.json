@@ -1258,7 +1258,7 @@
     "notAvailable": "Not provided",
     "languagesList": "Languages: {languages}",
     "costStatus": "Costs:",
-    "pageSummary": "Page {page} · {shown} of {total}",
+    "pageSummary": "Page {page} · Showing {shown} of {total}",
     "pageOnly": "Page {page}",
     "trustVerifiedSub": "Qarevo checks identity and licence before a profile appears.",
     "trustLicensedSub": "Practices are verified before the first booking.",
@@ -1483,9 +1483,9 @@
     "addThisDeviceAsA": "Add this device as a passkey to enable faster sign-in.",
     "remove": "Remove",
     "closePasskeys": "Close passkeys",
-    "insuranceSaved": "Insurance details saved.",
+    "insuranceSaved": "Insurance information saved successfully",
     "insuranceSaveFailed": "Your insurance details were not saved. Your entries are kept; please try again.",
-    "addInsurance": "Add insurance",
+    "addInsurance": "Add Insurance",
     "backToPreviousStep": "Back to the previous step"
   },
   "patientLabRequests": {
