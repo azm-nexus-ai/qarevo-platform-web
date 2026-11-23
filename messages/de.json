@@ -693,7 +693,8 @@
     "assignedEpisodes": "Zugewiesene Fälle",
     "aiDraftsReady": "KI-Entwürfe bereit",
     "recentAppointments": "Letzte Termine",
-    "recentConsultations": "Letzte Sprechstunden"
+    "recentConsultations": "Letzte Sprechstunden",
+    "todaysAppointments": "Termine heute"
   },
   "adminDashboard": {
     "operationalStatus": "Betriebsstatus",
@@ -2189,5 +2190,20 @@
     "waitingFor": "Wartet seit {minutes} Min.",
     "missed": "Nicht gestartet – Termin verpasst",
     "inProgress": "Läuft"
+  },
+  "doctorBookability": {
+    "title": "Für Patientinnen und Patienten buchbar?",
+    "allBookable": "Ja. Sie erscheinen in der Arztsuche und können für alle Versicherungsarten gebucht werden.",
+    "notAll": "Noch nicht für alle Versicherungsarten. So sieht die Arztsuche Sie gerade:",
+    "coverageGkv": "Gesetzlich (GKV)",
+    "coveragePkv": "Privat (PKV)",
+    "coverageSelfPay": "Selbstzahler",
+    "srBookable": "buchbar",
+    "srNotBookable": "nicht buchbar",
+    "awaitApproval": "Ihr Konto wird noch von Qarevo geprüft. Danach können Sie einer Praxis beitreten oder Ihre eigene Praxis prüfen lassen.",
+    "joinOrVerify": "Treten Sie einer geprüften Praxis bei (Einladung der Praxis annehmen) oder lassen Sie Ihre eigene Praxis prüfen:",
+    "practices": "Meine Praxen",
+    "independent": "Eigene Praxis",
+    "statutory": "Für gesetzlich Versicherte ist eine Praxis mit KV-Zulassung und bestätigter Berechtigung nötig."
   }
 }

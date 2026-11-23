@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
+import BookabilityCard from '@/components/doctor/BookabilityCard'
 import {
   clearPortalSession,
   getDoctorDashboard,
@@ -289,15 +290,17 @@ export default function DoctorDashboard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-        <StatCard title="Today's Appointments" value={dashboardData.stats.today_appointments} icon={ICONS.calendar} color={T.blue} href="/doctor/appointments" onNavigate={router.push} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: '16px' }}>
+        <StatCard title={t('todaysAppointments')} value={dashboardData.stats.today_appointments} icon={ICONS.calendar} color={T.blue} href="/doctor/appointments" onNavigate={router.push} />
         <StatCard title={t('pendingPatients')} value={dashboardData.stats.pending_patients} icon={ICONS.user} color={T.amber} href="/doctor/patients" onNavigate={router.push} />
         <StatCard title={t('assignedEpisodes')} value={dashboardData.stats.assigned_episodes} icon={ICONS.cpu} color={T.cyan} href="/doctor/workspace" onNavigate={router.push} />
         <StatCard title={t('aiDraftsReady')} value={dashboardData.stats.episodes_with_ai_ready} icon={ICONS.zap} color={T.green} href="/doctor/workspace" onNavigate={router.push} />
       </div>
 
+      <BookabilityCard />
+
       {/* Recent Activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '16px' }}>
         <ActivityCard title={t('recentAppointments')} items={dashboardData.recent_appointments} type="appointments" onNavigate={router.push} />
         <ActivityCard title={t('recentConsultations')} items={dashboardData.recent_consultations} type="consultations" onNavigate={router.push} />
       </div>

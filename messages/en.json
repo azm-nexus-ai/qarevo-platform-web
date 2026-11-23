@@ -693,7 +693,8 @@
     "assignedEpisodes": "Assigned Episodes",
     "aiDraftsReady": "AI Drafts Ready",
     "recentAppointments": "Recent Appointments",
-    "recentConsultations": "Recent Consultations"
+    "recentConsultations": "Recent Consultations",
+    "todaysAppointments": "Today's Appointments"
   },
   "adminDashboard": {
     "operationalStatus": "Operational Status",
@@ -2189,5 +2190,20 @@
     "waitingFor": "Waiting {minutes} min",
     "missed": "Not started – missed",
     "inProgress": "In progress"
+  },
+  "doctorBookability": {
+    "title": "Can patients book you?",
+    "allBookable": "Yes. You appear in the doctor search and can be booked for every coverage type.",
+    "notAll": "Not for every coverage type yet. This is how the doctor search sees you now:",
+    "coverageGkv": "Statutory (GKV)",
+    "coveragePkv": "Private (PKV)",
+    "coverageSelfPay": "Self-pay",
+    "srBookable": "bookable",
+    "srNotBookable": "not bookable",
+    "awaitApproval": "Qarevo is still reviewing your account. Then you can join a practice or have your own practice verified.",
+    "joinOrVerify": "Join a verified practice (accept the practice invitation) or have your own practice verified:",
+    "practices": "My practices",
+    "independent": "Own practice",
+    "statutory": "Statutory patients need a practice with KV approval and confirmed eligibility."
   }
 }
