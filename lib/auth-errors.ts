@@ -31,6 +31,8 @@ const CODES: Record<string, string> = {
   LINK_USED: 'linkUsed', LINK_EXPIRED: 'linkExpired', LINK_INVALID: 'linkInvalid', TOO_MANY_LOGIN_ATTEMPTS: 'tooManyLoginAttempts',
   ACCOUNT_NOT_ACTIVE: 'accountNotActive', EMAIL_VERIFICATION_PENDING: 'emailVerificationPending',
   CLINICIAN_APPROVAL_REQUIRED: 'clinicianApprovalRequired', MFA_EMAIL_RESEND_FAILED: 'resendFailed',
+  SOCIAL_ACCOUNT_EXISTS: 'socialAccountExists', SOCIAL_EMAIL_MISMATCH: 'socialEmailMismatch',
+  SOCIAL_IDENTITY_IN_USE: 'socialIdentityInUse', SOCIAL_TICKET_INVALID: 'socialTicketInvalid',
 }
 
 /** Localised message for an authentication error, with waits and remaining tries. */

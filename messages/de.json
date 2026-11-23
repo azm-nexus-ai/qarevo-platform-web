@@ -418,7 +418,21 @@
       "password": "Passwort",
       "confirmPassword": "Passwort bestätigen",
       "creatingAccount": "Konto wird erstellt…",
-      "createAccount": "Konto erstellen"
+      "createAccount": "Konto erstellen",
+      "valFirstName": "Bitte den Vornamen angeben.",
+      "valLastName": "Bitte den Nachnamen angeben.",
+      "valEmail": "Bitte eine gültige E-Mail-Adresse eingeben.",
+      "valPasswordLength": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+      "valPasswordMatch": "Die Passwörter stimmen nicht überein.",
+      "valCountry": "Bitte Ihr Land auswählen.",
+      "valPhone": "Bitte eine gültige Telefonnummer eingeben.",
+      "completeRequired": "Bitte füllen Sie die Pflichtfelder aus, bevor Sie Ihr Konto anlegen.",
+      "acceptTerms": "Bitte akzeptieren Sie die Nutzungsbedingungen und die Datenschutzerklärung, um fortzufahren.",
+      "emailRegistered": "Zu dieser E-Mail-Adresse gibt es bereits ein Konto. Bitte melden Sie sich an oder setzen Sie Ihr Passwort zurück.",
+      "createFailed": "Ihr Konto konnte gerade nicht angelegt werden. Bitte versuchen Sie es erneut.",
+      "socialVerified": "Weiter mit {provider}: Ihre E-Mail-Adresse ist bestätigt. Legen Sie noch ein Passwort fest und stimmen Sie den Bedingungen zu.",
+      "socialUnverified": "Weiter mit {provider}: Geben Sie Ihre E-Mail-Adresse an. Wir senden Ihnen einen Bestätigungscode.",
+      "socialCancel": "Ohne {provider} registrieren"
     },
     "forgotPassword": {
       "recoverAccessSafely": "Zugang sicher wiederherstellen.",
@@ -550,7 +564,11 @@
       "badgeDevelopment": "Entwicklung",
       "badgeSynthetic": "Synthetische Daten",
       "badgeTestAccounts": "Testkonten",
-      "alreadyHaveAccount": "Sie haben bereits ein Konto?"
+      "alreadyHaveAccount": "Sie haben bereits ein Konto?",
+      "socialVerified": "Weiter mit {provider}: Ihre E-Mail-Adresse ist bestätigt. Ergänzen Sie Ihre beruflichen Angaben und ein Passwort; danach prüft Qarevo Ihr Konto.",
+      "socialUnverified": "Weiter mit {provider}: Geben Sie Ihre E-Mail-Adresse an. Wir senden Ihnen einen Bestätigungscode.",
+      "socialCancel": "Ohne {provider} registrieren",
+      "errSocial": "Die Registrierung über den Anbieter ist nicht möglich: Die E-Mail-Adresse muss die vom Anbieter bestätigte sein, das Anbieterkonto darf noch nicht verbunden sein, und die Sitzung gilt 30 Minuten. Registrieren Sie sich andernfalls ohne Anbieter."
     },
     "verifyEmail": {
       "codeVerifiedActivatingYourAccount": "Code bestätigt – Ihr Konto wird aktiviert…",
@@ -1998,6 +2016,43 @@
     "waitSeconds": "{count, plural, one {# Sekunde} other {# Sekunden}}",
     "waitMinutes": "{count, plural, one {# Minute} other {# Minuten}}",
     "loginCooldown": "Zu viele fehlgeschlagene Anmeldeversuche. Versuchen Sie es in {time} erneut. Die Passwort-Wiederherstellung bleibt verfügbar.",
-    "loginCooldownOver": "Die Wartezeit ist vorbei. Sie können sich erneut anmelden oder Ihr Passwort zurücksetzen."
+    "loginCooldownOver": "Die Wartezeit ist vorbei. Sie können sich erneut anmelden oder Ihr Passwort zurücksetzen.",
+    "socialAccountExists": "Zu dieser E-Mail-Adresse gibt es bereits ein Konto. Melden Sie sich mit Ihrem Passwort an und verbinden Sie den Anbieter in den Kontoeinstellungen.",
+    "socialEmailMismatch": "Bitte verwenden Sie die vom Anbieter bestätigte E-Mail-Adresse oder registrieren Sie sich ohne Anbieter.",
+    "socialIdentityInUse": "Dieses Anbieterkonto ist bereits mit einem Qarevo-Konto verbunden. Bitte melden Sie sich an.",
+    "socialTicketInvalid": "Die Registrierung über den Anbieter ist abgelaufen. Starten Sie erneut mit dem Anbieter oder registrieren Sie sich mit E-Mail und Passwort."
+  },
+  "socialAuth": {
+    "checking": "Anmeldeoptionen werden geprüft …",
+    "checkFailed": "Die Anmeldeanbieter konnten nicht geprüft werden. E-Mail und Passwort bleiben verfügbar.",
+    "startFailed": "Die Anmeldung beim Anbieter konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+    "allUnavailable": "Die Anmeldung mit Google, Microsoft oder Apple ist in dieser Umgebung noch nicht eingerichtet. Bitte verwenden Sie E-Mail und Passwort.",
+    "someUnavailable": "Noch nicht eingerichtet: {providers}.",
+    "enterPasswordFirst": "Geben Sie zuerst Ihr aktuelles Passwort ein, um einen Anbieter zu verbinden.",
+    "linkHint": "Der Anbieter wird mit diesem Konto verbunden. Rolle, Status und Zwei-Faktor-Anmeldung gelten weiterhin.",
+    "signUpHint": "Neu bei Qarevo? Fahren Sie mit einem Anbieter fort und schließen Sie die Registrierung ab. Bestehende Konten verbinden den Anbieter nach der Anmeldung.",
+    "connectRegion": "Anmeldeanbieter verbinden",
+    "alternativeRegion": "Weitere Anmeldeoptionen",
+    "continueWith": "Weiter mit {provider}",
+    "connectWith": "Mit {provider} verbinden",
+    "opening": "Wird geöffnet …",
+    "retry": "Erneut prüfen",
+    "openingConnections": "Verbindungen werden geöffnet …",
+    "connectAfterSignIn": "Anbieter nach der Anmeldung verbinden",
+    "callback": {
+      "title": "Sichere Anmeldung wird abgeschlossen",
+      "verifying": "Die Antwort des Anbieters wird geprüft …",
+      "cancelled": "Die Anmeldung beim Anbieter wurde abgebrochen oder abgelehnt. Sie können es erneut versuchen oder E-Mail und Passwort verwenden.",
+      "missing": "Diese Anmeldung kann nicht fortgesetzt werden. Starten Sie sie erneut in diesem Browser-Tab.",
+      "incomplete": "Die Antwort war unvollständig. Bitte verwenden Sie E-Mail und Passwort.",
+      "failed": "Die Anmeldung beim Anbieter ist fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "accountExists": "Zu dieser E-Mail-Adresse gibt es bereits ein Qarevo-Konto. Melden Sie sich mit Ihrem Passwort an und verbinden Sie den Anbieter anschließend in den Kontoeinstellungen. So entsteht kein doppeltes Konto.",
+      "connectedTitle": "Anmeldeanbieter verbunden",
+      "connectedBody": "Der Anbieter ist jetzt mit diesem Konto verbunden. Bei der Anmeldung gelten weiterhin Rolle, Status und eine eventuell erforderliche Zwei-Faktor-Anmeldung.",
+      "returnNav": "Zurück zur Anmeldung",
+      "patientSignIn": "Anmeldung für Patientinnen und Patienten",
+      "clinicianSignIn": "Anmeldung für Ärztinnen und Ärzte",
+      "forgotPassword": "Passwort vergessen?"
+    }
   }
 }

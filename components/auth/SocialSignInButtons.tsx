@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useId, useRef, useState } from 'react'
-import { beginSocial, socialProviders, type SocialAvailability, type SocialPortal, type SocialProvider } from '@/lib/social-auth'
+import { beginSocial, socialProviders, SOCIAL_PROVIDERS, type SocialAvailability, type SocialPortal, type SocialProvider } from '@/lib/social-auth'
+import { useTranslations } from 'next-intl'
 import { getApiErrorDetail } from '@/lib/api'
 import ActionLink from '@/components/ui/ActionLink'
 import { usePortalAction } from '@/lib/portal-action'
@@ -8,6 +9,10 @@ import styles from './SocialSignInButtons.module.css'
 
 /** Provider marks retain their approved provider colors; Qarevo tokens style the surrounding controls. */
 function ProviderMark({ provider }: { provider: SocialProvider }) {
+  if (provider === 'microsoft') return <svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'>
+    <path fill='#F25022' d='M2 2h9.5v9.5H2z'/><path fill='#7FBA00' d='M12.5 2H22v9.5h-9.5z'/>
+    <path fill='#00A4EF' d='M2 12.5h9.5V22H2z'/><path fill='#FFB900' d='M12.5 12.5H22V22h-9.5z'/>
+  </svg>
   return provider === 'google' ? <svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'>
     <path fill='#4285F4' d='M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.61 4.61 0 0 1-2 3.02v2.51h3.24c1.9-1.75 2.98-4.33 2.98-7.36Z'/>
     <path fill='#34A853' d='M12 22c2.7 0 4.96-.9 6.62-2.41l-3.24-2.51c-.9.6-2.06.96-3.38.96-2.6 0-4.8-1.76-5.59-4.12H3.07v2.59A10 10 0 0 0 12 22Z'/>
@@ -17,6 +22,7 @@ function ProviderMark({ provider }: { provider: SocialProvider }) {
 }
 
 export default function SocialSignInButtons({ portal, currentPassword }: { portal: SocialPortal; currentPassword?: string }) {
+  const t = useTranslations('socialAuth')
   const captureAction = usePortalAction()
   const [providers, setProviders] = useState<SocialAvailability | null>(null)
   const [error, setError] = useState('')
@@ -25,39 +31,41 @@ export default function SocialSignInButtons({ portal, currentPassword }: { porta
   const pendingRef = useRef(false)
   const statusId = useId()
   const linking = currentPassword !== undefined
+  const names: Record<SocialProvider, string> = { google: 'Google', microsoft: 'Microsoft', apple: 'Apple' }
   useEffect(() => {
     let current = true
     socialProviders().then(value => { if (current) { setProviders(value); setError('') } })
-      .catch(() => { if (current) setError('Sign-in providers could not be checked. Email and password remain available.') })
+      .catch(() => { if (current) setError(t('checkFailed')) })
     return () => { current = false }
-  }, [retry])
+  }, [retry, t])
   async function start(provider: SocialProvider) {
     if (pendingRef.current || !providers?.[provider].enabled) return
     pendingRef.current = true
     setPending(provider); setError('')
     const action = captureAction()
     try { await beginSocial(provider, portal, currentPassword, action.isCurrent) }
-    catch (failure) { if (!action.isCurrent()) return; setError(getApiErrorDetail(failure) || 'Provider sign-in could not start. Please retry.'); setPending(null); pendingRef.current = false }
+    catch (failure) { if (!action.isCurrent()) return; setError(getApiErrorDetail(failure) || t('startFailed')); setPending(null); pendingRef.current = false }
   }
-  const status = !providers && !error ? 'Checking secure sign-in options…'
-    : providers && !providers.google.enabled && !providers.apple.enabled ? 'Google and Apple sign-in are unavailable while company provider configuration is completed. Use email and password.'
-    : providers && (!providers.google.enabled || !providers.apple.enabled) ? `${!providers.google.enabled ? 'Google' : 'Apple'} sign-in configuration is pending.`
-    : linking && !currentPassword ? 'Enter your current password before connecting a provider.'
-    : 'Provider accounts must first be connected from your signed-in account settings.'
-  return <section className={styles.root} aria-label={linking ? 'Connect a sign-in provider' : 'Alternative sign-in'}>
+  const unavailable = providers ? SOCIAL_PROVIDERS.filter(provider => !providers[provider].enabled).map(provider => names[provider]) : []
+  const status = !providers && !error ? t('checking')
+    : providers && unavailable.length === SOCIAL_PROVIDERS.length ? t('allUnavailable')
+    : providers && unavailable.length ? t('someUnavailable', { providers: unavailable.join(', ') })
+    : linking && !currentPassword ? t('enterPasswordFirst')
+    : linking ? t('linkHint') : t('signUpHint')
+  return <section className={styles.root} aria-label={linking ? t('connectRegion') : t('alternativeRegion')}>
     <div className={styles.buttons}>
-      {(['google', 'apple'] as const).map(provider => <button key={provider} type='button'
+      {SOCIAL_PROVIDERS.map(provider => <button key={provider} type='button'
         className={`${styles.provider} ${styles[provider]}`}
         disabled={!providers?.[provider].enabled || !!pending || (linking && !currentPassword)}
         aria-describedby={statusId} aria-busy={pending === provider}
-        aria-label={`${linking ? 'Connect' : 'Continue with'} ${provider === 'google' ? 'Google' : 'Apple'}`}
+        aria-label={linking ? t('connectWith', { provider: names[provider] }) : t('continueWith', { provider: names[provider] })}
         onClick={() => void start(provider)}>
         {pending === provider ? <span className={styles.spinner} aria-hidden='true'/> : <ProviderMark provider={provider}/>}
-        <span>{pending === provider ? 'Opening…' : `${linking ? 'Connect' : 'Continue with'} ${provider === 'google' ? 'Google' : 'Apple'}`}</span>
+        <span>{pending === provider ? t('opening') : linking ? t('connectWith', { provider: names[provider] }) : t('continueWith', { provider: names[provider] })}</span>
       </button>)}
     </div>
     <p id={statusId} role='status' className={styles.status}>{status}</p>
-    {error && <p role='alert' className={styles.error}>{error} {!providers && <button className='q-button q-button-secondary' type='button' onClick={() => setRetry(value => value + 1)}>Retry provider check</button>}</p>}
-    {!linking && <div className={styles.connect}><ActionLink href='/auth/social/connect' pendingLabel='Opening provider connections…'>Connect a provider after signing in</ActionLink></div>}
+    {error && <p role='alert' className={styles.error}>{error} {!providers && <button className='q-button q-button-secondary' type='button' onClick={() => setRetry(value => value + 1)}>{t('retry')}</button>}</p>}
+    {!linking && <div className={styles.connect}><ActionLink href='/auth/social/connect' pendingLabel={t('openingConnections')}>{t('connectAfterSignIn')}</ActionLink></div>}
   </section>
 }

@@ -342,6 +342,9 @@ export type PatientRegisterRequest = {
 export type PatientRegisterResponse = {
     user_id: string;
     message: string;
+    email_verified?: boolean;
+    // Set by the web BFF when the provider-verified sign-up started a session.
+    browser_session?: import('./portal-scope').PortalIdentity;
 };
 
 export async function registerPatient(body: PatientRegisterRequest): Promise<PatientRegisterResponse> {
@@ -375,6 +378,8 @@ export type DoctorRegisterResponse = {
     user_id: string;
     provider_id: string;
     message: string;
+    email_verified?: boolean;
+    next_action?: 'VERIFY_EMAIL' | 'AWAIT_APPROVAL';
 };
 
 export type DoctorUsernameAvailabilityResponse = {

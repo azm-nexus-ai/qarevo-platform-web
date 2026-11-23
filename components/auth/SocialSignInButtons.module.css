@@ -17,3 +17,5 @@
 .connect { margin-top: var(--space-3, 12px); }
 @keyframes provider-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .provider { transition: none; } .spinner { animation: none; } }
+.microsoft { background: var(--surface-glass); color: var(--text); box-shadow: var(--shadow-sm); }
+.microsoft:hover:not(:disabled) { background: var(--surface-subtle); border-color: var(--primary-border); }

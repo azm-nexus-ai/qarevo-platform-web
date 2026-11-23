@@ -184,7 +184,7 @@ function DoctorVerifyEmailPageContent() {
   const [authError, setAuthError] = useState('')
   const [notice, setNotice] = useState('')
   // After confirmation the account waits for review; that is the next step, not an error.
-  const [confirmed, setConfirmed] = useState(false)
+  const [confirmed, setConfirmed] = useState(() => searchParams.get('confirmed') === '1')
   const [cooldown, setCooldown] = useState(0)
 
   useEffect(() => {

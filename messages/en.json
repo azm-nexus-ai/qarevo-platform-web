@@ -418,7 +418,21 @@
       "password": "Password",
       "confirmPassword": "Confirm Password",
       "creatingAccount": "Creating account…",
-      "createAccount": "Create Account"
+      "createAccount": "Create Account",
+      "valFirstName": "First name is required",
+      "valLastName": "Last name is required",
+      "valEmail": "Enter a valid email address",
+      "valPasswordLength": "Password must be at least 8 characters",
+      "valPasswordMatch": "Passwords do not match",
+      "valCountry": "Please select your country",
+      "valPhone": "Enter a valid phone number",
+      "completeRequired": "Please complete the required fields before creating your account.",
+      "acceptTerms": "Please accept the Terms of Service and Privacy Policy to continue.",
+      "emailRegistered": "An account already exists for this email address. Please sign in or reset your password.",
+      "createFailed": "We could not create your account right now. Please try again.",
+      "socialVerified": "Continuing with {provider}: your email address is confirmed. Set a password and accept the terms to finish.",
+      "socialUnverified": "Continuing with {provider}: enter your email address. We will send you a confirmation code.",
+      "socialCancel": "Register without {provider}"
     },
     "forgotPassword": {
       "recoverAccessSafely": "Recover access safely.",
@@ -550,7 +564,11 @@
       "badgeDevelopment": "Development",
       "badgeSynthetic": "Synthetic data",
       "badgeTestAccounts": "Test accounts",
-      "alreadyHaveAccount": "Already have an account?"
+      "alreadyHaveAccount": "Already have an account?",
+      "socialVerified": "Continuing with {provider}: your email address is confirmed. Add your professional details and a password; Qarevo then reviews your account.",
+      "socialUnverified": "Continuing with {provider}: enter your email address. We will send you a confirmation code.",
+      "socialCancel": "Register without {provider}",
+      "errSocial": "Provider sign-up is not possible: the email must be the one the provider confirmed, the provider account must not be connected yet, and the sign-up is valid for 30 minutes. Otherwise register without the provider."
     },
     "verifyEmail": {
       "codeVerifiedActivatingYourAccount": "Code verified — activating your account…",
@@ -1998,6 +2016,43 @@
     "waitSeconds": "{count, plural, one {# second} other {# seconds}}",
     "waitMinutes": "{count, plural, one {# minute} other {# minutes}}",
     "loginCooldown": "Too many failed sign-in attempts. Try again in {time}. Password recovery remains available.",
-    "loginCooldownOver": "The retry window has ended. You can try signing in again, or reset your password."
+    "loginCooldownOver": "The retry window has ended. You can try signing in again, or reset your password.",
+    "socialAccountExists": "An account already exists for this email address. Sign in with your password and connect the provider in your account settings.",
+    "socialEmailMismatch": "Use the email address confirmed by the provider, or register without it.",
+    "socialIdentityInUse": "This provider account is already connected to a Qarevo account. Please sign in.",
+    "socialTicketInvalid": "The provider sign-up expired. Start again with the provider or register with email and password."
+  },
+  "socialAuth": {
+    "checking": "Checking secure sign-in options…",
+    "checkFailed": "Sign-in providers could not be checked. Email and password remain available.",
+    "startFailed": "Provider sign-in could not start. Please retry.",
+    "allUnavailable": "Google, Microsoft and Apple sign-in are not set up in this environment yet. Use email and password.",
+    "someUnavailable": "Not set up yet: {providers}.",
+    "enterPasswordFirst": "Enter your current password before connecting a provider.",
+    "linkHint": "The provider is connected to this account. Its role, status and second factor still apply.",
+    "signUpHint": "New to Qarevo? Continue with a provider and finish registering. Existing accounts connect a provider after signing in.",
+    "connectRegion": "Connect a sign-in provider",
+    "alternativeRegion": "Alternative sign-in",
+    "continueWith": "Continue with {provider}",
+    "connectWith": "Connect {provider}",
+    "opening": "Opening…",
+    "retry": "Retry provider check",
+    "openingConnections": "Opening provider connections…",
+    "connectAfterSignIn": "Connect a provider after signing in",
+    "callback": {
+      "title": "Completing secure sign-in",
+      "verifying": "Verifying the provider response…",
+      "cancelled": "Provider sign-in was cancelled or declined. You can try again or use email and password.",
+      "missing": "The provider callback is missing. Start again in this browser tab.",
+      "incomplete": "The sign-in response was incomplete. Please use email and password.",
+      "failed": "Provider sign-in failed. Please try again.",
+      "accountExists": "A Qarevo account already exists for this email address. Sign in with your password, then connect the provider in your account settings. This avoids a duplicate account.",
+      "connectedTitle": "Sign-in provider connected",
+      "connectedBody": "Your provider is now linked to this account. Future provider sign-in still enforces the account’s role, status and any required second factor.",
+      "returnNav": "Return to sign-in",
+      "patientSignIn": "Patient sign-in",
+      "clinicianSignIn": "Clinician sign-in",
+      "forgotPassword": "Forgot password?"
+    }
   }
 }

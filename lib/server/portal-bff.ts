@@ -23,7 +23,11 @@ function effectivePath(path: string, portal: Portal): string {
 }
 const SAFE_METHODS = new Set(['GET', 'HEAD']);
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
-const SECRET_FIELDS = new Set(['access_token', 'refresh_token', 'temp_token']);
+const SECRET_FIELDS = new Set(['access_token', 'refresh_token', 'temp_token', 'registration_ticket']);
+// Provider sign-up: the signed ticket stays in an HttpOnly cookie and only reaches
+// the registration endpoint of the same portal, never page JavaScript.
+const SOCIAL_TICKET_MINUTES = 30;
+const REGISTRATION_PATHS: Partial<Record<Portal, string>> = { patient: '/api/v1/patient/register', doctor: '/api/v1/doctor/register' };
 const RESPONSE_HEADERS = ['content-type', 'content-disposition', 'retry-after', 'server-timing', 'x-query-count', 'x-querycount'];
 const SHARED_NAMESPACES = new Set(['session', 'security', 'consultations', 'meetings']);
 const MFA_PATHS = new Set(['mfa/verify-email', 'mfa/resend-email', 'mfa/verify-phone', 'mfa/resend-phone']);
@@ -84,7 +88,7 @@ function cookies(request: Request, portal: Portal, env:Environment): CookieConte
     const divider = part.indexOf('=');
     if (divider < 1) continue;
     const name = part.slice(0, divider).trim();
-    if (![`${prefix}access`, `${prefix}refresh`, `${prefix}mfa`, csrf].includes(name)) continue;
+    if (![`${prefix}access`, `${prefix}refresh`, `${prefix}mfa`, `${prefix}social`, csrf].includes(name)) continue;
     if (values.has(name)) throw new BoundaryError(400, 'Conflicting application cookies. Clear this portal’s cookies and sign in again.');
     try { values.set(name, decodeURIComponent(part.slice(divider + 1).trim())); }
     catch { throw new BoundaryError(400, 'Invalid application cookie.'); }
@@ -92,7 +96,7 @@ function cookies(request: Request, portal: Portal, env:Environment): CookieConte
   return { secure, prefix, csrf, values };
 }
 
-function cookieValue(context: CookieContext, kind: 'access' | 'refresh' | 'mfa'): string | undefined {
+function cookieValue(context: CookieContext, kind: 'access' | 'refresh' | 'mfa' | 'social'): string | undefined {
   return context.values.get(`${context.prefix}${kind}`);
 }
 
@@ -176,7 +180,8 @@ function routeAccess(path: string[], portal: Portal): 'public' | 'access' | 'mfa
   if (suffix.startsWith('admin/invitations/') && portal === 'admin' && ['admin/invitations/accept', 'admin/invitations/validate'].includes(suffix)) return 'public';
   if (['register/doctor'].includes(suffix) && portal === 'doctor') return 'public';
   if (['passkeys/authenticate', 'passkeys/authentication-options'].includes(suffix) && portal === 'patient') return 'public';
-  if (/^social\/(providers|(google|apple)\/(start|finish|link\/(start|finish)))$/.test(suffix) && ['patient', 'doctor'].includes(portal)) {
+  if (suffix === 'social/registration/cancel' && ['patient', 'doctor'].includes(portal)) return 'public';
+  if (/^social\/(providers|(google|apple|microsoft)\/(start|finish|link\/(start|finish)))$/.test(suffix) && ['patient', 'doctor'].includes(portal)) {
     return suffix.includes('/link/') ? 'access' : 'public';
   }
   throw new BoundaryError(403, 'This identity operation is unavailable in this portal.');
@@ -327,6 +332,9 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
     for (const [name,value] of Object.entries(signProxyContext(request,target,env))) headers.set(name,value);
     // Never accept browser-supplied Authorization, Cookie, proxy context or refresh headers.
     if (credential && mode !== 'public') headers.set('Authorization', `Bearer ${credential}`);
+    const socialTicket = cookieValue(context, 'social');
+    const registering = request.method === 'POST' && upstreamPath === REGISTRATION_PATHS[portal];
+    if (registering && socialTicket) headers.set('X-Qarevo-Social-Ticket', socialTicket);
     if (refresh && (upstreamPath.includes('/settings/active-devices') || upstreamPath.startsWith('/api/v1/security') || upstreamPath.startsWith('/api/v1/practice/security'))) headers.set('X-Qarevo-Refresh-Token', refresh);
     let body: BodyInit | undefined;
     if (!SAFE_METHODS.has(request.method)) {
@@ -376,12 +384,18 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
         setCookie(response, `${context.prefix}refresh`, original.refresh_token, context, deadline);
         setCookie(response, `${context.prefix}mfa`, '', context, new Date(0));
       } else if (upstream.ok && typeof original.temp_token === 'string') {
-        if (portal !== 'doctor' || !['/api/v1/auth/doctor/login', '/api/v1/auth/social/google/finish', '/api/v1/auth/social/apple/finish'].includes(upstreamPath)) throw new BoundaryError(502, 'An unexpected verification challenge was returned.');
+        if (portal !== 'doctor' || !['/api/v1/auth/doctor/login', '/api/v1/auth/social/google/finish', '/api/v1/auth/social/apple/finish', '/api/v1/auth/social/microsoft/finish'].includes(upstreamPath)) throw new BoundaryError(502, 'An unexpected verification challenge was returned.');
         const seconds = Number(original.expires_in);
         if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 15 * 60) throw new BoundaryError(502, 'The verification challenge could not be validated.');
         response = new Response(JSON.stringify({ ...payload, mfa_pending: true }), { status: upstream.status, headers: responseHeaders });
         clearSession(response, context);
         setCookie(response, `${context.prefix}mfa`, original.temp_token, context, new Date(Date.now() + seconds * 1000));
+      } else if (upstream.ok && typeof original.registration_ticket === 'string') {
+        if (!['patient', 'doctor'].includes(portal) || !/^\/api\/v1\/auth\/social\/(google|apple|microsoft)\/finish$/.test(upstreamPath) || original.registration_ticket.length > 4096) {
+          throw new BoundaryError(502, 'An unexpected sign-up response was returned.');
+        }
+        response = new Response(JSON.stringify(payload), { status: upstream.status, headers: responseHeaders });
+        setCookie(response, `${context.prefix}social`, original.registration_ticket, context, new Date(Date.now() + SOCIAL_TICKET_MINUTES * 60 * 1000));
       } else {
         if (upstream.ok && upstreamPath === sessionPath(portal)) payload = { ...payload, browser_session: sessionMetadata(original, portal) };
         response = new Response(JSON.stringify(payload), { status: upstream.status, headers: responseHeaders });
@@ -393,6 +407,10 @@ async function proxyPortalRequest(request: Request, params: { portal: string; pa
     if ([logicalPath, upstreamPath].some(path => ['/api/v1/auth/logout', '/api/v1/auth/practice/logout'].includes(path)) ||
       (['/api/v1/auth/refresh', '/api/v1/auth/practice/refresh'].includes(upstreamPath) && [401, 403].includes(upstream.status)) ||
       (upstream.ok && ['/api/v1/security/password', '/api/v1/security/sessions/revoke-all', '/api/v1/practice/security/password', '/api/v1/practice/security/sessions/revoke-all'].includes(upstreamPath))) clearSession(response, context);
+    // A used or abandoned sign-up ticket is removed; a failed registration keeps it for a retry.
+    if (socialTicket && ((registering && upstream.ok) || upstreamPath === '/api/v1/auth/social/registration/cancel')) {
+      setCookie(response, `${context.prefix}social`, '', context, new Date(0));
+    }
     return response;
   } catch (error) {
     const response = error instanceof BoundaryError ? json({ detail: error.errorCode ? { error_code: error.errorCode, message: error.message } : error.message }, error.status) : json({ detail: 'The application service could not be reached. Please try again.' }, 502);

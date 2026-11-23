@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useState, useId } from 'react'
+import { useEffect, useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -9,6 +9,9 @@ import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { clearPortalSession, getApiErrorDetail, registerPatient } from '@/lib/api'
+import { cancelSocialRegistration, clearSocialProfile, readSocialProfile, type SocialProfile } from '@/lib/social-auth'
+import { getOnboarding, onboardingPath } from '@/lib/patient-onboarding'
+import { apiErrorInfo, useAuthErrorMessage } from '@/lib/auth-errors'
 import { storeSignupEmail } from '@/lib/signup-context'
 import { usePortalAction } from '@/lib/portal-action'
 
@@ -368,19 +371,37 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  // Continuing a Google/Microsoft/Apple sign-up: the provider's ticket stays in an
+  // HttpOnly cookie; only the non-secret profile is used to pre-fill this form.
+  const [social, setSocial] = useState<SocialProfile | null>(null)
+  const errorMessage = useAuthErrorMessage()
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('social') !== '1') return
+    const profile = readSocialProfile()
+    if (!profile) return
+    setSocial(profile)
+    setForm(current => ({ ...current, email: profile.email || current.email,
+      firstName: current.firstName || profile.first_name, lastName: current.lastName || profile.last_name }))
+  }, [])
+  const providerName = social ? { google: 'Google', microsoft: 'Microsoft', apple: 'Apple' }[social.provider] : ''
+  const emailLocked = Boolean(social?.email_verified && social.email)
+  const withoutProvider = async () => {
+    await cancelSocialRegistration()
+    setSocial(null)
+  }
 
   const set = (k: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [k]: v }))
   const touch = (k: keyof typeof form) => setTouched(previous => ({ ...previous, [k]: true }))
 
   // Validation
   const errors = {
-    firstName: touched.firstName && !form.firstName.trim() ? 'First name is required' : '',
-    lastName: touched.lastName && !form.lastName.trim() ? 'Last name is required' : '',
-    email: touched.email && !EMAIL_RE.test(form.email) ? 'Enter a valid email address' : '',
-    password: touched.password && form.password.length < 8 ? 'Password must be at least 8 characters' : '',
-    confirmPassword: touched.confirmPassword && form.confirmPassword !== form.password ? 'Passwords do not match' : '',
-    country: touched.country && !form.country ? 'Please select your country' : '',
-    phone: touched.phone && form.phone && !PHONE_RE.test(form.phone) ? 'Enter a valid phone number' : '',
+    firstName: touched.firstName && !form.firstName.trim() ? t('valFirstName') : '',
+    lastName: touched.lastName && !form.lastName.trim() ? t('valLastName') : '',
+    email: touched.email && !EMAIL_RE.test(form.email) ? t('valEmail') : '',
+    password: touched.password && form.password.length < 8 ? t('valPasswordLength') : '',
+    confirmPassword: touched.confirmPassword && form.confirmPassword !== form.password ? t('valPasswordMatch') : '',
+    country: touched.country && !form.country ? t('valCountry') : '',
+    phone: touched.phone && form.phone && !PHONE_RE.test(form.phone) ? t('valPhone') : '',
   }
 
   const strength = getStrength(form.password)
@@ -390,13 +411,21 @@ export default function SignUpPage() {
     && terms && privacy
 
   const captureAction = usePortalAction()
+  // Known API answers in the user's language; structured codes come first.
+  function errorMessageFor(error: unknown) {
+    const info = apiErrorInfo(error)
+    if (info.code) return errorMessage(error)
+    if (/email already registered/i.test(getApiErrorDetail(error) || '')) return t('emailRegistered')
+    if (info.status === 422) return t('completeRequired')
+    return errorMessage(error) || t('createFailed')
+  }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
     setSubmitError('')
     setTouched({ email: true, password: true, confirmPassword: true })
     if (!isValid) {
-      setSubmitError('Please complete the required fields before creating your account.')
+      setSubmitError(t('completeRequired'))
       return
     }
 
@@ -404,7 +433,7 @@ export default function SignUpPage() {
     const action = captureAction()
     const email = form.email.trim().toLowerCase()
     try {
-      await registerPatient({
+      const created = await registerPatient({
         email,
         password: form.password,
         consents: {
@@ -414,7 +443,16 @@ export default function SignUpPage() {
         },
       })
 
-      if (!action.isCurrent()) return
+      if (!action.isCurrent({ completedSession: created.browser_session })) return
+      if (created.browser_session) {
+        // The provider verified this address: the account is active and signed in.
+        clearSocialProfile()
+        const progress = await getOnboarding()
+        if (!action.isCurrent({ completedSession: created.browser_session })) return
+        router.replace(progress.complete ? '/patient/dashboard' : onboardingPath(progress.next_step))
+        return
+      }
+      clearSocialProfile()
       clearPortalSession(action.portal)
       try {
         storeSignupEmail(email, action.portal)
@@ -424,7 +462,7 @@ export default function SignUpPage() {
       router.push('/auth/verify-email')
     } catch (error) {
       if (!action.isCurrent()) return
-      setSubmitError(getApiErrorDetail(error) || 'We could not create your account right now. Please try again.')
+      setSubmitError(errorMessageFor(error))
     } finally {
       if (action.isCurrent()) setLoading(false)
     }
@@ -432,7 +470,7 @@ export default function SignUpPage() {
 
   const agreementError = submitted && (!terms || !privacy)
 
-  const submitMessage = submitError || (agreementError ? 'Please accept the Terms of Service and Privacy Policy to continue.' : '')
+  const submitMessage = submitError || (agreementError ? t('acceptTerms') : '')
 
   const clearSubmitError = () => {
     if (submitError) setSubmitError('')
@@ -506,6 +544,12 @@ export default function SignUpPage() {
             <form onSubmit={handleSubmit} noValidate>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
+                {social && (
+                  <div role="status" style={{ padding: '12px 14px', borderRadius: '12px', background: 'var(--primary-soft)', border: '1px solid var(--primary-border)', fontSize: '14px', lineHeight: 1.5, color: 'var(--text)', display: 'grid', gap: '6px' }}>
+                    <span>{emailLocked ? t('socialVerified', { provider: providerName }) : t('socialUnverified', { provider: providerName })}</span>
+                    <button type="button" onClick={() => void withoutProvider()} style={{ justifySelf: 'start', minHeight: 36, padding: 0, background: 'none', border: 'none', color: 'var(--link)', fontWeight: 700, cursor: 'pointer' }}>{t('socialCancel', { provider: providerName })}</button>
+                  </div>
+                )}
                 {/* Email */}
                 <Field
                   label={t('emailAddress')}
@@ -517,6 +561,7 @@ export default function SignUpPage() {
                   success={EMAIL_RE.test(form.email)}
                   icon={ICONS.ema}
                   autoComplete="email"
+                  disabled={emailLocked}
                   onBlur={() => touch('email')}
                 />
 

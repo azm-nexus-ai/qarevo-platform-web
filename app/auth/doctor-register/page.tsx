@@ -10,6 +10,7 @@ import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ApiError, checkDoctorUsernameAvailability, getApiErrorDetail, registerDoctor, type DoctorRegisterRequest } from '@/lib/api'
+import { cancelSocialRegistration, clearSocialProfile, readSocialProfile, type SocialProfile } from '@/lib/social-auth'
 
 // Page background
 const PAGE_BG = [
@@ -41,6 +42,7 @@ const PHONE_RE = /^\d{4,14}$/
 
 function getFriendlyDoctorRegisterError(error: unknown, t: (key: string) => string) {
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
+  if (error instanceof ApiError && /"error_code":"SOCIAL_/.test(error.body.replace(/\s/g, ''))) return t('errSocial')
 
   if (detail.includes('email already registered')) {
     return t('errEmailRegistered')
@@ -234,6 +236,19 @@ export default function DoctorRegisterPage() {
   const [isIndependent, setIsIndependent] = useState(false)
 
   const [consentAccepted, setConsentAccepted] = useState(false)
+  // Continuing a provider sign-up (the ticket stays in an HttpOnly cookie).
+  const [social, setSocial] = useState<SocialProfile | null>(null)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('social') !== '1') return
+    const profile = readSocialProfile()
+    if (!profile) return
+    setSocial(profile)
+    if (profile.email) setEmail(profile.email)
+    if (profile.first_name) setFirstName(current => current || profile.first_name)
+    if (profile.last_name) setLastName(current => current || profile.last_name)
+  }, [])
+  const providerName = social ? { google: 'Google', microsoft: 'Microsoft', apple: 'Apple' }[social.provider] : ''
+  const emailLocked = Boolean(social?.email_verified && social.email)
 
   const [touched, setTouched] = useState({
     firstName: false,
@@ -356,12 +371,18 @@ export default function DoctorRegisterPage() {
         consents: {
           terms_privacy: true,
           telehealth: true,
-          marketing: true,
+          // Marketing is opt-in only; registration never assumes it.
+          marketing: false,
         },
       }
 
-      await registerDoctor(registerData)
-
+      const created = await registerDoctor(registerData)
+      clearSocialProfile()
+      if (created.email_verified) {
+        // The provider verified this address: next is Qarevo's review, not an email code.
+        router.push('/auth/doctor-verify-email?confirmed=1')
+        return
+      }
       // Redirect to doctor-specific email verification page with phone details
       router.push(`/auth/doctor-verify-email?email=${encodeURIComponent(email)}&country_code=${countryCode}&phone=${phone || ''}`)
     } catch (error) {
@@ -531,12 +552,18 @@ export default function DoctorRegisterPage() {
                 optional
               />
 
+              {social && (
+                <div role="status" style={{ padding: '12px 14px', borderRadius: '12px', background: 'var(--primary-soft)', border: '1px solid var(--primary-border)', fontSize: '14px', lineHeight: 1.5, color: 'var(--text)', display: 'grid', gap: '6px' }}>
+                  <span>{emailLocked ? t('socialVerified', { provider: providerName }) : t('socialUnverified', { provider: providerName })}</span>
+                  <button type="button" onClick={() => { void cancelSocialRegistration(); setSocial(null) }} style={{ justifySelf: 'start', minHeight: 36, padding: 0, background: 'none', border: 'none', color: 'var(--link)', fontWeight: 700, cursor: 'pointer' }}>{t('socialCancel', { provider: providerName })}</button>
+                </div>
+              )}
               <Field
                 label={t('emailAddress')}
                 placeholder="doctor@example.com"
                 type="email"
                 value={email}
-                onChange={setEmail}
+                onChange={emailLocked ? () => {} : setEmail}
                 icon={ICONS.ema}
                 error={emailErr}
                 onBlur={() => setTouched({ ...touched, email: true })}
