@@ -78,5 +78,7 @@ test('a malformed provider answer is rejected instead of crashing the sign-in pa
     assert.throws(() => api.socialAvailability(value), /could not be verified/)
   }
   assert.equal(JSON.stringify(api.socialAvailability({ google: { enabled: true, message: null }, apple: { enabled: false, message: 'Pending' } })),
-    JSON.stringify({ google: { enabled: true, message: null }, apple: { enabled: false, message: 'Pending' } }))
+    JSON.stringify({ google: { enabled: true, message: null }, apple: { enabled: false, message: 'Pending' }, microsoft: { enabled: false, message: null } }))
+  // An API that predates Microsoft support reports it as unavailable, never as an error.
+  assert.equal(api.socialAvailability({ google: { enabled: true, message: null }, apple: { enabled: true, message: null }, microsoft: { enabled: true, message: null } }).microsoft.enabled, true)
 })
