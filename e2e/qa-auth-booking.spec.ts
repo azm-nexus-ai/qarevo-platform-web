@@ -29,7 +29,8 @@ for(const [portal,path] of [['patient','/auth/sign-in'],['clinician','/auth/doct
     await page.goto(path)
     await expect(page.getByRole('button',{name:'Continue with Google',exact:true})).toBeDisabled()
     await expect(page.getByRole('button',{name:'Continue with Apple',exact:true})).toBeDisabled()
-    await expect(page.getByRole('status').filter({hasText:'company provider configuration'})).toBeVisible()
+    await expect(page.getByRole('button',{name:'Continue with Microsoft',exact:true})).toBeDisabled()
+    await expect(page.getByRole('status').filter({hasText:'not set up in this environment'})).toBeVisible()
     await expect(page).toHaveURL(new RegExp(path+'$'))
   })
 }

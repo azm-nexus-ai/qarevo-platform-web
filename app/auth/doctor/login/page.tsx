@@ -210,7 +210,10 @@ export default function DoctorLoginPage() {
   const [verifiedNotice, setVerifiedNotice] = useState(false)
   const cooldown = useLoginCooldown()
   const errorMessage = useAuthErrorMessage()
-  useEffect(() => { setVerifiedNotice(new URLSearchParams(window.location.search).get('verified') === 'email') }, [])
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVerifiedNotice(new URLSearchParams(window.location.search).get('verified') === 'email'), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const identifierErr = touched.identifier && !identifier ? t('identifierRequired') : ''
   const passErr = touched.password && !password ? t('passwordRequired') : ''

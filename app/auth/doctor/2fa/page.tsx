@@ -1,7 +1,7 @@
 'use client'
 import { safePortalDestination } from '@/lib/portal-handoff'
 
-import { useState, useEffect, useId, useRef } from 'react'
+import { useState, useId, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -12,6 +12,7 @@ import { AuthTokenResponse, apiPost } from '@/lib/api'
 import { apiErrorInfo, useAuthErrorMessage } from '@/lib/auth-errors'
 import { useTranslations } from 'next-intl'
 import { usePortalAction } from '@/lib/portal-action'
+import { useCountdown } from '@/lib/use-countdown'
 
 // Page background
 const PAGE_BG = [
@@ -187,13 +188,9 @@ export default function Doctor2FAPage() {
   const [sessionEnded, setSessionEnded] = useState(false)
   const [sent, setSent] = useState(false)
   // Seconds until another code may be requested (the API enforces the same cooldown).
-  const [cooldown, setCooldown] = useState(60)
-
-  useEffect(() => {
-    if (cooldown <= 0) return
-    const timer = window.setTimeout(() => setCooldown(value => Math.max(0, value - 1)), 1000)
-    return () => window.clearTimeout(timer)
-  }, [cooldown])
+  const countdown = useCountdown(60)
+  const cooldown = countdown.seconds
+  const setCooldown = countdown.start
 
   const showError = (error: unknown) => {
     const info = apiErrorInfo(error)

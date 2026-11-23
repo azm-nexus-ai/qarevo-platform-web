@@ -242,10 +242,13 @@ export default function DoctorRegisterPage() {
     if (new URLSearchParams(window.location.search).get('social') !== '1') return
     const profile = readSocialProfile()
     if (!profile) return
-    setSocial(profile)
-    if (profile.email) setEmail(profile.email)
-    if (profile.first_name) setFirstName(current => current || profile.first_name)
-    if (profile.last_name) setLastName(current => current || profile.last_name)
+    const timer = window.setTimeout(() => {
+      setSocial(profile)
+      if (profile.email) setEmail(profile.email)
+      if (profile.first_name) setFirstName(current => current || profile.first_name)
+      if (profile.last_name) setLastName(current => current || profile.last_name)
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [])
   const providerName = social ? { google: 'Google', microsoft: 'Microsoft', apple: 'Apple' }[social.provider] : ''
   const emailLocked = Boolean(social?.email_verified && social.email)

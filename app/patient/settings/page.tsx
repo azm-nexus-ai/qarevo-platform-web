@@ -71,7 +71,9 @@ export default function PatientSettingsPage() {
   const [returnTo, setReturnTo] = useState('')
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get('return') ?? ''
-    if (/^\/patient\/[A-Za-z0-9/_-]*(\?[A-Za-z0-9=&_%-]*)?$/.test(value)) setReturnTo(value)
+    if (!/^\/patient\/[A-Za-z0-9/_-]*(\?[A-Za-z0-9=&_%-]*)?$/.test(value)) return
+    const timer = window.setTimeout(() => setReturnTo(value), 0)
+    return () => window.clearTimeout(timer)
   }, [])
   const insuranceCardInputRef = useRef<HTMLInputElement | null>(null)
   const [loading, setLoading] = useState(true)

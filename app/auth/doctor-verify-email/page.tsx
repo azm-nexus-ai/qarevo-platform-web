@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useId, Suspense } from 'react'
+import { useState, useId, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -11,6 +11,7 @@ import { apiPost, type VerifyEmailCodeResponse } from '@/lib/api'
 import { apiErrorInfo, useAuthErrorMessage } from '@/lib/auth-errors'
 import { useTranslations } from 'next-intl'
 import { usePortalAction } from '@/lib/portal-action'
+import { useCountdown } from '@/lib/use-countdown'
 
 // Page background
 const PAGE_BG = [
@@ -185,13 +186,9 @@ function DoctorVerifyEmailPageContent() {
   const [notice, setNotice] = useState('')
   // After confirmation the account waits for review; that is the next step, not an error.
   const [confirmed, setConfirmed] = useState(() => searchParams.get('confirmed') === '1')
-  const [cooldown, setCooldown] = useState(0)
-
-  useEffect(() => {
-    if (cooldown <= 0) return
-    const timer = window.setTimeout(() => setCooldown(value => Math.max(0, value - 1)), 1000)
-    return () => window.clearTimeout(timer)
-  }, [cooldown])
+  const countdown = useCountdown(0)
+  const cooldown = countdown.seconds
+  const setCooldown = countdown.start
 
   const fail = (error: unknown) => {
     const info = apiErrorInfo(error)

@@ -379,9 +379,12 @@ export default function SignUpPage() {
     if (new URLSearchParams(window.location.search).get('social') !== '1') return
     const profile = readSocialProfile()
     if (!profile) return
-    setSocial(profile)
-    setForm(current => ({ ...current, email: profile.email || current.email,
-      firstName: current.firstName || profile.first_name, lastName: current.lastName || profile.last_name }))
+    const timer = window.setTimeout(() => {
+      setSocial(profile)
+      setForm(current => ({ ...current, email: profile.email || current.email,
+        firstName: current.firstName || profile.first_name, lastName: current.lastName || profile.last_name }))
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [])
   const providerName = social ? { google: 'Google', microsoft: 'Microsoft', apple: 'Apple' }[social.provider] : ''
   const emailLocked = Boolean(social?.email_verified && social.email)
