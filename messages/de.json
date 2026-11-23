@@ -1043,7 +1043,25 @@
     "actionAppointments": "Termine",
     "actionAppointmentsSub": "Anstehend und vergangen",
     "actionHelp": "Hilfe",
-    "actionHelpSub": "Antworten und Kontakt"
+    "actionHelpSub": "Antworten und Kontakt",
+    "timeline": {
+      "careUpdate": "Neuigkeit zu Ihrer Behandlung",
+      "episodeCreated": "Behandlungsfall eröffnet",
+      "episodeCreatedBody": "Sie können jetzt Ihre Angaben für die Praxis ausfüllen.",
+      "intakeSubmitted": "Ihre Angaben wurden übermittelt",
+      "intakeSubmittedBody": "Ihre Angaben sind bei der Praxis eingegangen. Zurzeit müssen Sie nichts tun.",
+      "recordUploaded": "Unterlage gespeichert",
+      "recordUploadedBody": "Die Datei ist in Ihrer Gesundheitsakte gespeichert.",
+      "appointmentBooked": "Termin gebucht",
+      "messageReceived": "Neue Nachricht",
+      "labResultUploaded": "Laborbefund hochgeladen",
+      "labResultReceived": "Laborbefund eingegangen",
+      "labVisitRecorded": "Labortermin erfasst",
+      "workCertificateIssued": "Arbeitsunfähigkeitsbescheinigung ausgestellt",
+      "doctorAssigned": "Ärztin oder Arzt zugewiesen",
+      "episodeClosed": "Behandlungsfall abgeschlossen",
+      "episodeUpdated": "Behandlungsfall aktualisiert"
+    }
   },
   "onboarding": {
     "medical": {
@@ -1390,7 +1408,12 @@
     "searchNamesOrMessages": "Namen oder Nachrichten suchen…",
     "addAttachment": "Anhang hinzufügen",
     "sendMessage": "Nachricht senden",
-    "removeAttachment": "Anhang entfernen"
+    "removeAttachment": "Anhang entfernen",
+    "noRecipientYet": "Sie sind noch mit keiner Praxis verbunden",
+    "selectRecipient": "Empfänger auswählen …",
+    "findFreeAppointments": "Freie Termine suchen",
+    "sending": "Wird gesendet …",
+    "chooseRecipientFirst": "Wählen Sie zuerst einen Empfänger aus."
   },
   "patientAppointmentDetails": {
     "loadingYourAppointment": "Ihr Termin wird geladen…",

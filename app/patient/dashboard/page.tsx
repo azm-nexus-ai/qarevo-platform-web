@@ -152,6 +152,13 @@ function getGreeting(): 'greetingMorning' | 'greetingAfternoon' | 'greetingEveni
   return 'greetingEvening'
 }
 
+const TIMELINE_KEYS: Record<string, string> = {
+  episode_created: 'episodeCreated', intake_submitted: 'intakeSubmitted', medical_record_uploaded: 'recordUploaded',
+  appointment_booked: 'appointmentBooked', message_received: 'messageReceived', lab_result_uploaded: 'labResultUploaded',
+  lab_result_received: 'labResultReceived', lab_visit_recorded: 'labVisitRecorded', work_certificate_issued: 'workCertificateIssued',
+  doctor_assigned: 'doctorAssigned', episode_closed: 'episodeClosed', episode_transitioned: 'episodeUpdated',
+}
+
 /** Quick actions are labelled by where they lead, in the patient's language. Stored
  *  dashboard rows carry English text written at sign-up, so it is not shown. */
 const ACTION_KEYS: Record<string, [string, string]> = {
@@ -752,13 +759,17 @@ export default function PatientDashboardPage() {
     if (!source.length && !dashboardHasKey(dashboardData, 'timeline_items', 'timelineItems')) return []
     return source.map((item) => {
       const fallback = { sub: '', time: '' }
+      // Known events read in the patient's language: what happened and whether
+      // anything is needed. Unknown types keep their stored title.
+      const known = TIMELINE_KEYS[text(item.event_type, '').replace('.', '_')]
+      const sub = text(item.sub ?? item.body ?? item.provider, fallback.sub)
       return {
-        title: text(item.title ?? item.event, 'Care update'),
-        sub: text(item.sub ?? item.body ?? item.provider, fallback.sub),
+        title: known ? t(`timeline.${known}`) : text(item.title ?? item.event, t('timeline.careUpdate')),
+        sub: known && t.has(`timeline.${known}Body`) ? t(`timeline.${known}Body`) : /^[A-Z][a-z]+(\.[A-Z][a-z]+)+$/.test(sub) ? '' : sub,
         time: text(item.time ?? item.date, fallback.time),
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const displayAIInsights = useMemo<AIInsightCard[]>(() => {
     const source = dashboardArray(dashboardData, 'ai_insights', 'aiInsights')

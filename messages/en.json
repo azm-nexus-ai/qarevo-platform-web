@@ -1043,7 +1043,25 @@
     "actionAppointments": "Appointments",
     "actionAppointmentsSub": "Upcoming and past",
     "actionHelp": "Help",
-    "actionHelpSub": "Answers and contact"
+    "actionHelpSub": "Answers and contact",
+    "timeline": {
+      "careUpdate": "Care update",
+      "episodeCreated": "Care episode opened",
+      "episodeCreatedBody": "You can now fill in your details for the practice.",
+      "intakeSubmitted": "Your details were sent",
+      "intakeSubmittedBody": "Your details reached the practice. Nothing is needed from you right now.",
+      "recordUploaded": "Document saved",
+      "recordUploadedBody": "The file is saved in your health record.",
+      "appointmentBooked": "Appointment booked",
+      "messageReceived": "New message",
+      "labResultUploaded": "Lab result uploaded",
+      "labResultReceived": "Lab result received",
+      "labVisitRecorded": "Lab visit recorded",
+      "workCertificateIssued": "Work certificate issued",
+      "doctorAssigned": "Doctor assigned",
+      "episodeClosed": "Care episode closed",
+      "episodeUpdated": "Care episode updated"
+    }
   },
   "onboarding": {
     "medical": {
@@ -1390,7 +1408,12 @@
     "searchNamesOrMessages": "Search names or messages...",
     "addAttachment": "Add attachment",
     "sendMessage": "Send message",
-    "removeAttachment": "Remove attachment"
+    "removeAttachment": "Remove attachment",
+    "noRecipientYet": "You are not connected to a practice yet",
+    "selectRecipient": "Select a recipient…",
+    "findFreeAppointments": "Find free appointments",
+    "sending": "Sending…",
+    "chooseRecipientFirst": "Choose a recipient first."
   },
   "patientAppointmentDetails": {
     "loadingYourAppointment": "Loading your appointment…",

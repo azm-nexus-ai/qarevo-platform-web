@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import { getApiErrorDetail } from '@/lib/api'
 
 import Image from 'next/image'
@@ -188,7 +189,7 @@ function NewMessageModal({
             disabled={contacts.length === 0}
             style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '12px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.navy, fontSize: '14px', outline: 'none' }}
           >
-            <option value="" disabled>{contacts.length === 0 ? 'No eligible physicians yet' : 'Select a recipient...'}</option>
+            <option value="" disabled>{contacts.length === 0 ? t('noRecipientYet') : t('selectRecipient')}</option>
             {contacts.map(c => (
               <option key={c.id} value={c.id}>{c.name} ({c.role || c.type})</option>
             ))}
@@ -200,6 +201,14 @@ function NewMessageModal({
           ) : null}
         </div>
 
+        {contacts.length === 0 ? (
+          // Nothing can be sent without a practice: offer the next step instead of a
+          // text box whose message could never reach anyone.
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <Link href='/patient/find-doctor' style={{ flex: 1, minHeight: '46px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontWeight: 700, textDecoration: 'none' }}>{t('findFreeAppointments')}</Link>
+            <button type='button' onClick={onClose} style={{ minHeight: '46px', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface)', color: T.navy, fontWeight: 700, cursor: 'pointer' }}>{t('close')}</button>
+          </div>
+        ) : <>
         <div style={{ marginBottom: '24px' }}>
           <label style={{ display: 'block', margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: T.slate2 }}>{t('message')}</label>
           <textarea
@@ -217,9 +226,11 @@ function NewMessageModal({
             base={{ flex: 1, minHeight: '46px', padding: '0 16px', borderRadius: '12px', border: 'none', background: canSend ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", color: canSend ? '#fff' : T.slate2, fontSize: '13.5px', fontWeight: 700, cursor: canSend ? 'pointer' : 'not-allowed', boxShadow: canSend ? '0 5px 16px rgba(32,181,223,0.28)' : 'none' }}
             on={canSend ? { transform: 'translateY(-1px)', boxShadow: '0 8px 20px rgba(52,140,234,0.34)' } : {}}
           >
-            {sending ? 'Sending...' : 'Send Message'}
+            {sending ? t('sending') : t('sendMessage')}
           </HoverBtn>
         </div>
+        {!recipient && <p style={{ margin: '10px 0 0', fontSize: '13px', color: T.slate2 }}>{t('chooseRecipientFirst')}</p>}
+        </>}
       </div>
     </div>
   )
