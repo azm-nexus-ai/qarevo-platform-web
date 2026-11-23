@@ -29,7 +29,7 @@ function getStrength(pw: string) {
     noCommon: !/(password|123456|qwerty|admin)/i.test(pw),
   }
   const score = Object.values(checks).filter(Boolean).length
-  const levels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent']
+  const levels = ['', 'strengthWeak', 'strengthFair', 'strengthGood', 'strengthStrong', 'strengthExcellent']
   const colors = ['', T.red, T.amber, '#2563EB', T.green, T.green]
   return { checks, score, label: levels[score] ?? '', color: colors[score] ?? T.slate2 }
 }
@@ -39,32 +39,32 @@ const USERNAME_RE = /^[a-z0-9._-]+$/
 const COUNTRY_CODE_RE = /^\+[1-9]\d{0,2}$/
 const PHONE_RE = /^\d{4,14}$/
 
-function getFriendlyDoctorRegisterError(error: unknown) {
+function getFriendlyDoctorRegisterError(error: unknown, t: (key: string) => string) {
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
   if (detail.includes('email already registered')) {
-    return 'This email is already registered. Please sign in or use a different email address.'
+    return t('errEmailRegistered')
   }
   if (detail.includes('username already taken')) {
-    return 'This username is already taken. Please choose another one.'
+    return t('errUsernameTaken')
   }
   if (detail.includes('password')) {
-    return 'Password does not meet requirements. Please use a stronger password.'
+    return t('errPassword')
   }
   if (detail.includes('specialty')) {
-    return 'Invalid medical specialty. Please select a valid specialty.'
+    return t('errSpecialty')
   }
   if (detail.includes('valid email') || detail.includes('email address')) {
-    return 'Enter a valid email address.'
+    return t('errEmail')
   }
   if (detail.includes('phone')) {
-    return 'Please check the phone number and country code.'
+    return t('errPhone')
   }
   if (error instanceof ApiError && error.status === 422) {
-    return 'Please check the highlighted registration details and try again.'
+    return t('errCheck')
   }
   if (error instanceof ApiError && error.status >= 500) {
-    return 'Registration is temporarily unavailable. Please try again shortly.'
+    return t('errUnavailable')
   }
 
   return 'We could not create the doctor account right now. Please try again.'
@@ -254,20 +254,20 @@ export default function DoctorRegisterPage() {
 
   const normalizedUsername = username.trim().toLowerCase()
   const usernameErr = touched.username && normalizedUsername && !USERNAME_RE.test(normalizedUsername)
-    ? 'Use letters, numbers, dots, underscores, or hyphens only'
+    ? t('valUsernameChars')
     : touched.username && normalizedUsername.length > 0 && normalizedUsername.length < 3
-    ? 'Username must be at least 3 characters'
+    ? t('valUsernameLength')
     : touched.username && usernameAvailable === false
-    ? 'This username is already taken'
+    ? t('valUsernameTaken')
     : ''
-  const emailErr = touched.email && !EMAIL_RE.test(email) ? 'Enter a valid email address' : ''
-  const passErr = touched.password && (password.length < 8 || password.length > 128 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^a-zA-Z0-9\s]/.test(password)) ? 'Use 8–128 characters with uppercase and lowercase letters, a number and a special character.' : ''
-  const countryCodeErr = touched.countryCode && !COUNTRY_CODE_RE.test(countryCode.trim()) ? 'Use a valid country code, like +49' : ''
-  const phoneErr = touched.phone && !PHONE_RE.test(phone.trim()) ? 'Enter 4–14 digits without spaces or the country code.' : ''
-  const dateOfBirthErr = touched.dateOfBirth && (!dateOfBirth || dateOfBirth >= new Date().toISOString().slice(0, 10)) ? 'Enter a valid date of birth before today.' : ''
-  const experienceErr = submitted && experienceYears && (!/^\d{1,2}$/.test(experienceYears) || Number(experienceYears) > 80) ? 'Enter a whole number from 0 to 80 years.' : ''
-  const specialtyErr = submitted && isOtherSpecialty && customSpecialty.trim().length < 2 ? 'Specify your specialty using at least 2 characters.' : ''
-  const genderErr = touched.gender && !gender.trim() ? 'Gender is required' : ''
+  const emailErr = touched.email && !EMAIL_RE.test(email) ? t('valEmail') : ''
+  const passErr = touched.password && (password.length < 8 || password.length > 128 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^a-zA-Z0-9\s]/.test(password)) ? t('valPassword') : ''
+  const countryCodeErr = touched.countryCode && !COUNTRY_CODE_RE.test(countryCode.trim()) ? t('valCountryCode') : ''
+  const phoneErr = touched.phone && !PHONE_RE.test(phone.trim()) ? t('valPhone') : ''
+  const dateOfBirthErr = touched.dateOfBirth && (!dateOfBirth || dateOfBirth >= new Date().toISOString().slice(0, 10)) ? t('valBirthDate') : ''
+  const experienceErr = submitted && experienceYears && (!/^\d{1,2}$/.test(experienceYears) || Number(experienceYears) > 80) ? t('valExperience') : ''
+  const specialtyErr = submitted && isOtherSpecialty && customSpecialty.trim().length < 2 ? t('valSpecialty') : ''
+  const genderErr = touched.gender && !gender.trim() ? t('valGender') : ''
   const passStrength = getStrength(password)
 
   useEffect(() => {
@@ -365,7 +365,7 @@ export default function DoctorRegisterPage() {
       // Redirect to doctor-specific email verification page with phone details
       router.push(`/auth/doctor-verify-email?email=${encodeURIComponent(email)}&country_code=${countryCode}&phone=${phone || ''}`)
     } catch (error) {
-      setAuthError(getFriendlyDoctorRegisterError(error))
+      setAuthError(getFriendlyDoctorRegisterError(error, t))
     } finally {
       setLoading(false)
     }
@@ -376,7 +376,7 @@ export default function DoctorRegisterPage() {
       type="button"
       tabIndex={-1}
       onClick={() => setShowPassword(s => !s)}
-      aria-label={showPassword ? 'Hide password' : 'Show password'}
+      aria-label={showPassword ? t('hidePasswordLabel') : t('showPasswordLabel')}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex' }}
     >
       <Ico p={showPassword ? ICONS.eyeOff : ICONS.eye} size={14} sw={1.75} />
@@ -385,10 +385,10 @@ export default function DoctorRegisterPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } body { margin: 0; }`}</style>
+      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } body { margin: 0; } @media (max-width: 860px) { .doctor-register-left { display: none !important; } } .doctor-register-card { padding: clamp(20px, 6vw, 40px); }`}</style>
 
-      {/* Left panel - branding */}
-      <div style={{
+      {/* Left panel - branding (hidden on small screens, like the other clinician auth pages) */}
+      <div className="doctor-register-left" style={{
         width: '380px',
         flexShrink: 0,
         background: 'linear-gradient(135deg, #04354D 0%, #0E151A 100%)',
@@ -429,7 +429,7 @@ export default function DoctorRegisterPage() {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {['Development', 'Synthetic data', 'Test accounts'].map(b => (
+            {[t('badgeDevelopment'), t('badgeSynthetic'), t('badgeTestAccounts')].map(b => (
               <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
             ))}
           </div>
@@ -437,8 +437,8 @@ export default function DoctorRegisterPage() {
       </div>
 
       {/* Right panel - registration form */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '500px' }}>
+      <main style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 6vw, 48px) 16px', minHeight: '100vh' }}>
+        <div style={{ width: '100%', maxWidth: '500px', minWidth: 0 }}>
           {/* Back link */}
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
@@ -446,14 +446,13 @@ export default function DoctorRegisterPage() {
           </Link>
 
           {/* Form card */}
-          <div style={{
+          <div className="doctor-register-card" style={{
             background: "var(--surface-glass)",
             backdropFilter: 'blur(28px) saturate(200%)',
             WebkitBackdropFilter: 'blur(28px) saturate(200%)',
             borderRadius: '22px',
             border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
-            padding: '40px 40px 36px',
           }}>
             {/* Header */}
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -484,18 +483,18 @@ export default function DoctorRegisterPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field
                   label={t('firstName')}
-                  placeholder="John"
+                  placeholder={t('firstNamePlaceholder')}
                   value={firstName}
                   onChange={setFirstName}
-                  error={touched.firstName && firstName.trim().length < 1 ? 'First name is required.' : ''}
+                  error={touched.firstName && firstName.trim().length < 1 ? t('valFirstName') : ''}
                   onBlur={() => setTouched({ ...touched, firstName: true })}
                 />
                 <Field
                   label={t('lastName')}
-                  placeholder="Doe"
+                  placeholder={t('lastNamePlaceholder')}
                   value={lastName}
                   onChange={setLastName}
-                  error={touched.lastName && lastName.trim().length < 1 ? 'Last name is required.' : ''}
+                  error={touched.lastName && lastName.trim().length < 1 ? t('valLastName') : ''}
                   onBlur={() => setTouched({ ...touched, lastName: true })}
                 />
               </div>
@@ -521,10 +520,10 @@ export default function DoctorRegisterPage() {
                 error={usernameErr}
                 hint={
                   usernameChecking
-                    ? 'Checking username...'
+                    ? t('usernameChecking')
                     : usernameAvailable
-                    ? 'Username is available'
-                    : 'Optional. Patients and staff can identify you by this handle.'
+                    ? t('usernameAvailable')
+                    : t('usernameHint')
                 }
                 success={usernameAvailable === true && !usernameErr}
                 onBlur={() => setTouched({ ...touched, username: true })}
@@ -563,7 +562,7 @@ export default function DoctorRegisterPage() {
                   <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: "var(--surface-hover)", overflow: 'hidden' }}>
                     <div style={{ width: `${(passStrength.score / 5) * 100}%`, height: '100%', background: passStrength.color || T.slate2, transition: 'all 0.3s ease' }} />
                   </div>
-                  <span style={{ fontSize: "13px", fontWeight: 600, color: passStrength.color || T.slate2, minWidth: '50px' }}>{passStrength.label}</span>
+                  <span style={{ fontSize: "13px", fontWeight: 600, color: passStrength.color || T.slate2, minWidth: '50px' }}>{passStrength.label ? t(passStrength.label) : ''}</span>
                 </div>
               )}
 
@@ -579,7 +578,7 @@ export default function DoctorRegisterPage() {
                 />
                 <Field
                   label={t('phoneNumber')}
-                  hint="Digits only; enter the country code in the separate field."
+                  hint={t('phoneHint')}
                   placeholder="1234567890"
                   value={phone}
                   onChange={setPhone}
@@ -698,7 +697,7 @@ export default function DoctorRegisterPage() {
                 <Field
                   label={t('yearsOfExperience')}
                   error={experienceErr || undefined}
-                  hint="Whole years from 0 to 80."
+                  hint={t('experienceHint')}
                   placeholder="e.g., 5"
                   value={experienceYears}
                   onChange={setExperienceYears}
@@ -761,21 +760,21 @@ export default function DoctorRegisterPage() {
                     : '0 3px 10px rgba(32,181,223,0.32), 0 1px 3px rgba(32,181,223,0.2)',
                 }}
               >
-                {loading ? 'Creating Account...' : 'Create Physician Account'}
+                {loading ? t('creatingAccount') : t('createPhysicianAccount')}
                 {!loading && <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />}
               </button>
             </form>
 
             {/* Sign in link */}
             <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: '24px 0 0', letterSpacing: '-0.01em' }}>
-              Already have an account?{' '}
+              {t('alreadyHaveAccount')}{' '}
               <Link href="/auth/doctor/login" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>
                 {t('signIn')}
               </Link>
             </p>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
