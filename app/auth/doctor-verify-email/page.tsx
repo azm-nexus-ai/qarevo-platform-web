@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useId, Suspense } from 'react'
+import { useEffect, useState, useId, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { ApiError, apiPost, getApiErrorDetail, type VerifyEmailCodeResponse } from '@/lib/api'
+import { apiPost, type VerifyEmailCodeResponse } from '@/lib/api'
+import { apiErrorInfo, useAuthErrorMessage } from '@/lib/auth-errors'
+import { useTranslations } from 'next-intl'
 import { usePortalAction } from '@/lib/portal-action'
 
 // Page background
@@ -26,40 +28,6 @@ const LEFT_BG = [
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
   T.brandNavy,
 ].join(', ')
-
-function getFriendlyDoctorEmailVerificationError(error: unknown) {
-  const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
-
-  if (detail.includes('invalid verification code')) {
-    return 'The verification code you entered is incorrect. Please check the code and try again.'
-  }
-  if (detail.includes('expired')) {
-    return 'The verification code has expired. Please request a new code.'
-  }
-  if (detail.includes('already used')) {
-    return 'This verification code has already been used. Please request a new code.'
-  }
-  if (detail.includes('replaced')) {
-    return 'This code has been replaced. Please request a new code.'
-  }
-  if (detail.includes('no verification code found')) {
-    return 'No verification code found. Please request a new code.'
-  }
-  if (detail.includes('user not found')) {
-    return 'User not found. Please register again.'
-  }
-  if (detail.includes('already verified')) {
-    return 'This email has already been verified. Please sign in.'
-  }
-  if (detail.includes('valid email')) {
-    return 'Enter a valid email address.'
-  }
-  if (error instanceof ApiError && error.status === 422) {
-    return 'Please check the verification details and try again.'
-  }
-
-  return 'We could not verify your email right now. Please try again.'
-}
 
 // Field component
 interface FieldProps {
@@ -150,6 +118,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
 
 // Left panel component
 function LeftPanel() {
+  const t = useTranslations('auth.doctorVerifyEmail')
   return (
     <div style={{
       width: '380px',
@@ -184,226 +153,156 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
         <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
-          Email Verification
+          {t('panelTitle')}
         </h2>
         <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-          Verify your email address to activate your physician account
+          {t('panelBody')}
         </p>
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['Email verification', 'Account security', 'Clinician review'].map(b => (
-            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
-          ))}
-        </div>
-      </div>
+      <ol style={{ position: 'relative', zIndex: 1, margin: 0, paddingLeft: '18px', color: 'rgba(255,255,255,0.82)', fontSize: '13px', lineHeight: 1.7 }}>
+        <li>{t('stepRegister')}</li>
+        <li>{t('stepConfirm')}</li>
+        <li>{t('stepReview')}</li>
+        <li>{t('stepSignIn')}</li>
+      </ol>
     </div>
   )
 }
 
 // Main page
 function DoctorVerifyEmailPageContent() {
+  const t = useTranslations('auth.doctorVerifyEmail')
+  const errorMessage = useAuthErrorMessage()
   const router = useRouter()
   const captureAction = usePortalAction()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
-
   const [code, setCode] = useState('')
+  const [touched, setTouched] = useState(false)
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [notice, setNotice] = useState('')
+  // After confirmation the account waits for review; that is the next step, not an error.
+  const [confirmed, setConfirmed] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
 
-  const codeErr = !code ? 'Verification code is required' : ''
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = window.setTimeout(() => setCooldown(value => Math.max(0, value - 1)), 1000)
+    return () => window.clearTimeout(timer)
+  }, [cooldown])
+
+  const fail = (error: unknown) => {
+    const info = apiErrorInfo(error)
+    if (info.code === 'EMAIL_ALREADY_VERIFIED') { setConfirmed(true); return }
+    if (info.code === 'CODE_RESEND_COOLDOWN' && info.retryAfter) setCooldown(info.retryAfter)
+    setAuthError(errorMessage(error, 'code'))
+  }
 
   const handleVerify = async () => {
-    if (!code) {
-      setAuthError('Verification code is required')
-      return
-    }
-
+    setTouched(true)
+    if (!/^\d{6}$/.test(code)) { setAuthError(t('codeRequired')); return }
+    if (!email) { setAuthError(t('emailMissing')); return }
     setLoading(true)
     setAuthError('')
+    setNotice('')
     const action = captureAction()
     let response: VerifyEmailCodeResponse | undefined
     const current = () => action.isCurrent({ completedSession: response?.browser_session })
-
     try {
       response = await apiPost<VerifyEmailCodeResponse>('/api/v1/auth/verify-email-code', { email, code })
       if (!current()) return
-      setSuccess(true)
-      // Keep loading state true during redirect to prevent button clicks
-      action.after(1500, () => {
-        router.push('/auth/doctor/login?verified=email')
-      }, { completedSession: response.browser_session })
-      return // Don't set loading to false yet
+      setConfirmed(true)
     } catch (error) {
       if (!current()) return
-      setAuthError(getFriendlyDoctorEmailVerificationError(error))
+      fail(error)
+      setCode('')
     } finally {
       if (current()) setLoading(false)
     }
   }
 
   const handleResend = async () => {
+    if (!email || cooldown > 0) return
     const action = captureAction()
     setLoading(true)
     setAuthError('')
+    setNotice('')
     try {
       await apiPost('/api/v1/auth/resend-verification-email', { email })
       if (!action.isCurrent()) return
-      setSuccess(true)
-      action.after(3000, () => setSuccess(false))
+      setNotice(t('sent'))
+      setCooldown(60)
     } catch (error) {
-      if (!action.isCurrent()) return
-      setAuthError(getFriendlyDoctorEmailVerificationError(error))
+      if (action.isCurrent()) fail(error)
     } finally {
       if (action.isCurrent()) setLoading(false)
     }
   }
 
+  const codeError = touched && !/^\d{6}$/.test(code) && !authError ? t('codeRequired') : ''
+
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } @media (max-width: 860px) { .doctor-verify-left { display: none !important; } }`}</style>
-
-      {/* Left panel */}
-      <div className="doctor-verify-left">
-        <LeftPanel />
-      </div>
-
-      {/* Right panel - verification form */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
+      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } @media (max-width: 860px) { .doctor-verify-left { display: none !important; } } .doctor-verify-card { padding: clamp(22px, 6vw, 40px); }`}</style>
+      <div className="doctor-verify-left"><LeftPanel /></div>
+      <main style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 6vw, 48px) 16px', minHeight: '100vh' }}>
         <div style={{ width: '100%', maxWidth: '460px' }}>
-          {/* Back link */}
-          <button
-            onClick={() => router.back()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
+          <Link href="/auth/doctor/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '20px', textDecoration: 'none' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back
-          </button>
-
-          {/* Form card */}
-          <div style={{
-            background: "var(--surface-glass)",
-            backdropFilter: 'blur(28px) saturate(200%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(200%)',
-            borderRadius: '22px',
-            border: "1px solid var(--border)",
-            boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
-            padding: '40px 40px 36px',
-          }}>
-            {/* Header */}
-            <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <div>
-                <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
-                  Verify Your Email
-                </h1>
-                <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                  Enter the 6-digit code sent to your email
+            {t('back')}
+          </Link>
+          <div className="doctor-verify-card" style={{ background: 'var(--surface-glass)', borderRadius: '22px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-float, 0 24px 64px rgba(4,53,77,0.1))' }}>
+            {confirmed ? (
+              <div role="status" style={{ display: 'grid', gap: '14px' }}>
+                <div aria-hidden style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'var(--success-soft)', display: 'grid', placeItems: 'center' }}>
+                  <Ico p={ICONS.check} size={22} sw={2.2} color={T.green} />
+                </div>
+                <h1 style={{ fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: 0 }}>{t('confirmedTitle')}</h1>
+                <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0 }}>{t('confirmedBody')}</p>
+                <ul style={{ margin: 0, paddingLeft: '18px', color: T.slate, fontSize: '14px', lineHeight: 1.7 }}>
+                  <li>{t('confirmedNext1')}</li>
+                  <li>{t('confirmedNext2')}</li>
+                  <li>{t('confirmedNext3')}</li>
+                </ul>
+                <button type="button" onClick={() => router.push('/auth/doctor/login')} style={{ minHeight: 48, borderRadius: '13px', border: '1px solid var(--border)', background: 'var(--surface)', color: T.navy, fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}>
+                  {t('toSignIn')}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: '24px' }}>
+                  <h1 style={{ fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>{t('title')}</h1>
+                  <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, overflowWrap: 'anywhere' }}>
+                    {email ? t('subtitle', { email }) : t('subtitleNoEmail')}
+                  </p>
+                </div>
+                {authError && <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: 'var(--danger-soft)', marginBottom: '18px', fontSize: '14px', lineHeight: 1.45, color: 'var(--text)' }}>{authError}</div>}
+                {notice && !authError && <div role="status" style={{ padding: '12px 16px', borderRadius: '11px', background: 'var(--success-soft)', marginBottom: '18px', fontSize: '14px', lineHeight: 1.45, color: 'var(--text)' }}>{notice}</div>}
+                <form onSubmit={event => { event.preventDefault(); void handleVerify() }} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <Field label={t('codeLabel')} placeholder={t('codePlaceholder')} value={code} error={codeError}
+                    onChange={value => { setCode(value.replace(/\D/g, '').slice(0, 6)); setAuthError('') }} icon={ICONS.shield} maxLength={6} />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                    <button type="button" onClick={handleResend} disabled={loading || cooldown > 0 || !email}
+                      style={{ background: 'none', border: 'none', padding: 0, minHeight: 44, fontSize: '14px', color: cooldown > 0 || !email ? T.slate2 : T.link, fontWeight: 600, cursor: loading || cooldown > 0 ? 'not-allowed' : 'pointer' }}>
+                      {cooldown > 0 ? t('resendIn', { seconds: cooldown }) : t('resend')}
+                    </button>
+                    <span style={{ fontSize: '13px', color: T.slate2 }}>{t('expiry')}</span>
+                  </div>
+                  <button type="submit" disabled={loading}
+                    style={{ width: '100%', minHeight: 48, borderRadius: '13px', border: 'none', background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,var(--primary-end) 100%)`, color: '#fff', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                    {loading ? t('verifying') : t('verify')}
+                  </button>
+                </form>
+                <p style={{ textAlign: 'center', fontSize: '13px', color: T.slate2, margin: '20px 0 0', lineHeight: 1.5 }}>
+                  {t('noCode')}{' '}<Link href="/support" style={{ color: T.link, fontWeight: 600 }}>{t('contactSupport')}</Link>.
                 </p>
-              </div>
-              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Ico p={ICONS.ema} size={20} sw={1.25} color="#fff" />
-              </div>
-            </div>
-
-            {/* Error banner */}
-            {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
-                <Ico p={ICONS.info} size={16} sw={1.75} color={T.red} />
-                <span style={{ fontSize: '13px', color: '#991B1B', lineHeight: 1.4 }}>{authError}</span>
-              </div>
+              </>
             )}
-
-            {/* Success banner */}
-            {success && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--success-soft)", border: '1px solid rgba(9,173,112,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
-                <Ico p={ICONS.check} size={16} sw={2.5} color={T.green} />
-                <span style={{ fontSize: '13px', color: '#166534', lineHeight: 1.4 }}>Verification code sent successfully</span>
-              </div>
-            )}
-
-            {/* Email display */}
-            <div style={{ padding: '12px 16px', borderRadius: '11px', background: 'rgba(32,181,223,0.06)', border: '1px solid rgba(32,181,223,0.12)', marginBottom: '20px' }}>
-              <p style={{ margin: 0, fontSize: "13px", color: T.slate2, fontWeight: 600, marginBottom: '4px' }}>Email address</p>
-              <p style={{ margin: 0, fontSize: '14px', color: T.navy, fontWeight: 600 }}>{email || 'doctor@example.com'}</p>
-            </div>
-
-            {/* Form */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <Field
-                label="Verification Code"
-                placeholder="Enter 6-digit code"
-                type="text"
-                value={code}
-                onChange={setCode}
-                icon={ICONS.shield}
-                error={codeErr}
-                maxLength={6}
-              />
-
-
-              {/* Verify button */}
-              <button
-                type="button"
-                onClick={handleVerify}
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  borderRadius: '13px',
-                  border: 'none',
-                  background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,var(--primary-end) 100%)`,
-                  color: '#fff',
-                  fontFamily: 'inherit',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.15s ease',
-                  boxShadow: loading ? 'none' : '0 3px 10px rgba(32,181,223,0.32), 0 1px 3px rgba(32,181,223,0.2)',
-                }}
-              >
-                {loading ? 'Verifying...' : 'Verify Email'}
-                {!loading && <Ico p={ICONS.check} size={15} sw={2.2} />}
-              </button>
-
-              {/* Resend link */}
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={loading}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  fontSize: '13px',
-                  color: T.link,
-                  fontWeight: 600,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  textDecoration: 'none',
-                  textAlign: 'center',
-                }}
-              >
-                Resend Verification Code
-              </button>
-            </div>
-
-            {/* Help link */}
-            <p style={{ textAlign: 'center', fontSize: '13px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
-              Didn&apos;t receive the code?{' '}
-              <Link href="/support" style={{ color: T.link, fontWeight: 600, textDecoration: 'none' }}>
-                Contact Support
-              </Link>
-            </p>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

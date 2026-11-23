@@ -4,7 +4,7 @@ import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/Port
 import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
 import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
 
-import { useState, useId } from 'react'
+import { useEffect, useState, useId } from 'react'
 import Link from 'next/link'
 import SocialSignInButtons from '@/components/auth/SocialSignInButtons'
 import { useLoginCooldown } from '@/lib/use-login-cooldown'
@@ -13,7 +13,8 @@ import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { ApiError, apiPost, getApiErrorDetail, getLoginThrottleMessage, type DoctorLoginRequest } from '@/lib/api'
+import { apiPost, type DoctorLoginRequest } from '@/lib/api'
+import { apiErrorInfo, useAuthErrorMessage } from '@/lib/auth-errors'
 import { usePortalAction } from '@/lib/portal-action'
 
 // Page background
@@ -32,41 +33,6 @@ const LEFT_BG = [
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
   T.brandNavy,
 ].join(', ')
-
-function getFriendlyDoctorLoginError(error: unknown, t: (key: string) => string) {
-  const throttle = getLoginThrottleMessage(error)
-  if (throttle) return throttle
-
-  const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
-  if (detail.includes('administrator') || detail.includes('clinician_approval') || detail.includes('not active')) return getApiErrorDetail(error) || 'Administrator review is required.'
-
-  if (detail.includes('phone not verified')) {
-    return t('errors.phone')
-  }
-  if (detail.includes('email_verification_pending') || detail.includes('email verification')) {
-    return t('errors.email')
-  }
-  if (detail.includes('invalid identifier or password') || detail.includes('invalid') || detail.includes('password')) {
-    return t('errors.invalid')
-  }
-  if (detail.includes('use patient login endpoint') || detail.includes('patient account')) {
-    return t('errors.patient')
-  }
-  if (error instanceof ApiError && error.status === 422 && detail.includes('valid email')) {
-    return t('errors.identifier')
-  }
-  if (error instanceof ApiError && error.status === 401) {
-    return t('errors.invalid')
-  }
-  if (error instanceof ApiError && error.status === 422) {
-    return t('errors.check')
-  }
-  if (error instanceof ApiError && error.status >= 500) {
-    return t('errors.unavailable')
-  }
-
-  return t('errors.generic')
-}
 
 // Field component
 interface FieldProps {
@@ -239,7 +205,12 @@ export default function DoctorLoginPage() {
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const [handoff, setHandoff] = useState<PortalHandoff | null>(null)
+  // Account states that are next steps, not failures: confirm the email, or wait for review.
+  const [accountState, setAccountState] = useState<'verify' | 'review' | null>(null)
+  const [verifiedNotice, setVerifiedNotice] = useState(false)
   const cooldown = useLoginCooldown()
+  const errorMessage = useAuthErrorMessage()
+  useEffect(() => { setVerifiedNotice(new URLSearchParams(window.location.search).get('verified') === 'email') }, [])
 
   const identifierErr = touched.identifier && !identifier ? t('identifierRequired') : ''
   const passErr = touched.password && !password ? t('passwordRequired') : ''
@@ -254,7 +225,7 @@ export default function DoctorLoginPage() {
     }
 
     setLoading(true)
-    setAuthError(''); setHandoff(null)
+    setAuthError(''); setHandoff(null); setAccountState(null)
     const action = captureAction()
     const current = () => action.isCurrent({ allowEndedSession: true })
 
@@ -279,7 +250,10 @@ export default function DoctorLoginPage() {
       cooldown.record(error)
       const wrongPortal = authenticatedPortalHandoff(error)
       setHandoff(wrongPortal)
-      setAuthError(wrongPortal ? '' : getFriendlyDoctorLoginError(error, t))
+      const { code, status } = apiErrorInfo(error)
+      if (code === 'EMAIL_VERIFICATION_PENDING') setAccountState('verify')
+      else if (code === 'CLINICIAN_APPROVAL_REQUIRED') setAccountState('review')
+      setAuthError(wrongPortal || code === 'CLINICIAN_APPROVAL_REQUIRED' || code === 'EMAIL_VERIFICATION_PENDING' ? '' : status === 401 ? t('errors.invalid') : errorMessage(error, 'signIn'))
     } finally {
       if (current()) setLoading(false)
     }
@@ -340,11 +314,22 @@ export default function DoctorLoginPage() {
             </div>
 
             {handoff && <WrongPortalNotice handoff={handoff}/>}
+            {verifiedNotice && !accountState && !authError && (
+              <div role="status" style={{ padding: '12px 16px', borderRadius: '11px', background: 'var(--success-soft)', marginBottom: '20px', fontSize: '14px', lineHeight: 1.45, color: 'var(--text)' }}>{t('verifiedNotice')}</div>
+            )}
+            {accountState && (
+              <div role="status" style={{ padding: '12px 16px', borderRadius: '11px', background: 'var(--primary-soft)', border: '1px solid var(--primary-border)', marginBottom: '20px', fontSize: '14px', lineHeight: 1.5, color: 'var(--text)', display: 'grid', gap: '8px' }}>
+                <span>{accountState === 'verify' ? t('stateVerify') : t('stateReview')}</span>
+                {accountState === 'verify' && (
+                  <Link href={`/auth/doctor-verify-email${identifier.includes('@') ? `?email=${encodeURIComponent(identifier.trim())}` : ''}`} style={{ color: 'var(--link)', fontWeight: 700 }}>{t('stateVerifyAction')}</Link>
+                )}
+              </div>
+            )}
             {/* Error banner */}
             {(cooldown.message || authError) && (
               <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={16} sw={1.75} color={T.red} />
-                <span style={{ fontSize: '13px', color: T.red, lineHeight: 1.4 }}>{cooldown.message || authError}</span>
+                <span style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.45 }}>{cooldown.message || authError}</span>
               </div>
             )}
 

@@ -1,9 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { ApiError } from '@/lib/api'
 
 /** A visible retry timer; the backend remains the authority for every attempt. */
 export function useLoginCooldown() {
+  const t = useTranslations('authErrors')
   const [until, setUntil] = useState(0)
   const [seconds, setSeconds] = useState(0)
   useEffect(() => {
@@ -24,7 +26,7 @@ export function useLoginCooldown() {
     setUntil(Date.now() + delay * 1000); setSeconds(delay)
   }
   const message = !until ? null : seconds > 0
-    ? `Too many failed sign-in attempts. Try again in ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}. Password recovery remains available.`
-    : 'The retry window has ended. You can try signing in again, or reset your password.'
+    ? t('loginCooldown', { time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` })
+    : t('loginCooldownOver')
   return { seconds, message, record }
 }

@@ -8,7 +8,9 @@ import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { ApiError, AuthTokenResponse, apiPost, getApiErrorDetail } from '@/lib/api'
+import { AuthTokenResponse, apiPost } from '@/lib/api'
+import { apiErrorInfo, useAuthErrorMessage } from '@/lib/auth-errors'
+import { useTranslations } from 'next-intl'
 import { usePortalAction } from '@/lib/portal-action'
 
 // Page background
@@ -27,38 +29,6 @@ const LEFT_BG = [
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
   T.brandNavy,
 ].join(', ')
-
-function getFriendlyVerificationError(error: unknown, method: 'email' | 'phone') {
-  const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
-  const deliveryTarget = method === 'email' ? 'email' : 'phone'
-
-  if (detail.includes('invalid verification code')) {
-    return 'The verification code you entered is incorrect. Please check the code and try again.'
-  }
-  if (detail.includes('expired')) {
-    return 'This verification code has expired. Please request a new code.'
-  }
-  if (detail.includes('already used')) {
-    return 'This verification code has already been used. Please request a new code.'
-  }
-  if (detail.includes('replaced')) {
-    return 'This code has been replaced. Please use the latest code or request a new one.'
-  }
-  if (detail.includes('no verification code found')) {
-    return `No active ${deliveryTarget} verification code was found. Please request a new code.`
-  }
-  if (detail.includes('not available for this account')) {
-    return `${method === 'email' ? 'Email' : 'Phone'} verification is not available for this account. Please contact support.`
-  }
-  if (error instanceof ApiError && error.status === 401) {
-    return 'Your secure login session has expired. Please sign in again.'
-  }
-  if (error instanceof ApiError && error.status === 429) {
-    return 'Too many attempts. Please wait a moment before trying again.'
-  }
-
-  return 'We could not verify the code right now. Please try again.'
-}
 
 // Field component
 interface FieldProps {
@@ -155,6 +125,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
 
 // Left panel component
 function LeftPanel() {
+  const t = useTranslations('auth.doctorTwoFactor')
   return (
     <div style={{
       width: '380px',
@@ -189,99 +160,92 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
         <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
-          Two-Factor Authentication
+          {t('panelTitle')}
         </h2>
         <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-          Verify your identity to complete the secure login process
+          {t('panelBody')}
         </p>
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['Email verification', 'Account security', 'Clinician review'].map(b => (
-            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
-          ))}
-        </div>
-      </div>
+      <div aria-hidden style={{ position: 'relative', zIndex: 1 }} />
     </div>
   )
 }
 
 // Main page
 export default function Doctor2FAPage() {
+  const t = useTranslations('auth.doctorTwoFactor')
+  const errorMessage = useAuthErrorMessage()
   const captureAction = usePortalAction()
   const router = useRouter()
   const verifyingRef = useRef(false)
-
-  const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
-
-  const [touched, setTouched] = useState({
-    code: false,
-  })
-
+  const [touched, setTouched] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [resending, setResending] = useState(false)
   const [authError, setAuthError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [sessionEnded, setSessionEnded] = useState(false)
+  const [sent, setSent] = useState(false)
+  // Seconds until another code may be requested (the API enforces the same cooldown).
+  const [cooldown, setCooldown] = useState(60)
 
-  // Load stored identifier on mount
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const storedIdentifier = sessionStorage.getItem('qarevo:doctor:identifier')
-      if (storedIdentifier?.includes('@')) {
-        setEmail(storedIdentifier)
-      }
-    }, 0)
+    if (cooldown <= 0) return
+    const timer = window.setTimeout(() => setCooldown(value => Math.max(0, value - 1)), 1000)
     return () => window.clearTimeout(timer)
-  }, [])
+  }, [cooldown])
 
-  const codeErr = touched.code && !code ? 'Verification code is required' : ''
+  const showError = (error: unknown) => {
+    const info = apiErrorInfo(error)
+    // The sign-in challenge ended (expired, used or replaced): only a new sign-in helps.
+    if (info.status === 401 || info.code === 'MFA_EMAIL_RESEND_FAILED') setSessionEnded(true)
+    if (info.code === 'CODE_RESEND_COOLDOWN' && info.retryAfter) setCooldown(info.retryAfter)
+    setAuthError(errorMessage(error, 'code'))
+  }
 
   const handleSendCode = async () => {
+    if (resending || cooldown > 0) return
     const action = captureAction()
-    setLoading(true)
+    setResending(true)
     setAuthError('')
-
+    setSent(false)
     try {
-      if (email) {
-        await apiPost('/api/v1/auth/mfa/resend-email', { email })
-      }
+      // The account comes from the sign-in challenge, so this also works for
+      // doctors who signed in with a phone number.
+      await apiPost('/api/v1/auth/mfa/resend-email', {})
       if (!action.isCurrent()) return
-      setSuccess(true)
+      setSent(true)
+      setCode('')
+      setCooldown(60)
     } catch (error) {
-      if (!action.isCurrent()) return
-      setAuthError(getFriendlyVerificationError(error, 'email'))
+      if (action.isCurrent()) showError(error)
     } finally {
-      if (action.isCurrent()) setLoading(false)
+      if (action.isCurrent()) setResending(false)
     }
   }
 
   const handleVerify = async () => {
     if (verifyingRef.current || loading) return
-    setTouched({ code: true })
-
-    if (!code || code.length !== 6) {
-      setAuthError('Please enter the 6-digit verification code')
+    setTouched(true)
+    if (code.length !== 6) {
+      setAuthError(t('codeRequired'))
       return
     }
-
     setLoading(true)
     setAuthError('')
     verifyingRef.current = true
     const action = captureAction()
     let response: AuthTokenResponse | undefined
     const current = () => action.isCurrent({ completedSession: response?.browser_session })
-
     try {
-      response = await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-email', { email: email || undefined, code })
+      response = await apiPost<AuthTokenResponse>('/api/v1/auth/mfa/verify-email', { code })
       if (!current()) return
       sessionStorage.removeItem('qarevo:doctor:identifier')
-
-      // Redirect to doctor dashboard
       router.push(safePortalDestination(new URLSearchParams(window.location.search).get('next'), 'PROVIDER') || '/doctor/dashboard')
     } catch (error) {
       if (!current()) return
-      setAuthError(getFriendlyVerificationError(error, 'email'))
+      showError(error)
+      setCode('')
     } finally {
       verifyingRef.current = false
       if (current()) setLoading(false)
@@ -293,165 +257,73 @@ export default function Doctor2FAPage() {
     router.push('/auth/doctor/login')
   }
 
+  const codeError = touched && code.length !== 6 && !authError ? t('codeRequired') : ''
+
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } @media (max-width: 860px) { .doctor-2fa-left { display: none !important; } }`}</style>
-
-      {/* Left panel */}
-      <div className="doctor-2fa-left">
-        <LeftPanel />
-      </div>
-
-      {/* Right panel - 2FA form */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
+      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } @media (max-width: 860px) { .doctor-2fa-left { display: none !important; } } .doctor-2fa-card { padding: clamp(22px, 6vw, 40px); }`}</style>
+      <div className="doctor-2fa-left"><LeftPanel /></div>
+      <main style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 6vw, 48px) 16px', minHeight: '100vh' }}>
         <div style={{ width: '100%', maxWidth: '460px' }}>
-          {/* Back link */}
-          <button
-            onClick={handleBack}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
+          <button type="button" onClick={handleBack}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '20px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back to Login
+            {t('back')}
           </button>
-
-          {/* Form card */}
-          <div style={{
-            background: "var(--surface-glass)",
-            backdropFilter: 'blur(28px) saturate(200%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(200%)',
-            borderRadius: '22px',
-            border: "1px solid var(--border)",
-            boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
-            padding: '40px 40px 36px',
-          }}>
-            {/* Header */}
-            <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <div>
-                <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
-                  Verify Your Identity
-                </h1>
-                <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                  Enter the 6-digit code sent to your email.
-                </p>
+          <div className="doctor-2fa-card" style={{ background: 'var(--surface-glass)', borderRadius: '22px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-float, 0 24px 64px rgba(4,53,77,0.1))' }}>
+            <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+              <div style={{ minWidth: 0 }}>
+                <h1 style={{ fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>{t('title')}</h1>
+                <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0 }}>{t('subtitle')}</p>
               </div>
-              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div aria-hidden style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.shield} size={20} sw={1.25} color="#fff" />
               </div>
             </div>
 
-            {/* Error banner */}
             {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
-                <Ico p={ICONS.info} size={16} sw={1.75} color={T.red} />
-                <span style={{ fontSize: '13px', color: '#991B1B', lineHeight: 1.4 }}>{authError}</span>
+              <div role="alert" style={{ padding: '12px 16px', borderRadius: '11px', background: 'var(--danger-soft)', border: '1px solid var(--danger-border, rgba(220,38,38,0.25))', display: 'grid', gap: '10px', marginBottom: '20px', color: 'var(--danger-text, var(--text))', fontSize: '14px', lineHeight: 1.45 }}>
+                <span>{authError}</span>
+                {sessionEnded && (
+                  <button type="button" onClick={handleBack} style={{ justifySelf: 'start', minHeight: 40, padding: '0 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface)', color: T.navy, fontWeight: 700, cursor: 'pointer' }}>{t('signInAgain')}</button>
+                )}
               </div>
             )}
-
-            {/* Success banner */}
-            {success && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--success-soft)", border: '1px solid rgba(9,173,112,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
-                <Ico p={ICONS.check} size={16} sw={2.5} color={T.green} />
-                <span style={{ fontSize: '13px', color: '#166534', lineHeight: 1.4 }}>Verification code sent successfully</span>
-              </div>
+            {sent && !authError && (
+              <div role="status" style={{ padding: '12px 16px', borderRadius: '11px', background: 'var(--success-soft)', border: '1px solid var(--success-border, rgba(9,173,112,0.25))', marginBottom: '20px', fontSize: '14px', color: 'var(--text)', lineHeight: 1.45 }}>{t('sent')}</div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '10px 12px', borderRadius: '11px', border: '1.5px solid rgba(32,181,223,0.18)', background: 'rgba(32,181,223,0.07)', color: T.link, fontSize: '13px', fontWeight: 700 }}>
-              <Ico p={ICONS.ema} size={14} sw={1.75} />
-              Email verification
-            </div>
-
-            {/* Form */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {email && (
-                <Field
-                  label="Email Address"
-                  placeholder="doctor@example.com"
-                  type="email"
-                  value={email}
-                  onChange={setEmail}
-                  icon={ICONS.ema}
-                />
-              )}
-
+            <form onSubmit={event => { event.preventDefault(); void handleVerify() }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} noValidate>
               <Field
-                label="Verification Code"
-                placeholder="Enter 6-digit code"
+                label={t('codeLabel')}
+                placeholder={t('codePlaceholder')}
                 type="text"
                 value={code}
-                onChange={(value) => {
-                  setCode(value.replace(/\D/g, '').slice(0, 6))
-                  setAuthError('')
-                }}
+                onChange={(value) => { setCode(value.replace(/\D/g, '').slice(0, 6)); setAuthError('') }}
                 icon={ICONS.shield}
-                error={codeErr}
+                error={codeError}
                 maxLength={6}
               />
-
-              {/* Resend link */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  onClick={handleSendCode}
-                  disabled={loading || !email}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    fontSize: '13px',
-                    color: T.link,
-                    fontWeight: 600,
-                    cursor: loading || !email ? 'not-allowed' : 'pointer',
-                    opacity: email ? 1 : 0.55,
-                    textDecoration: 'none',
-                  }}
-                >
-                  {email ? 'Resend Code' : 'Check your email'}
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                <button type="button" onClick={handleSendCode} disabled={resending || cooldown > 0 || sessionEnded} aria-live="polite"
+                  style={{ background: 'none', border: 'none', padding: 0, minHeight: 44, fontSize: '14px', color: cooldown > 0 || sessionEnded ? T.slate2 : T.link, fontWeight: 600, cursor: resending || cooldown > 0 ? 'not-allowed' : 'pointer' }}>
+                  {cooldown > 0 ? t('resendIn', { seconds: cooldown }) : t('resend')}
                 </button>
-                <span style={{ fontSize: "13px", color: T.slate2 }}>
-                  Code expires in 10 minutes
-                </span>
+                <span style={{ fontSize: '13px', color: T.slate2 }}>{t('expiry')}</span>
               </div>
-
-              {/* Verify button */}
-              <button
-                type="button"
-                onClick={handleVerify}
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  borderRadius: '13px',
-                  border: 'none',
-                  background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,var(--primary-end) 100%)`,
-                  color: '#fff',
-                  fontFamily: 'inherit',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.15s ease',
-                  boxShadow: loading ? 'none' : '0 3px 10px rgba(32,181,223,0.32), 0 1px 3px rgba(32,181,223,0.2)',
-                }}
-              >
-                {loading ? 'Verifying...' : 'Verify & Sign In'}
+              <button type="submit" disabled={loading || sessionEnded}
+                style={{ width: '100%', minHeight: 48, padding: '14px 20px', borderRadius: '13px', border: 'none', background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,var(--primary-end) 100%)`, color: '#fff', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                {loading ? t('verifying') : t('verify')}
                 {!loading && <Ico p={ICONS.check} size={15} sw={2.2} />}
               </button>
-            </div>
-
-            {/* Help link */}
-            <p style={{ textAlign: 'center', fontSize: '13px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
-              Didn&apos;t receive the code?{' '}
-              <Link href="/support" style={{ color: T.link, fontWeight: 600, textDecoration: 'none' }}>
-                Contact Support
-              </Link>
+            </form>
+            <p style={{ textAlign: 'center', fontSize: '13px', color: T.slate2, margin: '20px 0 0', lineHeight: 1.5 }}>
+              {t('noCode')}{' '}
+              <Link href="/support" style={{ color: T.link, fontWeight: 600 }}>{t('contactSupport')}</Link>.
             </p>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
