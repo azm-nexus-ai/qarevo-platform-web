@@ -30,12 +30,12 @@ export default function PracticeLayout({ children }: { children: ReactNode }) {
   }
   const avatar = (size: number) => <ProfileAvatar name={name} kind='practice' size={size} />
   return <div className='practice-portal-shell portal-shell' style={{ minHeight: '100vh', background: PAGE_BG }}>
-    <PortalMobileNavigation portal='practice' className='practice-mobile-navigation' homeHref={PRACTICE_ROUTES.dashboard} homeLabel='Qarevo Health practice dashboard'
+    <PortalMobileNavigation portal='practice' className='practice-mobile-navigation' homeHref={PRACTICE_ROUTES.dashboard} homeLabel={t('practiceHome')}
       groups={PRACTICE_NAV_GROUPS} isActive={isPracticeNavActive} navLabel={t('practiceNavigation')} summaryLabel={name}
       identity={{ name, description: t('practiceSubtitle'), avatar: avatar(40) }} onLogout={() => setConfirming(true)} loggingOut={ending} />
-    <header className='portal-desktop-navbar portal-header' aria-label='Practice main navigation'>
+    <header className='portal-desktop-navbar portal-header' aria-label={t('practiceMainNavigation')}>
       <div className='portal-navbar-row'>
-        <RoleHomeLink aria-label='Qarevo Health practice dashboard' className='portal-navbar-brand'><AuthenticatedLogo width={156} /></RoleHomeLink>
+        <RoleHomeLink aria-label={t('practiceHome')} className='portal-navbar-brand'><AuthenticatedLogo width={156} /></RoleHomeLink>
         <SidebarToggle role='practice' />
         <div className='portal-navbar-title'>
           <h2 className='portal-header-title'>{name}</h2>

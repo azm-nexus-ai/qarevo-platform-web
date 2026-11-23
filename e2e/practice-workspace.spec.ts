@@ -173,3 +173,27 @@ test('an open administrative decision cannot silently adopt a newer practice ver
   await page.getByRole('button', { name: 'Record administrative review', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Record administrative review', exact: true }).locator('..').getByRole('checkbox')).not.toBeChecked()
 })
+
+test.describe('in German', () => {
+  test.use({ storageState: { cookies: [{ name: 'qarevo_locale', value: 'de', domain: 'localhost', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }], origins: [] } })
+
+  test('the practice workspace, security and registration pages read in German', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: 'qarevo_locale', value: 'de', url: baseURL! }])
+    await prepare(context, page, { practiceSession: true })
+    await page.goto('/practice/dashboard')
+    await expect(page.getByRole('heading', { name: 'Praxisbereich', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Praxisteam', exact: true })).toBeVisible()
+    await expect(page.getByText('Ärztin/Arzt · aktiv')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Einladungen für Ärztinnen und Ärzte' })).toBeVisible()
+    await expect(page.getByText('Nur Verwaltungsbereich.', { exact: false }).first()).toBeVisible()
+    await page.goto('/practice/settings')
+    await expect(page.getByRole('heading', { name: 'Sicherheit im Praxisbereich' })).toBeVisible()
+    await page.getByRole('button', { name: 'Kontopasswort ändern' }).click()
+    await expect(page.getByText('Geben Sie Ihr aktuelles Kontopasswort ein.').first()).toBeVisible()
+    await expect(page.getByText('Aktueller Browser')).toBeVisible()
+    await page.goto('/auth/practice/register')
+    await expect(page.getByRole('heading', { name: 'Praxis registrieren' })).toBeVisible()
+    await expect(page.getByLabel('Geschäftliche E-Mail (Pflichtfeld)')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Arztportal' })).toHaveAttribute('href', '/auth/doctor-register')
+  })
+})

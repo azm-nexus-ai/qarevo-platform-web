@@ -41,14 +41,21 @@ export function practicePage<T extends { id: string }>(value: unknown, key: stri
   return { rows, total: value.total, limit: value.limit, offset: value.offset, hasNext: value.has_next, hasPrevious: value.has_previous, canManage: value.can_manage }
 }
 export function practiceFields(value?: Practice) { return { name: value?.name ?? '', contact_email: value?.contact_email ?? '', phone: value?.phone ?? '', address_line1: value?.address_line1 ?? '', address_line2: value?.address_line2 ?? '', city: value?.city ?? '', postcode: value?.postcode ?? '', country: value?.country ?? 'DE' } }
-export function validatePracticeFields(fields: ReturnType<typeof practiceFields>) {
+/** Validation and delivery text; English is the default so non-React callers stay readable. Portals pass translations. */
+export const PRACTICE_FIELD_TEXT = {
+  nameError: 'Enter a practice name using 2–160 characters.', emailError: 'Enter a valid contact email address.',
+  phoneError: 'Use international format, for example +493012345678.', countryError: 'Use a two-letter country code, for example DE.',
+  postcodeError: 'A German postcode must contain exactly five digits.', tooLong: (maximum: number) => `Use at most ${maximum} characters.`,
+}
+export type PracticeFieldText = typeof PRACTICE_FIELD_TEXT
+export function validatePracticeFields(fields: ReturnType<typeof practiceFields>, text: PracticeFieldText = PRACTICE_FIELD_TEXT) {
   const errors: Record<string, string> = {}
-  if (fields.name.trim().length < 2 || fields.name.trim().length > 160) errors.name = 'Enter a practice name using 2–160 characters.'
-  if (fields.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.contact_email)) errors.contact_email = 'Enter a valid contact email address.'
-  if (fields.phone && !/^\+[1-9]\d{7,14}$/.test(fields.phone)) errors.phone = 'Use international format, for example +493012345678.'
-  if (!/^[A-Za-z]{2}$/.test(fields.country)) errors.country = 'Use a two-letter country code, for example DE.'
-  if (fields.postcode && fields.country.toUpperCase() === 'DE' && !/^\d{5}$/.test(fields.postcode)) errors.postcode = 'A German postcode must contain exactly five digits.'
-  for (const [key, maximum] of [['address_line1', 255], ['address_line2', 255], ['city', 100], ['postcode', 20], ['contact_email', 255]] as const) if (fields[key].length > maximum) errors[key] = `Use at most ${maximum} characters.`
+  if (fields.name.trim().length < 2 || fields.name.trim().length > 160) errors.name = text.nameError
+  if (fields.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.contact_email)) errors.contact_email = text.emailError
+  if (fields.phone && !/^\+[1-9]\d{7,14}$/.test(fields.phone)) errors.phone = text.phoneError
+  if (!/^[A-Za-z]{2}$/.test(fields.country)) errors.country = text.countryError
+  if (fields.postcode && fields.country.toUpperCase() === 'DE' && !/^\d{5}$/.test(fields.postcode)) errors.postcode = text.postcodeError
+  for (const [key, maximum] of [['address_line1', 255], ['address_line2', 255], ['city', 100], ['postcode', 20], ['contact_email', 255]] as const) if (fields[key].length > maximum) errors[key] = text.tooLong(maximum)
   return errors
 }
 export const practiceVersion = (version: number) => { if (!recordVersion(version)) throw new Error('Reload the current record before saving.'); return { 'If-Match': `"${version}"` } }
@@ -57,7 +64,13 @@ export function invitationInspection(value: unknown) {
   if (!object(value) || !text(value.practice_name, 160) || !['OWNER', 'CLINICIAN'].includes(String(value.role)) || !text(value.email_hint, 255) || typeof value.existing_account !== 'boolean' || !text(value.expires_at, 50) || !Number.isFinite(Date.parse(value.expires_at))) return null
   return value as { practice_name: string; role: 'OWNER' | 'CLINICIAN'; email_hint: string; existing_account: boolean; expires_at: string }
 }
-export function deliveryMessage(value: unknown): string {
-  if (!object(value) || !object(value.delivery) || !['accepted', 'unconfirmed', 'not_configured'].includes(String(value.delivery.status))) return 'The invitation is saved. Review its delivery state before resending.'
-  return value.delivery.status === 'accepted' ? 'The email provider accepted the invitation. Inbox delivery is not confirmed.' : value.delivery.status === 'not_configured' ? 'The invitation is saved, but invitation email is not configured. Contact the platform operator before resending.' : 'The invitation is saved; email delivery could not be confirmed. Review the saved invitation before resending.'
+export const DELIVERY_TEXT = {
+  invalid: 'The invitation is saved. Review its delivery state before resending.',
+  accepted: 'The email provider accepted the invitation. Inbox delivery is not confirmed.',
+  notConfigured: 'The invitation is saved, but invitation email is not configured. Contact the platform operator before resending.',
+  unconfirmed: 'The invitation is saved; email delivery could not be confirmed. Review the saved invitation before resending.',
+}
+export function deliveryMessage(value: unknown, text: typeof DELIVERY_TEXT = DELIVERY_TEXT): string {
+  if (!object(value) || !object(value.delivery) || !['accepted', 'unconfirmed', 'not_configured'].includes(String(value.delivery.status))) return text.invalid
+  return value.delivery.status === 'accepted' ? text.accepted : value.delivery.status === 'not_configured' ? text.notConfigured : text.unconfirmed
 }

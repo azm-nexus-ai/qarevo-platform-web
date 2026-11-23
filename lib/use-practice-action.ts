@@ -1,11 +1,12 @@
 'use client'
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { usePortalAction } from './portal-action'
 import { getApiErrorDetail, getApiErrorRequestId } from './api'
 
 /** Every action belongs to the mounted portal/account/route and selected practice/version. */
 export function usePracticeAction(context: string) {
-  const capture = usePortalAction(), latest = useRef(context), pending = useRef<AbortController | null>(null)
+  const t = useTranslations('practiceWs.shared'), capture = usePortalAction(), latest = useRef(context), pending = useRef<AbortController | null>(null)
   const [state, setState] = useState({ context, busy: false, error: '', reference: null as string | null, message: '' })
   useLayoutEffect(() => { latest.current = context; return () => { pending.current?.abort(); pending.current = null } }, [context])
   const run = useCallback(async (operation: (signal: AbortSignal) => Promise<unknown>, confirm: (result: unknown) => string, settled?: () => void, completedSession = false) => {
@@ -22,9 +23,9 @@ export function usePracticeAction(context: string) {
       setState({ context, busy: false, error: '', reference: null, message }); settled?.()
     } catch (error) {
       if (!current()) return
-      setState({ context, busy: false, error: getApiErrorDetail(error) || (error instanceof Error ? error.message : '') || 'This change could not be confirmed. Refresh and review the saved record before retrying.', reference: getApiErrorRequestId(error), message: '' }); settled?.()
+      setState({ context, busy: false, error: getApiErrorDetail(error) || (error instanceof Error ? error.message : '') || t('actionUnconfirmed'), reference: getApiErrorRequestId(error), message: '' }); settled?.()
     } finally { if (pending.current === controller) pending.current = null }
-  }, [capture, context])
+  }, [capture, context, t])
   const matched = state.context === context
   return { ...state, busy: matched && state.busy, error: matched ? state.error : '', reference: matched ? state.reference : null, message: matched ? state.message : '', run }
 }
