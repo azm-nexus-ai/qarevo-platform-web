@@ -162,7 +162,8 @@ export function NotificationInbox() {
       <div className={styles.pageToolbar}>
         <div className={styles.filters} role='group' aria-label={t('filterLabel')}>
           <button type='button' className={styles.filter} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>{t('filterAll')}</button>
-          <button type='button' className={styles.filter} aria-pressed={filter === 'unread'} onClick={() => setFilter('unread')}>{t('filterUnread', { count: unread.count })}</button>
+          {/* A count is shown only once it has loaded; a failed load never claims "Unread (0)". */}
+          <button type='button' className={styles.filter} aria-pressed={filter === 'unread'} onClick={() => setFilter('unread')}>{unread.ready ? t('filterUnread', { count: unread.count }) : t('filterUnreadPlain')}</button>
         </div>
         <button type='button' className={styles.textButton} disabled={!unread.count}
           onClick={() => { list.setItems(items => items?.map(item => ({ ...item, is_read: true })) ?? items); void markAllNotificationsRead().catch(() => undefined) }}>
