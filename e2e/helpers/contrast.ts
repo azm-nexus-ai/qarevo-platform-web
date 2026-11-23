@@ -3,6 +3,11 @@ import { expect, type Locator } from '@playwright/test'
 /** WCAG text contrast against the composited surface of an enabled control. */
 export async function expectEnabledControlContrast(control: Locator, minimum = 4.5) {
   await expect(control).toBeEnabled()
+  // Measure settled colours: a theme switch transitions colours on the control and
+  // its ancestors, and a mid-transition sample is not what users read.
+  await control.evaluate(() => Promise.all(document.getAnimations()
+    .filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity)
+    .map(animation => animation.finished.catch(() => undefined))))
   const ratio = await control.evaluate(element => {
     const color = (css: string): number[] => {
       const channels = css.match(/[\d.]+/g)?.map(Number)
