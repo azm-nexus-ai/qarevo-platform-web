@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import type { FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -86,45 +86,46 @@ function createMedicationEntry(): MedicationEntry {
   return { id: makeId(), medicationName: '', dosage: '', frequency: '', purpose: '' }
 }
 
-function validateForm(form: HealthProfileForm): HealthProfileErrors {
+/** `text` returns the active language's message for a validation key. */
+function validateForm(form: HealthProfileForm, text: (key: string) => string): HealthProfileErrors {
   const nextErrors: HealthProfileErrors = {}
 
   if (form.medicalHistory.length === 0) {
-    nextErrors.medicalHistory = 'Select at least one medical history option.'
+    nextErrors.medicalHistory = text('errMedicalHistory')
   }
 
   if (form.medicalHistory.includes('Other') && form.medicalHistoryOther.trim().length < 4) {
-    nextErrors.medicalHistoryOther = 'Describe the other condition using at least 4 characters.'
+    nextErrors.medicalHistoryOther = text('errMedicalHistoryOther')
   }
 
   if (!form.surgeriesStatus) {
-    nextErrors.surgeries = 'Tell us whether you have had previous surgeries.'
+    nextErrors.surgeries = text('errSurgeriesStatus')
   } else if (form.surgeriesStatus === 'yes') {
     if (form.surgeries.length === 0) {
-      nextErrors.surgeries = 'Add at least one surgery entry.'
+      nextErrors.surgeries = text('errSurgeriesEmpty')
     } else if (form.surgeries.some((entry) => !entry.procedureName.trim() || !entry.hospital.trim() || !entry.year.trim())) {
-      nextErrors.surgeries = 'Complete each surgery entry.'
+      nextErrors.surgeries = text('errSurgeriesIncomplete')
     }
   }
 
   if (form.allergies.length === 0) {
-    nextErrors.allergies = 'Select at least one allergy option.'
+    nextErrors.allergies = text('errAllergies')
   } else if (form.allergies.includes('Other') && (form.allergyDetails.Other?.trim().length || 0) < 4) {
-    nextErrors.allergies = 'Describe the other allergy using at least 4 characters.'
+    nextErrors.allergies = text('errAllergyOther')
   }
 
   if (!form.currentMedicationsMode) {
-    nextErrors.medications = 'Tell us whether you are currently taking any medication.'
+    nextErrors.medications = text('errMedicationsMode')
   } else if (form.currentMedicationsMode === 'taking') {
     if (form.medications.length === 0) {
-      nextErrors.medications = 'Add at least one medication.'
+      nextErrors.medications = text('errMedicationsEmpty')
     } else if (form.medications.some((entry) => !entry.medicationName.trim() || !entry.dosage.trim() || !entry.frequency.trim())) {
-      nextErrors.medications = 'Complete each medication card.'
+      nextErrors.medications = text('errMedicationsIncomplete')
     }
   }
 
   if (form.familyHistory.length === 0) {
-    nextErrors.familyHistory = 'Select at least one family history option.'
+    nextErrors.familyHistory = text('errFamilyHistory')
   }
 
   return nextErrors
@@ -243,9 +244,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.brain, label: 'AI-Assisted Insights', sub: 'Smarter recommendations from your health profile' },
-          { icon: ICONS.steth, label: 'Safer Clinical Review', sub: 'Medical history supports better decision-making' },
-          { icon: ICONS.shield, label: 'Private by Design', sub: 'Protected health information across your journey' },
+          { icon: ICONS.brain, label: t('panelInsights'), sub: t('panelInsightsSub') },
+          { icon: ICONS.steth, label: t('panelReview'), sub: t('panelReviewSub') },
+          { icon: ICONS.shield, label: t('panelPrivate'), sub: t('panelPrivateSub') },
         ].map(({ icon, label, sub }) => (
           <div key={label} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', padding: '13px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
@@ -304,7 +305,7 @@ function Field({ label, placeholder, value, onChange, error, success, type = 'te
         {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>{t('optional')}</span> : <span>{t('required')}</span>}
       </label>
       <input id={id} type={type} value={value} placeholder={placeholder} autoComplete={autoComplete} onChange={(event) => onChange(event.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={{ width: '100%', minHeight: '44px', padding: '11px 12px', borderRadius: '11px', border: `1.5px solid ${border}`, background, color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', transition: 'all 0.15s ease' }} />
-      {(error || success) && <p style={{ margin: 0, fontSize: "13px", color: error ? T.red : T.green, lineHeight: 1.45 }}>{error || 'Looks good.'}</p>}
+      {(error || success) && <p style={{ margin: 0, fontSize: "13px", color: error ? T.red : T.green, lineHeight: 1.45 }}>{error || t('looksGood')}</p>}
     </div>
   )
 }
@@ -379,7 +380,7 @@ function MedicationCard({ entry, onChange, onRemove, canRemove }: { entry: Medic
           <label style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em', display: 'block', marginBottom: '6px' }}>{t('frequency')}</label>
           <select value={entry.frequency} onChange={(event) => onChange({ ...entry, frequency: event.target.value })} style={{ width: '100%', minHeight: '44px', padding: '11px 12px', borderRadius: '11px', border: `1.5px solid ${entry.frequency ? 'rgba(9,173,112,0.5)' : "var(--border)"}`, background: entry.frequency ? "var(--success-soft)" : "var(--surface-glass)", color: entry.frequency ? T.navy : T.slate2, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}>
             <option value=''>{t('selectFrequency')}</option>
-            {FREQUENCY_OPTIONS.map((frequency) => <option key={frequency} value={frequency}>{frequency}</option>)}
+            {FREQUENCY_OPTIONS.map((frequency) => <option key={frequency} value={frequency}>{t('opt' + frequency.replace(/[^A-Za-z]/g, ''))}</option>)}
           </select>
         </div>
       </div>
@@ -397,12 +398,14 @@ function MedicationCard({ entry, onChange, onRemove, canRemove }: { entry: Medic
 
 export default function MedicalHistoryAllergiesPage() {
   const t = useTranslations('onboarding.medical')
+  // Stored values stay in English for the API; only the visible label is translated.
+  const optionLabel = (option: string) => t('opt' + option.replace(/[^A-Za-z]/g, ''))
   const router = useRouter()
   const [draftStorage] = useState(createAccountDraftStorage)
   const [draftReady, setDraftReady] = useState(false)
   const [form, setForm] = useState<HealthProfileForm>(INITIAL_FORM)
   const [savedTick, setSavedTick] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
+  const [saveMessage, setSaveMessage] = useState(t('draftAutosaves'))
   const [submitting, setSubmitting] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -421,8 +424,8 @@ export default function MedicalHistoryAllergiesPage() {
       familyHistory: saved.family_history,
     } : {}
   }, data => setForm({ ...INITIAL_FORM, ...data }),
-  error => setSubmitError(getApiErrorDetail(error) || 'Could not load your saved health history. Reload to try again.'),
-  () => setDraftReady(true)), [draftStorage])
+  error => setSubmitError(getApiErrorDetail(error) || t('loadFailed')),
+  () => setDraftReady(true)), [draftStorage, t])
 
   useEffect(() => {
     if (!draftReady) return
@@ -430,22 +433,22 @@ export default function MedicalHistoryAllergiesPage() {
       try {
         draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
         setSavedTick(true)
-        setSaveMessage('Draft saved in this tab')
+        setSaveMessage(t('draftSaved'))
         window.setTimeout(() => {
           setSavedTick(false)
-          setSaveMessage('Draft autosaves in this tab')
+          setSaveMessage(t('draftAutosaves'))
         }, 1400)
       } catch {
-        setSaveMessage('Could not autosave right now')
+        setSaveMessage(t('autosaveFailed'))
       }
     }, 320)
 
     return () => window.clearTimeout(timer)
-  }, [form, draftStorage, draftReady])
+  }, [form, draftStorage, draftReady, t])
 
   useEffect(() => {
-    setErrors(validateForm(form))
-  }, [form])
+    setErrors(validateForm(form, key => t(key)))
+  }, [form, t])
 
   const canContinue = draftReady && !submitting
   const progress = 67
@@ -505,7 +508,7 @@ export default function MedicalHistoryAllergiesPage() {
     event.preventDefault()
     setSubmitted(true)
     setSubmitError('')
-    const nextErrors = validateForm(form)
+    const nextErrors = validateForm(form, key => t(key))
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) { focusValidation(event.currentTarget); return }
 
@@ -526,7 +529,7 @@ export default function MedicalHistoryAllergiesPage() {
       setOnboardingStage('insurance-consent')
       router.push(NEXT_ROUTE)
     } catch (error) {
-      setSubmitError(getApiErrorDetail(error) || 'We could not save your health profile. Please try again.')
+      setSubmitError(getApiErrorDetail(error) || t('saveFailed'))
       setSubmitting(false)
     }
   }
@@ -590,10 +593,10 @@ export default function MedicalHistoryAllergiesPage() {
             ) : null}
 
             <div style={{ marginBottom: '18px' }}>
-              <SectionHeader title={t('medicalHistory')} body='Select the conditions that best describe your health background. You can choose more than one.' />
+              <SectionHeader title={t('medicalHistory')} body={t('historyIntro')} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
                 {MEDICAL_HISTORY_OPTIONS.map((option) => (
-                  <ChipButton key={option} label={option} active={form.medicalHistory.includes(option)} onClick={() => toggleSelection('medicalHistory', option)} tone={option === 'None' ? 'warning' : 'default'} />
+                  <ChipButton key={option} label={optionLabel(option)} active={form.medicalHistory.includes(option)} onClick={() => toggleSelection('medicalHistory', option)} tone={option === 'None' ? 'warning' : 'default'} />
                 ))}
               </div>
               {form.medicalHistory.includes('Other') ? (
@@ -604,7 +607,7 @@ export default function MedicalHistoryAllergiesPage() {
             </div>
 
             <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
-              <SectionStatus title={t('pastSurgeries')} description={t('haveYouHadAnyPrevious')} status={form.surgeriesStatus === 'yes' ? 'Details provided' : form.surgeriesStatus === 'no' ? 'No previous surgeries' : 'Please choose one option'} error={submitted && !!errors.surgeries} />
+              <SectionStatus title={t('pastSurgeries')} description={t('haveYouHadAnyPrevious')} status={form.surgeriesStatus === 'yes' ? t('statusDetails') : form.surgeriesStatus === 'no' ? t('statusNoSurgeries') : t('statusChoose')} error={submitted && !!errors.surgeries} />
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <ChipButton label={t('no')} active={form.surgeriesStatus === 'no'} onClick={() => setForm((previous) => ({ ...previous, surgeriesStatus: 'no', surgeries: [] }))} />
                 <ChipButton label={t('yes')} active={form.surgeriesStatus === 'yes'} onClick={() => setForm((previous) => ({ ...previous, surgeriesStatus: 'yes', surgeries: previous.surgeries.length ? previous.surgeries : [createSurgeryEntry()] }))} />
@@ -621,16 +624,16 @@ export default function MedicalHistoryAllergiesPage() {
             </div>
 
             <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
-              <SectionStatus title={t('allergies')} description={t('tellUsAboutAnyAllergies')} status={form.allergies.includes('No Known Allergies') ? 'No known allergies selected' : 'Allergy details provided'} error={submitted && !!errors.allergies} />
+              <SectionStatus title={t('allergies')} description={t('tellUsAboutAnyAllergies')} status={form.allergies.includes('No Known Allergies') ? t('statusNoAllergies') : t('statusAllergies')} error={submitted && !!errors.allergies} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                 {ALLERGY_OPTIONS.map((option) => (
-                  <ChipButton key={option} label={option} active={form.allergies.includes(option)} onClick={() => toggleSelection('allergies', option)} tone={option === 'No Known Allergies' ? 'warning' : 'default'} />
+                  <ChipButton key={option} label={optionLabel(option)} active={form.allergies.includes(option)} onClick={() => toggleSelection('allergies', option)} tone={option === 'No Known Allergies' ? 'warning' : 'default'} />
                 ))}
               </div>
               {form.allergies.filter((item) => item !== 'No Known Allergies').length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   {form.allergies.filter((item) => item !== 'No Known Allergies').map((allergy) => (
-                    <TextAreaField key={allergy} label={`${allergy} details`} placeholder={t('describeTheReactionSeverityOr')} value={form.allergyDetails[allergy] || ''} onChange={(value) => setForm((previous) => ({ ...previous, allergyDetails: { ...previous.allergyDetails, [allergy]: value } }))} optional={allergy !== 'Other'} error={submitted && allergy === 'Other' && !form.allergyDetails.Other?.trim() ? 'Please share the details for the other allergy.' : undefined} />
+                    <TextAreaField key={allergy} label={t('allergyDetails', { allergy: optionLabel(allergy) })} placeholder={t('describeTheReactionSeverityOr')} value={form.allergyDetails[allergy] || ''} onChange={(value) => setForm((previous) => ({ ...previous, allergyDetails: { ...previous.allergyDetails, [allergy]: value } }))} optional={allergy !== 'Other'} error={submitted && allergy === 'Other' && !form.allergyDetails.Other?.trim() ? t('allergyOtherError') : undefined} />
                   ))}
                 </div>
               ) : null}
@@ -638,9 +641,9 @@ export default function MedicalHistoryAllergiesPage() {
             </div>
 
             <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
-              <SectionStatus title={t('currentMedications')} description={t('addTheMedicinesYouAre')} status={form.currentMedicationsMode === 'taking' ? 'Medication list in progress' : form.currentMedicationsMode === 'none' ? 'No current medication selected' : 'Please choose one option'} error={submitted && !!errors.medications} />
+              <SectionStatus title={t('currentMedications')} description={t('addTheMedicinesYouAre')} status={form.currentMedicationsMode === 'taking' ? t('statusMedications') : form.currentMedicationsMode === 'none' ? t('statusNoMedication') : t('statusChoose')} error={submitted && !!errors.medications} />
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <ChipButton label="I'm Not Taking Any Medication" active={form.currentMedicationsMode === 'none'} onClick={() => setForm((previous) => ({ ...previous, currentMedicationsMode: 'none', medications: [] }))} tone='warning' />
+                <ChipButton label={t('notTakingMedication')} active={form.currentMedicationsMode === 'none'} onClick={() => setForm((previous) => ({ ...previous, currentMedicationsMode: 'none', medications: [] }))} tone='warning' />
                 <ChipButton label={t('iAmTakingMedication')} active={form.currentMedicationsMode === 'taking'} onClick={() => setForm((previous) => ({ ...previous, currentMedicationsMode: 'taking', medications: previous.medications.length ? previous.medications : [createMedicationEntry()] }))} />
               </div>
               {form.currentMedicationsMode === 'taking' ? (
@@ -655,10 +658,10 @@ export default function MedicalHistoryAllergiesPage() {
             </div>
 
             <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
-              <SectionStatus title={t('familyMedicalHistory')} description={t('chooseConditionsThatRunIn')} status={form.familyHistory.includes('None Known') ? 'No known family history selected' : 'Family history captured'} error={submitted && !!errors.familyHistory} />
+              <SectionStatus title={t('familyMedicalHistory')} description={t('chooseConditionsThatRunIn')} status={form.familyHistory.includes('None Known') ? t('statusNoFamily') : t('statusFamily')} error={submitted && !!errors.familyHistory} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {FAMILY_HISTORY_OPTIONS.map((option) => (
-                  <ChipButton key={option} label={option} active={form.familyHistory.includes(option)} onClick={() => toggleSelection('familyHistory', option)} tone={option === 'None Known' ? 'warning' : 'default'} />
+                  <ChipButton key={option} label={optionLabel(option)} active={form.familyHistory.includes(option)} onClick={() => toggleSelection('familyHistory', option)} tone={option === 'None Known' ? 'warning' : 'default'} />
                 ))}
               </div>
               {submitted && errors.familyHistory ? <p style={{ margin: '10px 0 0', fontSize: "13px", color: T.red }}>{errors.familyHistory}</p> : null}
@@ -676,7 +679,7 @@ export default function MedicalHistoryAllergiesPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button type='submit' disabled={!canContinue} onMouseEnter={() => setContinueHover(true)} onMouseLeave={() => setContinueHover(false)} style={{ width: '100%', minHeight: '48px', padding: '14px 20px', borderRadius: '13px', border: 'none', background: canContinue ? continueHover ? 'linear-gradient(135deg,var(--primary-end) 0%,#0F47B8 100%)' : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : 'rgba(32,181,223,0.5)', color: '#fff', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em', cursor: canContinue ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: canContinue ? '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)' : 'none', transition: 'all 0.15s ease', transform: canContinue && continueHover ? 'translateY(-1px)' : 'none', opacity: submitting ? 0.92 : 1 }}>
-                <span>{submitting ? 'Saving and continuing...' : 'Continue'}</span>
+                <span>{submitting ? t('savingContinue') : t('continue')}</span>
                 <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
               </button>
 

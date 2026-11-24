@@ -91,9 +91,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'Your Profile', sub: 'Review and update your saved information' },
-          { icon: ICONS.shield, label: 'Ready for Care', sub: 'Your profile now supports better consultations' },
-          { icon: ICONS.check, label: 'A Smooth Finish', sub: 'You are ready to explore Qarevo Health' },
+          { icon: ICONS.lock, label: t('panelProfile'), sub: t('panelProfileSub') },
+          { icon: ICONS.shield, label: t('panelReady'), sub: t('panelReadySub') },
+          { icon: ICONS.check, label: t('panelFinish'), sub: t('panelFinishSub') },
         ].map(({ icon, label, sub }) => (
           <div key={label} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', padding: '13px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
@@ -152,15 +152,15 @@ export default function ProfileCompletedPage() {
               </div>
               <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>{t('profileCompleted')}</h1>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>
-                Your profile information has been saved. This development environment is for synthetic testing; legal approval and clinical launch checks remain outstanding.
+                {t('savedNote')}
               </p>
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '18px' }}>
               {[
-                { icon: ICONS.lock, label: 'Protected', sub: 'Your profile has been saved' },
-                { icon: ICONS.brain, label: 'Informed', sub: 'Your saved details are available' },
-                { icon: ICONS.shield, label: 'Secure', sub: 'Account-specific access' },
+                { icon: ICONS.lock, label: t('tileProtected'), sub: t('tileProtectedSub') },
+                { icon: ICONS.brain, label: t('tileInformed'), sub: t('tileInformedSub') },
+                { icon: ICONS.shield, label: t('tileSecure'), sub: t('tileSecureSub') },
               ].map(({ icon, label, sub }) => (
                 <div key={label} style={{ padding: '16px', borderRadius: '16px', background: "var(--surface-glass)", border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -648,6 +648,23 @@ test('onboarding explains invalid fields without locking Continue', async ({ pag
   await expect(page.locator('[data-validation-summary]')).toContainText('medical history')
 })
 
+test('onboarding reads in German with translated choices, notices and validation', async ({ page, context, baseURL }) => {
+  await signIn(page, alpha)
+  await context.addCookies([{ name: 'qarevo_locale', value: 'de', url: baseURL! }])
+  await page.goto('/auth/profile-setup/personal-information')
+  await expect(page.locator('#nationality option[value="German"]')).toHaveText('Deutsch')
+  await page.goto('/auth/profile-setup/medical-history-allergies')
+  await expect(page.getByRole('button', { name: 'Herzerkrankung', exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Keine bekannten Allergien', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Ich nehme keine Medikamente ein', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: /Weiter/ }).click()
+  await expect(page.locator('[data-validation-summary]')).toContainText('Krankengeschichte')
+  await page.goto('/auth/profile-setup/insurance-privacy-consent')
+  await page.getByRole('radio', { name: /Selbstzahler/ }).check()
+  await expect(page.getByText('Die Angabe „Selbstzahler“ bestätigt weder', { exact: false })).toBeVisible()
+  await expect(page.getByRole('radio', { name: /Gesetzliche Krankenversicherung \(GKV\)/ })).toBeVisible()
+})
+
 test('doctor registration exposes required fields and consent without a disabled-submit trap', async ({ page }) => {
   await page.goto('/auth/doctor-register')
   await page.locator('button[type="submit"]').click()

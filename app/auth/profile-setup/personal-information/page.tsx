@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
@@ -49,6 +49,7 @@ const INITIAL_FORM: PersonalInfoForm = {
   photoDataUrl: '',
 }
 
+/** Stored values stay in English for the API; labels come from onboarding.personal.nat* and lang*. */
 const NATIONALITIES = [
   'Nigerian',
   'Ghanaian',
@@ -229,9 +230,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.user, label: 'Personalized Onboarding', sub: 'Guided, lightweight, and secure' },
-          { icon: ICONS.steth, label: 'Better Physician Matching', sub: 'Profile insights improve recommendations' },
-          { icon: ICONS.shield, label: 'Protected Information', sub: 'Enterprise-grade security and encryption' },
+          { icon: ICONS.user, label: t('panelOnboarding'), sub: t('panelOnboardingSub') },
+          { icon: ICONS.steth, label: t('panelMatching'), sub: t('panelMatchingSub') },
+          { icon: ICONS.shield, label: t('panelProtected'), sub: t('panelProtectedSub') },
         ].map(({ icon, label, sub }) => (
           <div
             key={label}
@@ -293,7 +294,7 @@ export default function PersonalInformationPage() {
   const [submitting, setSubmitting] = useState(false)
   const [savedTick, setSavedTick] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
+  const [saveMessage, setSaveMessage] = useState(t('draftAutosaves'))
   const [submitError, setSubmitError] = useState('')
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [form, setForm] = useState<PersonalInfoForm>(INITIAL_FORM)
@@ -309,8 +310,8 @@ export default function PersonalInformationPage() {
       preferredLanguage: saved.language || '', maritalStatus: (saved.marital_status || '') as MaritalStatus,
     }
   }, data => setForm({ ...INITIAL_FORM, ...data, photoDataUrl: '' }),
-  error => setSubmitError(getApiErrorDetail(error) || 'Could not load your saved profile. Reload to try again.'),
-  () => setDraftReady(true)), [draftStorage])
+  error => setSubmitError(getApiErrorDetail(error) || t('loadFailed')),
+  () => setDraftReady(true)), [draftStorage, t])
 
   useEffect(() => {
     if (!draftReady) return
@@ -318,26 +319,22 @@ export default function PersonalInformationPage() {
       try {
         draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
         setSavedTick(true)
-        setSaveMessage('Draft saved in this tab')
+        setSaveMessage(t('draftSaved'))
         window.setTimeout(() => {
           setSavedTick(false)
-          setSaveMessage('Draft autosaves in this tab')
+          setSaveMessage(t('draftAutosaves'))
         }, 1400)
       } catch {
-        setSaveMessage('Could not autosave right now')
+        setSaveMessage(t('autosaveFailed'))
       }
     }, 320)
 
     return () => window.clearTimeout(id)
-  }, [form, draftStorage, draftReady])
+  }, [form, draftStorage, draftReady, t])
 
   const canContinue = draftReady && !submitting
 
-  const helperText = useMemo(
-    () =>
-      'We use your personal information to personalize your healthcare experience, improve physician matching, and ensure accurate medical records.',
-    [],
-  )
+  const helperText = t('helperText')
 
   const updateField = <K extends keyof PersonalInfoForm>(key: K, value: PersonalInfoForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -347,14 +344,14 @@ export default function PersonalInformationPage() {
   const collectErrors = (form: PersonalInfoForm) => {
     const nextErrors: Record<string, string> = {}
 
-    if (form.fullName.trim().length < 2) nextErrors.fullName = 'Please enter your full name'
-    if (!form.dateOfBirth) nextErrors.dateOfBirth = 'Date of birth is required'
-    else if (!isPastDate(form.dateOfBirth)) nextErrors.dateOfBirth = 'Please provide a valid past date'
+    if (form.fullName.trim().length < 2) nextErrors.fullName = t('fullNameError')
+    if (!form.dateOfBirth) nextErrors.dateOfBirth = t('dobError')
+    else if (!isPastDate(form.dateOfBirth)) nextErrors.dateOfBirth = t('dobPastError')
 
-    if (!form.gender) nextErrors.gender = 'Please select a gender option'
-    if (!form.nationality.trim()) nextErrors.nationality = 'Please select your nationality'
-    if (!form.preferredLanguage.trim()) nextErrors.preferredLanguage = 'Please select your preferred language'
-    if (!form.maritalStatus) nextErrors.maritalStatus = 'Please select your marital status'
+    if (!form.gender) nextErrors.gender = t('genderError')
+    if (!form.nationality.trim()) nextErrors.nationality = t('nationalityError')
+    if (!form.preferredLanguage.trim()) nextErrors.preferredLanguage = t('languageError')
+    if (!form.maritalStatus) nextErrors.maritalStatus = t('maritalError')
 
     return nextErrors
   }
@@ -403,7 +400,7 @@ export default function PersonalInformationPage() {
       setOnboardingStage('contact-information')
       router.push('/auth/profile-setup/contact-information')
     } catch (error) {
-      setSubmitError(getApiErrorDetail(error) || 'We could not save your personal information. Please try again.')
+      setSubmitError(getApiErrorDetail(error) || t('saveFailed'))
       setSubmitting(false)
     }
   }
@@ -524,7 +521,7 @@ export default function PersonalInformationPage() {
                   autoComplete='name'
                   onChange={(e) => updateField('fullName', e.target.value)}
                   onBlur={() => markTouched('fullName')}
-                  placeholder='Emma Harrison'
+                  placeholder={t('namePlaceholder')}
                   style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('fullName'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 />
                 {touched.fullName && errors.fullName ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.fullName}</p> : null}
@@ -587,7 +584,7 @@ export default function PersonalInformationPage() {
                   style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('nationality'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 >
                   <option value=''>{t('select')}</option>
-                  {NATIONALITIES.map(item => <option key={item} value={item}>{item}</option>)}
+                  {NATIONALITIES.map(item => <option key={item} value={item}>{t('nat' + item.replace(/[^A-Za-z]/g, ''))}</option>)}
                 </select>
                 {touched.nationality && errors.nationality ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.nationality}</p> : null}
               </div>
@@ -602,7 +599,7 @@ export default function PersonalInformationPage() {
                   style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('preferredLanguage'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
                 >
                   <option value=''>{t('select')}</option>
-                  {LANGUAGES.map(item => <option key={item} value={item}>{item}</option>)}
+                  {LANGUAGES.map(item => <option key={item} value={item}>{t('lang' + item)}</option>)}
                 </select>
                 {touched.preferredLanguage && errors.preferredLanguage ? <p style={{ margin: 0, fontSize: "13px", color: T.red }}>{errors.preferredLanguage}</p> : null}
               </div>
@@ -681,7 +678,7 @@ export default function PersonalInformationPage() {
                   opacity: submitting ? 0.92 : 1,
                 }}
               >
-                <span>{submitting ? 'Saving and continuing...' : 'Continue'}</span>
+                <span>{submitting ? t('savingContinue') : t('continue')}</span>
                 <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
               </button>
 

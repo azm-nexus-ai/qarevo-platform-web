@@ -13,25 +13,25 @@ import { ApiError, getApiErrorDetail } from '@/lib/api'
 import { createAccountDraftStorage } from '@/lib/account-storage'
 import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
 import { getOnboarding, saveCoverageInformation, onboardingPath, type CoverageInformation, type OnboardingStatus } from '@/lib/patient-onboarding'
-import { INSURANCE_VERIFICATION_NOTICE, SELF_PAY_NOTICE } from '@/lib/insurance-presentation'
 const LEFT_BG = `radial-gradient(ellipse at top left, rgba(32,181,223,.3), transparent 60%), ${T.brandNavy}`
 const STORAGE_KEY = 'qarevo.onboarding.insurance-privacy-consent.v2'
 type FundingType = CoverageInformation['insurance_type']
 type CoverageForm = Omit<CoverageInformation, 'insurance_type'> & { insurance_type: FundingType | '' }
 const INITIAL_FORM: CoverageForm = { insurance_type: '', provider: '', insurance_number: '', consents: { terms: false, privacy: false, health: false, telemedicine: false, marketing: false } }
+/** Labels, acknowledgements and step names below are message keys in onboarding.coverage. */
 const FUNDING_OPTIONS: { value: FundingType; label: string; body: string }[] = [
-  { value: 'GKV', label: 'Statutory insurance (GKV)', body: 'Gesetzliche Krankenversicherung, with your KVNR from the health card.' },
-  { value: 'PKV', label: 'Private insurance (PKV)', body: 'Private health insurance, with the policy number from your insurer.' },
-  { value: 'SELF_PAY', label: 'Self-pay', body: 'You pay the practice directly. You can add insurance later.' },
+  { value: 'GKV', label: 'fundingGkv', body: 'fundingGkvBody' },
+  { value: 'PKV', label: 'fundingPkv', body: 'fundingPkvBody' },
+  { value: 'SELF_PAY', label: 'fundingSelfPay', body: 'fundingSelfPayBody' },
 ]
 const TEST_ACKNOWLEDGEMENTS = [
-  ['terms', 'I understand that the patient terms are still awaiting approval.'],
-  ['privacy', 'I understand that the privacy notice is still awaiting approval.'],
-  ['health', 'I am using synthetic test information only.'],
-  ['telemedicine', 'I understand that this development flow does not authorise real medical care.'],
+  ['terms', 'ackTerms'],
+  ['privacy', 'ackPrivacy'],
+  ['health', 'ackHealth'],
+  ['telemedicine', 'ackTelemedicine'],
 ] as const
 const STEP_LABELS: Record<NonNullable<OnboardingStatus['next_step']>, string> = {
-  personal: 'personal information', contact: 'contact information', health: 'medical history', coverage: 'coverage',
+  personal: 'stepPersonal', contact: 'stepContact', health: 'stepHealth', coverage: 'stepCoverage',
 }
 
 /** Only the fields the API accepts, so a stale draft or saved record can never add unknown keys. */
@@ -49,15 +49,15 @@ function toForm(data: Partial<CoverageForm>): CoverageForm {
   }
 }
 
-function validate(form: CoverageForm) {
+function validate(form: CoverageForm, text: (key: string) => string) {
   const errors: Record<string, string> = {}
-  if (!form.insurance_type) errors.insurance_type = 'Select a funding type.'
+  if (!form.insurance_type) errors.insurance_type = text('errFunding')
   if (form.insurance_type && form.insurance_type !== 'SELF_PAY') {
-    if (form.provider.trim().length < 2) errors.provider = 'Enter the insurer name.'
-    if (form.insurance_type === 'GKV' && !/^[A-Z][0-9]{9}$/.test(form.insurance_number.trim())) errors.insurance_number = 'Use one capital letter and nine digits.'
-    if (form.insurance_type === 'PKV' && !/^[A-Za-z0-9][A-Za-z0-9 /.-]{2,49}$/.test(form.insurance_number.trim())) errors.insurance_number = 'Enter the policy number as supplied by the insurer (3–50 characters).'
+    if (form.provider.trim().length < 2) errors.provider = text('errInsurer')
+    if (form.insurance_type === 'GKV' && !/^[A-Z][0-9]{9}$/.test(form.insurance_number.trim())) errors.insurance_number = text('errKvnr')
+    if (form.insurance_type === 'PKV' && !/^[A-Za-z0-9][A-Za-z0-9 /.-]{2,49}$/.test(form.insurance_number.trim())) errors.insurance_number = text('errPolicy')
   }
-  if (TEST_ACKNOWLEDGEMENTS.some(([key]) => !form.consents[key])) errors.consents = 'Confirm each required test acknowledgement.'
+  if (TEST_ACKNOWLEDGEMENTS.some(([key]) => !form.consents[key])) errors.consents = text('errAcknowledgements')
   return errors
 }
 function LeftPanel() {
@@ -128,9 +128,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'Saved Preferences', sub: 'Your choices are saved to your account' },
-          { icon: ICONS.shield, label: 'Trusted Access', sub: 'Only authorized care teams can review it' },
-          { icon: ICONS.check, label: 'Funding preferences', sub: 'Record statutory, private or self-pay details' },
+          { icon: ICONS.lock, label: t('panelSaved'), sub: t('panelSavedSub') },
+          { icon: ICONS.shield, label: t('panelAccess'), sub: t('panelAccessSub') },
+          { icon: ICONS.check, label: t('panelFunding'), sub: t('panelFundingSub') },
         ].map(({ icon, label, sub }) => (
           <div key={label} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', padding: '13px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
@@ -180,9 +180,9 @@ export default function InsurancePrivacyConsentPage() {
   const [submitError, setSubmitError] = useState('')
   const [conflict, setConflict] = useState(false)
   const [savedNotice, setSavedNotice] = useState('')
-  const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
+  const [saveMessage, setSaveMessage] = useState(t('draftAutosaves'))
   const [submitted, setSubmitted] = useState(false)
-  const errors = validate(form)
+  const errors = validate(form, key => t(key))
   const shown = submitted ? errors : {}
   // A completed profile already holds every mandatory acknowledgement, so leaving without changes bypasses nothing.
   const returning = !!status?.complete
@@ -195,23 +195,23 @@ export default function InsurancePrivacyConsentPage() {
     request.then(value => { if (live) setStatus(value) }).catch(() => { /* reported by the hydration below */ })
     const stop = hydrateAccountDraft<CoverageForm>(draftStorage, STORAGE_KEY, async () => (await request).coverage || {},
       data => setForm(toForm(data)),
-      error => setLoadError(getApiErrorDetail(error) || 'Your saved coverage could not be loaded.'),
+      error => setLoadError(getApiErrorDetail(error) || t('loadFailed')),
       () => setReady(true))
     return () => { live = false; stop() }
-  }, [draftStorage, reloadKey])
+  }, [draftStorage, reloadKey, t])
 
   useEffect(() => {
     if (!ready) return
-    setSaveMessage('Saving draft in this tab…')
+    setSaveMessage(t('draftSaving'))
     const persist = () => {
-      try { draftStorage.setItem(STORAGE_KEY, JSON.stringify(form)); setSaveMessage('Draft saved in this tab') }
-      catch { setSaveMessage('Could not autosave right now') }
+      try { draftStorage.setItem(STORAGE_KEY, JSON.stringify(form)); setSaveMessage(t('draftSaved')) }
+      catch { setSaveMessage(t('autosaveFailed')) }
     }
     const timer = window.setTimeout(persist, 320)
     // Refresh/navigation must not discard the last keystrokes before the debounce.
     window.addEventListener('pagehide', persist)
     return () => { window.clearTimeout(timer); window.removeEventListener('pagehide', persist) }
-  }, [form, draftStorage, ready])
+  }, [form, draftStorage, ready, t])
 
   const update = <K extends keyof CoverageForm>(key: K, value: CoverageForm[K]) => { setSavedNotice(''); setForm(previous => ({ ...previous, [key]: value })) }
   const reloadSaved = () => {
@@ -229,20 +229,20 @@ export default function InsurancePrivacyConsentPage() {
       const saved = await saveCoverageInformation({ ...form, insurance_type: form.insurance_type as FundingType })
       setStatus(saved)
       try { draftStorage.removeItem(STORAGE_KEY) } catch { /* nothing left to clear */ }
-      if (!saved.complete) { setSubmitError('Your coverage is saved. An earlier profile step still needs to be completed before you can continue.'); return }
-      if (returning) { setSubmitted(false); setSavedNotice('Your coverage and acknowledgements are up to date.'); return }
+      if (!saved.complete) { setSubmitError(t('savedEarlierStep')); return }
+      if (returning) { setSubmitted(false); setSavedNotice(t('upToDateNotice')); return }
       setOnboardingStage('profile-completed')
       router.push('/auth/profile-setup/profile-completed')
     } catch (error) {
       const isConflict = error instanceof ApiError && error.status === 409
       setConflict(isConflict)
       setSubmitError(isConflict
-        ? 'Your saved details changed since this page was opened, for example in another tab. Reload them, check your choices and save again.'
-        : getApiErrorDetail(error) || 'Could not save your coverage information. Please try again.')
+        ? t('conflict')
+        : getApiErrorDetail(error) || t('saveFailed'))
     } finally { setSubmitting(false) }
   }
 
-  const pill = !ready ? 'Loading your saved coverage…' : savedNotice ? 'Saved to your account' : saveMessage
+  const pill = !ready ? t('loading') : savedNotice ? t('savedToAccount') : saveMessage
   return <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
     <style>{`
       .cv-left { display: block; }
@@ -312,8 +312,8 @@ export default function InsurancePrivacyConsentPage() {
         <form ref={formRef} className='cv-card' onSubmit={submit} noValidate aria-busy={submitting || !ready}>
           <fieldset className='cv-root' disabled={!ready || submitting}>
             <div className='cv-progress'>
-              <div><p className='cv-eyebrow'>{t('profileSetup')}</p><p>{returning ? 'Profile complete' : 'Step 5 of 6'}</p></div>
-              <div><p className='cv-eyebrow'>{returning ? 'Up to date' : '83% Complete'}</p><p>{returning ? 'Review or correct at any time' : 'Approximately 1 Minute'}</p></div>
+              <div><p className='cv-eyebrow'>{t('profileSetup')}</p><p>{returning ? t('profileComplete') : t('step5Of6')}</p></div>
+              <div><p className='cv-eyebrow'>{returning ? t('upToDate') : t('percentComplete')}</p><p>{returning ? t('reviewAnyTime') : t('approximately1Minute')}</p></div>
             </div>
             <header>
               <h1>{t('coveragePrivacy')}</h1>
@@ -333,8 +333,8 @@ export default function InsurancePrivacyConsentPage() {
             </div>}
             {savedNotice && <div role='status' className='cv-note'><p><strong>{savedNotice}</strong></p><p><Link href='/patient/dashboard'>{t('continueToYourDashboard')}</Link></p></div>}
             {earlierStep && <div role='note' className='cv-note warn'>
-              <p>Your {STEP_LABELS[earlierStep]} is not saved yet. You can fill in this step now, but your profile completes only after every step is saved.</p>
-              <p><Link href={onboardingPath(earlierStep)}>Continue with {STEP_LABELS[earlierStep]}</Link></p>
+              <p>{t('earlierStepMissing', { step: t(STEP_LABELS[earlierStep]) })}</p>
+              <p><Link href={onboardingPath(earlierStep)}>{t('continueWith', { step: t(STEP_LABELS[earlierStep]) })}</Link></p>
             </div>}
 
             <ValidationSummary errors={shown} />
@@ -344,28 +344,28 @@ export default function InsurancePrivacyConsentPage() {
             </div>}
 
             <section className='cv-section' aria-labelledby='cv-funding-title'>
-              <SectionHeader title={t('funding')} body='Choose how you intend to fund consultations. This records your preference; it is not an eligibility check.' />
+              <SectionHeader title={t('funding')} body={t('fundingIntro')} />
               <fieldset className='cv-options' aria-invalid={!!shown.insurance_type || undefined} aria-describedby={shown.insurance_type ? 'coverage-type-error' : undefined}>
                 <legend id='cv-funding-title'>{t('fundingTypeRequired')}</legend>
                 <div className='cv-option-grid'>
                   {FUNDING_OPTIONS.map(option => <label key={option.value} className={`cv-option${form.insurance_type === option.value ? ' chosen' : ''}`}>
                     <input type='radio' name='funding-type' value={option.value} checked={form.insurance_type === option.value} onChange={() => update('insurance_type', option.value)} />
-                    <strong>{option.label}</strong><span>{option.body}</span>
+                    <strong>{t(option.label)}</strong><span>{t(option.body)}</span>
                   </label>)}
                 </div>
                 {shown.insurance_type && <p id='coverage-type-error' className='field-error' role='alert'>{shown.insurance_type}</p>}
               </fieldset>
-              {form.insurance_type && <p className='cv-notice'>{form.insurance_type === 'SELF_PAY' ? SELF_PAY_NOTICE : INSURANCE_VERIFICATION_NOTICE}</p>}
+              {form.insurance_type && <p className='cv-notice'>{form.insurance_type === 'SELF_PAY' ? t('selfPayNotice') : t('insuranceNotice')}</p>}
               {form.insurance_type && form.insurance_type !== 'SELF_PAY' && <div className='cv-fields'>
-                <TextField label={t('insuranceProvider')} value={form.provider} onChange={value => update('provider', value)} placeholder={t('insurerName')} hint='The full insurer name, at least 2 characters.' error={shown.provider} />
-                <TextField label={form.insurance_type === 'GKV' ? 'Insurance number (KVNR)' : 'Private policy number'} value={form.insurance_number} onChange={value => update('insurance_number', value)}
-                  hint={form.insurance_type === 'GKV' ? 'One capital letter followed by 9 digits. Only the format is checked, not your coverage.' : '3–50 characters: letters, numbers, spaces, slash, full stop or hyphen.'}
-                  placeholder={form.insurance_type === 'GKV' ? 'A123456789' : 'As shown on your policy'} error={shown.insurance_number} />
+                <TextField label={t('insuranceProvider')} value={form.provider} onChange={value => update('provider', value)} placeholder={t('insurerName')} hint={t('insurerHint')} error={shown.provider} />
+                <TextField label={form.insurance_type === 'GKV' ? t('kvnrLabel') : t('policyLabel')} value={form.insurance_number} onChange={value => update('insurance_number', value)}
+                  hint={form.insurance_type === 'GKV' ? t('kvnrHint') : t('policyHint')}
+                  placeholder={form.insurance_type === 'GKV' ? t('kvnrPlaceholder') : t('policyPlaceholder')} error={shown.insurance_number} />
               </div>}
             </section>
 
             <section className='cv-section' aria-labelledby='cv-acks-title'>
-              <SectionHeader title={t('acknowledgements')} body='Required before you can use the platform, and kept on record with the date you gave them.' />
+              <SectionHeader title={t('acknowledgements')} body={t('acknowledgementsIntro')} />
               <fieldset className='cv-acks' style={{ margin: 0, minWidth: 0 }}>
                 <legend id='cv-acks-title' style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', padding: '0 4px' }}>{t('developmentTestAcknowledgements')}</legend>
                 <p>{t('theLegalDocumentsAreDrafts')}</p>
@@ -374,7 +374,7 @@ export default function InsurancePrivacyConsentPage() {
                   return <label key={key} className='cv-check'>
                     <input type='checkbox' required aria-invalid={missing} aria-describedby={missing ? `ack-${key}-error` : undefined} checked={form.consents[key]}
                       onChange={event => update('consents', { ...form.consents, [key]: event.target.checked })} />
-                    <span>{label} <strong>{t('required')}</strong>{missing && <span id={`ack-${key}-error`} role='alert' className='field-error'>{t('confirmThisAcknowledgementToContinue')}</span>}</span>
+                    <span>{t(label)} <strong>{t('required')}</strong>{missing && <span id={`ack-${key}-error`} role='alert' className='field-error'>{t('confirmThisAcknowledgementToContinue')}</span>}</span>
                   </label>
                 })}
               </fieldset>
@@ -389,7 +389,7 @@ export default function InsurancePrivacyConsentPage() {
                 <Link className='cv-link' href='/auth/profile-setup/medical-history-allergies'>{t('back')}</Link>
                 {ready && !loadError && <button type='button' className='cv-link' style={{ background: 'none', border: 0, padding: 0, font: 'inherit', cursor: 'pointer', minHeight: 44 }} onClick={reloadSaved}>{t('discardChanges')}</button>}
               </div>
-              <button type='submit' className='cv-submit' disabled={submitting || !ready}>{submitting ? 'Saving…' : returning ? 'Save changes' : 'Complete Profile'}</button>
+              <button type='submit' className='cv-submit' disabled={submitting || !ready}>{submitting ? t('saving') : returning ? t('saveChanges') : t('completeProfile')}</button>
             </div>
           </fieldset>
         </form>

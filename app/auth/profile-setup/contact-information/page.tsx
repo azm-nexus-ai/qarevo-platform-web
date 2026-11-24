@@ -185,9 +185,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.ema, label: 'Reliable Communication', sub: 'Stay informed with timely health updates' },
-          { icon: ICONS.user, label: 'Emergency Preparedness', sub: 'Support contacts available when needed' },
-          { icon: ICONS.shield, label: 'Private and Secure', sub: 'Protected communication across your care journey' },
+          { icon: ICONS.ema, label: t('panelCommunication'), sub: t('panelCommunicationSub') },
+          { icon: ICONS.user, label: t('panelEmergency'), sub: t('panelEmergencySub') },
+          { icon: ICONS.shield, label: t('panelPrivate'), sub: t('panelPrivateSub') },
         ].map(({ icon, label, sub }) => (
           <div key={label} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', padding: '13px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
@@ -222,7 +222,7 @@ export default function ContactInformationPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [savedTick, setSavedTick] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('Draft autosaves in this tab')
+  const [saveMessage, setSaveMessage] = useState(t('draftAutosaves'))
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [continueHover, setContinueHover] = useState(false)
@@ -243,13 +243,13 @@ export default function ContactInformationPage() {
         emergencyEmail: value.emergency_email || '',
       } : {}
     }, data => setForm(previous => ({ ...INITIAL_FORM, ...data, email: previous.email, primaryPhone: data.primaryPhone || previous.primaryPhone })),
-    error => setSubmitError(getApiErrorDetail(error) || 'Could not load your saved contact information. Reload to try again.'),
+    error => setSubmitError(getApiErrorDetail(error) || t('loadFailed')),
     () => setDraftReady(true))
     getPatientSettings().then(settings => {
       if (current) setForm(previous => ({ ...previous, email: settings.email, primaryPhone: previous.primaryPhone || settings.phone || '' }))
-    }).catch(error => { if (current) setSubmitError(getApiErrorDetail(error) || 'Could not load your account email. Reload to try again.') })
+    }).catch(error => { if (current) setSubmitError(getApiErrorDetail(error) || t('emailLoadFailed')) })
     return () => { current = false; stop() }
-  }, [draftStorage])
+  }, [draftStorage, t])
 
   useEffect(() => {
     if (!draftReady) return
@@ -257,18 +257,18 @@ export default function ContactInformationPage() {
       try {
         draftStorage.setItem(STORAGE_KEY, JSON.stringify(form))
         setSavedTick(true)
-        setSaveMessage('Draft saved in this tab')
+        setSaveMessage(t('draftSaved'))
         window.setTimeout(() => {
           setSavedTick(false)
-          setSaveMessage('Draft autosaves in this tab')
+          setSaveMessage(t('draftAutosaves'))
         }, 1400)
       } catch {
-        setSaveMessage('Could not autosave right now')
+        setSaveMessage(t('autosaveFailed'))
       }
     }, 320)
 
     return () => window.clearTimeout(id)
-  }, [form, draftStorage, draftReady])
+  }, [form, draftStorage, draftReady, t])
 
   const helpText = useMemo(
     () =>
@@ -284,34 +284,34 @@ export default function ContactInformationPage() {
   }
 
   const validatePhone = (value: string, required: boolean) => {
-    if (!value.trim()) return required ? 'This field is required' : ''
+    if (!value.trim()) return required ? t('fieldRequired') : ''
     const normalized = value.replace(/[\s().-]/g, '')
-    return /^\+[1-9][0-9]{6,14}$/.test(normalized) ? '' : 'Use an international number beginning with +, for example +49.'
+    return /^\+[1-9][0-9]{6,14}$/.test(normalized) ? '' : t('phoneFormatError')
   }
 
   const collectErrors = (value: ContactForm) => {
     const nextErrors: Record<string, string> = {}
 
-    if (!value.primaryPhone.trim()) nextErrors.primaryPhone = 'Primary phone number is required'
+    if (!value.primaryPhone.trim()) nextErrors.primaryPhone = t('primaryPhoneError')
     else if (validatePhone(value.primaryPhone, true)) nextErrors.primaryPhone = validatePhone(value.primaryPhone, true)
 
     if (value.alternativePhone && validatePhone(value.alternativePhone, false)) nextErrors.alternativePhone = validatePhone(value.alternativePhone, false)
-    if (!EMAIL_RE.test(value.email)) nextErrors.email = 'Enter a valid email address'
-    if (value.country !== 'Germany') nextErrors.country = 'Please select your country'
-    if (!GERMAN_STATES.includes(value.state)) nextErrors.state = 'Please select your state or province'
-    if (value.city.trim().length < 2 || value.city.trim().length > 100 || !/\p{L}/u.test(value.city) || /[<>\x00-\x1f]/.test(value.city)) nextErrors.city = 'Enter a city name using 2–100 characters; HTML is not accepted.'
-    if (value.address.trim().length < 5 || value.address.trim().length > 250 || !/\p{L}/u.test(value.address) || !/[0-9]/.test(value.address) || /[<>\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value.address)) nextErrors.address = 'Enter street and house number, for example Musterstraße 12 (5–250 characters).'
-    if (!/^[0-9]{5}$/.test(value.postalCode)) nextErrors.postalCode = 'Enter a five-digit German postal code'
-    if (!value.preferredContactMethod) nextErrors.preferredContactMethod = 'Please choose a preferred contact method'
+    if (!EMAIL_RE.test(value.email)) nextErrors.email = t('emailError')
+    if (value.country !== 'Germany') nextErrors.country = t('countryError')
+    if (!GERMAN_STATES.includes(value.state)) nextErrors.state = t('stateError')
+    if (value.city.trim().length < 2 || value.city.trim().length > 100 || !/\p{L}/u.test(value.city) || /[<>\x00-\x1f]/.test(value.city)) nextErrors.city = t('cityError')
+    if (value.address.trim().length < 5 || value.address.trim().length > 250 || !/\p{L}/u.test(value.address) || !/[0-9]/.test(value.address) || /[<>\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value.address)) nextErrors.address = t('streetError')
+    if (!/^[0-9]{5}$/.test(value.postalCode)) nextErrors.postalCode = t('postalError')
+    if (!value.preferredContactMethod) nextErrors.preferredContactMethod = t('contactMethodError')
 
-    if (value.emergencyName.trim().length < 2 || value.emergencyName.trim().length > 100 || !/\p{L}/u.test(value.emergencyName) || /[<>\x00-\x1f]/.test(value.emergencyName)) nextErrors.emergencyName = 'Enter the emergency contact’s name (2–100 characters).'
-    if (!value.emergencyRelationship) nextErrors.emergencyRelationship = 'Please select a relationship'
-    if (!value.emergencyPhone.trim()) nextErrors.emergencyPhone = 'Emergency contact phone number is required'
+    if (value.emergencyName.trim().length < 2 || value.emergencyName.trim().length > 100 || !/\p{L}/u.test(value.emergencyName) || /[<>\x00-\x1f]/.test(value.emergencyName)) nextErrors.emergencyName = t('emergencyNameError')
+    if (!value.emergencyRelationship) nextErrors.emergencyRelationship = t('relationshipError')
+    if (!value.emergencyPhone.trim()) nextErrors.emergencyPhone = t('emergencyPhoneError')
     else if (validatePhone(value.emergencyPhone, true)) nextErrors.emergencyPhone = validatePhone(value.emergencyPhone, true)
 
-    if (value.primaryPhone.trim() && value.primaryPhone.replace(/\D/g, '') === value.emergencyPhone.replace(/\D/g, '')) nextErrors.emergencyPhone = 'Use a different phone number for your emergency contact'
+    if (value.primaryPhone.trim() && value.primaryPhone.replace(/\D/g, '') === value.emergencyPhone.replace(/\D/g, '')) nextErrors.emergencyPhone = t('emergencySamePhoneError')
     if (value.emergencyAltPhone && validatePhone(value.emergencyAltPhone, false)) nextErrors.emergencyAltPhone = validatePhone(value.emergencyAltPhone, false)
-    if (value.emergencyEmail && !EMAIL_RE.test(value.emergencyEmail)) nextErrors.emergencyEmail = 'Enter a valid emergency contact email'
+    if (value.emergencyEmail && !EMAIL_RE.test(value.emergencyEmail)) nextErrors.emergencyEmail = t('emergencyEmailError')
 
     return nextErrors
   }
@@ -378,7 +378,7 @@ export default function ContactInformationPage() {
       setOnboardingStage('health-profile')
       router.push('/auth/profile-setup/medical-history-allergies')
     } catch (error) {
-      setSubmitError(getApiErrorDetail(error) || 'We could not save your contact information. Please try again.')
+      setSubmitError(getApiErrorDetail(error) || t('saveFailed'))
       setSubmitting(false)
     }
   }
@@ -459,13 +459,13 @@ export default function ContactInformationPage() {
             ) : null}
 
             <div style={{ marginBottom: '18px' }}>
-              <SectionHeader title={t('contactInformation')} body='Your preferred contact details help us coordinate care updates, reminders, and healthcare communication.' />
+              <SectionHeader title={t('contactInformation')} body={t('contactIntro')} />
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='primaryPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('primaryPhoneNumberRequired')}</label>
                   <input id='primaryPhone' type='tel' aria-invalid={!!(touched.primaryPhone && errors.primaryPhone)} aria-describedby={['primaryPhone-hint', touched.primaryPhone && errors.primaryPhone ? 'primaryPhone-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.primaryPhone} autoComplete='tel' onChange={(e) => updateField('primaryPhone', formatPhone(e.target.value, form.country))} onBlur={(event) => markTouched('primaryPhone', event.relatedTarget)} placeholder={form.country && COUNTRY_CODES[form.country] ? `${COUNTRY_CODES[form.country]} 801 234 5678` : '+234 801 234 5678'} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('primaryPhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  <FieldFeedback name='primaryPhone' error={touched.primaryPhone ? errors.primaryPhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
+                  <FieldFeedback name='primaryPhone' error={touched.primaryPhone ? errors.primaryPhone : undefined} hint={t('phoneHint')} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -476,7 +476,7 @@ export default function ContactInformationPage() {
               </div>
 
               <button type='button' onClick={() => setShowOptionalPhones((prev) => !prev)} style={{ marginBottom: showOptionalPhones ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em' }}>
-                {showOptionalPhones ? 'Hide optional phone fields' : 'Add alternative phone number'}
+                {showOptionalPhones ? t('hidePhoneFields') : t('addAlternativePhone')}
               </button>
 
               {showOptionalPhones ? (
@@ -484,7 +484,7 @@ export default function ContactInformationPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label htmlFor='alternativePhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('alternativePhoneNumber')} <span style={{ color: T.slate2, fontWeight: 500 }}>{t('optional')}</span></label>
                     <input id='alternativePhone' type='tel' aria-invalid={!!(touched.alternativePhone && errors.alternativePhone)} aria-describedby={['alternativePhone-hint', touched.alternativePhone && errors.alternativePhone ? 'alternativePhone-error' : null].filter(Boolean).join(' ') || undefined} value={form.alternativePhone} autoComplete='tel' onChange={(e) => updateField('alternativePhone', formatPhone(e.target.value, form.country))} onBlur={(event) => markTouched('alternativePhone', event.relatedTarget)} placeholder={t('alternativeNumber2')} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('alternativePhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                    <FieldFeedback name='alternativePhone' error={touched.alternativePhone ? errors.alternativePhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
+                    <FieldFeedback name='alternativePhone' error={touched.alternativePhone ? errors.alternativePhone : undefined} hint={t('phoneHint')} />
                   </div>
                 </div>
               ) : null}
@@ -507,7 +507,7 @@ export default function ContactInformationPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='city' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('cityRequired')}</label>
                   <input id='city' aria-invalid={!!(touched.city && errors.city)} aria-describedby={['city-hint', touched.city && errors.city ? 'city-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.city} autoComplete='address-level2' onChange={(e) => updateField('city', e.target.value)} onBlur={(event) => markTouched('city', event.relatedTarget)} placeholder={t('city')} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('city'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  <FieldFeedback name='city' error={touched.city ? errors.city : undefined} hint='City or municipality, 2–100 characters.' />
+                  <FieldFeedback name='city' error={touched.city ? errors.city : undefined} hint={t('cityHint')} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -520,7 +520,7 @@ export default function ContactInformationPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
                 <label htmlFor='address' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('residentialAddressRequired')}</label>
                 <textarea id='address' aria-invalid={!!(touched.address && errors.address)} aria-describedby={['address-hint', touched.address && errors.address ? 'address-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.address} autoComplete='street-address' onChange={(e) => updateField('address', e.target.value)} onBlur={(event) => markTouched('address', event.relatedTarget)} placeholder={t('musterstraE12')} rows={3} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('address'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
-                <FieldFeedback name='address' error={touched.address ? errors.address : undefined} hint='Street and house number, for example Musterstraße 12. Add apartment details if needed (maximum 250 characters).' />
+                <FieldFeedback name='address' error={touched.address ? errors.address : undefined} hint={t('streetHint')} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -556,13 +556,13 @@ export default function ContactInformationPage() {
             </div>
 
             <div style={{ marginBottom: '18px', paddingTop: '4px', borderTop: "1px solid var(--border)" }}>
-              <SectionHeader title={t('emergencyContact')} body='Let us know who we should reach in case of an urgent medical situation.' />
+              <SectionHeader title={t('emergencyContact')} body={t('emergencyIntro')} />
 
               <div className='ci-grid' style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='emergencyName' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('emergencyContactNameRequired')}</label>
                   <input id='emergencyName' aria-invalid={!!(touched.emergencyName && errors.emergencyName)} aria-describedby={['emergencyName-hint', touched.emergencyName && errors.emergencyName ? 'emergencyName-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.emergencyName} autoComplete='name' onChange={(e) => updateField('emergencyName', e.target.value)} onBlur={(event) => markTouched('emergencyName', event.relatedTarget)} placeholder={t('fullName')} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyName'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  <FieldFeedback name='emergencyName' error={touched.emergencyName ? errors.emergencyName : undefined} hint='Full name of another person, 2–100 characters.' />
+                  <FieldFeedback name='emergencyName' error={touched.emergencyName ? errors.emergencyName : undefined} hint={t('emergencyNameHint')} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -584,12 +584,12 @@ export default function ContactInformationPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='emergencyPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('emergencyContactPhoneNumberRequired')}</label>
                   <input id='emergencyPhone' type='tel' aria-invalid={!!(touched.emergencyPhone && errors.emergencyPhone)} aria-describedby={['emergencyPhone-hint', touched.emergencyPhone && errors.emergencyPhone ? 'emergencyPhone-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.emergencyPhone} autoComplete='tel' onChange={(e) => updateField('emergencyPhone', formatPhone(e.target.value, form.country))} onBlur={(event) => markTouched('emergencyPhone', event.relatedTarget)} placeholder={t('primaryEmergencyNumber')} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyPhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  <FieldFeedback name='emergencyPhone' error={touched.emergencyPhone ? errors.emergencyPhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
+                  <FieldFeedback name='emergencyPhone' error={touched.emergencyPhone ? errors.emergencyPhone : undefined} hint={t('phoneHint')} />
                 </div>
               </div>
 
               <button type='button' onClick={() => setShowOptionalEmergency((prev) => !prev)} style={{ marginBottom: showOptionalEmergency ? '12px' : '0', background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: T.link, fontSize: "13px", fontWeight: 700, letterSpacing: '-0.01em' }}>
-                {showOptionalEmergency ? 'Hide optional emergency fields' : 'Add optional emergency contact details'}
+                {showOptionalEmergency ? t('hideEmergencyFields') : t('addEmergencyDetails')}
               </button>
 
               {showOptionalEmergency ? (
@@ -597,7 +597,7 @@ export default function ContactInformationPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label htmlFor='emergencyAltPhone' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('alternativeNumber')} <span style={{ color: T.slate2, fontWeight: 500 }}>{t('optional')}</span></label>
                     <input id='emergencyAltPhone' type='tel' aria-invalid={!!(touched.emergencyAltPhone && errors.emergencyAltPhone)} aria-describedby={['emergencyAltPhone-hint', touched.emergencyAltPhone && errors.emergencyAltPhone ? 'emergencyAltPhone-error' : null].filter(Boolean).join(' ') || undefined} value={form.emergencyAltPhone} autoComplete='tel' onChange={(e) => updateField('emergencyAltPhone', formatPhone(e.target.value, form.country))} onBlur={(event) => markTouched('emergencyAltPhone', event.relatedTarget)} placeholder={t('alternativeEmergencyNumber')} style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('emergencyAltPhone'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                    <FieldFeedback name='emergencyAltPhone' error={touched.emergencyAltPhone ? errors.emergencyAltPhone : undefined} hint='Include + and country code; 7–15 digits, for example +49 151 23456789. Spaces, brackets and hyphens are allowed.' />
+                    <FieldFeedback name='emergencyAltPhone' error={touched.emergencyAltPhone ? errors.emergencyAltPhone : undefined} hint={t('phoneHint')} />
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -648,7 +648,7 @@ export default function ContactInformationPage() {
                   opacity: submitting ? 0.92 : 1,
                 }}
               >
-                <span>{submitting ? 'Saving and continuing...' : 'Continue'}</span>
+                <span>{submitting ? t('savingContinue') : t('continue')}</span>
                 <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
               </button>
 
