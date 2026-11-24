@@ -136,3 +136,13 @@ test('physician service cards do not invent a currency or approved quote from a 
   await expect(service).toContainText('Duration: 30 min')
   await expect(service).not.toContainText('$33')
 })
+
+test('the appointment calendar reads in German with German dates, times and weekdays', async ({page, context, baseURL}) => {
+  await bookingFixtures(context)
+  await context.addCookies([{name: 'qarevo_locale', value: 'de', url: baseURL!}])
+  await page.goto(`/patient/consultation-booking/date-time?provider_id=${provider}&episode_id=${episode}&service=video&date=2030-07-10`)
+  await expect(page.getByText('Datum und Uhrzeit').first()).toBeVisible()
+  await expect(page.getByText('Videosprechstunde').first()).toBeVisible()
+  await expect(page.getByText('Preise werden noch eingerichtet').first()).toBeVisible()
+  await expect(page.getByText('Pricing pending setup')).toHaveCount(0)
+})

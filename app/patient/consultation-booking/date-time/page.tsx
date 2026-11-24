@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Suspense, useMemo, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
@@ -23,14 +23,15 @@ import {
   type PatientBookingWorkingHours,
 } from '@/lib/api'
 
-function readLabel(service: string | null) {
+/** Message key for the consultation type shown to the patient. */
+function serviceKey(service: string | null) {
   switch (service) {
     case 'physical':
-      return 'In-person Consultation'
+      return 'serviceInPerson'
     case 'follow-up':
-      return 'Follow-up Consultation'
+      return 'serviceFollowUp'
     default:
-      return 'Video Consultation'
+      return 'serviceVideo'
   }
 }
 
@@ -41,8 +42,15 @@ function formatDateKey(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-function formatDateLabel(date: Date, timeZone?: string) {
-  return date.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric', timeZone })
+function formatDateLabel(date: Date, locale = 'en', timeZone?: string) {
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone })
+}
+
+const WEEKDAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+/** API weekday codes (MONDAY…) as names in the active language. 7 January 2024 was a Sunday. */
+function weekdayLabel(day: string, locale: string) {
+  const index = WEEKDAYS.indexOf(day)
+  return index < 0 ? day : new Date(Date.UTC(2024, 0, 7 + index)).toLocaleDateString(locale, { weekday: 'long', timeZone: 'UTC' })
 }
 
 function addDays(date: Date, days: number) {
@@ -51,17 +59,18 @@ function addDays(date: Date, days: number) {
   return next
 }
 
-function formatWorkingTime(value?: string | null) {
-  if (!value) return 'Not set'
+/** 12-hour clock for English, 24-hour for German. */
+function formatWorkingTime(value: string | null | undefined, notSet: string, twelveHour: boolean) {
+  if (!value) return notSet
   const [hourValue, minuteValue = '00'] = value.split(':')
   const hour = Number(hourValue)
   if (!Number.isFinite(hour)) return value
+  if (!twelveHour) return `${String(hour).padStart(2, '0')}:${minuteValue.padStart(2, '0')}`
   const suffix = hour >= 12 ? 'PM' : 'AM'
   const displayHour = hour % 12 || 12
   return `${displayHour}:${minuteValue.padStart(2, '0')} ${suffix}`
 }
 
-function formatFee() { return CONSULTATION_PRICING_PENDING }
 
 function groupSlots(slots: string[]) {
   const groups = [
@@ -120,7 +129,7 @@ function doctorToBookingFallback(doctor: PatientDoctor | null) {
 }
 
 function DateTimeSelectionPageContent() {
-  const t = useTranslations('bookingDateTime')
+  const t = useTranslations('bookingDateTime'), german = useLocale().startsWith('de'), dateLocale = german ? 'de-DE' : 'en'
   const router = useRouter()
   const searchParams = useSearchParams()
   useSafetyScreenGate()
@@ -140,7 +149,7 @@ function DateTimeSelectionPageContent() {
     const services = profileServices(remoteDoctor)
     return services.find((item) => item.type === selectedServiceType) ?? services[0]
   }, [remoteDoctor, selectedServiceType])
-  const duration = serviceDetail?.duration ?? 'Duration not configured'
+  const duration = serviceDetail?.duration ?? t('durationNotConfigured')
   const insurance = declaredDoctorFundingOptions(physicianData.insurance)
   const initialDateParam = searchParams.get('date') ?? (matchingDraft ? bookingState.date : undefined)
   const initialDate = useMemo(() => {
@@ -183,9 +192,9 @@ function DateTimeSelectionPageContent() {
 
   const selectedDateKey = formatDateKey(selectedDate)
   const quickShortcuts = [
-    { label: 'Today', date: new Date() },
-    { label: 'Tomorrow', date: addDays(new Date(), 1) },
-    { label: 'Next Week', date: addDays(new Date(), 7) },
+    { label: t('today'), date: new Date() },
+    { label: t('tomorrow'), date: addDays(new Date(), 1) },
+    { label: t('nextWeek'), date: addDays(new Date(), 7) },
   ]
 
   const slotGroups = useMemo(() => groupSlots(availableSlots), [availableSlots])
@@ -238,7 +247,7 @@ function DateTimeSelectionPageContent() {
         if (!cancelled) {
           setAvailability([])
           setAvailableDays([])
-          setAvailabilityError('We could not load this doctor schedule. Please try again.')
+          setAvailabilityError(t('scheduleLoadFailed'))
         }
       } finally {
         if (!cancelled) setLoadingAvailability(false)
@@ -250,7 +259,7 @@ function DateTimeSelectionPageContent() {
     return () => {
       cancelled = true
     }
-  }, [physicianData.id])
+  }, [physicianData.id, t])
 
   // Validate selected date against available days
   useEffect(() => {
@@ -264,19 +273,16 @@ function DateTimeSelectionPageContent() {
 
     if (!isAvailable) {
       const nextAvailableDay = availableDays[0]
-      let errorMessage = `${physicianData.name} is not available on ${formatDateLabel(selectedDate)}.`
-
-      if (nextAvailableDay) {
-        errorMessage += ` Available days: ${availableDays.join(', ')}. Please select an available date.`
-      } else {
-        errorMessage += ` Please check the doctor's availability settings.`
-      }
+      const unavailable = t('notAvailableOn', { name: physicianData.name, date: formatDateLabel(selectedDate, dateLocale) })
+      const errorMessage = nextAvailableDay
+        ? `${unavailable} ${t('availableDays', { days: availableDays.map(day => weekdayLabel(day, dateLocale)).join(', ') })}`
+        : `${unavailable} ${t('checkAvailability')}`
 
       setDateValidationError(errorMessage)
     } else {
       setDateValidationError('')
     }
-  }, [selectedDateKey, availableDays, physicianData.name, selectedDate])
+  }, [selectedDateKey, availableDays, physicianData.name, selectedDate, t, dateLocale])
 
   useEffect(() => {
     if (!physicianData.id || !selectedDateKey) return
@@ -290,7 +296,7 @@ function DateTimeSelectionPageContent() {
         if (cancelled) return
         setAvailableSlots(response.slots)
         setSlotDetails(response.slot_details ?? [])
-        setAvailabilityError(response.schedule_ready === false ? 'This clinician has not configured a complete appointment calendar. Choose another clinician or contact support.' : '')
+        setAvailabilityError(response.schedule_ready === false ? t('calendarIncomplete') : '')
         setWorkingHours((current) => response.working_hours ?? current)
         setSelectedSlot((current) => response.slots.includes(current) ? current : response.slots[0] ?? '')
       })
@@ -299,7 +305,7 @@ function DateTimeSelectionPageContent() {
         if (!cancelled) {
           setAvailableSlots([])
           setSlotDetails([])
-          setAvailabilityError('Available times could not be loaded. Select the date again to retry.')
+          setAvailabilityError(t('slotsLoadFailed'))
           setSelectedSlot('')
         }
       })
@@ -310,12 +316,12 @@ function DateTimeSelectionPageContent() {
     return () => {
       cancelled = true
     }
-  }, [physicianData.id, selectedDateKey])
+  }, [physicianData.id, selectedDateKey, t])
 
   const endTime = selectedSlotDetail
-    ? new Date(selectedSlotDetail.end_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZone: selectedSlotDetail.time_zone })
+    ? new Date(selectedSlotDetail.end_at).toLocaleTimeString(dateLocale, { hour: 'numeric', minute: '2-digit', timeZone: selectedSlotDetail.time_zone })
     : ''
-  const displayDuration = selectedSlotDetail ? `${selectedSlotDetail.duration_minutes} min` : 'Select a time'
+  const displayDuration = selectedSlotDetail ? t('minutes', { minutes: selectedSlotDetail.duration_minutes }) : t('selectATime')
   const canContinue = Boolean(remoteDoctor?.id === physicianId && !doctorLoading && !loadingSlots && selectedSlotDetail && availableSlots.includes(selectedSlot))
 
   useEffect(() => {
@@ -328,7 +334,7 @@ function DateTimeSelectionPageContent() {
     getPatientDoctor(physicianId)
       .then((doctor) => {
         if (cancelled) return
-        if (doctor.id !== physicianId) throw new Error('The selected clinician could not be confirmed.')
+        if (doctor.id !== physicianId) throw new Error(t('clinicianUnconfirmed'))
         setRemoteDoctor(doctor)
         setDoctorLoadError('')
       })
@@ -336,24 +342,24 @@ function DateTimeSelectionPageContent() {
         console.error('Failed to load selected doctor', error)
         if (!cancelled) {
           setRemoteDoctor(null)
-          setDoctorLoadError('The selected doctor could not be confirmed. Retry loading their details or choose another doctor.')
+          setDoctorLoadError(t('doctorUnconfirmed'))
         }
       })
       .finally(() => { if (!cancelled) setDoctorLoading(false) })
 
     return () => { cancelled = true }
-  }, [physicianId, doctorReload])
+  }, [physicianId, doctorReload, t])
 
   if (!physicianId || !remoteDoctor || doctorLoading) {
     const missing = !physicianId
     const failed = !missing && !doctorLoading && Boolean(doctorLoadError)
     return <main className='bg-surface-subtle px-4 py-8 sm:px-6'>
       <section className='mx-auto max-w-xl rounded-2xl border border-theme bg-surface p-6 sm:p-8' aria-labelledby='booking-doctor-title'>
-        <h1 id='booking-doctor-title' className='text-xl font-bold text-ink'>{missing ? 'Choose a doctor to continue' : failed ? 'Doctor details unavailable' : 'Checking your selected doctor'}</h1>
-        <p className='mt-3 text-sm leading-relaxed text-muted' role={failed ? 'alert' : 'status'}>{missing ? 'Choose a doctor before selecting an appointment time. Your saved account information and intake remain available.' : failed ? doctorLoadError : 'Loading the doctor’s current details and appointment calendar…'}</p>
+        <h1 id='booking-doctor-title' className='text-xl font-bold text-ink'>{missing ? t('chooseDoctorTitle') : failed ? t('doctorUnavailableTitle') : t('checkingDoctorTitle')}</h1>
+        <p className='mt-3 text-sm leading-relaxed text-muted' role={failed ? 'alert' : 'status'}>{missing ? t('chooseDoctorText') : failed ? doctorLoadError : t('loadingDoctor')}</p>
         <div className='mt-6 flex flex-wrap gap-3'>
           {failed && <button type='button' className='q-button q-button-primary' onClick={() => setDoctorReload(value => value + 1)}>{t('retryDoctorDetails')}</button>}
-          <ActionLink href={discoveryHref} pendingLabel='Opening doctor selection…' tone={missing ? 'primary' : 'secondary'}>{missing ? 'Choose a doctor' : 'Choose another doctor'}</ActionLink>
+          <ActionLink href={discoveryHref} pendingLabel={t('openingSelection')} tone={missing ? 'primary' : 'secondary'}>{missing ? t('chooseDoctor') : t('chooseAnotherDoctor')}</ActionLink>
           <ActionLink href='/patient/dashboard'>{t('returnToDashboard')}</ActionLink>
         </div>
       </section>
@@ -391,7 +397,7 @@ function DateTimeSelectionPageContent() {
                 <div style={{ width: '60%', height: '100%', background: 'linear-gradient(90deg, #20B5DF 0%, var(--primary-end) 100%)', borderRadius: '999px', transition: 'width 0.3s ease' }} />
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {['Doctor Selected', 'Consultation Type', 'Date & Time', 'Review', 'Confirmation'].map((step, index) => {
+                {[t('stepDoctor'), t('consultationType'), t('stepDateTime'), t('stepReview'), t('stepConfirmation')].map((step, index) => {
                   const completed = index < 2
                   const active = index === 2
                   return (
@@ -419,11 +425,11 @@ function DateTimeSelectionPageContent() {
               )}
               <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
               <div style={{ display: 'grid', gap: '7px', fontSize: "13px", color: T.slate2 }}>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('consultation')}</span><strong style={{ color: T.navy }}>{readLabel(selectedServiceType)}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('consultation')}</span><strong style={{ color: T.navy }}>{t(serviceKey(selectedServiceType))}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('duration')}</span><strong style={{ color: T.navy }}>{displayDuration}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('workingHours')}</span><strong style={{ color: T.navy }}>{formatWorkingTime(workingHours?.start)} - {formatWorkingTime(workingHours?.end)}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('days')}</span><strong style={{ color: T.navy }}>{availableDays.length ? availableDays.join(', ') : 'Not configured'}</strong></div>
-	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('fee')}</span><strong style={{ color: T.navy }}>{formatFee()}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('workingHours')}</span><strong style={{ color: T.navy }}>{formatWorkingTime(workingHours?.start, t('notSet'), !german)} - {formatWorkingTime(workingHours?.end, t('notSet'), !german)}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('days')}</span><strong style={{ color: T.navy }}>{availableDays.length ? availableDays.map(day => weekdayLabel(day, dateLocale)).join(', ') : t('notConfigured')}</strong></div>
+	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('fee')}</span><strong style={{ color: T.navy }}>{t('pricingPending')}</strong></div>
 	                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('insurance')}</span><strong style={{ color: T.green }}>{insurance}</strong></div>
               </div>
             </section>
@@ -561,14 +567,14 @@ function DateTimeSelectionPageContent() {
                 )}
                 {selectedAvailability && selectedAvailability.status !== 'available' && !dateValidationError && (
                   <div style={{ borderRadius: '12px', border: '1px solid rgba(217,119,6,0.22)', background: 'rgba(255,251,235,0.9)', color: T.amber, padding: '11px 12px', fontSize: '13px', fontWeight: 600 }}>
-                    This doctor has no open slot on {formatDateLabel(selectedDate)}.
+                    {t('noOpenSlotOn', { date: formatDateLabel(selectedDate, dateLocale) })}
                   </div>
                 )}
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', paddingTop: '2px' }}>
                   {[
-                    ['Selected Date', T.blue],
-                    ['Today', T.green],
+                    [t('selectedDate'), T.blue],
+                    [t('today'), T.green],
                   ].map(([label, color]) => (
                     <div key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: "13px", color: T.slate, fontWeight: 600 }}>
                       <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
@@ -585,7 +591,7 @@ function DateTimeSelectionPageContent() {
                   <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('timeSlots')}</p>
                   <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('chooseAPremiumAppointmentWindow')}</h2>
                 </div>
-	                <div style={{ padding: '8px 12px', borderRadius: '999px', background: 'rgba(165,224,218,0.24)', color: T.teal, fontSize: "13px", fontWeight: 700 }}>Timezone: {workingHours?.timezone ?? 'Doctor timezone'}</div>
+	                <div style={{ padding: '8px 12px', borderRadius: '999px', background: 'rgba(165,224,218,0.24)', color: T.teal, fontSize: "13px", fontWeight: 700 }}>{t('timezoneLabel', { zone: workingHours?.timezone ?? t('doctorTimezone') })}</div>
               </div>
 
               {/* Mobile bottom sheet trigger */}
@@ -608,7 +614,7 @@ function DateTimeSelectionPageContent() {
                   marginBottom: '12px',
                 }}
               >
-	                Select Time Slot: {selectedSlot || 'No slots available'}
+	                {t('selectTimeSlotValue', { slot: selectedSlot || t('noSlots') })}
 	              </button>
 
 	              <div style={{ display: 'grid', gap: '12px' }}>
@@ -743,12 +749,12 @@ function DateTimeSelectionPageContent() {
 
 	                <div className='dt-detail-grid'>
                   {[
-                    ['Consultation Type', readLabel(selectedServiceType)],
-                    ['Appointment Duration', duration],
-                    ['Estimated End Time', endTime],
-                    ['Consultation Fee', formatFee()],
-                    ['Doctor’s declared billing options', insurance],
-                    ['Cancellation terms', 'Cancellation terms not configured'],
+                    [t('consultationType'), t(serviceKey(selectedServiceType))],
+                    [t('appointmentDuration'), duration],
+                    [t('estimatedEnd'), endTime],
+                    [t('consultationFee'), t('pricingPending')],
+                    [t('billingOptions'), insurance],
+                    [t('cancellationTerms'), t('cancellationNotConfigured')],
                   ].map(([label, value]) => (
                     <div key={label} style={{ padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
@@ -766,7 +772,7 @@ function DateTimeSelectionPageContent() {
                   <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('aCalmReadyExperience')}</h2>
                 </div>
                 <div style={{ display: 'grid', gap: '8px' }}>
-                  {['Prepare your medical documents', 'Ensure internet connectivity', 'Join 5 minutes early', 'Find a quiet location', 'Keep previous prescriptions nearby'].map((tip) => (
+                  {[t('tipDocuments'), t('tipInternet'), t('tipEarly'), t('tipQuiet'), t('tipPrescriptions')].map((tip) => (
                     <div key={tip} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <Ico p={ICONS.check} size={12} sw={2.4} color={T.green} />
                       <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{tip}</span>
@@ -795,13 +801,13 @@ function DateTimeSelectionPageContent() {
 
               <div style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
                 {[
-                  ['Consultation', readLabel(service)],
-                  ['Selected Date', formatDateLabel(selectedDate)],
-                  ['Selected Time', selectedSlot || 'Not selected'],
-                  ['Duration', displayDuration],
-                  ['Fee', formatFee()],
-                  ['Insurance', insurance],
-                  ['Estimated Total', formatFee()],
+                  [t('consultation'), t(serviceKey(service))],
+                  [t('selectedDate'), formatDateLabel(selectedDate, dateLocale)],
+                  [t('selectedTime'), selectedSlot || t('notSelected')],
+                  [t('duration'), displayDuration],
+                  [t('fee'), t('pricingPending')],
+                  [t('insurance'), insurance],
+                  [t('estimatedTotal'), t('pricingPending')],
                 ].map(([label, value]) => (
                   <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
                     <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
@@ -848,7 +854,7 @@ function DateTimeSelectionPageContent() {
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {['Doctor selection', 'Clinician appointment calendar', 'Review before confirmation', 'Account access required'].map((item) => (
+                {[t('trustSelection'), t('trustCalendar'), t('trustReview'), t('trustAccount')].map((item) => (
                   <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: T.slate, fontSize: "13px", fontWeight: 600 }}>
                     <Ico p={ICONS.shield} size={12} sw={1.8} color={T.green} />
                     {item}

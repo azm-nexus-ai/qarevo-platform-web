@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { getApiErrorDetail } from '@/lib/api'
 
 import Link from 'next/link'
@@ -18,36 +18,17 @@ import HoverBtn from '@/components/buttons/HoverBtn'
 import { useEpisodeIntake } from '@/lib/use-episode-intake'
 import { resolveBookingSlot } from '@/lib/booking-slot'
 
-function formatFee(value: number) {
-  return 'Pricing pending setup'
-}
 
-function readLabel(service: string | null) {
+/** Message key for the consultation type shown to the patient. */
+function serviceKey(service: string | null) {
   switch (service) {
     case 'physical':
-      return 'In-person Consultation'
+      return 'serviceInPerson'
     case 'follow-up':
-      return 'Follow-up Consultation'
+      return 'serviceFollowUp'
     default:
-      return 'Video Consultation'
+      return 'serviceVideo'
   }
-}
-
-function profileServices(doctor: PatientDoctor | null) {
-  const services = doctor?.profile?.services
-  if (!Array.isArray(services)) return []
-
-  return services
-    .map((service) => {
-      if (!service || typeof service !== 'object') return null
-      const item = service as Record<string, unknown>
-      return {
-        type: typeof item.type === 'string' ? item.type : '',
-        duration: typeof item.duration === 'string' ? item.duration : '',
-        price: typeof item.price === 'number' ? item.price : null,
-      }
-    })
-    .filter((service): service is { type: string; duration: string; price: number | null } => Boolean(service))
 }
 
 function doctorToBookingFallback(doctor: PatientDoctor | null) {
@@ -67,7 +48,7 @@ function doctorToBookingFallback(doctor: PatientDoctor | null) {
 }
 
 function ReviewPageContent() {
-  const t = useTranslations('bookingReview')
+  const t = useTranslations('bookingReview'), timeLocale = useLocale().startsWith('de') ? 'de-DE' : 'en'
   const router = useRouter()
   const searchParams = useSearchParams()
   const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
@@ -78,12 +59,7 @@ function ReviewPageContent() {
   const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor) ?? physician, [remoteDoctor, physician])
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
-  const serviceDetail = useMemo(() => {
-    const services = profileServices(remoteDoctor)
-    return services.find((item) => item.type === service) ?? services[0]
-  }, [remoteDoctor, service])
-  const fee = Number(searchParams.get('fee') ?? serviceDetail?.price ?? physicianData.consultationFee ?? 0)
-  const duration = verifiedSlot ? `${verifiedSlot.duration_minutes} min` : 'Not yet verified'
+  const duration = verifiedSlot ? t('minutes', { minutes: verifiedSlot.duration_minutes }) : t('notYetVerified')
   const insurance = declaredDoctorFundingOptions(physicianData.insurance)
   const date = searchParams.get('date') ?? ''
   const slot = searchParams.get('slot') ?? ''
@@ -92,20 +68,20 @@ function ReviewPageContent() {
   const [patient, setPatient] = useState<PatientSettings | null>(null)
   const [patientError, setPatientError] = useState('')
   const intake = useEpisodeIntake(episodeId)
-  const patientName = patient ? [patient.first_name, patient.last_name].filter(Boolean).join(' ') || 'Not provided' : 'Loading…'
-  const email = patient?.email || 'Not provided'
-  const phone = patient?.phone || 'Not provided'
-  const emergencyContact = patient?.emergency_contacts?.map(contact => [contact.name, contact.phone].filter(Boolean).join(' · ')).join('; ') || 'Not provided'
-  const medicalConcern = intake.loading ? 'Loading saved intake…' : intake.error || intake.notes || 'No saved intake available'
+  const patientName = patient ? [patient.first_name, patient.last_name].filter(Boolean).join(' ') || t('notProvided') : t('loading')
+  const email = patient?.email || t('notProvided')
+  const phone = patient?.phone || t('notProvided')
+  const emergencyContact = patient?.emergency_contacts?.map(contact => [contact.name, contact.phone].filter(Boolean).join(' · ')).join('; ') || t('notProvided')
+  const medicalConcern = intake.loading ? t('loadingIntake') : intake.error || intake.notes || t('noIntake')
   useEffect(() => {
     let current = true
     getPatientSettings().then(value => { if (current) setPatient(value) })
-      .catch(() => { if (current) setPatientError('Your patient details could not be loaded. Refresh to try again.') })
+      .catch(() => { if (current) setPatientError(t('patientLoadFailed')) })
     return () => { current = false }
-  }, [])
+  }, [t])
 
   const [agreed, setAgreed] = useState(false)
-  const [entitySelection, setEntitySelection] = useState<EntitySelection>({ ready: false, treatingEntityId: null, confirmedFeeMinor: null, reason: 'Checking who can treat you…' })
+  const [entitySelection, setEntitySelection] = useState<EntitySelection>({ ready: false, treatingEntityId: null, confirmedFeeMinor: null, reason: t('checkingTreating') })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [showPolicy, setShowPolicy] = useState(false)
@@ -124,14 +100,14 @@ function ReviewPageContent() {
         console.error('Failed to load selected doctor', error)
         if (!cancelled) {
           setRemoteDoctor(null)
-          setDoctorLoadError('We could not load the selected physician details. Please go back and choose the doctor again.')
+          setDoctorLoadError(t('doctorLoadFailed'))
         }
       })
 
     return () => {
       cancelled = true
     }
-  }, [physicianId, physician])
+  }, [physicianId, physician, t])
 
   const [slotError, setSlotError] = useState('')
   const requestedStart = searchParams.get('start_at')
@@ -140,17 +116,17 @@ function ReviewPageContent() {
     setVerifiedSlot(null)
     setSlotError('')
     if (!physicianId || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !slot) {
-      setSlotError('Go back and choose an available appointment date and time.')
+      setSlotError(t('chooseSlotAgain'))
       return
     }
     getPatientBookingSlots(physicianId, date)
       .then(response => { if (current) setVerifiedSlot(resolveBookingSlot(response.slot_details ?? [], slot, requestedStart)) })
-      .catch(error => { if (current) setSlotError(getApiErrorDetail(error) || 'The appointment time could not be verified.') })
+      .catch(error => { if (current) setSlotError(getApiErrorDetail(error) || t('slotUnverified')) })
     return () => { current = false }
-  }, [physicianId, date, slot, requestedStart])
+  }, [physicianId, date, slot, requestedStart, t])
   const appointmentEnd = verifiedSlot
-    ? new Date(verifiedSlot.end_at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', timeZone: verifiedSlot.time_zone })
-    : 'Verifying appointment time…'
+    ? new Date(verifiedSlot.end_at).toLocaleTimeString(timeLocale, { hour: 'numeric', minute: '2-digit', timeZone: verifiedSlot.time_zone })
+    : t('verifyingSlot')
 
   const allAgreed = agreed
 
@@ -168,11 +144,11 @@ function ReviewPageContent() {
 
   const handleConfirm = async () => {
     if (isSubmitting) return
-    if (!verifiedSlot) { setSubmitError(slotError || 'Wait for the appointment time to be verified.'); return }
-    if (!allAgreed) { setSubmitError('Confirm the required booking review before continuing.'); return }
-    if (!entitySelection.ready) { setSubmitError(entitySelection.reason || 'Choose your treating practice before continuing.'); return }
-    if (!episodeId || !intakeSubmitted) { setSubmitError('Complete and submit the required intake before confirming this booking.'); return }
-    if (!patient || patientError || intake.error || intake.loading) { setSubmitError(patientError || intake.error || 'Wait for your saved information to load before continuing.'); return }
+    if (!verifiedSlot) { setSubmitError(slotError || t('waitForSlot')); return }
+    if (!allAgreed) { setSubmitError(t('confirmReview')); return }
+    if (!entitySelection.ready) { setSubmitError(entitySelection.reason || t('choosePractice')); return }
+    if (!episodeId || !intakeSubmitted) { setSubmitError(t('completeIntake')); return }
+    if (!patient || patientError || intake.error || intake.loading) { setSubmitError(patientError || intake.error || t('waitForData')); return }
     setIsSubmitting(true)
     setSubmitError('')
 
@@ -194,7 +170,7 @@ function ReviewPageContent() {
       if (aiDraftJobId) next.set('aiDraftJobId', aiDraftJobId)
       router.push(`/patient/consultation-booking/success?${next.toString()}`)
     } catch (error) {
-      setSubmitError(getApiErrorDetail(error) || 'Unable to confirm this appointment right now.')
+      setSubmitError(getApiErrorDetail(error) || t('confirmFailed'))
     } finally {
       setIsSubmitting(false)
     }
@@ -216,7 +192,7 @@ function ReviewPageContent() {
                 <div style={{ width: '80%', height: '100%', background: 'linear-gradient(90deg, #20B5DF 0%, var(--primary-end) 100%)', borderRadius: '999px', transition: 'width 0.3s ease' }} />
               </div>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {['Doctor Selected', 'Date & Time', 'Intake', 'Review', 'Confirmation'].map((step, index) => {
+                {[t('stepDoctor'), t('stepDateTime'), t('stepIntake'), t('stepReview'), t('stepConfirmation')].map((step, index) => {
                   const completed = index < 3
                   const active = index === 3
                   return (
@@ -239,10 +215,10 @@ function ReviewPageContent() {
               <h2 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.02em' }}>{physicianData.name}</h2>
               <p style={{ margin: '0 0 8px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
               <div style={{ display: 'grid', gap: '7px', fontSize: "13px", color: T.slate2 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('consultation')}</span><strong style={{ color: T.navy }}>{readLabel(service)}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('consultation')}</span><strong style={{ color: T.navy }}>{t(serviceKey(service))}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('date')}</span><strong style={{ color: T.navy }}>{date}</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('time')}</span><strong style={{ color: T.navy }}>{slot}</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('fee')}</span><strong style={{ color: T.navy }}>{formatFee(fee)}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}><span>{t('fee')}</span><strong style={{ color: T.navy }}>{t('pricingPending')}</strong></div>
               </div>
               {doctorLoadError && (
                 <div style={{ marginTop: '10px', borderRadius: '12px', border: '1px solid rgba(220,38,38,0.2)', background: 'rgba(254,242,242,0.9)', color: '#B91C1C', padding: '10px 11px', fontSize: "13px", fontWeight: 700, lineHeight: 1.5 }}>
@@ -285,9 +261,9 @@ function ReviewPageContent() {
                   <h3 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy }}>{physicianData.name}</h3>
                   <p style={{ margin: '0 0 6px', fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{physicianData.specialty} · {physicianData.hospital}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: "13px", color: T.slate2 }}>
-	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.activity} size={12} sw={1.75} color={T.blue} />{physicianData.experienceYears} years experience</span>
-	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.steth} size={12} sw={1.75} color={T.blue} />{remoteDoctor && remoteDoctor.reviews > 0 ? `${remoteDoctor.rating.toFixed(1)} rating` : 'No ratings yet'}</span>
-	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.lock} size={12} sw={1.75} color={T.blue} />{physicianData.languages.length ? physicianData.languages.join(', ') : 'Languages not listed'}</span>
+	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.activity} size={12} sw={1.75} color={T.blue} />{t('yearsExperience', { years: physicianData.experienceYears })}</span>
+	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.steth} size={12} sw={1.75} color={T.blue} />{remoteDoctor && remoteDoctor.reviews > 0 ? t('rating', { rating: remoteDoctor.rating.toFixed(1) }) : t('noRatings')}</span>
+	                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ico p={ICONS.lock} size={12} sw={1.75} color={T.blue} />{physicianData.languages.length ? physicianData.languages.join(', ') : t('noLanguages')}</span>
                   </div>
                 </div>
               </div>
@@ -300,14 +276,14 @@ function ReviewPageContent() {
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' }}>
                 {[
-                  ['Consultation Type', readLabel(service)],
-                  ['Appointment Date', date],
-                  ['Appointment Time', slot],
-                  ['Timezone', verifiedSlot?.time_zone || 'Not available'],
-                  ['Estimated Duration', verifiedSlot ? `${verifiedSlot.duration_minutes} min` : 'Not available'],
-                  ['Consultation Fee', formatFee(fee)],
-                  ['Doctor’s declared billing options', insurance],
-                  ['Expected End Time', appointmentEnd],
+                  [t('consultationType'), t(serviceKey(service))],
+                  [t('appointmentDate'), date],
+                  [t('appointmentTime'), slot],
+                  [t('timezone'), verifiedSlot?.time_zone || t('notAvailable')],
+                  [t('estimatedDuration'), verifiedSlot ? t('minutes', { minutes: verifiedSlot.duration_minutes }) : t('notAvailable')],
+                  [t('consultationFee'), t('pricingPending')],
+                  [t('billingOptions'), insurance],
+                  [t('expectedEnd'), appointmentEnd],
                 ].map(([label, value]) => (
                   <div key={label} style={{ minWidth: 0, overflowWrap: 'anywhere', padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
@@ -324,11 +300,11 @@ function ReviewPageContent() {
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' }}>
                 {[
-                  ['Patient Name', patientName],
-                  ['Email Address', email],
-                  ['Phone Number', phone],
-                  ['Emergency Contact', emergencyContact],
-                  ['Primary Medical Concern', medicalConcern],
+                  [t('patientName'), patientName],
+                  [t('emailAddress'), email],
+                  [t('phoneNumber'), phone],
+                  [t('emergencyContact'), emergencyContact],
+                  [t('primaryConcern'), medicalConcern],
                 ].map(([label, value]) => (
                   <div key={label} style={{ minWidth: 0, overflowWrap: 'anywhere', padding: '12px 13px', borderRadius: '14px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
@@ -346,7 +322,7 @@ function ReviewPageContent() {
                   <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('aCalmReadyExperience')}</h2>
                 </div>
                 <div style={{ display: 'grid', gap: '8px' }}>
-                  {['Join the consultation 5 minutes early', 'Ensure a stable internet connection', 'Upload any remaining medical documents', 'Prepare questions for your physician', 'Keep previous prescriptions available'].map((tip) => (
+                  {[t('tipEarly'), t('tipInternet'), t('tipDocuments'), t('tipQuestions'), t('tipPrescriptions')].map((tip) => (
                     <div key={tip} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <Ico p={ICONS.check} size={12} sw={2.4} color={T.green} />
                       <span style={{ fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{tip}</span>
@@ -362,15 +338,15 @@ function ReviewPageContent() {
                   <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('cancellationPolicy')}</p>
                   <h2 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em' }}>{t('clearFlexibleTerms')}</h2>
                 </div>
-                <button type='button' onClick={() => setShowPolicy((value) => !value)} style={{ border: 'none', background: 'none', color: T.link, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>{showPolicy ? 'Hide' : 'Show Details'}</button>
+                <button type='button' onClick={() => setShowPolicy((value) => !value)} style={{ border: 'none', background: 'none', color: T.link, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>{showPolicy ? t('hideDetails') : t('showDetails')}</button>
               </div>
               {showPolicy ? (
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {[
-                    ['Free cancellation', 'Free cancellation up to 24 hours before appointment.'],
-                    ['Cancellation terms', 'Commercial cancellation terms are awaiting approval. This development test does not create a charge.'],
-                    ['Missed appointments', 'Missed visits are subject to the standard care-team rescheduling policy.'],
-                    ['Payments and invoices', 'Payment processing and automated invoicing are not enabled for this development test.'],
+                    [t('policyFree'), t('policyFreeBody')],
+                    [t('policyTerms'), t('policyTermsBody')],
+                    [t('policyMissed'), t('policyMissedBody')],
+                    [t('policyPayments'), t('policyPaymentsBody')],
                   ].map(([label, value]) => (
                     <div key={label} style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 3px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{label}</p>
@@ -421,13 +397,13 @@ function ReviewPageContent() {
 
               <div style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
                 {[
-                  ['Consultation', readLabel(service)],
-                  ['Date', date],
-                  ['Time', slot],
-                  ['Duration', duration],
-                  ['Fee', formatFee(fee)],
-                  ['Insurance', insurance],
-                  ['Estimated Total', formatFee(fee)],
+                  [t('consultation'), t(serviceKey(service))],
+                  [t('date'), date],
+                  [t('time'), slot],
+                  [t('duration'), duration],
+                  [t('fee'), t('pricingPending')],
+                  [t('insurance'), insurance],
+                  [t('estimatedTotal'), t('pricingPending')],
                 ].map(([label, value]) => (
                   <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
                     <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
@@ -458,7 +434,7 @@ function ReviewPageContent() {
                 }}
                 on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 18px rgba(32,181,223,0.28)' }}
               >
-                {isSubmitting ? 'Confirming…' : 'Confirm Appointment'}
+                {isSubmitting ? t('confirming') : t('confirmAppointment')}
                 <Ico p={ICONS.arrowFwd} size={14} sw={2.2} />
               </HoverBtn>
               {submitError && (
@@ -475,7 +451,7 @@ function ReviewPageContent() {
 
             <section style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {['Review before booking', 'Optional AI assistance', 'Clinician-led care'].map((item) => (
+                {[t('trustReview'), t('trustAi'), t('trustClinician')].map((item) => (
                   <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: T.slate, fontSize: "13px", fontWeight: 600 }}>
                     <Ico p={ICONS.shield} size={12} sw={1.8} color={T.green} />
                     {item}
