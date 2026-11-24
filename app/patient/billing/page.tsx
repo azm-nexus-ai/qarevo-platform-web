@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import PatientPortalShell from '@/components/patient/PatientPortalShell'
 import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/components/patient/PatientPortalPrimitives'
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { clearPortalSession, getApiErrorDetail, getPatientBilling, isAuthError, type PatientBillingInvoice, type PatientBillingPaymentMethod, type PatientBillingReadiness, type PatientBillingResponse } from '@/lib/api'
 import { T } from '@/lib/tokens'
-import { insurancePresentation } from '@/lib/insurance-presentation'
+import { useInsurancePresentation } from '@/lib/use-insurance-presentation'
 
 const EMPTY_BILLING: PatientBillingResponse = {
   status: 'not_configured',
@@ -28,32 +29,34 @@ const EMPTY_BILLING: PatientBillingResponse = {
   },
 }
 
-function money(value: number | null | undefined, currency = 'EUR') {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return 'Not available'
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value)
+type Tr = (key: string, values?: Record<string, string | number>) => string
+
+function money(value: number | null | undefined, currency: string, locale: string | undefined, unavailable: string) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return unavailable
+  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(value)
 }
 
-function invoiceAmount(invoice: PatientBillingInvoice, currency: string) {
+function invoiceAmount(invoice: PatientBillingInvoice, unavailable: string) {
   if (typeof invoice.amount === 'string' && invoice.amount.trim()) return invoice.amount
-  return money(null, currency)
+  return unavailable
 }
 
-function invoiceDate(invoice: PatientBillingInvoice) {
-  if (!invoice.date) return 'Date unavailable'
+function invoiceDate(invoice: PatientBillingInvoice, locale: string | undefined, unavailable: string) {
+  if (!invoice.date) return unavailable
   const date = new Date(invoice.date)
-  return Number.isNaN(date.getTime()) ? invoice.date : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  return Number.isNaN(date.getTime()) ? invoice.date : date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function cardBrandLabel(method: PatientBillingPaymentMethod) {
+function cardBrandLabel(method: PatientBillingPaymentMethod, t: Tr) {
   if (method.label) return method.label
-  if (method.brand && method.last4) return `${method.brand} ending in ${method.last4}`
-  return method.brand || 'Payment method'
+  if (method.brand && method.last4) return t('cardEnding', { brand: method.brand, last4: method.last4 })
+  return method.brand || t('paymentMethod')
 }
 
-function cardMeta(method: PatientBillingPaymentMethod) {
+function cardMeta(method: PatientBillingPaymentMethod, t: Tr) {
   if (method.meta) return method.meta
-  if (method.expiry_month || method.expiry_year) return `Expires ${[method.expiry_month, method.expiry_year].filter(Boolean).join('/')}`
-  return 'Payment details secured by provider'
+  if (method.expiry_month || method.expiry_year) return t('expires', { date: [method.expiry_month, method.expiry_year].filter(Boolean).join('/') })
+  return t('securedByProvider')
 }
 
 function EmptyState({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
@@ -67,7 +70,8 @@ function EmptyState({ title, body, action }: { title: string; body: string; acti
 }
 
 function PaymentMethodCard({ method }: { method: PatientBillingPaymentMethod }) {
-  const brand = method.brand || 'Card'
+  const t = useTranslations('patientBilling')
+  const brand = method.brand || t('card')
   const last4 = method.last4 || method.label?.match(/\d{4}$/)?.[0] || '----'
 
   return (
@@ -75,43 +79,44 @@ function PaymentMethodCard({ method }: { method: PatientBillingPaymentMethod }) 
       <div style={{ minHeight: '126px', borderRadius: '16px', padding: '16px', background: 'linear-gradient(135deg, #04354D 0%, #0C6B86 58%, #20B5DF 100%)', color: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18)' }}>
         <div className='flex items-center justify-between gap-3'>
           <span style={{ fontSize: "13px", fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{brand}</span>
-          {method.primary ? <span style={{ fontSize: "13px", fontWeight: 800, borderRadius: '999px', padding: '4px 8px', background: 'rgba(255,255,255,0.18)' }}>Primary</span> : null}
+          {method.primary ? <span style={{ fontSize: "13px", fontWeight: 800, borderRadius: '999px', padding: '4px 8px', background: 'rgba(255,255,255,0.18)' }}>{t('primary')}</span> : null}
         </div>
         <div>
           <p style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800 }}>**** {last4}</p>
-          <p style={{ margin: 0, fontSize: "13px", color: 'rgba(255,255,255,0.78)' }}>{cardMeta(method)}</p>
+          <p style={{ margin: 0, fontSize: "13px", color: 'rgba(255,255,255,0.78)' }}>{cardMeta(method, t)}</p>
         </div>
       </div>
       <div className='mt-3'>
-        <p style={{ margin: '0 0 3px', fontSize: '14px', fontWeight: 800, color: T.navy }}>{cardBrandLabel(method)}</p>
-        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{cardMeta(method)}</p>
+        <p style={{ margin: '0 0 3px', fontSize: '14px', fontWeight: 800, color: T.navy }}>{cardBrandLabel(method, t)}</p>
+        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{cardMeta(method, t)}</p>
       </div>
     </div>
   )
 }
 
 function BillingReadinessDetails({ readiness }: { readiness?: PatientBillingReadiness }) {
+  const t = useTranslations('patientBilling')
   if (!readiness) return null
   return (
     <>
       <PortalCard>
-        <h2 className='mb-2 text-xl font-semibold' style={{ color: T.navy }}>Payment method availability</h2>
-        <p className='mb-4 max-w-2xl text-sm leading-6' style={{ color: T.slate }}>These methods are being evaluated. None is currently available for payment.</p>
-        <ul aria-label='Requested payment methods' className='grid list-none gap-3 p-0 sm:grid-cols-2 xl:grid-cols-3'>
+        <h2 className='mb-2 text-xl font-semibold' style={{ color: T.navy }}>{t('availabilityTitle')}</h2>
+        <p className='mb-4 max-w-2xl text-sm leading-6' style={{ color: T.slate }}>{t('availabilityText')}</p>
+        <ul aria-label={t('requestedMethods')} className='grid list-none gap-3 p-0 sm:grid-cols-2 xl:grid-cols-3'>
           {readiness.requested_methods.map(method => (
             <li key={method.method} className='flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border p-3' style={{ borderColor: 'var(--border)', background: 'var(--surface-subtle)' }}>
               <span className='text-sm font-semibold' style={{ color: T.navy }}>{method.label}</span>
-              <PortalBadge tone='neutral'>Not available</PortalBadge>
+              <PortalBadge tone='neutral'>{t('notAvailable')}</PortalBadge>
             </li>
           ))}
         </ul>
       </PortalCard>
       <PortalCard>
-        <h2 className='mb-3 text-xl font-semibold' style={{ color: T.navy }}>Invoices and funding</h2>
+        <h2 className='mb-3 text-xl font-semibold' style={{ color: T.navy }}>{t('invoicesFunding')}</h2>
         <dl className='mb-4 grid gap-3 sm:grid-cols-2'>
           {[
-            ['Medical invoices', readiness.medical_invoicing.message],
-            ['Online payments', readiness.patient_payments.message],
+            [t('medicalInvoices'), readiness.medical_invoicing.message],
+            [t('onlinePayments'), readiness.patient_payments.message],
           ].map(([label, message]) => (
             <div key={label} className='rounded-xl border p-3' style={{ borderColor: 'var(--border)' }}>
               <dt className='mb-2 text-sm font-semibold' style={{ color: T.navy }}>{label}</dt>
@@ -120,9 +125,9 @@ function BillingReadinessDetails({ readiness }: { readiness?: PatientBillingRead
           ))}
         </dl>
         <div className='space-y-3 text-sm leading-6' style={{ color: T.slate }}>
-          <p>Your treating practice is responsible for any medical invoice. Qarevo’s practice usage fees are handled separately.</p>
-          <p>Covered GKV consultations do not use patient checkout. Coverage must still be confirmed for the individual consultation; entering insurance details does not verify it.</p>
-          <p>Selecting self-pay does not authorize a charge. A separate, explicit cost agreement is required.</p>
+          <p>{t('practiceResponsible')}</p>
+          <p>{t('gkvNote')}</p>
+          <p>{t('selfPayNote')}</p>
         </div>
       </PortalCard>
     </>
@@ -130,6 +135,7 @@ function BillingReadinessDetails({ readiness }: { readiness?: PatientBillingRead
 }
 
 export default function PatientBillingPage() {
+  const t = useTranslations('patientBilling'), numberLocale = useLocale().startsWith('de') ? 'de-DE' : undefined, presentInsurance = useInsurancePresentation()
   const [loading, setLoading] = useState(true)
   const [billing, setBilling] = useState<PatientBillingResponse>(EMPTY_BILLING)
   const [notice, setNotice] = useState<{ title: string; body: string } | null>(null)
@@ -151,7 +157,7 @@ export default function PatientBillingPage() {
           window.location.href = '/auth/sign-in'
           return
         }
-        if (mounted) setErrorMessage(getApiErrorDetail(error) || 'Billing is temporarily unavailable.')
+        if (mounted) setErrorMessage(getApiErrorDetail(error) || t('loadFailed'))
       } finally {
         if (mounted) setLoading(false)
       }
@@ -161,22 +167,24 @@ export default function PatientBillingPage() {
     return () => {
       mounted = false
     }
-  }, [reload])
+  }, [reload, t])
 
   const currency = billing.currency || 'EUR'
   const paidInvoices = useMemo(() => billing.invoices.filter((invoice) => invoice.status?.toLowerCase() === 'paid'), [billing.invoices])
   const hasPaymentMethods = billing.payment_methods.length > 0
   const hasInvoices = billing.invoices.length > 0
   const insurance = billing.insurance_summary || EMPTY_BILLING.insurance_summary
-  const insuranceInfo = insurancePresentation({insurance_type:insurance.insurance_type,insurance_provider_name:insurance.provider_name,insurance_number:insurance.member_number})
+  const insuranceInfo = presentInsurance({insurance_type:insurance.insurance_type,insurance_provider_name:insurance.provider_name,insurance_number:insurance.member_number})
   const insuranceStatus = insuranceInfo.verificationLabel
 
   const showNotice = (title: string, body: string) => setNotice({ title, body })
+  // API statuses are English words; unknown ones are shown as sent.
+  const invoiceStatus = (status?: string | null) => !status ? t('statusOpen') : ({ Paid: t('statusPaid'), Pending: t('statusPending'), Refunded: t('statusRefunded'), Open: t('statusOpen') } as Record<string, string>)[status] ?? status
 
   function handleReceiptDownload() {
     const invoice = paidInvoices.find((item) => item.receipt_url || item.pdf_url)
     if (!invoice) {
-      showNotice('No receipt available', 'A downloadable receipt will appear after a real paid invoice is created for this account.')
+      showNotice(t('noReceiptTitle'), t('noReceiptBody'))
       return
     }
     window.open(invoice.receipt_url || invoice.pdf_url || '', '_blank', 'noopener,noreferrer')
@@ -185,19 +193,19 @@ export default function PatientBillingPage() {
   function handlePayNow() {
     // Provider flags or legacy authorization records cannot enable an operation
     // that this build does not implement. Never infer payment from a UI action.
-    showNotice('Online checkout unavailable', 'Online checkout is not available. No payment was attempted.')
+    showNotice(t('checkoutTitle'), t('checkoutBody'))
   }
 
   const rightRail = (
     <div className='grid gap-3'>
       <PortalCard>
-        <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Outstanding Balance</p>
-        <h2 style={{ margin: '0 0 10px', fontSize: '28px', fontWeight: 800, color: T.navy }}>{money(billing.amount_due, currency)}</h2>
+        <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('outstanding')}</p>
+        <h2 style={{ margin: '0 0 10px', fontSize: '28px', fontWeight: 800, color: T.navy }}>{money(billing.amount_due, currency, numberLocale, t('notAvailable'))}</h2>
         <div className='grid gap-2'>
           {[
-            ['Insurance Coverage', money(billing.insurance_coverage, currency)],
-            ['Amount Due', money(billing.amount_due, currency)],
-            ['Payment Methods', String(billing.payment_methods.length)],
+            [t('insuranceCoverage'), money(billing.insurance_coverage, currency, numberLocale, t('notAvailable'))],
+            [t('amountDue'), money(billing.amount_due, currency, numberLocale, t('notAvailable'))],
+            [t('paymentMethods'), String(billing.payment_methods.length)],
           ].map(([label, value]) => (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
               <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
@@ -206,9 +214,9 @@ export default function PatientBillingPage() {
           ))}
         </div>
         <div className='mt-3 grid gap-2'>
-          <PortalButton tone='primary' fullWidth disabled aria-describedby='billing-checkout-unavailable' onClick={handlePayNow}>Pay Now</PortalButton>
-          <p id='billing-checkout-unavailable' className='m-0 text-sm leading-6' style={{ color: T.slate }}>Online checkout is not available. No payment can be attempted.</p>
-          <PortalButton tone='secondary' fullWidth onClick={handleReceiptDownload}>Download Receipt</PortalButton>
+          <PortalButton tone='primary' fullWidth disabled aria-describedby='billing-checkout-unavailable' onClick={handlePayNow}>{t('payNow')}</PortalButton>
+          <p id='billing-checkout-unavailable' className='m-0 text-sm leading-6' style={{ color: T.slate }}>{t('checkoutUnavailable')}</p>
+          <PortalButton tone='secondary' fullWidth onClick={handleReceiptDownload}>{t('downloadReceipt')}</PortalButton>
         </div>
       </PortalCard>
 
@@ -218,13 +226,13 @@ export default function PatientBillingPage() {
             <Ico p={ICONS.shield} size={15} sw={1.7} color={T.link} />
           </div>
           <div>
-            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>Insurance Summary</p>
-            <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>{insurance.provider_name || 'No insurer recorded'}</p>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{t('insuranceSummary')}</p>
+            <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>{insurance.provider_name || t('noInsurerRecorded')}</p>
           </div>
         </div>
         <div className='grid gap-2'>
           <PortalBadge tone={insuranceInfo.tone}>{insuranceStatus}</PortalBadge>
-          {insurance.member_number ? <PortalBadge tone='info'>Member record on file</PortalBadge> : null}
+          {insurance.member_number ? <PortalBadge tone='info'>{t('memberOnFile')}</PortalBadge> : null}
         </div>
       </PortalCard>
     </div>
@@ -232,8 +240,8 @@ export default function PatientBillingPage() {
 
   return (
     <PatientPortalShell
-      title='Billing & Payments'
-      description='Track balances, payment methods, invoices, insurance coverage, and upcoming healthcare charges from one dedicated billing workspace.'
+      title={t('title')}
+      description={t('description')}
       rightRail={!loading && !errorMessage && billing.status === 'ready' ? rightRail : undefined}
     >
       {loading ? (
@@ -244,26 +252,26 @@ export default function PatientBillingPage() {
         </div>
       ) : errorMessage ? (
         <PortalCard>
-          <p role='alert' aria-label='Billing error' className='mb-4'>{errorMessage}</p>
-          <PortalButton tone='secondary' onClick={() => setReload(value => value + 1)}>Retry billing</PortalButton>
+          <p role='alert' aria-label={t('billingError')} className='mb-4'>{errorMessage}</p>
+          <PortalButton tone='secondary' onClick={() => setReload(value => value + 1)}>{t('retry')}</PortalButton>
         </PortalCard>
       ) : billing.status !== 'ready' ? (
         <div className='grid gap-5'>
           <PortalCard>
-            <div role='status' aria-label='Billing availability'>
-              <PortalBadge tone='neutral'>Not available yet</PortalBadge>
-              <h2 className='mt-4 mb-2 text-xl font-semibold' style={{ color: T.navy }}>Payments &amp; invoices</h2>
-              <p className='max-w-2xl text-sm leading-6' style={{ color: T.slate }}>Payments and automated invoices are not available yet. Consultation fees and funding terms must be confirmed before a paid booking.</p>
-              <p className='mt-3 text-sm leading-6' style={{ color: T.slate }}>A balance and any confirmed insurance contribution will appear when billing becomes available.</p>
+            <div role='status' aria-label={t('availabilityLabel')}>
+              <PortalBadge tone='neutral'>{t('notYet')}</PortalBadge>
+              <h2 className='mt-4 mb-2 text-xl font-semibold' style={{ color: T.navy }}>{t('paymentsInvoices')}</h2>
+              <p className='max-w-2xl text-sm leading-6' style={{ color: T.slate }}>{t('notYetText')}</p>
+              <p className='mt-3 text-sm leading-6' style={{ color: T.slate }}>{t('balanceLater')}</p>
             </div>
           </PortalCard>
           <BillingReadinessDetails readiness={billing.readiness} />
           <PortalCard>
-            <h2 className='mb-2 text-xl font-semibold' style={{ color: T.navy }}>Your insurance details</h2>
+            <h2 className='mb-2 text-xl font-semibold' style={{ color: T.navy }}>{t('yourInsurance')}</h2>
             <PortalBadge tone={insuranceInfo.tone}>{insuranceStatus}</PortalBadge>
-            <p className='mt-3 text-sm leading-6' style={{ color: T.slate }}>{insurance.provider_name || 'No insurer has been added.'}</p>
+            <p className='mt-3 text-sm leading-6' style={{ color: T.slate }}>{insurance.provider_name || t('noInsurerAdded')}</p>
             <p className='mt-2 mb-4 max-w-2xl text-sm leading-6' style={{ color: T.slate }}>{insuranceInfo.notice}</p>
-            <Link href='/patient/settings' className='inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold' style={{ color: T.link, border: '1px solid var(--border)', background: 'var(--surface-subtle)' }}>Review insurance details</Link>
+            <Link href='/patient/settings' className='inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold' style={{ color: T.link, border: '1px solid var(--border)', background: 'var(--surface-subtle)' }}>{t('reviewInsurance')}</Link>
           </PortalCard>
         </div>
       ) : (
@@ -272,9 +280,9 @@ export default function PatientBillingPage() {
 
           <div className='grid gap-4 xl:grid-cols-3'>
             {[
-              { label: 'Current Balance', value: money(billing.current_balance, currency), hint: hasInvoices ? 'Across active invoices' : 'No active invoices' },
-              { label: 'Insurance Coverage', value: money(billing.insurance_coverage, currency), hint: insurance.provider_name || 'No payer coverage applied' },
-              { label: 'Amount Due', value: money(billing.amount_due, currency), hint: billing.amount_due === null ? 'Balance unavailable' : billing.amount_due > 0 ? 'Payment required' : 'Nothing due right now' },
+              { label: t('currentBalance'), value: money(billing.current_balance, currency, numberLocale, t('notAvailable')), hint: hasInvoices ? t('acrossInvoices') : t('noActiveInvoices') },
+              { label: t('insuranceCoverage'), value: money(billing.insurance_coverage, currency, numberLocale, t('notAvailable')), hint: insurance.provider_name || t('noPayerCoverage') },
+              { label: t('amountDue'), value: money(billing.amount_due, currency, numberLocale, t('notAvailable')), hint: billing.amount_due === null ? t('balanceUnavailable') : billing.amount_due > 0 ? t('paymentRequired') : t('nothingDue') },
             ].map((item) => (
               <PortalCard key={item.label}>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</p>
@@ -287,8 +295,8 @@ export default function PatientBillingPage() {
           <PortalCard>
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Payment Methods</p>
-                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Saved cards and payment profiles</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('paymentMethods')}</p>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('savedCards')}</h2>
               </div>
               <PortalButton
                 tone='primary'
@@ -298,7 +306,7 @@ export default function PatientBillingPage() {
                 Add Card
               </PortalButton>
             </div>
-            <p id='billing-saved-methods-unavailable' className='mb-4 text-sm leading-6' style={{ color: T.slate }}>Saving payment methods is not available. No card details are collected on this page.</p>
+            <p id='billing-saved-methods-unavailable' className='mb-4 text-sm leading-6' style={{ color: T.slate }}>{t('savingUnavailable')}</p>
             {hasPaymentMethods ? (
               <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
                 {billing.payment_methods.map((method, index) => (
@@ -307,8 +315,8 @@ export default function PatientBillingPage() {
               </div>
             ) : (
               <EmptyState
-                title='No payment methods saved'
-                body='New patients will see this empty state until a real payment provider creates a saved card, bank profile, or wallet token.'
+                title={t('noMethodsTitle')}
+                body={t('noMethodsBody')}
               />
             )}
           </PortalCard>
@@ -316,8 +324,8 @@ export default function PatientBillingPage() {
           <div className='grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]'>
             <PortalCard>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Invoices</p>
-                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Recent invoices and receipts</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('invoices')}</p>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('recentInvoices')}</h2>
               </div>
               {hasInvoices ? (
                 <div className='grid gap-3'>
@@ -326,18 +334,18 @@ export default function PatientBillingPage() {
                       <div className='flex flex-wrap items-start justify-between gap-3'>
                         <div>
                           <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{invoice.id}</p>
-                          <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate }}>{invoice.appointment || 'Healthcare invoice'}</p>
-                          <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>{invoiceDate(invoice)}</p>
+                          <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate }}>{invoice.appointment || t('healthcareInvoice')}</p>
+                          <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>{invoiceDate(invoice, numberLocale, t('dateUnavailable'))}</p>
                         </div>
                         <div className='text-right'>
-                          <PortalBadge tone={invoice.status === 'Paid' ? 'success' : invoice.status === 'Pending' ? 'warning' : invoice.status === 'Refunded' ? 'info' : 'neutral'}>{invoice.status || 'Open'}</PortalBadge>
-                          <p style={{ margin: '8px 0 0', fontSize: '16px', fontWeight: 800, color: T.navy }}>{invoiceAmount(invoice, currency)}</p>
+                          <PortalBadge tone={invoice.status === 'Paid' ? 'success' : invoice.status === 'Pending' ? 'warning' : invoice.status === 'Refunded' ? 'info' : 'neutral'}>{invoiceStatus(invoice.status)}</PortalBadge>
+                          <p style={{ margin: '8px 0 0', fontSize: '16px', fontWeight: 800, color: T.navy }}>{invoiceAmount(invoice, t('notAvailable'))}</p>
                         </div>
                       </div>
                       <div className='mt-3'>
                         <PortalButton
                           tone='secondary'
-                          onClick={() => invoice.pdf_url || invoice.receipt_url ? window.open(invoice.pdf_url || invoice.receipt_url || '', '_blank', 'noopener,noreferrer') : showNotice('PDF unavailable', 'This invoice does not have a downloadable PDF yet.')}
+                          onClick={() => invoice.pdf_url || invoice.receipt_url ? window.open(invoice.pdf_url || invoice.receipt_url || '', '_blank', 'noopener,noreferrer') : showNotice(t('pdfUnavailableTitle'), t('pdfUnavailableBody'))}
                         >
                           Download PDF
                         </PortalButton>
@@ -347,16 +355,16 @@ export default function PatientBillingPage() {
                 </div>
               ) : (
                 <EmptyState
-                  title='No invoices yet'
-                  body='Invoices will appear here after appointments, lab requests, or payment provider events create real billing records.'
+                  title={t('noInvoicesTitle')}
+                  body={t('noInvoicesBody')}
                 />
               )}
             </PortalCard>
 
             <PortalCard>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Payment History</p>
-                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Status at a glance</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('paymentHistory')}</p>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('statusGlance')}</h2>
               </div>
               <div className='grid gap-3'>
                 {billing.payment_history.map((item) => (
@@ -375,34 +383,34 @@ export default function PatientBillingPage() {
           <div className='grid gap-4 xl:grid-cols-2'>
             <PortalCard>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Upcoming Charges</p>
-                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Projected healthcare spend</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('upcomingCharges')}</p>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('projectedSpend')}</h2>
               </div>
               {billing.upcoming_charges.length ? (
                 <div className='grid gap-3'>
                   {billing.upcoming_charges.map((charge, index) => (
                     <div key={`${charge.label || 'charge'}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
-                      <span style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{charge.label || 'Upcoming charge'}</span>
-                      <span style={{ fontSize: '13px', color: T.navy, fontWeight: 800 }}>{typeof charge.amount === 'number' ? money(charge.amount, currency) : charge.amount || money(null, currency)}</span>
+                      <span style={{ fontSize: '13px', color: T.navy, fontWeight: 700 }}>{charge.label || t('upcomingCharge')}</span>
+                      <span style={{ fontSize: '13px', color: T.navy, fontWeight: 800 }}>{typeof charge.amount === 'number' ? money(charge.amount, currency, numberLocale, t('notAvailable')) : charge.amount || money(null, currency, numberLocale, t('notAvailable'))}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <EmptyState title='No upcoming charges' body='Projected spend will show after real scheduled appointments, lab orders, or medication billing events exist.' />
+                <EmptyState title={t('noUpcomingTitle')} body={t('noUpcomingBody')} />
               )}
             </PortalCard>
 
             <PortalCard>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Summary</p>
-                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Coverage, claims, and authorizations</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('insuranceSummary')}</p>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('coverageClaims')}</h2>
               </div>
               <div className='grid gap-3 sm:grid-cols-2'>
                 {[
-                  ['Coverage status', insuranceStatus],
-                  ['Provider', insurance.provider_name || 'Not added'],
-                  ['Claims', String(insurance.claims?.length || 0)],
-                  ['Authorizations', String(insurance.authorizations?.length || 0)],
+                  [t('coverageStatus'), insuranceStatus],
+                  [t('provider'), insurance.provider_name || t('notAdded')],
+                  [t('claims'), String(insurance.claims?.length || 0)],
+                  [t('authorizations'), String(insurance.authorizations?.length || 0)],
                 ].map(([label, value]) => (
                   <div key={label} style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                     <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
@@ -412,7 +420,7 @@ export default function PatientBillingPage() {
               </div>
               {insurance.status === 'not_added' ? (
                 <div className='mt-4'>
-                  <Link href='/patient/settings' style={{ color: T.link, fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>Add insurance in settings -&gt;</Link>
+                  <Link href='/patient/settings' style={{ color: T.link, fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>{t('addInsurance')}</Link>
                 </div>
               ) : null}
             </PortalCard>
@@ -431,6 +439,7 @@ export default function PatientBillingPage() {
 }
 
 function BillingNoticeDialog({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {
+  const t = useTranslations('patientBilling')
   return (
     <div
       role='presentation'
@@ -468,7 +477,7 @@ function BillingNoticeDialog({ title, body, onClose }: { title: string; body: st
           </div>
           <button
             type='button'
-            aria-label='Close billing notice'
+            aria-label={t('closeNotice')}
             onClick={onClose}
             style={{
               width: '38px',
@@ -486,7 +495,7 @@ function BillingNoticeDialog({ title, body, onClose }: { title: string; body: st
             <Ico p={ICONS.x} size={18} sw={1.8} />
           </button>
         </div>
-        <PortalButton tone='primary' fullWidth onClick={onClose}>Got it</PortalButton>
+        <PortalButton tone='primary' fullWidth onClick={onClose}>{t('gotIt')}</PortalButton>
       </div>
     </div>
   )

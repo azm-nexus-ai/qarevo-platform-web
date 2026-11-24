@@ -60,7 +60,7 @@ function ReviewPageContent() {
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
   const duration = verifiedSlot ? t('minutes', { minutes: verifiedSlot.duration_minutes }) : t('notYetVerified')
-  const insurance = declaredDoctorFundingOptions(physicianData.insurance)
+  const insurance = declaredDoctorFundingOptions(physicianData.insurance, t('notProvided'))
   const date = searchParams.get('date') ?? ''
   const slot = searchParams.get('slot') ?? ''
   const episodeId = searchParams.get('episode_id') ?? ''

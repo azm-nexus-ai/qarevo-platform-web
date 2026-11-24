@@ -122,3 +122,18 @@ test('an older unconfigured server without readiness fields retains the truthful
   await expect(page.getByRole('button', { name: /Pay Now|Add Card/ })).toHaveCount(0)
   expect(state.financialMutations).toBe(0)
 })
+
+test.describe('in German', () => {
+  test.use({ storageState: { cookies: [{ name: 'qarevo_locale', value: 'de', domain: 'localhost', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }], origins: [] } })
+
+  test('billing reads in German, including the unverified insurance status', async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: 'qarevo_locale', value: 'de', url: baseURL! }])
+    await prepare(context)
+    await page.goto('/patient/billing')
+    await expect(page.getByRole('heading', { name: 'Abrechnung und Zahlungen' })).toBeVisible()
+    await expect(page.getByText('Noch nicht verfügbar').first()).toBeVisible()
+    await expect(page.getByText('Nicht geprüft').first()).toBeVisible()
+    await expect(page.getByText('Billing & Payments')).toHaveCount(0)
+    await expect(page.getByText('Not verified')).toHaveCount(0)
+  })
+})

@@ -150,7 +150,7 @@ function DateTimeSelectionPageContent() {
     return services.find((item) => item.type === selectedServiceType) ?? services[0]
   }, [remoteDoctor, selectedServiceType])
   const duration = serviceDetail?.duration ?? t('durationNotConfigured')
-  const insurance = declaredDoctorFundingOptions(physicianData.insurance)
+  const insurance = declaredDoctorFundingOptions(physicianData.insurance, t('notProvided'))
   const initialDateParam = searchParams.get('date') ?? (matchingDraft ? bookingState.date : undefined)
   const initialDate = useMemo(() => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(initialDateParam ?? '')) {

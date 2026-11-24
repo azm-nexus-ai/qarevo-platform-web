@@ -6,8 +6,18 @@ export const SELF_PAY_NOTICE = 'A self-pay preference does not confirm a consult
 
 type Details = {insurance_type?: unknown; insurance_provider_name?: unknown; insurance_number?: unknown; insured_status?: unknown}
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : ''
-const fundingLabels: Record<string,string> = {GKV:'Statutory insurance (GKV)',PKV:'Private insurance (PKV)',SELF_PAY:'Self-pay'}
-const membershipLabels: Record<string,string> = {SELF_INSURED:'Self-insured',FAMILY_MEMBER:'Family member',STUDENT:'Student',PENSIONER:'Pensioner',OTHER:'Other'}
+/** English text for each key of the `insurance` message namespace; portals translate the keys. */
+export const INSURANCE_TEXT = {
+  noDetails: 'No insurance details recorded', selfPayRecorded: 'Self-pay preference recorded',
+  detailsRecorded: 'Insurance details recorded', detailsIncomplete: 'Insurance details incomplete',
+  notVerified: 'Not verified', notApplicableSelfPay: 'Not applicable to a self-pay preference', notAdded: 'Not added',
+  fundingGkv: 'Statutory insurance (GKV)', fundingPkv: 'Private insurance (PKV)', fundingSelfPay: 'Self-pay', fundingNotRecorded: 'Funding type not recorded',
+  memberSelfInsured: 'Self-insured', memberFamily: 'Family member', memberStudent: 'Student', memberPensioner: 'Pensioner', memberOther: 'Other', memberNotRecorded: 'Not recorded',
+  verificationNotice: INSURANCE_VERIFICATION_NOTICE, selfPayNotice: SELF_PAY_NOTICE,
+} as const
+export type InsuranceTextKey = keyof typeof INSURANCE_TEXT
+const fundingKeys: Record<string, InsuranceTextKey> = {GKV:'fundingGkv',PKV:'fundingPkv',SELF_PAY:'fundingSelfPay'}
+const membershipKeys: Record<string, InsuranceTextKey> = {SELF_INSURED:'memberSelfInsured',FAMILY_MEMBER:'memberFamily',STUDENT:'memberStudent',PENSIONER:'memberPensioner',OTHER:'memberOther'}
 
 export function insurancePresentation(value: Details | null | undefined) {
   const type = text(value?.insurance_type).toUpperCase()
@@ -15,20 +25,27 @@ export function insurancePresentation(value: Details | null | undefined) {
   const hasDetails = Boolean(type || provider || member)
   const selfPay = type === 'SELF_PAY'
   const complete = (type === 'GKV' || type === 'PKV') && Boolean(provider && member)
-  const label = !hasDetails ? 'No insurance details recorded' : selfPay ? 'Self-pay preference recorded' : complete ? 'Insurance details recorded' : 'Insurance details incomplete'
+  const keys = {
+    label: (!hasDetails ? 'noDetails' : selfPay ? 'selfPayRecorded' : complete ? 'detailsRecorded' : 'detailsIncomplete') as InsuranceTextKey,
+    verification: (hasDetails && !selfPay ? 'notVerified' : selfPay ? 'notApplicableSelfPay' : 'notAdded') as InsuranceTextKey,
+    funding: fundingKeys[type] ?? 'fundingNotRecorded',
+    membership: membershipKeys[text(value?.insured_status).toUpperCase()] ?? 'memberNotRecorded',
+    notice: (selfPay ? 'selfPayNotice' : 'verificationNotice') as InsuranceTextKey,
+  }
   return {
-    label, hasDetails,
+    keys, hasDetails,
+    label: INSURANCE_TEXT[keys.label],
     tone: hasDetails && !selfPay && !complete ? 'warning' as const : hasDetails ? 'info' as const : 'neutral' as const,
-    verificationLabel: hasDetails && !selfPay ? 'Not verified' : selfPay ? 'Not applicable to a self-pay preference' : 'Not added',
-    fundingLabel: fundingLabels[type] ?? 'Funding type not recorded',
-    membershipLabel: membershipLabels[text(value?.insured_status).toUpperCase()] ?? 'Not recorded',
-    notice: selfPay ? SELF_PAY_NOTICE : INSURANCE_VERIFICATION_NOTICE,
+    verificationLabel: INSURANCE_TEXT[keys.verification],
+    fundingLabel: INSURANCE_TEXT[keys.funding],
+    membershipLabel: INSURANCE_TEXT[keys.membership],
+    notice: INSURANCE_TEXT[keys.notice],
   }
 }
 
 /** Doctor-supplied options are not a patient's verified coverage or selected case route. */
-export function declaredDoctorFundingOptions(value: unknown): string {
-  if (!Array.isArray(value)) return 'Not provided'
+export function declaredDoctorFundingOptions(value: unknown, none = 'Not provided'): string {
+  if (!Array.isArray(value)) return none
   const options = [...new Set(value.filter((item): item is string => typeof item === 'string').map(item => item.trim()).filter(Boolean))]
-  return options.length ? options.join(', ') : 'Not provided'
+  return options.length ? options.join(', ') : none
 }
