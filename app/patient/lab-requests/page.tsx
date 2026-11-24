@@ -48,8 +48,6 @@ const blankResponse: PatientLabRequestsResponse = {
 
 const planAllowed = (request: PatientLabRequest | null) => !!request && !request.result_file_id && !request.result_uploaded_at &&
   ['pending', 'booked', 'scheduled', 'requested', 'ordered'].includes(request.status.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' '))
-const planUnavailable = 'This lab request can no longer be planned or rescheduled here. Contact your care team; existing results and clinical progress are preserved.'
-const labStatusLabel = (status: string) => status.trim().toLowerCase() === 'booked' ? 'Patient-reported appointment' : status
 
 const downloadTextFile = (filename: string, content: string) => {
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
@@ -65,6 +63,11 @@ const downloadTextFile = (filename: string, content: string) => {
 
 function LabRequestsPageContent() {
   const t = useTranslations('patientLabRequests')
+  // API statuses are English; known ones are translated, others are shown as sent.
+  const labStatusLabel = (status: string) => {
+    const key = ({ pending: 'statusPending', booked: 'statusBooked', collected: 'statusCollected', processing: 'statusProcessing', 'results available': 'statusResultsAvailable', completed: 'statusCompleted', requested: 'statusRequested', ordered: 'statusOrdered', scheduled: 'statusScheduled' } as Record<string, string>)[status.trim().toLowerCase().replace(/[_-]+/g, ' ')]
+    return key ? t(key) : status
+  }
   const router = useRouter(), parameters = useSearchParams()
   const linkedRequest = patientLabRequestTarget(parameters), appliedRequestLink = useRef(false)
   const renderedQuery = parameters.toString()
@@ -91,9 +94,9 @@ function LabRequestsPageContent() {
   const resultRestoreTarget = useRef<HTMLElement | null>(null)
   const closeResultWithFocus = useCallback(() => { setResultAccess(null); if (resultRestoreTarget.current?.isConnected && renderedScope === readAccountScope('patient')) resultRestoreTarget.current.focus() }, [renderedScope])
   const loadResult = useCallback(() => {
-    if (!resultAccess || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return Promise.reject(new Error('Your result context changed. Refresh the request before opening its file.'))
+    if (!resultAccess || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return Promise.reject(new Error(t('contextChanged')))
     return downloadMedicalRecord(resultAccess.fileId, { disposition: 'attachment' })
-  }, [resultAccess, renderedScope, renderedPath, renderedQuery])
+  }, [resultAccess, renderedScope, renderedPath, renderedQuery, t])
   const currentDetails = detailsRequest ? data.test_requests.find(item => item.id === detailsRequest.id) : null
   const activeResultAccess = resultAccess && data.test_requests.some(item => item.result_file_id === resultAccess.fileId) ? resultAccess : null
   const [appointmentLabName, setAppointmentLabName] = useState('')
@@ -142,7 +145,7 @@ function LabRequestsPageContent() {
     } catch (err) {
       if (!isCurrent()) return
       if (isAuthError(err)) { clearPortalSession(); router.replace('/auth/sign-in'); return }
-      setError(getApiErrorDetail(err) ?? 'Unable to load lab requests right now. Reload saved requests to retry.')
+      setError(getApiErrorDetail(err) ?? t('loadFailed'))
     } finally {
       refreshInFlight.current = false
       if (isCurrent()) setLoading(false)
@@ -169,11 +172,11 @@ function LabRequestsPageContent() {
     if (!selectedRequest) return []
     const specific = selectedRequest.preparation_instructions?.trim()
     return [
-      specific ? { title: 'Doctor instruction', body: specific } : null,
-      { title: 'Bring identification', body: 'Bring your ID and insurance card if the lab requests them.' },
-      { title: 'Follow test guidance', body: 'Follow fasting or medication instructions from your doctor or lab before your visit.' },
+      specific ? { title: t('prepDoctor'), body: specific } : null,
+      { title: t('prepId'), body: t('prepIdBody') },
+      { title: t('prepGuidance'), body: t('prepGuidanceBody') },
     ].filter(Boolean) as Array<{ title: string; body: string }>
-  }, [selectedRequest])
+  }, [selectedRequest, t])
 
   const beginBooking = (request: PatientLabRequest) => {
     if (!planAllowed(request) || operationInFlight.current) return
@@ -196,18 +199,18 @@ function LabRequestsPageContent() {
   const handleBook = async () => {
     if (operationInFlight.current || refreshInFlight.current || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return
     setNotice(''); setError(null)
-    if (!planAllowed(selectedRequest)) { setError(planUnavailable); return }
+    if (!planAllowed(selectedRequest)) { setError(t('planUnavailable')); return }
     const errors: typeof validation = {}
-    if (!selectedRequest) errors.request = 'Choose the doctor-created request.'
-    if (appointmentLabName.trim().length > 220) errors.lab = 'Use 220 characters or fewer for the laboratory name.'
-    if (appointmentLabAddress.trim().length > 2000) errors.address = 'Use 2,000 characters or fewer for the laboratory address.'
-    if (!appointmentLabName.trim()) errors.lab = 'Enter the laboratory or centre name you arranged the visit with.'
-    if (!selectedDate) errors.date = 'Enter the date arranged with your laboratory.'
-    if (!selectedTime) errors.time = 'Enter the time arranged with your laboratory.'
+    if (!selectedRequest) errors.request = t('errRequest')
+    if (appointmentLabName.trim().length > 220) errors.lab = t('errLabLength')
+    if (appointmentLabAddress.trim().length > 2000) errors.address = t('errAddressLength')
+    if (!appointmentLabName.trim()) errors.lab = t('errLab')
+    if (!selectedDate) errors.date = t('errDate')
+    if (!selectedTime) errors.time = t('errTime')
     let scheduledFor = ''
     if (selectedDate && selectedTime) {
       try { scheduledFor = orderDateToIso(`${selectedDate}T${selectedTime}`, selectedRequest?.scheduled_for) }
-      catch (err) { errors.date = err instanceof Error ? err.message : 'Check your local date and time.' }
+      catch (err) { errors.date = err instanceof Error ? err.message : t('errDateTime') }
     }
     setValidation(errors)
     if (Object.keys(errors).length || !selectedRequest) return
@@ -225,19 +228,19 @@ function LabRequestsPageContent() {
       const response = await bookPatientLabRequest(requestId, formData)
       if (!action.isCurrent()) return
       applyResponse(response, false)
-      setNotice('Your patient-reported visit is saved. Qarevo has not booked or contacted the laboratory.')
-    } catch (err) { if (action.isCurrent()) setError(getApiErrorDetail(err) ?? 'Unable to save your patient-reported visit. Your entries are still here; retry saving.') }
+      setNotice(t('visitSaved'))
+    } catch (err) { if (action.isCurrent()) setError(getApiErrorDetail(err) ?? t('visitSaveFailed')) }
     finally { operationInFlight.current = false; if (action.isCurrent()) setSaving(false) }
   }
 
   const handleUpload = async (file?: File, retryNote?: string) => {
     if (!selectedRequest || !file || operationInFlight.current || refreshInFlight.current || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return
-    const uploadError = medicalUploadError(file.size) || (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? 'Choose a PDF, PNG, JPEG or WebP file.' : null)
+    const uploadError = medicalUploadError(file.size) || (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? t('fileType') : null)
     if (uploadError) { setError(uploadError); return }
     operationInFlight.current = true
     ++refreshVersion.current
     const action = captureAction(), requestId = selectedRequest.id
-    const note = retryNote ?? `${selectedRequest.title} result uploaded by patient`
+    const note = retryNote ?? `${t('uploadedTitle', { title: selectedRequest.title })}`
     setSaving(true); setError(null); setNotice('')
     try {
       const attempt = await labUploadAttempt(uploadAttempt.current, JSON.stringify([action.scope, requestId]), file, note)
@@ -248,12 +251,12 @@ function LabRequestsPageContent() {
       const response = await uploadPatientLabResult(requestId, formData)
       if (!action.isCurrent() || selectedRequestRef.current !== requestId) return
       const receipt = labUploadReceipt(response.upload_receipt, attempt.uploadId)
-      if (!receipt) throw new Error('Upload confirmation is unavailable. Retry this same file to recover its saved upload safely.')
+      if (!receipt) throw new Error(t('uploadUnconfirmed'))
       applyResponse(response); uploadAttempt.current = null; setFailedUpload(null)
-      setNotice(receipt.current ? (receipt.replayed ? 'This upload was already saved. No second file was created.' : 'Result upload saved in Medical Records. No clinical review has been recorded.') : 'The earlier upload was already recorded; it is no longer the current available result. Review this lab request before uploading again.')
+      setNotice(receipt.current ? (receipt.replayed ? t('uploadReplayed') : t('uploadSaved')) : t('uploadSuperseded'))
       if (uploadInputRef.current) uploadInputRef.current.value = ''
     } catch (err) {
-      if (action.isCurrent() && selectedRequestRef.current === requestId) { setFailedUpload({ requestId, file, note }); setError(getApiErrorDetail(err) ?? 'Unable to upload this lab result. Retry the same file safely.') }
+      if (action.isCurrent() && selectedRequestRef.current === requestId) { setFailedUpload({ requestId, file, note }); setError(getApiErrorDetail(err) ?? t('uploadFailed')) }
     } finally {
       operationInFlight.current = false
       if (action.isCurrent()) setSaving(false)
@@ -263,25 +266,25 @@ function LabRequestsPageContent() {
   const previewResult = (fileId: string) => {
     if (!labReference(fileId) || !renderedScope || renderedScope !== readAccountScope('patient') || currentPortal() !== 'patient' || window.location.pathname !== renderedPath || new URLSearchParams(window.location.search).toString() !== renderedQuery) return
     const request = data.test_requests.find(item => item.result_file_id === fileId)
-    if (!request) { setError('This result is no longer current. Reload the saved requests before opening a file.'); return }
+    if (!request) { setError(t('resultStale')); return }
     resultRestoreTarget.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setDetailsRequest(null); setResultAccess({ fileId, title: request.title })
   }
 
   const downloadRequests = () => {
     const lines = data.test_requests.map((item) => [
-      `Title: ${item.title}`,
-      `Status: ${labStatusLabel(item.status)}`,
-      `Ordering physician: ${item.physician_name ?? 'Care team'}`,
-      `Reason: ${item.reason ?? 'Not provided'}`,
-      `Recommended completion: ${item.completionDate ?? item.recommended_date ?? 'Not scheduled'}`,
-      `Recommended lab: ${item.recommended_lab_name || 'Any accredited laboratory'}`,
-      `Recommended lab details: ${item.recommended_lab_address || 'Not specified'}`,
-      `Patient-reported appointment: ${item.scheduledForLabel || 'Not recorded yet'}`,
-      `Patient-reported laboratory: ${item.selected_lab_name || 'Not recorded yet'}`,
+      `${t('fileTitle')}: ${item.title}`,
+      `${t('fileStatus')}: ${labStatusLabel(item.status)}`,
+      `${t('fileOrderingPhysician')}: ${item.physician_name ?? t('careTeam')}`,
+      `${t('fileReason')}: ${item.reason ?? t('notProvided')}`,
+      `${t('fileCompletion')}: ${item.completionDate ?? item.recommended_date ?? t('notScheduled')}`,
+      `${t('fileRecommendedLab')}: ${item.recommended_lab_name || t('anyLab')}`,
+      `${t('fileRecommendedLabDetails')}: ${item.recommended_lab_address || t('notSpecified')}`,
+      `${t('fileReportedAppointment')}: ${item.scheduledForLabel || t('notRecordedYet')}`,
+      `${t('fileReportedLab')}: ${item.selected_lab_name || t('notRecordedYet')}`,
       '',
     ].join('\n'))
-    downloadTextFile('lab-requests.txt', 'Patient-reported visits are not laboratory confirmations. Arrange visits directly with the laboratory. Saving in Qarevo does not book or contact the laboratory or confirm home collection.\n\n' + lines.join('\n'))
+    downloadTextFile('lab-requests.txt', t('fileNotice') + '\n\n' + lines.join('\n'))
   }
 
   const rightRail = (
@@ -289,9 +292,9 @@ function LabRequestsPageContent() {
       <p className='section-eyebrow'>{t('careSummary')}</p>
       <h2 className='rail-title'>{t('diagnosticOverview')}</h2>
       <div className='rail-grid'>
-        <div className='rail-stat'><span>{t('outstandingTests')}</span><strong>{data.summary.pending_tests} pending</strong></div>
-        <div className='rail-stat'><span>{t('patientReportedVisit')}</span><strong>{data.summary.upcoming_lab_appointment ?? 'Not recorded'}</strong></div>
-        <div className='rail-stat'><span>{t('estimatedCompletion')}</span><strong>{data.summary.estimated_completion ?? 'Not provided'}</strong></div>
+        <div className='rail-stat'><span>{t('outstandingTests')}</span><strong>{t('pendingCount', { count: data.summary.pending_tests })}</strong></div>
+        <div className='rail-stat'><span>{t('patientReportedVisit')}</span><strong>{data.summary.upcoming_lab_appointment ?? t('notRecorded')}</strong></div>
+        <div className='rail-stat'><span>{t('estimatedCompletion')}</span><strong>{data.summary.estimated_completion ?? t('notProvided')}</strong></div>
         <div className='rail-stat'><span>{t('completedResults')}</span><strong>{data.summary.completed_tests}</strong></div>
       </div>
       <div className='rail-note'>{t('resultsUploadedHereAreSaved')}</div>
@@ -353,7 +356,7 @@ function LabRequestsPageContent() {
         </div>
       </section>
 
-      {(linkedRequest.id || linkedRequest.invalid) && <section aria-label={t('selectedLabRequest')} className='lab-card'><h2 className='portal-h2'>{t('selectedLabRequest')}</h2><p className='text-sm leading-7 text-secondary'>{linkedRequest.invalid ? 'This lab request link is invalid. Choose an available request below.' : loading ? 'Loading the selected request…' : !data.test_requests.some(item => item.id === linkedRequest.id) ? 'The referenced request is unavailable to this account. No other request has been selected automatically.' : 'The referenced request is available below. No result file has been opened automatically.'}</p></section>}
+      {(linkedRequest.id || linkedRequest.invalid) && <section aria-label={t('selectedLabRequest')} className='lab-card'><h2 className='portal-h2'>{t('selectedLabRequest')}</h2><p className='text-sm leading-7 text-secondary'>{linkedRequest.invalid ? t('linkInvalid') : loading ? t('linkLoading') : !data.test_requests.some(item => item.id === linkedRequest.id) ? t('linkUnavailable') : t('linkAvailable')}</p></section>}
       {notice && <div role='status' className='lab-card'>{notice}</div>}
       {error && <div role='alert' className='lab-card' style={{ color: T.red, border: '1px solid rgba(220,38,38,0.18)' }}>{error}</div>}
       {loading && <div className='lab-card'>{t('loadingYourLabRequests')}</div>}
@@ -365,10 +368,10 @@ function LabRequestsPageContent() {
             <h2 style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: 800, color: T.navy }}>{t('aQuickOverview')}</h2>
             <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
               {[
-                ['Requested tests', String(data.summary.requested_tests)],
-                ['Pending tests', String(data.summary.pending_tests)],
-                ['Completed tests', String(data.summary.completed_tests)],
-                ['Patient-reported visit', data.summary.upcoming_lab_appointment ?? 'Not recorded'],
+                [t('sumRequested'), String(data.summary.requested_tests)],
+                [t('sumPending'), String(data.summary.pending_tests)],
+                [t('sumCompleted'), String(data.summary.completed_tests)],
+                [t('sumVisit'), data.summary.upcoming_lab_appointment ?? t('notRecorded')],
               ].map(([label, value]) => (
                 <div key={label} className='meta-item'><span>{label}</span><strong>{value}</strong></div>
               ))}
@@ -387,20 +390,20 @@ function LabRequestsPageContent() {
                     <article key={item.id} className='request-card' data-lab-request-id={item.id} data-notification-target={item.id === linkedRequest.id ? 'true' : undefined}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                         <div>
-                          <span className='badge' style={{ display: 'inline-flex', background: "var(--surface)", color: T.navy }}>{item.category ?? 'Diagnostic Test'}</span>
+                          <span className='badge' style={{ display: 'inline-flex', background: "var(--surface)", color: T.navy }}>{item.category ?? t('diagnosticTest')}</span>
                           <h3 style={{ margin: '10px 0 4px', fontSize: '18px', fontWeight: 800, color: T.navy }}>{item.title}</h3>
-                          <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{item.description || 'No extra description provided yet.'}</p>
+                          <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6 }}>{item.description || t('noDescriptionYet')}</p>
                         </div>
                         <span className='status-badge'><ClinicalStatusBadge status={item.status} domain='lab-request' label={labStatusLabel(item.status)} /></span>
                       </div>
                       <div className='meta-grid'>
-                        <div className='meta-item'><span>{t('orderingPhysician')}</span><strong>{item.physician_name ?? 'Care team'}</strong></div>
-                        <div className='meta-item'><span>{t('recommendedLab')}</span><strong>{item.recommended_lab_name || 'Any accredited laboratory'}</strong></div>
-                        <div className='meta-item'><span>{t('processingTime')}</span><strong>{item.processing_time || 'Lab dependent'}</strong></div>
+                        <div className='meta-item'><span>{t('orderingPhysician')}</span><strong>{item.physician_name ?? t('careTeam')}</strong></div>
+                        <div className='meta-item'><span>{t('recommendedLab')}</span><strong>{item.recommended_lab_name || t('anyLab')}</strong></div>
+                        <div className='meta-item'><span>{t('processingTime')}</span><strong>{item.processing_time || t('labDependent')}</strong></div>
                       </div>
                       <div className='mt-3'><LabResultReviewStatus review={item.result_review} fileId={item.result_file_id} /></div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
-                        <div style={{ fontSize: "13px", color: T.slate2 }}>Recommended completion: {item.completionDate ?? 'Not scheduled'}</div>
+                        <div style={{ fontSize: "13px", color: T.slate2 }}>{t('completionLine', { date: item.completionDate ?? t('notScheduled') })}</div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button type='button' className='action-btn primary' onClick={() => beginBooking(item)} disabled={!planAllowed(item) || saving}>{t('recordPatientReportedVisit')}</button>
                           <button type='button' className='action-btn' onClick={() => setDetailsRequest(item)}>{t('viewDetails')}</button>
@@ -424,11 +427,11 @@ function LabRequestsPageContent() {
               <>
                 {selectedRequest && (
                   <div className='empty-box' style={{ marginBottom: '12px' }}>
-                    Doctor guidance: {selectedRequest.recommended_lab_name || 'Any accredited laboratory'}{selectedRequest.recommended_lab_address ? ` - ${selectedRequest.recommended_lab_address}` : ''}
+                    {t('doctorGuidance', { lab: selectedRequest.recommended_lab_name || t('anyLab') })}{selectedRequest.recommended_lab_address ? ` - ${selectedRequest.recommended_lab_address}` : ''}
                   </div>
                 )}
                 <label><span id='patient-lab-request-label' className='section-eyebrow'>{t('requestRequired')}</span><select aria-labelledby='patient-lab-request-label' className='select-input' value={selectedRequestId} disabled={saving} onChange={(event) => selectRequest(event.target.value)}><option value=''>{t('chooseALabRequest')}</option>{data.test_requests.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
-                {!canRecord && <p role='status' className='empty-box'>{planUnavailable}</p>}
+                {!canRecord && <p role='status' className='empty-box'>{t('planUnavailable')}</p>}
                 <fieldset disabled={saving || !canRecord} aria-describedby='lab-plan-guidance' style={{ border: 0, margin: '12px 0 0', padding: 0, minWidth: 0 }}>
                 <div className='form-grid'>
                   <label><span id='lab-plan-date-label' className='section-eyebrow'>{t('dateRequired')}</span><input aria-labelledby='lab-plan-date-label' required className='select-input' type='date' value={selectedDate} aria-invalid={Boolean(validation.date)} aria-describedby={validation.date ? 'lab-plan-date-error' : undefined} onChange={(event) => { planEdited.current = true; setSelectedDate(event.target.value) }} />{validation.date && <span id='lab-plan-date-error' role='alert'>{validation.date}</span>}</label>
@@ -438,7 +441,7 @@ function LabRequestsPageContent() {
                 </div>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
                   <button type='button' aria-pressed={homeCollection} className={`toggle-pill ${homeCollection ? 'active' : ''}`} onClick={() => { planEdited.current = true; setHomeCollection((value) => !value) }}>{t('homeCollectionArrangedWithLaboratory')}</button>
-                  <button type='button' className='action-btn primary' onClick={handleBook}>{saving ? 'Saving visit…' : 'Save patient-reported visit'}</button>
+                  <button type='button' className='action-btn primary' onClick={handleBook}>{saving ? t('savingVisit') : t('saveVisit')}</button>
                 </div>
                 </fieldset>
               </>
@@ -478,11 +481,11 @@ function LabRequestsPageContent() {
             ) : (
               <div className='download-row'>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{selectedRequest?.title ?? 'Selected lab request'}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: T.navy }}>{selectedRequest?.title ?? t('selectedRequestFallback')}</div>
                   <div style={{ fontSize: "13px", color: T.slate2, marginTop: '3px' }}>{t('pdfPngJpgOrWebp')}</div>
                 </div>
                 <input ref={uploadInputRef} type='file' accept='.pdf,image/png,image/jpeg,image/webp' style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleUpload(file) }} />
-                <button type='button' className='action-btn primary' onClick={() => uploadInputRef.current?.click()} disabled={saving}>{saving ? 'Uploading...' : 'Upload Result'}</button>
+                <button type='button' className='action-btn primary' onClick={() => uploadInputRef.current?.click()} disabled={saving}>{saving ? t('uploading') : t('uploadResult')}</button>
                 {failedUpload?.requestId === selectedRequestId && <button type='button' className='action-btn' disabled={saving} onClick={() => void handleUpload(failedUpload.file, failedUpload.note)}>{t('retryResultUpload')}</button>}
               </div>
             )}
@@ -510,27 +513,27 @@ function LabRequestsPageContent() {
         </>
       )}
 
-      {activeResultAccess && <SecureDocumentAccessDialog key={activeResultAccess.fileId} documentTitle={activeResultAccess.title} documentKind='Lab result' expectedFileId={activeResultAccess.fileId} maxLifetimeSeconds={3600} loadDocument={loadResult} onClose={closeResultWithFocus} />}
+      {activeResultAccess && <SecureDocumentAccessDialog key={activeResultAccess.fileId} documentTitle={activeResultAccess.title} documentKind={t('labResult')} expectedFileId={activeResultAccess.fileId} maxLifetimeSeconds={3600} loadDocument={loadResult} onClose={closeResultWithFocus} />}
       {!activeResultAccess && currentDetails && (
         <div className='modal-backdrop' role='dialog' aria-modal='true' onClick={() => setDetailsRequest(null)}>
           <div className='modal-card' onClick={(event) => event.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' }}>
               <div>
-                <p className='section-eyebrow'>{currentDetails.category ?? 'Lab request'}</p>
+                <p className='section-eyebrow'>{currentDetails.category ?? t('labRequest')}</p>
                 <h2 style={{ margin: '0 0 6px', color: T.navy }}>{currentDetails.title}</h2>
-                <p style={{ margin: 0, color: T.slate }}>{currentDetails.physician_name ?? 'Care team'} | {labStatusLabel(currentDetails.status)}</p>
+                <p style={{ margin: 0, color: T.slate }}>{currentDetails.physician_name ?? t('careTeam')} | {labStatusLabel(currentDetails.status)}</p>
               </div>
               <button type='button' className='icon-btn' aria-label={t('closeLabRequestDetails')} onClick={() => setDetailsRequest(null)}>x</button>
             </div>
             <LabResultReviewStatus review={currentDetails.result_review} fileId={currentDetails.result_file_id} />
             <div style={{ display: 'grid', gap: '10px', marginTop: '16px' }}>
-              <div className='meta-item'><span>{t('description')}</span><strong>{currentDetails.description || 'No description provided.'}</strong></div>
-              <div className='meta-item'><span>{t('reason')}</span><strong>{currentDetails.reason || 'No reason provided.'}</strong></div>
-              <div className='meta-item'><span>{t('doctorRecommendation')}</span><strong>{currentDetails.recommended_lab_name || 'Any accredited laboratory'}</strong></div>
-              <div className='meta-item'><span>{t('recommendationDetails')}</span><strong>{currentDetails.recommended_lab_address || 'No specific centre or address provided.'}</strong></div>
-              <div className='meta-item'><span>{t('patientReportedVisit')}</span><strong>{currentDetails.scheduledForLabel || 'Not recorded yet'}</strong></div>
-              <div className='meta-item'><span>{t('patientRecordedLab')}</span><strong>{currentDetails.selected_lab_name || 'Not recorded yet'}</strong></div>
-              <div className='meta-item'><span>{t('patientLabAddress')}</span><strong>{currentDetails.selected_lab_address || 'Not recorded yet'}</strong></div>
+              <div className='meta-item'><span>{t('description')}</span><strong>{currentDetails.description || t('noDescription')}</strong></div>
+              <div className='meta-item'><span>{t('reason')}</span><strong>{currentDetails.reason || t('noReason')}</strong></div>
+              <div className='meta-item'><span>{t('doctorRecommendation')}</span><strong>{currentDetails.recommended_lab_name || t('anyLab')}</strong></div>
+              <div className='meta-item'><span>{t('recommendationDetails')}</span><strong>{currentDetails.recommended_lab_address || t('noCentre')}</strong></div>
+              <div className='meta-item'><span>{t('patientReportedVisit')}</span><strong>{currentDetails.scheduledForLabel || t('notRecordedYet')}</strong></div>
+              <div className='meta-item'><span>{t('patientRecordedLab')}</span><strong>{currentDetails.selected_lab_name || t('notRecordedYet')}</strong></div>
+              <div className='meta-item'><span>{t('patientLabAddress')}</span><strong>{currentDetails.selected_lab_address || t('notRecordedYet')}</strong></div>
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@ import PatientMedicationCards from '@/components/clinical/PatientMedicationCards
 import { careInstruction, instructionList } from '@/lib/clinical-instructions'
 
 import Link from 'next/link'
-import Image from 'next/image'
+import ProfileAvatar from '@/components/branding/ProfileAvatar'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
@@ -205,14 +205,6 @@ function resolveIcon(value: unknown, fallback: string | readonly string[]) {
   return key && iconLookup[key] ? iconLookup[key] : fallback
 }
 
-function doctorContactHref(sender: string) {
-  const normalized = sender.toLowerCase()
-  if (normalized.includes('reed')) return `${PATIENT_ROUTES.messages}?contactId=dr-reed`
-  if (normalized.includes('care')) return `${PATIENT_ROUTES.messages}?contactId=care-team`
-  if (normalized.includes('support')) return `${PATIENT_ROUTES.messages}?contactId=support-billing`
-  return PATIENT_ROUTES.messages
-}
-
 function documentHref(name: string) {
   const normalized = name.toLowerCase()
   if (normalized.includes('prescription')) return PATIENT_ROUTES.prescriptions
@@ -282,7 +274,6 @@ function SectionCard({ title, sub, action, children, collapsible = false, defaul
   )
 }
 
-const countLabel = (count: number, noun: string) => count === 0 ? 'Nothing recorded yet' : `${count} ${noun}${count === 1 ? '' : 's'}`
 
 function EmptyState({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
@@ -379,6 +370,9 @@ function topButtonBase(): CSSProperties {
 
 export default function PatientDashboardPage() {
   const t = useTranslations('patientDashboard')
+  // Specialty values go to the doctor search unchanged; only their labels are translated.
+  const specialtyLabel = (value: string) => t(`extra.spec${value.replace(/[^A-Za-z]/g, '')}`)
+  const countLabel = (count: number, noun: 'plan' | 'result' | 'referral' | 'measurement' | 'event' | 'doctor') => t(`extra.count${noun[0].toUpperCase()}${noun.slice(1)}`, { count })
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState<PatientDashboardSearchResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -403,7 +397,7 @@ export default function PatientDashboardPage() {
   const router = useRouter()
   const pathname = usePathname()
   const specialtyMenuRef = useRef<HTMLDivElement>(null)
-  const displayPatientName = patientName || 'Patient'
+  const displayPatientName = patientName || t('extra.patient')
 
   const handleLogout = async () => {
     try { await logoutCurrentUser() }
@@ -588,7 +582,7 @@ export default function PatientDashboardPage() {
         console.error('Dashboard search failed:', error)
         if (!cancelled) {
           setSearchResults([])
-          setSearchError('Search is unavailable right now.')
+          setSearchError(t('extra.searchUnavailable'))
           setSearchOpen(true)
         }
       } finally {
@@ -602,7 +596,7 @@ export default function PatientDashboardPage() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [router, search])
+  }, [router, search, t])
 
   const handleSearchResult = (href: string) => {
     setSearchOpen(false)
@@ -610,9 +604,9 @@ export default function PatientDashboardPage() {
   }
 
   const categoryLabel = (category: PatientDashboardSearchResult['category']) => {
-    if (category === 'doctors') return 'Doctor'
-    if (category === 'records') return 'Record'
-    return 'Prescription'
+    if (category === 'doctors') return t('extra.resultDoctor')
+    if (category === 'records') return t('extra.resultRecord')
+    return t('extra.resultPrescription')
   }
 
   const displaySummaryCards = useMemo<SummaryCard[]>(() => {
@@ -620,7 +614,7 @@ export default function PatientDashboardPage() {
     if (!source.length && !dashboardHasKey(dashboardData, 'summary_cards', 'summaryCards')) return []
     return source.map((item) => {
       return {
-        label: text(item.label, 'Summary item'),
+        label: text(item.label, t('extra.summaryItem')),
         value: text(item.value, '-'),
         sub: text(item.sub ?? item.hint ?? item.status, ''),
         icon: resolveIcon(item.icon, ICONS.info),
@@ -628,7 +622,7 @@ export default function PatientDashboardPage() {
         href: text(item.href, PATIENT_ROUTES.dashboard),
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const displayQuickActions = useMemo<QuickAction[]>(() => {
     const source = dashboardArray(dashboardData, 'quick_actions', 'quickActions')
@@ -653,13 +647,13 @@ export default function PatientDashboardPage() {
     return source.map((item) => {
       const plan = careInstruction(item)
       return {
-        name: plan.title?.trim() || 'Care plan title not recorded', progress: plan.progress,
-        physician: text(item.physician ?? item.provider ?? item.doctor, 'Clinician not recorded'),
-        eta: plan.status?.trim() ? `Status: ${plan.status}` : 'Clinical status not recorded',
-        tasks: plan.description?.trim() || 'Plan details not recorded', reviewNeeded: plan.quality.reviewNeeded,
+        name: plan.title?.trim() || t('extra.planTitleMissing'), progress: plan.progress,
+        physician: text(item.physician ?? item.provider ?? item.doctor, t('extra.clinicianMissing')),
+        eta: plan.status?.trim() ? t('extra.statusLine', { status: plan.status }) : t('extra.clinicalStatusMissing'),
+        tasks: plan.description?.trim() || t('extra.planDetailsMissing'), reviewNeeded: plan.quality.reviewNeeded,
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const medicationCount = dashboardArray(dashboardData, 'medications').length
 
@@ -667,15 +661,15 @@ export default function PatientDashboardPage() {
     const source = dashboardArray(dashboardData, 'lab_data', 'labData')
     if (!source.length && !dashboardHasKey(dashboardData, 'lab_data', 'labData')) return []
     return source.map((item) => {
-      const fallback = { value: 'Lab test', detail: '' }
+      const fallback = { value: t('extra.labTest'), detail: '' }
       return {
-        title: text(item.title ?? item.name, 'Lab update'),
+        title: text(item.title ?? item.name, t('extra.labUpdate')),
         value: text(item.value ?? item.name ?? item.category, fallback.value),
         status: text(item.status, 'Pending'),
         detail: text(item.detail ?? item.date ?? item.completionDate, fallback.detail),
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const displayReferrals = useMemo<ReferralCard[]>(() => {
     const source = dashboardArray(dashboardData, 'referrals')
@@ -683,42 +677,42 @@ export default function PatientDashboardPage() {
     return source.map((item) => {
       const fallback = { detail: '' }
       return {
-        name: text(item.name ?? item.title, 'Referral'),
+        name: text(item.name ?? item.title, t('extra.referral')),
         status: text(item.status, 'Pending'),
         detail: text(item.detail ?? item.specialty ?? item.reason, fallback.detail),
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const displayMessageThreads = useMemo<MessageThread[]>(() => {
     const source = dashboardArray(dashboardData, 'message_threads', 'messageThreads')
     if (!source.length && !dashboardHasKey(dashboardData, 'message_threads', 'messageThreads')) return []
     return source.map((item) => {
       const fallback = { preview: '', unread: false, time: '' }
-      const sender = text(item.sender ?? item.name ?? item.contactName, 'Care team')
+      const sender = text(item.sender ?? item.name ?? item.contactName, t('extra.careTeam'))
       return {
         sender,
         preview: text(item.preview ?? item.lastMessage ?? item.body, fallback.preview),
         unread: Boolean(item.unread ?? item.isUnread ?? fallback.unread),
         time: text(item.time ?? item.lastMessageTime, fallback.time),
-        href: text(item.href, doctorContactHref(sender)),
+        href: text(item.href, PATIENT_ROUTES.messages),
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const displayDocs = useMemo<DocumentCard[]>(() => {
     const source = dashboardArray(dashboardData, 'docs', 'documents')
     if (!source.length && !dashboardHasKey(dashboardData, 'docs', 'documents')) return []
     return source.map((item) => {
-      const fallback = { count: '0 files' }
-      const name = text(item.name ?? item.title, 'Document')
+      const fallback = { count: t('extra.noFiles') }
+      const name = text(item.name ?? item.title, t('extra.document'))
       return {
         name,
         count: text(item.count ?? item.meta ?? [item.type, item.size].filter(Boolean).join(' - '), fallback.count),
         href: text(item.href, documentHref(name)),
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const displayWellnessCards = useMemo<WellnessCard[]>(() => {
     const source = dashboardArray(dashboardData, 'wellness_cards', 'wellnessCards')
@@ -726,18 +720,18 @@ export default function PatientDashboardPage() {
     return source.map((item) => {
       const fallback = { value: '', sub: '' }
       return {
-        title: text(item.title ?? item.label, 'Wellness'),
+        title: text(item.title ?? item.label, t('extra.wellness')),
         value: text(item.value, fallback.value),
         sub: text(item.sub ?? item.hint, fallback.sub),
       }
     })
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const displayMetrics = useMemo<MetricCard[]>(() => {
     // Use health info from profile instead of dashboard historical data
     if (healthInfo.blood_pressure) {
       const bp = healthInfo.blood_pressure
-      return [{ label: 'Blood Pressure', value: `${bp} mmHg`, trend: 'Recorded measurement', color: "var(--link)" }]
+      return [{ label: t('extra.bloodPressure'), value: `${bp} mmHg`, trend: t('extra.recordedMeasurement'), color: "var(--link)" }]
     }
 
     // Fallback to dashboard data if no health info
@@ -746,13 +740,13 @@ export default function PatientDashboardPage() {
     return source.map((item) => {
       const fallback = { value: '', trend: '', color: "var(--link)" }
       return {
-        label: text(item.label, 'Metric'),
+        label: text(item.label, t('extra.metric')),
         value: text(item.value, fallback.value),
         trend: text(item.trend, fallback.trend),
         color: text(item.color, fallback.color),
       }
     })
-  }, [dashboardData, healthInfo])
+  }, [dashboardData, healthInfo, t])
 
   const displayTimelineItems = useMemo<TimelineCard[]>(() => {
     const source = dashboardArray(dashboardData, 'timeline_items', 'timelineItems')
@@ -775,13 +769,13 @@ export default function PatientDashboardPage() {
     const source = dashboardArray(dashboardData, 'ai_insights', 'aiInsights')
     if (!source.length) return []
     return source.map((item) => ({
-      title: text(item.title, 'Insight'),
+      title: text(item.title, t('extra.insight')),
       body: text(item.body ?? item.description, ''),
       action: text(item.action ?? item.action_label ?? item.actionLabel, ''),
       href: text(item.href, '') || undefined,
       icon: resolveIcon(item.icon, insightIcon(item.type ?? item.insight_type ?? item.insightType)),
     }))
-  }, [dashboardData])
+  }, [dashboardData, t])
 
   const snapshotCards = useMemo(() => {
     const source = dashboardArray(dashboardData, 'today_snapshot', 'todaySnapshot')
@@ -798,25 +792,25 @@ export default function PatientDashboardPage() {
     const labs = displayLabData.filter((item) => !item.status.toLowerCase().includes('available'))
     const messages = findCard('message')
     return [
-      { label: 'Upcoming Appointments', value: appointment?.value ?? '0', sub: appointment?.sub ?? 'No upcoming appointments' },
-      { label: 'Active Prescriptions', value: prescriptions?.value ?? String(medicationCount), sub: prescriptions?.sub ?? (medicationCount ? 'Recorded medications' : 'No medications recorded') },
-      { label: 'Pending Lab Tests', value: String(labs.length || displayLabData.length), sub: labs[0]?.status ?? 'No pending tests' },
-      { label: 'Unread Messages', value: messages?.value ?? String(displayMessageThreads.filter((item) => item.unread).length), sub: messages?.sub ?? 'Care team updates' },
+      { label: t('extra.tileAppointments'), value: appointment?.value ?? '0', sub: appointment?.sub ?? t('extra.noUpcoming') },
+      { label: t('extra.tilePrescriptions'), value: prescriptions?.value ?? String(medicationCount), sub: prescriptions?.sub ?? (medicationCount ? t('extra.recordedMedications') : t('extra.noMedications')) },
+      { label: t('extra.tileLabs'), value: String(labs.length || displayLabData.length), sub: labs[0]?.status ?? t('extra.noPendingTests') },
+      { label: t('extra.tileMessages'), value: messages?.value ?? String(displayMessageThreads.filter((item) => item.unread).length), sub: messages?.sub ?? t('extra.careTeamUpdates') },
     ]
-  }, [dashboardData, displayLabData, medicationCount, displayMessageThreads, displaySummaryCards])
+  }, [dashboardData, displayLabData, medicationCount, displayMessageThreads, displaySummaryCards, t])
 
   const currentAppointment = displaySummaryCards.find((item) => item.label.toLowerCase().includes('appointment'))
   const primaryPhysician = displaySummaryCards.find((item) => item.label.toLowerCase().includes('physician'))
   const hasUpcomingAppointment = currentAppointment ? Number.parseInt(currentAppointment.value, 10) > 0 : false
   const hasCareActivity = hasUpcomingAppointment || displayCarePlans.length > 0 || medicationCount > 0 || displayLabData.length > 0 || displayMessageThreads.length > 0
   const heroBody = hasCareActivity
-    ? 'View your appointments, care records and messages in one place.'
-    : 'Choose a physician to book a consultation and begin your care.'
+    ? t('extra.introReturning')
+    : t('extra.introNew')
   const recordedPlanProgress = displayCarePlans.flatMap(plan => plan.progress === null ? [] : [plan.progress])
   const careProgress = recordedPlanProgress.length ? Math.round(recordedPlanProgress.reduce((total, value) => total + value, 0) / recordedPlanProgress.length) : null
   const todayScheduleItems = [
-    ...(hasUpcomingAppointment && currentAppointment && primaryPhysician ? [{ title: 'Upcoming appointment', body: `${primaryPhysician.value} · ${primaryPhysician.sub}`, time: currentAppointment.sub }] : []),
-    ...displayLabData.slice(0, 1).map((item) => ({ title: 'Lab update', body: `${item.value} · ${item.status}`, time: item.detail })),
+    ...(hasUpcomingAppointment && currentAppointment && primaryPhysician ? [{ title: t('extra.upcomingAppointment'), body: `${primaryPhysician.value} · ${primaryPhysician.sub}`, time: currentAppointment.sub }] : []),
+    ...displayLabData.slice(0, 1).map((item) => ({ title: t('extra.labUpdate'), body: `${item.value} · ${item.status}`, time: item.detail })),
   ].slice(0, 3)
 
   return (
@@ -940,7 +934,7 @@ export default function PatientDashboardPage() {
                 <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.26))', border: "1px solid var(--border)", display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.navy, fontWeight: 700 }}><ProfileImage name={displayPatientName}/></div>
                 <div>
                   <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{displayPatientName}</p>
-                  <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{carePlanStatus === 'none' ? t('carePlanNone') : carePlanStatus === 'unknown' ? t('carePlanUnknown') : carePlanStatus.startsWith('status:') ? t('carePlanStatus', { status: carePlanStatus.slice(7) }) : t('carePlanLoading')}</p>
+                  <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{carePlanStatus === 'none' ? t('carePlanNone') : carePlanStatus === 'unknown' ? t('carePlanUnknown') : carePlanStatus.startsWith('status:') ? t('carePlanStatus', { status: carePlanStatus.slice(7) }) : carePlanStatus === 'Unavailable' ? t('extra.carePlanUnavailable') : t('carePlanLoading')}</p>
                 </div>
               </div>
             </section>
@@ -1001,7 +995,7 @@ export default function PatientDashboardPage() {
               <div className='pd-greeting-block'>
                 <h1 className='pd-greeting-title'>
                   <span className='pd-greeting-kicker'>{greeting ? t(greeting) : ''}</span>
-                  <span className='pd-greeting-name'>{patientName || 'Patient'} <span aria-hidden='true'>👋</span></span>
+                  <span className='pd-greeting-name'>{patientName || t('extra.patient')} <span aria-hidden='true'>👋</span></span>
                 </h1>
                 <p style={{ margin: '5px 0 0', fontSize: '13px', color: T.slate }}>{t('howAreYouFeelingToday')}</p>
               </div>
@@ -1097,7 +1091,7 @@ export default function PatientDashboardPage() {
                 </label>
 
                 <HoverBtn
-                  ariaLabel='Open help and support'
+                  ariaLabel={t('extra.openHelp')}
                   title={t('helpAndSupport')}
                   onClick={() => router.push(PATIENT_ROUTES.support)}
                   base={topButtonBase()}
@@ -1106,7 +1100,7 @@ export default function PatientDashboardPage() {
                   <Ico p={ICONS.help} size={16} sw={1.8} />
                 </HoverBtn>
                 <HoverBtn
-                  ariaLabel='Open messages'
+                  ariaLabel={t('extra.openMessages')}
                   title={t('messages')}
                   onClick={() => router.push(PATIENT_ROUTES.messages)}
                   base={topButtonBase()}
@@ -1234,7 +1228,7 @@ export default function PatientDashboardPage() {
               <div ref={specialtyMenuRef} className='pd-specialty-wrap' style={{ position: 'relative' }}>
                 <HoverBtn
                   className='pd-specialty-trigger'
-                  ariaLabel='Book by specialty'
+                  ariaLabel={t('extra.bookBySpecialtyLabel')}
                   title={t('bookBySpecialty')}
                   onClick={() => setSpecialtyMenuOpen((open) => !open)}
                   base={{
@@ -1261,7 +1255,7 @@ export default function PatientDashboardPage() {
                     boxShadow: '0 8px 20px rgba(4,53,77,0.1)',
                   }}
                 >
-                  <span>{selectedSpecialty || 'Book by Specialty'}</span>
+                  <span>{selectedSpecialty ? specialtyLabel(selectedSpecialty) : t('bookBySpecialty')}</span>
                   <Ico p={ICONS.chevronDown} size={12} sw={1.8} color='currentColor' />
                 </HoverBtn>
                 {specialtyMenuOpen && (
@@ -1274,7 +1268,7 @@ export default function PatientDashboardPage() {
                         className='pd-specialty-option'
                         onClick={() => handleBookBySpecialty(specialty)}
                       >
-                        <span>{specialty}</span>
+                        <span>{specialtyLabel(specialty)}</span>
                         {selectedSpecialty === specialty && <Ico p={ICONS.check} size={13} sw={1.9} color='currentColor' />}
                       </button>
                     ))}
@@ -1284,7 +1278,7 @@ export default function PatientDashboardPage() {
             </div>
           </section>
 
-          <SectionCard title={t('healthSummary')} sub='A quick snapshot of your care status.'>
+          <SectionCard title={t('healthSummary')} sub={t('extra.subHealthSummary')}>
             <div className='pd-summary-grid'>
               {displaySummaryCards.map((item) => <SummaryTile key={item.label} item={item} />)}
             </div>
@@ -1292,7 +1286,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title={t('quickActions')} sub='Fast access to your most-used healthcare services.'>
+          <SectionCard title={t('quickActions')} sub={t('extra.subQuickActions')}>
             <div className='pd-actions-grid'>
               {displayQuickActions.map((action) => <QuickActionTile key={action.label} action={action} />)}
             </div>
@@ -1300,7 +1294,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={false} title={t('todaySHealthSnapshot')} sub='A live read of your care journey, focus areas, and next steps.'>
+          <SectionCard collapsible defaultOpen={false} title={t('todaySHealthSnapshot')} sub={t('extra.subSnapshot')}>
             <div className='pd-snapshot-grid'>
               {snapshotCards.map((item) => (
                 <div key={item.label} className='pd-snapshot-card'>
@@ -1316,18 +1310,18 @@ export default function PatientDashboardPage() {
 
           <SectionCard
             title={t('upcomingAppointments')}
-            sub='Your next scheduled consultations and follow-up care.'
+            sub={t('extra.subAppointments')}
             action={hasUpcomingAppointment ? <span style={{ ...Glass.chip, display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: "13px", color: T.link, fontWeight: 700 }}><span className='pd-notice-dot' /> {t('scheduled')}</span> : undefined}
           >
             {hasUpcomingAppointment && primaryPhysician && currentAppointment ? (
               <div className='pd-appointment-grid' style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
-                <Image src='https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=160&h=160&fit=crop' alt={primaryPhysician.value || 'Physician'} width={96} height={96} style={{ width: '96px', height: '96px', borderRadius: '14px', objectFit: 'cover', border: "1px solid var(--border)", boxShadow: '0 8px 18px rgba(4,53,77,0.16)' }} />
+                <ProfileAvatar name={primaryPhysician.value} kind='doctor' size={96} />
                 <div>
-                  <h3 className='portal-h3'>{primaryPhysician.value || 'Physician'}</h3>
-                  <p style={{ margin: '0 0 10px', fontSize: '13px', color: T.slate2 }}>{primaryPhysician.sub || 'Specialty'} · Virtual consultation</p>
+                  <h3 className='portal-h3'>{primaryPhysician.value || t('extra.physician')}</h3>
+                  <p style={{ margin: '0 0 10px', fontSize: '13px', color: T.slate2 }}>{primaryPhysician.sub || t('extra.specialty')} · {t('extra.virtual')}</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('date')}</strong> {currentAppointment.sub?.split(' at ')[0] || 'Scheduled'}</p>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('time')}</strong> {currentAppointment.sub?.split(' at ')[1] || currentAppointment.sub || 'TBD'}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('date')}</strong> {currentAppointment.sub?.split(' at ')[0] || t('extra.scheduled')}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('time')}</strong> {currentAppointment.sub?.split(' at ')[1] || currentAppointment.sub || t('extra.tbd')}</p>
                     <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('type')}</strong> {t('consultation')}</p>
                     <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('status')}</strong> {t('booked')}</p>
                   </div>
@@ -1346,7 +1340,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayCarePlans.length > 0} status={countLabel(displayCarePlans.length, 'plan')} title={t('carePlans')} sub='Care plans and recorded progress.'>
+          <SectionCard collapsible defaultOpen={displayCarePlans.length > 0} status={countLabel(displayCarePlans.length, 'plan')} title={t('carePlans')} sub={t('extra.subCarePlans')}>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayCarePlans.length === 0 && (
                 <EmptyState>{t('noActiveCarePlansYet')}</EmptyState>
@@ -1358,7 +1352,7 @@ export default function PatientDashboardPage() {
                       <h3 className='portal-h3'>{plan.name}</h3>
                       <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{plan.physician} · {plan.eta}</p>
                     </div>
-                    <div style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: T.link }}>{plan.progress === null ? 'Progress not recorded' : `${plan.progress}% recorded progress`}</div>
+                    <div style={{ ...Glass.chip, padding: '6px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, color: T.link }}>{plan.progress === null ? t('extra.progressMissing') : t('extra.progressRecorded', { progress: plan.progress })}</div>
                   </div>
                   {plan.progress !== null && <div style={{ marginTop: '12px', height: '8px', borderRadius: '999px', background: "var(--surface-hover)", overflow: 'hidden' }}>
                     <div style={{ width: `${plan.progress}%`, height: '100%', borderRadius: 'inherit', background: 'linear-gradient(90deg, #20B5DF 0%, var(--primary-end) 100%)' }} />
@@ -1372,13 +1366,13 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title={t('medications')} sub='Clinician instructions and separate patient-reported adherence.'>
+          <SectionCard title={t('medications')} sub={t('extra.subMedications')}>
             <PatientMedicationCards records={dashboardData?.medications ?? []} onUpdated={setDashboardData} />
           </SectionCard>
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayLabData.length > 0} status={countLabel(displayLabData.length, 'result')} title={t('labResultsDiagnostics')} sub='Latest lab information shared with your care team.'>
+          <SectionCard collapsible defaultOpen={displayLabData.length > 0} status={countLabel(displayLabData.length, 'result')} title={t('labResultsDiagnostics')} sub={t('extra.subLabs')}>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayLabData.length === 0 && (
                 <EmptyState>{t('noLabRequestsOrResults')}</EmptyState>
@@ -1401,7 +1395,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayReferrals.length > 0} status={countLabel(displayReferrals.length, 'referral')} title={t('referralsSpecialistCare')} sub='Track ongoing specialist recommendations and bookings.'>
+          <SectionCard collapsible defaultOpen={displayReferrals.length > 0} status={countLabel(displayReferrals.length, 'referral')} title={t('referralsSpecialistCare')} sub={t('extra.subReferrals')}>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayReferrals.length === 0 && (
                 <EmptyState>{t('noReferralsHaveBeenCreated')}</EmptyState>
@@ -1422,7 +1416,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayMetrics.length > 0} status={countLabel(displayMetrics.length, 'measurement')} title={t('healthMetrics')} sub='Recorded measurements; no clinical interpretation is inferred.'>
+          <SectionCard collapsible defaultOpen={displayMetrics.length > 0} status={countLabel(displayMetrics.length, 'measurement')} title={t('healthMetrics')} sub={t('extra.subMetrics')}>
             {healthError && <p role='alert'>{t('healthMeasurementsCouldNotBe')} <button onClick={() => setReload(value => value + 1)}>{t('tryAgain')}</button></p>}
             <div style={{ display: 'grid', gap: '10px' }}>
               {!healthError && displayMetrics.length === 0 && (
@@ -1448,7 +1442,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title={t('messages')} sub='Recent conversations from your care team and support channels.'>
+          <SectionCard title={t('messages')} sub={t('extra.subMessages')}>
             <div style={{ display: 'grid', gap: '10px' }}>
               {displayMessageThreads.length === 0 && (
                 <EmptyState action={<Link href={PATIENT_ROUTES.messages} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '10px', padding: '0 12px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', fontSize: "13px", fontWeight: 700 }}>{t('openMessages')}</Link>}>
@@ -1472,7 +1466,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title={t('medicalDocuments')} sub='Quick access to the records that support your ongoing care.'>
+          <SectionCard title={t('medicalDocuments')} sub={t('extra.subDocuments')}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
               {displayDocs.length === 0 && (
                 <EmptyState>{t('noMedicalDocumentsAreAvailable')}</EmptyState>
@@ -1488,7 +1482,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={displayTimelineItems.length > 0} status={countLabel(displayTimelineItems.length, 'event')} title={t('healthTimeline')} sub='A visual story of your care journey from onboarding to recovery.'>
+          <SectionCard collapsible defaultOpen={displayTimelineItems.length > 0} status={countLabel(displayTimelineItems.length, 'event')} title={t('healthTimeline')} sub={t('extra.subTimeline')}>
             <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '10px' }}>
               {displayTimelineItems.length === 0 && (
                 <EmptyState>{t('yourCareTimelineWillStart')}</EmptyState>
@@ -1510,13 +1504,13 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={false} title={t('healthInformation')} sub='Your vital signs and medical details from your profile.' action={<Link href='/patient/settings' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 600, textDecoration: 'none' }}>{t('updateInSettings')}</Link>}>
+          <SectionCard collapsible defaultOpen={false} title={t('healthInformation')} sub={t('extra.subHealthInfo')} action={<Link href='/patient/settings' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 600, textDecoration: 'none' }}>{t('updateInSettings')}</Link>}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
               {[
-                { label: 'Blood Pressure', value: healthInfo.blood_pressure || 'Not set' },
-                { label: 'Weight', value: healthInfo.weight ? `${healthInfo.weight} kg` : 'Not set' },
-                { label: 'Height', value: healthInfo.height ? `${healthInfo.height} cm` : 'Not set' },
-                { label: 'Blood Type', value: healthInfo.blood_type || 'Not set' },
+                { label: t('extra.bloodPressure'), value: healthInfo.blood_pressure || t('extra.notSet') },
+                { label: t('extra.weight'), value: healthInfo.weight ? `${healthInfo.weight} kg` : t('extra.notSet') },
+                { label: t('extra.height'), value: healthInfo.height ? `${healthInfo.height} cm` : t('extra.notSet') },
+                { label: t('extra.bloodType'), value: healthInfo.blood_type || t('extra.notSet') },
               ].map((item) => (
                 <div key={item.label} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-glass)", padding: '14px' }}>
                   <p style={{ margin: '0 0 6px', fontSize: "13px", letterSpacing: '0.06em', textTransform: 'uppercase', color: T.slate2 }}>{item.label}</p>
@@ -1528,7 +1522,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={false} title={t('personalWellness')} sub='Daily habits that shape your long-term health.'>
+          <SectionCard collapsible defaultOpen={false} title={t('personalWellness')} sub={t('extra.subWellness')}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
               {displayWellnessCards.length === 0 && (
                 <EmptyState>{t('noWellnessCheckInsHave')}</EmptyState>
@@ -1545,10 +1539,10 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={false} title={t('optionalAiAssistance')} sub='Drafting support remains subject to clinician review.'>
+          <SectionCard collapsible defaultOpen={false} title={t('optionalAiAssistance')} sub={t('extra.subAi')}>
             <div style={{ borderRadius: '16px', overflow: 'hidden', border: "1px solid var(--border)", background: "var(--surface-glass)" }}>
               {displayAIInsights.length === 0 && (
-                <EmptyState>{text(dashboardData?.ai_insights_message, 'Optional AI drafting supports clinician review. Care recommendations are shared through your clinician-approved care record.')}</EmptyState>
+                <EmptyState>{text(dashboardData?.ai_insights_message, t('extra.aiNote'))}</EmptyState>
               )}
               {displayAIInsights.map((item, index) => (
                 <AIItem
@@ -1567,7 +1561,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard collapsible defaultOpen={(recentDoctors ?? []).length > 0} status={countLabel((recentDoctors ?? []).length, 'doctor')} title={t('quickReBooking')} sub='Book with doctors you have seen before for faster care.' action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>{t('findNewDoctor')}</Link>}>
+          <SectionCard collapsible defaultOpen={(recentDoctors ?? []).length > 0} status={countLabel((recentDoctors ?? []).length, 'doctor')} title={t('quickReBooking')} sub={t('extra.subRebook')} action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>{t('findNewDoctor')}</Link>}>
             <div style={{ display: 'grid', gap: '10px' }}>
               <div className='pd-doctor-carousel'>
                 {(recentDoctors ?? []).length === 0 && (
@@ -1579,7 +1573,7 @@ export default function PatientDashboardPage() {
                   <div key={doc.id} style={{ display: 'grid', gap: '8px' }}>
                     <DoctorCard name={doc.name} specialty={doc.specialty} verification={doc.verification} tags={doc.tags} imageUrl={doc.imageUrl} />
                     <div className='pd-doctor-footer'>
-                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : 'No ratings'} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
+                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : t('extra.noRatings')} · {t('extra.years', { years: doc.experienceYears })} · {doc.nextAvailable}</p>
                       <div className='pd-doctor-actions'>
                         <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>{t('bookNow')}</Link>
                       </div>
@@ -1592,7 +1586,7 @@ export default function PatientDashboardPage() {
 
           <div style={{ height: '14px' }} />
 
-          <SectionCard title={t('findAPhysician')} sub='Listed by rating, without a clinical recommendation.' action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>{t('openDiscovery')}</Link>}>
+          <SectionCard title={t('findAPhysician')} sub={t('extra.subFindPhysician')} action={<Link href='/patient/find-doctor' style={{ fontSize: "13px", color: "var(--link)", fontWeight: 700, textDecoration: 'none' }}>{t('openDiscovery')}</Link>}>
             <div style={{ display: 'grid', gap: '10px' }}>
               <div className='pd-doctor-carousel'>
                 {doctorsLoading ? <p role='status'>{t('loadingPhysicians')}</p> : doctorsError ? <p role='alert'>{t('physiciansCouldNotBeLoaded')} <button onClick={() => setReload(value => value + 1)}>{t('tryAgain')}</button></p> : (recommendedDoctors ?? []).length === 0 && (
@@ -1604,7 +1598,7 @@ export default function PatientDashboardPage() {
                   <div key={doc.name} style={{ display: 'grid', gap: '8px' }}>
                     <DoctorCard name={doc.name} specialty={doc.specialty} verification={doc.verification} tags={doc.tags} imageUrl={doc.imageUrl} />
                     <div className='pd-doctor-footer'>
-                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : 'No ratings'} · {doc.experienceYears} yrs · {doc.nextAvailable}</p>
+                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : t('extra.noRatings')} · {t('extra.years', { years: doc.experienceYears })} · {doc.nextAvailable}</p>
                       <div className='pd-doctor-actions'>
                         <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=view')} style={{ color: T.navy }}>{t('viewProfile')}</Link>
                         <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>{t('book')}</Link>
@@ -1620,7 +1614,7 @@ export default function PatientDashboardPage() {
 
         {!dashboardLoading && !dashboardError && <aside id='patient-secondary-sidebar' className='pd-right'>
           <div className='portal-sidebar-content portal-sidebar-stack'>
-            <SectionCard collapsible defaultOpen={todayScheduleItems.length > 0} status={todayScheduleItems.length ? `${todayScheduleItems.length} today` : 'Nothing scheduled today'} title={t('todaySSchedule')} sub='The key moments and commitments for the day.'>
+            <SectionCard collapsible defaultOpen={todayScheduleItems.length > 0} status={todayScheduleItems.length ? t('extra.todayCount', { count: todayScheduleItems.length }) : t('extra.nothingToday')} title={t('todaySSchedule')} sub={t('extra.subToday')}>
               {todayScheduleItems.length ? (
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {todayScheduleItems.map((item) => (
@@ -1636,11 +1630,11 @@ export default function PatientDashboardPage() {
               )}
             </SectionCard>
 
-            <SectionCard title={t('notifications')} sub='Recent account and care updates.'>
+            <SectionCard title={t('notifications')} sub={t('extra.subNotifications')}>
               <PatientNotifications compact />
             </SectionCard>
 
-            <SectionCard collapsible defaultOpen={false} title={t('careProgress')} sub='How your current plan is tracking.'>
+            <SectionCard collapsible defaultOpen={false} title={t('careProgress')} sub={t('extra.subProgress')}>
               {careProgress !== null ? (
                 <div style={{ borderRadius: '14px', padding: '14px', background: 'linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(165,224,218,0.22) 100%)', border: "1px solid var(--border)" }}>
                   <div style={{ marginBottom: '8px', height: '8px', borderRadius: '999px', background: "var(--surface-hover)", overflow: 'hidden' }}>
@@ -1653,14 +1647,14 @@ export default function PatientDashboardPage() {
               )}
             </SectionCard>
 
-            <SectionCard collapsible defaultOpen={false} title={t('contactYourCareTeam')} sub='Use your messages to contact your care team.'>
+            <SectionCard collapsible defaultOpen={false} title={t('contactYourCareTeam')} sub={t('extra.subContact')}>
               <div style={{ borderRadius: '14px', padding: '14px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
                 <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{t('messages')}</p>
                 <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{t('responsesDependOnYourCare')}</p>
               </div>
             </SectionCard>
 
-            <SectionCard collapsible defaultOpen={false} title={t('primaryActions')} sub='Jump directly into the services you use most.'>
+            <SectionCard collapsible defaultOpen={false} title={t('primaryActions')} sub={t('extra.subPrimary')}>
               <div style={{ display: 'grid', gap: '8px' }}>
                 <Link href={PATIENT_ROUTES.findDoctor} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: '#20B5DF', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, boxShadow: '0 4px 12px rgba(32,181,223,0.28)' }}>{t('bookNewAppointment')}</Link>
                 <Link href={PATIENT_ROUTES.messages} style={{ textDecoration: 'none', minHeight: '36px', borderRadius: '11px', background: "var(--surface-glass)", color: T.navy, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '13px', fontWeight: 700, border: "1px solid var(--border)" }}>{t('contactCareTeam')}</Link>

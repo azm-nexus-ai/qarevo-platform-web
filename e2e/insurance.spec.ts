@@ -74,3 +74,15 @@ test('an oversized insurance card is rejected inline before any upload request',
   await expect(page.locator('#insurance-card-upload-error')).toHaveText(/3 MB or smaller/)
   expect(uploads).toBe(0)
 })
+
+test('settings read in German, including insurance status and the account security panel',async({page,context,baseURL})=>{
+  const state=await patientApiFixture(context)
+  state.insurance={id:'synthetic-policy',insurance_type:'GKV',insurance_provider_name:'Synthetic insurer',insurance_number:'A123456789',insured_status:'SELF_INSURED',validity_end:'2099-12-31'}
+  await context.addCookies([{name:'qarevo_locale',value:'de',url:baseURL!}])
+  await page.goto('/patient/settings')
+  await expect(page.getByText('Selbst versichert',{exact:true})).toBeVisible()
+  await expect(page.getByText('31. Dezember 2099',{exact:true})).toBeVisible()
+  await expect(page.getByText('E-Mail-Bestätigung',{exact:true})).toBeVisible()
+  await expect(page.getByText('Not verified')).toHaveCount(0)
+  await expect(page.getByText('Email Verification')).toHaveCount(0)
+})

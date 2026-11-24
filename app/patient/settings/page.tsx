@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import AccountSecurity from '@/components/security/AccountSecurity'
 
 import { ProfileImageEditor } from '@/components/patient/ProfileImage'
@@ -14,7 +14,7 @@ import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/compone
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { T } from '@/lib/tokens'
-import { insurancePresentation } from '@/lib/insurance-presentation'
+import { useInsurancePresentation } from '@/lib/use-insurance-presentation'
 import { medicalUploadError } from '@/lib/clinical-upload'
 import { clearPortalSession, createEmergencyContact, createInsurance, deactivatePatientAccount, deleteEmergencyContact, deletePatientPasskey, downloadPatientDataExport, getApiErrorDetail, getPatientActiveDevices, getPatientHealthInfo, getPatientLoginHistory, getPatientPasskeyStatus, getPatientPasskeys, getPatientSettings, isAuthError, readSessionMarker, registerPatientPasskey, revokeOtherPatientActiveDevices, revokePatientActiveDevice, updateEmergencyContact, updateInsurance, updatePatientSettings, updateProfile, uploadMedicalRecord, type PatientActiveDevice, type PatientLoginHistoryItem, type PatientPasskeyCredential, type PatientPasskeyStatus, type EmergencyContact, type Insurance, type EmergencyContactCreate } from '@/lib/api'
 
@@ -54,16 +54,18 @@ const DEFAULT_TOGGLES: Record<ToggleKey, boolean> = {
   highContrast: false,
 }
 
+/** Security rows; `id` drives behaviour and names the secItem* messages. */
 const SECURITY_ITEMS = [
-  { title: 'Change Password', body: 'Use password reset from the sign-in screen until in-app password change is added.', badge: 'Available', tone: 'info' as const },
-  { title: 'Email Verification', body: 'Verify your email address before accessing your account.', badge: 'Required', tone: 'success' as const },
-  { title: 'Active Devices', body: 'Review current browser sessions and sign out devices you no longer use.', badge: 'Available', tone: 'info' as const },
-  { title: 'Login History', body: 'Recent sign-in events are available from the audit log.', badge: 'Available', tone: 'info' as const },
-  { title: 'Face ID / Biometrics', body: 'Set up passkeys so this browser can sign in with your device security.', badge: 'Available', tone: 'info' as const },
+  { id: 'EmailVerification', badge: 'badgeRequired', tone: 'success' as const },
+  { id: 'ActiveDevices', badge: 'badgeAvailable', tone: 'info' as const },
+  { id: 'LoginHistory', badge: 'badgeAvailable', tone: 'info' as const },
+  { id: 'Passkeys', badge: 'badgeAvailable', tone: 'info' as const },
 ]
 
 export default function PatientSettingsPage() {
-  const t = useTranslations('patientSettings')
+  const t = useTranslations('patientSettings'), german = useLocale().startsWith('de'), presentInsurance = useInsurancePresentation()
+  const longDate = (value: string) => localDate(value, german)
+  const genderLabel = (value: string) => ({ Male: t('male'), Female: t('female'), Other: t('other') } as Record<string, string>)[value] ?? value
   const [contactErrors, setContactErrors] = useState<Record<string, string>>({})
   const { theme, setTheme } = useTheme()
   const router = useRouter()
@@ -182,16 +184,13 @@ export default function PatientSettingsPage() {
 
         if (cancelled) return
         const fullName = [settingsData.first_name, settingsData.last_name].filter(Boolean).join(' ')
-        const formattedDate = settingsData.date_of_birth
-          ? new Date(settingsData.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-          : ''
 
         setAccountData({
-          fullName: fullName || 'Not set',
+          fullName,
           email: settingsData.email || '',
-          phone: settingsData.phone || 'Not set',
-          dateOfBirth: formattedDate || 'Not set',
-          gender: settingsData.gender || 'Not set',
+          phone: settingsData.phone || '',
+          dateOfBirth: settingsData.date_of_birth || '',
+          gender: settingsData.gender || '',
         })
 
         setContacts(settingsData.emergency_contacts || [])
@@ -238,7 +237,7 @@ export default function PatientSettingsPage() {
           router.replace('/auth/sign-in')
           return
         }
-        if (!cancelled) setLoadError('Your settings could not be loaded. No changes have been saved.')
+        if (!cancelled) setLoadError(t('loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -249,7 +248,7 @@ export default function PatientSettingsPage() {
       cancelled = true
       window.clearTimeout(sessionTimer)
     }
-  }, [router, loadAttempt])
+  }, [router, loadAttempt, t])
 
   const settingsAppearance = useMemo(() => ({
     darkMode: theme === 'dark',
@@ -301,18 +300,18 @@ export default function PatientSettingsPage() {
     try {
       await deleteEmergencyContact(contactId)
       setContacts(contacts.filter(c => c.id !== contactId))
-      setSaveMessage('Emergency contact deleted.')
+      setSaveMessage(t('contactDeleted'))
     } catch (error) {
-      showError(error, 'Failed to delete emergency contact.')
+      showError(error, t('contactDeleteFailed'))
     }
   }
 
   function validateContact(value: { name: string; relationship: string; phone: string }) {
     const errors: Record<string, string> = {}
     for (const key of ['name', 'relationship'] as const) {
-      if (value[key].trim().length < 2 || value[key].trim().length > 100 || !/\p{L}/u.test(value[key]) || /[<>]/.test(value[key])) errors[key] = `Enter the contact’s ${key} using 2–100 characters without HTML.`
+      if (value[key].trim().length < 2 || value[key].trim().length > 100 || !/\p{L}/u.test(value[key]) || /[<>]/.test(value[key])) errors[key] = t(key === 'name' ? 'contactNameError' : 'contactRelationshipError')
     }
-    if (!/^\+[1-9][0-9]{6,14}$/.test(value.phone.replace(/[\s().-]/g, ''))) errors.phone = 'Use + and a country code followed by the number (7–15 digits), for example +49 151 23456789.'
+    if (!/^\+[1-9][0-9]{6,14}$/.test(value.phone.replace(/[\s().-]/g, ''))) errors.phone = t('contactPhoneError')
     setContactErrors(errors)
     return !Object.keys(errors).length
   }
@@ -325,9 +324,9 @@ export default function PatientSettingsPage() {
       setContacts([...contacts, created])
       setNewContact({ name: '', relationship: '', phone: '' })
       setShowAddContactForm(false)
-      setSaveMessage('Emergency contact added.')
+      setSaveMessage(t('contactAdded'))
     } catch (error) {
-      showError(error, 'Failed to add emergency contact.')
+      showError(error, t('contactAddFailed'))
     } finally {
       setContactSaving(false)
     }
@@ -350,9 +349,9 @@ export default function PatientSettingsPage() {
       const updated = await updateEmergencyContact(editingContactId, contactEdit)
       setContacts((current) => current.map((contact) => contact.id === updated.id ? updated : contact))
       setEditingContactId(null)
-      setSaveMessage('Emergency contact updated.')
+      setSaveMessage(t('contactUpdated'))
     } catch (error) {
-      showError(error, 'Failed to update emergency contact.')
+      showError(error, t('contactUpdateFailed'))
     } finally {
       setContactSaving(false)
     }
@@ -362,22 +361,19 @@ export default function PatientSettingsPage() {
     try {
       const updated = await updateProfile(profileEdit)
       const fullName = [updated.first_name, updated.last_name].filter(Boolean).join(' ')
-      const formattedDate = updated.date_of_birth
-        ? new Date(updated.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-        : ''
 
       setAccountData({
-        fullName: fullName || 'Not set',
+        fullName,
         email: updated.email || '',
-        phone: updated.phone || 'Not set',
-        dateOfBirth: formattedDate || 'Not set',
-        gender: updated.gender || 'Not set',
+        phone: updated.phone || '',
+        dateOfBirth: updated.date_of_birth || '',
+        gender: updated.gender || '',
       })
       setShowProfileEdit(false)
-      setSaveMessage('Profile updated successfully')
+      setSaveMessage(t('profileUpdated'))
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
-      showError(error, 'Failed to update profile.')
+      showError(error, t('profileUpdateFailed'))
     }
   }
 
@@ -385,9 +381,9 @@ export default function PatientSettingsPage() {
     setProfileEdit({
       first_name: accountData.fullName.split(' ')[0] || '',
       last_name: accountData.fullName.split(' ').slice(1).join(' ') || '',
-      date_of_birth: accountData.dateOfBirth !== 'Not set' ? new Date(accountData.dateOfBirth).toISOString().split('T')[0] : '',
-      gender: accountData.gender !== 'Not set' ? accountData.gender : '',
-      phone: accountData.phone !== 'Not set' ? accountData.phone : '',
+      date_of_birth: accountData.dateOfBirth.slice(0, 10),
+      gender: accountData.gender,
+      phone: accountData.phone,
     })
     setShowProfileEdit(true)
   }
@@ -464,7 +460,7 @@ export default function PatientSettingsPage() {
         timeZone: updatedSettings.time_zone,
       })
       setSaving(false)
-      setSaveMessage('Settings saved successfully.')
+      setSaveMessage(t('settingsSaved'))
     } catch (error) {
       if (isAuthError(error)) {
         setSaving(false)
@@ -482,7 +478,7 @@ export default function PatientSettingsPage() {
     setFontSize(savedDisplayPrefs.fontSize)
     setLanguage(savedDisplayPrefs.language)
     setTimeZone(savedDisplayPrefs.timeZone)
-    setSaveMessage('Changes reverted to the last saved version.')
+    setSaveMessage(t('changesReverted'))
   }
 
   async function handleDataExport() {
@@ -497,9 +493,9 @@ export default function PatientSettingsPage() {
       anchor.click()
       anchor.remove()
       window.URL.revokeObjectURL(url)
-      setSaveMessage('Your data export is ready.')
+      setSaveMessage(t('exportReady'))
     } catch (error) {
-      showError(error, 'Failed to download your data export.')
+      showError(error, t('exportFailed'))
     }
   }
 
@@ -510,7 +506,7 @@ export default function PatientSettingsPage() {
       const history = await getPatientLoginHistory()
       setLoginHistory(history.items || [])
     } catch (error) {
-      showError(error, 'Failed to load login history.')
+      showError(error, t('historyFailed'))
     } finally {
       setLoginHistoryLoading(false)
     }
@@ -522,7 +518,7 @@ export default function PatientSettingsPage() {
       const devices = await getPatientActiveDevices()
       setActiveDevices(devices.items || [])
     } catch (error) {
-      showError(error, 'Failed to load active devices.')
+      showError(error, t('devicesFailed'))
     } finally {
       setActiveDevicesLoading(false)
     }
@@ -541,10 +537,10 @@ export default function PatientSettingsPage() {
         router.replace('/auth/sign-in')
         return
       }
-      setSaveMessage('Device signed out.')
+      setSaveMessage(t('deviceSignedOut'))
       await loadActiveDevices()
     } catch (error) {
-      showError(error, 'Failed to sign out device.')
+      showError(error, t('deviceSignOutFailed'))
     }
   }
 
@@ -554,7 +550,7 @@ export default function PatientSettingsPage() {
       setSaveMessage(result.message)
       await loadActiveDevices()
     } catch (error) {
-      showError(error, 'Failed to sign out other devices.')
+      showError(error, t('othersSignOutFailed'))
     }
   }
 
@@ -568,7 +564,7 @@ export default function PatientSettingsPage() {
       setPasskeys(items)
       setPasskeyStatus(status)
     } catch (error) {
-      showError(error, 'Failed to load passkeys.')
+      showError(error, t('passkeysFailed'))
     } finally {
       setPasskeysLoading(false)
     }
@@ -577,7 +573,7 @@ export default function PatientSettingsPage() {
   async function handlePasskeyClick() {
     const browserSupportsPasskeys = typeof window !== 'undefined' && !!window.PublicKeyCredential
     if (!browserSupportsPasskeys) {
-      setSaveMessage('This browser does not support passkeys.')
+      setSaveMessage(t('passkeysUnsupported'))
       return
     }
     setShowPasskeys(true)
@@ -588,13 +584,13 @@ export default function PatientSettingsPage() {
     setRegisteringPasskey(true)
     try {
       const platform = typeof navigator !== 'undefined' ? navigator.platform : ''
-      const credential = await registerPatientPasskey(platform ? `${platform} passkey` : 'This device passkey')
+      const credential = await registerPatientPasskey(platform ? t('platformPasskey', { platform }) : t('devicePasskey'))
       setPasskeys((items) => [credential, ...items.filter((item) => item.id !== credential.id)])
       const status = await getPatientPasskeyStatus()
       setPasskeyStatus(status)
-      setSaveMessage('Passkey added. You can now sign in with this device.')
+      setSaveMessage(t('passkeyAdded'))
     } catch (error) {
-      showError(error, 'Failed to add passkey.')
+      showError(error, t('passkeyAddFailed'))
     } finally {
       setRegisteringPasskey(false)
     }
@@ -603,10 +599,10 @@ export default function PatientSettingsPage() {
   async function handleDeletePasskey(credentialId: string) {
     try {
       await deletePatientPasskey(credentialId)
-      setSaveMessage('Passkey removed.')
+      setSaveMessage(t('passkeyRemoved'))
       await loadPasskeys()
     } catch (error) {
-      showError(error, 'Failed to remove passkey.')
+      showError(error, t('passkeyRemoveFailed'))
     }
   }
 
@@ -616,7 +612,7 @@ export default function PatientSettingsPage() {
       clearPortalSession()
       router.replace('/auth/sign-in')
     } catch (error) {
-      showError(error, 'Failed to deactivate account.')
+      showError(error, t('deactivateFailed'))
     }
   }
 
@@ -633,14 +629,14 @@ export default function PatientSettingsPage() {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('record_type', 'Insurance')
-      formData.append('title', 'Insurance Card')
-      formData.append('description', 'Patient-uploaded insurance card')
-      formData.append('provider_name', insurance?.insurance_provider_name || 'Insurance provider')
+      formData.append('title', t('cardTitle'))
+      formData.append('description', t('cardDescription'))
+      formData.append('provider_name', insurance?.insurance_provider_name || t('cardProvider'))
       formData.append('record_date', new Date().toISOString())
       await uploadMedicalRecord(formData)
-      setSaveMessage('Insurance card uploaded to your medical records.')
+      setSaveMessage(t('cardUploaded'))
     } catch (error) {
-      showError(error, 'Failed to upload insurance card.')
+      showError(error, t('cardUploadFailed'))
     } finally {
       setUploadingInsuranceCard(false)
       if (insuranceCardInputRef.current) insuranceCardInputRef.current.value = ''
@@ -650,7 +646,7 @@ export default function PatientSettingsPage() {
   const headerActions = (
     <>
       <PortalButton tone='secondary' onClick={handleCancel}>{t('cancel')}</PortalButton>
-      <PortalButton tone='primary' onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</PortalButton>
+      <PortalButton tone='primary' onClick={handleSave} disabled={saving}>{saving ? t('saving') : t('saveChanges')}</PortalButton>
     </>
   )
 
@@ -663,7 +659,7 @@ export default function PatientSettingsPage() {
     toggles.labResultAlerts,
     toggles.marketingEmails,
   ].filter(Boolean).length
-  const insuranceInfo = insurancePresentation(insurance)
+  const insuranceInfo = presentInsurance(insurance)
 
   const rightRail = (
     <div className='grid gap-3'>
@@ -672,9 +668,9 @@ export default function PatientSettingsPage() {
         <h2 className='portal-h2'>{t('yourPreferencesAreCurrent')}</h2>
         <div className='grid gap-2'>
           {[
-            ['Security status', sessionStatus === 'checking' ? 'Checking' : sessionStatus === 'active' ? 'Active session' : 'Signed out'],
-            ['Notification setup', `${enabledNotificationCount} of 7 enabled`],
-            ['Insurance details', loading ? 'Loading…' : loadError ? 'Unavailable' : insuranceInfo.hasDetails ? 'Recorded' : 'Not added'],
+            [t('summarySecurity'), sessionStatus === 'checking' ? t('summaryChecking') : sessionStatus === 'active' ? t('summaryActive') : t('summarySignedOut')],
+            [t('summaryNotifications'), t('enabledCount', { count: enabledNotificationCount, total: 7 })],
+            [t('summaryInsurance'), loading ? t('loading') : loadError ? t('summaryUnavailable') : insuranceInfo.hasDetails ? t('summaryRecorded') : t('summaryNotAdded')],
           ].map(([label, value]) => (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
               <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
@@ -752,7 +748,7 @@ export default function PatientSettingsPage() {
                 <h2 className='portal-h2 settings-card-title'>{t('profileAndContactIdentity')}</h2>
               </div>
               <PortalButton tone='secondary' onClick={() => { if (!showProfileEdit) openProfileEdit(); else setShowProfileEdit(false) }}>
-                {showProfileEdit ? 'Cancel' : 'Edit'}
+                {showProfileEdit ? t('cancel') : t('edit')}
               </PortalButton>
             </div>
             <div className='settings-profile-grid'>
@@ -823,7 +819,7 @@ export default function PatientSettingsPage() {
                   <>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('fullName')}</p>
-                      <p className='settings-field-value' style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.fullName}</p>
+                      <p className='settings-field-value' style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.fullName || t('notSet')}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('email')}</p>
@@ -831,15 +827,15 @@ export default function PatientSettingsPage() {
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('phoneNumber')}</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.phone}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.phone || t('notSet')}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('dateOfBirth')}</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.dateOfBirth}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.dateOfBirth ? longDate(accountData.dateOfBirth) : t('notSet')}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('gender')}</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.gender}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.gender ? genderLabel(accountData.gender) : t('notSet')}</p>
                     </div>
                   </>
                 )}
@@ -857,27 +853,27 @@ export default function PatientSettingsPage() {
             <div className='settings-info-grid'>
               <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('bloodPressure')}</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodPressure ? `${healthInfo.bloodPressure} mmHg` : 'Not set'}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodPressure ? `${healthInfo.bloodPressure} mmHg` : t('notSet')}</p>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('weight')}</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.weight ? `${healthInfo.weight} kg` : 'Not set'}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.weight ? `${healthInfo.weight} kg` : t('notSet')}</p>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('height')}</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.height ? `${healthInfo.height} cm` : 'Not set'}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.height ? `${healthInfo.height} cm` : t('notSet')}</p>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('bloodType')}</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodType || 'Not set'}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodType || t('notSet')}</p>
               </div>
               <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('allergies')}</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || 'Not recorded'}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || t('notRecorded')}</p>
               </div>
               <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                 <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('medicalConditions')}</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || 'Not recorded'}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || t('notRecorded')}</p>
               </div>
             </div>
           </PortalCard>
@@ -888,21 +884,21 @@ export default function PatientSettingsPage() {
               <AccountSecurity/>
             </div>
             <div className='grid gap-3'>
-              {SECURITY_ITEMS.filter(item => item.title !== 'Change Password').map((item) => (
-                <div key={item.title} style={{ padding: '14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+              {SECURITY_ITEMS.map((item) => (
+                <div key={item.id} style={{ padding: '14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                   <div className='flex flex-wrap items-start justify-between gap-2 mb-2'>
                     <div>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{item.title}</p>
-                      <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.55 }}>{item.body}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{t(`secItem${item.id}`)}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.55 }}>{t(`secItem${item.id}Body`)}</p>
                     </div>
-                    <PortalBadge tone={item.tone}>{item.badge}</PortalBadge>
+                    <PortalBadge tone={item.tone}>{t(item.badge)}</PortalBadge>
                   </div>
-                  {item.title === 'Active Devices' ? (
+                  {item.id === 'ActiveDevices' ? (
                     <PortalButton tone='secondary' onClick={handleOpenActiveDevices}>{t('manageDevices')}</PortalButton>
                   ) : null}
-                  {item.title === 'Face ID / Biometrics' ? (
+                  {item.id === 'Passkeys' ? (
                     <PortalButton tone='secondary' onClick={handlePasskeyClick}>
-                      {passkeyStatus?.enabled ? 'Manage passkeys' : 'Set up passkey'}
+                      {passkeyStatus?.enabled ? t('managePasskeys') : t('setUpPasskey')}
                     </PortalButton>
                   ) : null}
                 </div>
@@ -917,15 +913,15 @@ export default function PatientSettingsPage() {
             </div>
             <div className='grid gap-3'>
               {[
-                ['Email Notifications', 'emailNotifications'],
-                ['SMS Notifications', 'smsNotifications'],
-                ['Push Notifications', 'pushNotifications'],
-                ['Appointment Reminders', 'appointmentReminders'],
-                ['Medication Reminders', 'medicationReminders'],
-                ['Lab Result Alerts', 'labResultAlerts'],
-                ['Marketing Emails', 'marketingEmails'],
+                ['notifEmail', 'emailNotifications'],
+                ['notifSms', 'smsNotifications'],
+                ['notifPush', 'pushNotifications'],
+                ['notifAppointments', 'appointmentReminders'],
+                ['notifMedication', 'medicationReminders'],
+                ['notifLab', 'labResultAlerts'],
+                ['notifMarketing', 'marketingEmails'],
               ].map(([label, key]) => (
-                <ToggleRow key={key} label={label} enabled={toggles[key as ToggleKey]} onToggle={() => toggleSetting(key as ToggleKey)} />
+                <ToggleRow key={key} label={t(label)} enabled={toggles[key as ToggleKey]} onToggle={() => toggleSetting(key as ToggleKey)} />
               ))}
             </div>
           </PortalCard>
@@ -938,9 +934,9 @@ export default function PatientSettingsPage() {
               </div>
               <div className='grid gap-3'>
                 <p style={{ color: T.slate, lineHeight: 1.6 }}>{t('privacyChoicesAndConsentWithdrawal')}</p>
-                <PreferenceActionRow label={t('downloadMyData')} buttonLabel='Open' onClick={handleDataExport} />
-                <PreferenceActionRow label={t('deleteAccount')} buttonLabel='Manage' tone='danger' onClick={() => setShowDeleteAccountConfirm(true)} />
-                <PreferenceActionRow label={t('privacyPolicy')} buttonLabel='Open' onClick={() => router.push('/privacy')} />
+                <PreferenceActionRow label={t('downloadMyData')} buttonLabel={t('open')} onClick={handleDataExport} />
+                <PreferenceActionRow label={t('deleteAccount')} buttonLabel={t('manage')} tone='danger' onClick={() => setShowDeleteAccountConfirm(true)} />
+                <PreferenceActionRow label={t('privacyPolicy')} buttonLabel={t('open')} onClick={() => router.push('/privacy')} />
               </div>
             </PortalCard>
 
@@ -952,8 +948,8 @@ export default function PatientSettingsPage() {
               <div className='grid gap-3'>
                 <ToggleRow label={t('darkMode')} enabled={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} description={t('savedAutomaticallyInThisBrowser')} />
                 <ToggleRow label={t('highContrast')} enabled={toggles.highContrast} onToggle={() => toggleSetting('highContrast')} />
-                <SelectRow label={t('fontSize')} value={fontSize} options={['Small', 'Medium', 'Large']} onChange={updateFontSizePreference} />
-                <SelectRow label={t('language')} value={language} options={['German', 'English']} onChange={setLanguage} />
+                <SelectRow label={t('fontSize')} value={fontSize} options={['Small', 'Medium', 'Large']} onChange={updateFontSizePreference} optionLabel={option => t(`fontSize${option}`)} />
+                <SelectRow label={t('language')} value={language} options={['German', 'English']} onChange={setLanguage} optionLabel={option => t(`language${option}`)} />
                 <SelectRow label={t('timeZone')} value={timeZone} options={['Europe/Berlin', 'UTC', 'Europe/London']} onChange={setTimeZone} />
               </div>
             </PortalCard>
@@ -967,7 +963,7 @@ export default function PatientSettingsPage() {
                   <h2 className='portal-h2 settings-card-title'>{t('peopleToContactQuickly')}</h2>
                 </div>
                 <PortalButton tone='primary' onClick={() => setShowAddContactForm(!showAddContactForm)}>
-                  {showAddContactForm ? 'Cancel' : 'Add Contact'}
+                  {showAddContactForm ? t('cancel') : t('addContact')}
                 </PortalButton>
               </div>
 
@@ -1008,11 +1004,11 @@ export default function PatientSettingsPage() {
                         placeholder='+49 151 23456789'
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
-                          <FieldFeedback name='newContact-phone' error={contactErrors.phone} hint='Include the country code, for example +49 151 23456789.' />
+                          <FieldFeedback name='newContact-phone' error={contactErrors.phone} hint={t('phoneHint')} />
                     </div>
                     <div className='flex gap-2'>
                       <PortalButton tone='primary' onClick={handleAddContact} disabled={contactSaving}>
-                        {contactSaving ? 'Saving…' : 'Add Contact'}
+                        {contactSaving ? t('saving') : t('addContact')}
                       </PortalButton>
                       <PortalButton tone='secondary' onClick={() => setShowAddContactForm(false)}>
                         {t('cancel')}
@@ -1059,10 +1055,10 @@ export default function PatientSettingsPage() {
                             placeholder={t('phoneNumber2')}
                             style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
-                          <FieldFeedback name='contactEdit-phone' error={contactErrors.phone} hint='Include the country code, for example +49 151 23456789.' />
+                          <FieldFeedback name='contactEdit-phone' error={contactErrors.phone} hint={t('phoneHint')} />
                           <div className='flex flex-wrap gap-2'>
                             <PortalButton tone='primary' onClick={handleContactEditSave} disabled={contactSaving}>
-                              {contactSaving ? 'Saving…' : 'Save'}
+                              {contactSaving ? t('saving') : t('save')}
                             </PortalButton>
                             <PortalButton tone='secondary' onClick={() => setEditingContactId(null)}>{t('cancel')}</PortalButton>
                           </div>
@@ -1190,11 +1186,11 @@ export default function PatientSettingsPage() {
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('insuranceProvider')}</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_provider_name || 'Not set'}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_provider_name || t('notSet')}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('policyNumber')}</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_number || 'Not set'}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_number || t('notSet')}</p>
                     </div>
                     <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('membershipCategoryPatientReported')}</p>
@@ -1204,8 +1200,8 @@ export default function PatientSettingsPage() {
                       <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('reportedCardValidityUntil')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>
                         {insurance.validity_end
-                          ? new Date(insurance.validity_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-                          : 'Not set'}
+                          ? longDate(insurance.validity_end)
+                          : t('notSet')}
                       </p>
                     </div>
                   </>
@@ -1227,7 +1223,7 @@ export default function PatientSettingsPage() {
                   style={{ display: 'none' }}
                 />
                 <PortalButton tone='secondary' onClick={() => insuranceCardInputRef.current?.click()} disabled={uploadingInsuranceCard}>
-                  {uploadingInsuranceCard ? 'Uploading…' : 'Upload Insurance Card'}
+                  {uploadingInsuranceCard ? t('uploading') : t('uploadCard')}
                 </PortalButton>
                 <p id='insurance-card-upload-help' className='mt-2 text-sm text-muted'>{t('maximum3MbPerFile')}</p>
                 <p id='insurance-card-upload-error' role={insuranceCardError ? 'alert' : undefined} className='mt-2 text-sm text-ink'>{insuranceCardError}</p>
@@ -1239,8 +1235,8 @@ export default function PatientSettingsPage() {
       {showDeleteAccountConfirm ? (
         <ConfirmDialog
           title={t('deactivateAccount')}
-          body='This will sign you out and deactivate your account. Clinical records are preserved for compliance and care continuity.'
-          confirmLabel='Deactivate'
+          body={t('deactivateBody')}
+          confirmLabel={t('deactivate')}
           onCancel={() => setShowDeleteAccountConfirm(false)}
           onConfirm={handleDeactivateAccount}
         />
@@ -1330,7 +1326,7 @@ function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { tit
 }
 
 function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHistoryItem[]; loading: boolean; onClose: () => void }) {
-  const t = useTranslations('patientSettings')
+  const t = useTranslations('patientSettings'), german = useLocale().startsWith('de')
   return (
     <div
       role='presentation'
@@ -1401,11 +1397,11 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
             {items.map((item) => (
               <div key={item.id} style={{ borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '12px' }}>
                 <div className='flex flex-wrap items-center justify-between gap-2'>
-                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: T.navy }}>{formatAuditEvent(item.event_type)}</p>
-                  <PortalBadge tone={item.success ? 'success' : 'danger'}>{item.success ? 'Successful' : 'Failed'}</PortalBadge>
+                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: T.navy }}>{({ LOGIN_SUCCESS: t('eventLoginSuccess'), LOGIN_FAILURE: t('eventLoginFailure'), LOGOUT: t('eventLogout'), TOKEN_REFRESHED: t('eventTokenRefreshed') } as Record<string, string>)[item.event_type] ?? formatAuditEvent(item.event_type)}</p>
+                  <PortalBadge tone={item.success ? 'success' : 'danger'}>{item.success ? t('successful') : t('failed')}</PortalBadge>
                 </div>
                 <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
-                  {new Date(item.created_at).toLocaleString()} {item.ip_address ? `• ${item.ip_address}` : ''}
+                  {localDateTime(item.created_at, german)} {item.ip_address ? `• ${item.ip_address}` : ''}
                 </p>
                 {item.failure_reason ? <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.red }}>{item.failure_reason}</p> : null}
               </div>
@@ -1430,7 +1426,7 @@ function ActiveDevicesDialog({
   onRevoke: (deviceId: string, isCurrent: boolean) => void
   onRevokeOthers: () => void
 }) {
-  const t = useTranslations('patientSettings')
+  const t = useTranslations('patientSettings'), german = useLocale().startsWith('de')
   return (
     <div
       role='presentation'
@@ -1512,14 +1508,14 @@ function ActiveDevicesDialog({
                       {item.is_current ? <PortalBadge tone='success'>{t('current')}</PortalBadge> : null}
                     </div>
                     <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
-                      {[item.browser_name, item.operating_system, item.ip_address].filter(Boolean).join(' • ') || 'Device details unavailable'}
+                      {[item.browser_name, item.operating_system, item.ip_address].filter(Boolean).join(' • ') || t('deviceUnknown')}
                     </p>
                     <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>
-                      Last active {item.last_seen_at ? new Date(item.last_seen_at).toLocaleString() : 'recently'}
+                      {t('lastActive', { time: item.last_seen_at ? localDateTime(item.last_seen_at, german) : t('recently') })}
                     </p>
                   </div>
                   <PortalButton tone={item.is_current ? 'danger' : 'secondary'} onClick={() => onRevoke(item.id, item.is_current)}>
-                    {item.is_current ? 'Sign out now' : 'Sign out'}
+                    {item.is_current ? t('signOutNow') : t('signOut')}
                   </PortalButton>
                 </div>
               </div>
@@ -1546,7 +1542,7 @@ function PasskeysDialog({
   onRegister: () => void
   onDelete: (credentialId: string) => void
 }) {
-  const t = useTranslations('patientSettings')
+  const t = useTranslations('patientSettings'), german = useLocale().startsWith('de')
   return (
     <div
       role='presentation'
@@ -1607,7 +1603,7 @@ function PasskeysDialog({
 
         <div className='mb-4 flex flex-wrap justify-end gap-2'>
           <PortalButton tone='primary' onClick={onRegister} disabled={registering}>
-            {registering ? 'Adding…' : 'Add passkey'}
+            {registering ? t('adding') : t('addPasskey')}
           </PortalButton>
         </div>
 
@@ -1626,10 +1622,10 @@ function PasskeysDialog({
                   <div>
                     <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: T.navy }}>{item.device_name || 'Passkey'}</p>
                     <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
-                      Added {item.created_at ? new Date(item.created_at).toLocaleString() : 'recently'}
+                      {t('addedAt', { time: item.created_at ? localDateTime(item.created_at, german) : t('recently') })}
                     </p>
                     <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>
-                      Last used {item.last_used_at ? new Date(item.last_used_at).toLocaleString() : 'not yet'}
+                      {t('lastUsed', { time: item.last_used_at ? localDateTime(item.last_used_at, german) : t('notYet') })}
                     </p>
                   </div>
                   <PortalButton tone='danger' onClick={() => onDelete(item.id)}>
@@ -1645,6 +1641,13 @@ function PasskeysDialog({
   )
 }
 
+/** English keeps its existing formats; German uses de-DE. */
+function localDate(value: string, german: boolean) {
+  return new Date(value).toLocaleDateString(german ? 'de-DE' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+function localDateTime(value: string, german: boolean) {
+  return new Date(value).toLocaleString(german ? 'de-DE' : undefined)
+}
 function formatAuditEvent(eventType: string) {
   return eventType.toLowerCase().split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
 }
@@ -1674,13 +1677,13 @@ function ToggleRow({ label, enabled, onToggle, description }: { label: string; e
   )
 }
 
-function SelectRow({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (next: string) => void }) {
+function SelectRow({ label, value, options, onChange, optionLabel = option => option }: { label: string; value: string; options: string[]; onChange: (next: string) => void; optionLabel?: (option: string) => string }) {
   return (
     <label className='settings-row'>
       <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{label}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)} className='settings-row-control rounded-xl border px-3 py-2 text-sm' style={{ borderColor: "var(--border)", color: T.navy, background: "var(--surface)" }}>
         {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
+          <option key={option} value={option}>{optionLabel(option)}</option>
         ))}
       </select>
     </label>

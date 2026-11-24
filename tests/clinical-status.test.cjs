@@ -52,9 +52,14 @@ test('medication, care-plan and diagnostic lifecycles are domain-specific', () =
   assert.equal(statuses.clinicalStatus('STARTED', 'episode').tone, 'neutral')
 })
 
+// The badge translates its label, so it renders inside the same provider as the app.
+const { NextIntlClientProvider } = require('next-intl')
+const inLocale = (locale, element) => renderToStaticMarkup(React.createElement(NextIntlClientProvider, { locale, messages: JSON.parse(fs.readFileSync(`messages/${locale}.json`, 'utf8')) }, element))
+
 test('shared badge renders readable status with a semantic tone in either theme', () => {
-  const html = renderToStaticMarkup(React.createElement(Badge, {status: 'Stopped', domain: 'medication'}))
+  const html = inLocale('en', React.createElement(Badge, {status: 'Stopped', domain: 'medication'}))
   assert.match(html, /Stopped/)
+  assert.match(inLocale('de', React.createElement(Badge, {status: 'NO_SHOW', domain: 'appointment'})), /Nicht wahrgenommen/)
   assert.match(html, /data-status-tone="neutral"/)
   assert.doesNotMatch(html, /#[0-9a-f]{3,8}|rgb\(/i)
 })
