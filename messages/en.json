@@ -1695,7 +1695,8 @@
     "costGkv": "Covered by statutory insurance if the practice confirms it for this appointment. You see the status before booking.",
     "costPkv": "Private invoice from the practice under GOÄ. You see the expected amount before booking.",
     "costSelfPay": "Self-pay service. You see the price and who invoices you before booking.",
-    "loadingName": "Loading…"
+    "loadingName": "Loading…",
+    "pricingPending": "Pricing pending setup"
   },
   "patientPhysician": {
     "loadingPhysicianProfile": "Loading physician profile",
@@ -1727,7 +1728,8 @@
     "experience": "Experience:",
     "rating": "Rating:",
     "languages": "Languages:",
-    "hospital": "Hospital:"
+    "hospital": "Hospital:",
+    "pricingPending": "Pricing pending setup"
   },
   "patientMessages": {
     "cancelReply": "Cancel reply",

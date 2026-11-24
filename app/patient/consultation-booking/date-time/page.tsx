@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Suspense, useMemo, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, Sh, Glass, PAGE_BG } from '@/lib/tokens'
-import { bookingService, buildBookingQueryParams, buildDoctorDiscoveryHref, CONSULTATION_PRICING_PENDING, getBookingPhysician, readBookingProviderId } from '@/lib/booking'
+import { bookingService, buildBookingQueryParams, buildDoctorDiscoveryHref, getBookingPhysician, readBookingProviderId } from '@/lib/booking'
 import { declaredDoctorFundingOptions } from '@/lib/insurance-presentation'
 import ActionLink from '@/components/ui/ActionLink'
 import { ICONS } from '@/constants/icons'
@@ -517,7 +517,7 @@ function DateTimeSelectionPageContent() {
                       }}
                     >
                       <span style={{ textTransform: 'capitalize' }}>{svc.type}</span>
-                      <span style={{ fontSize: "13px", color: T.slate2 }}>{svc.duration} · {CONSULTATION_PRICING_PENDING}</span>
+                      <span style={{ fontSize: "13px", color: T.slate2 }}>{svc.duration} · {t('pricingPending')}</span>
                     </button>
                   ))}
                 </div>

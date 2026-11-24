@@ -1695,7 +1695,8 @@
     "costGkv": "Kassenleistung, sofern die Praxis sie für diesen Termin bestätigt. Vor der Buchung sehen Sie den Status.",
     "costPkv": "Privatrechnung der Praxis nach GOÄ. Den voraussichtlichen Betrag sehen Sie vor der Buchung.",
     "costSelfPay": "Selbstzahlerleistung. Preis und Rechnungssteller sehen Sie vor der Buchung.",
-    "loadingName": "Wird geladen …"
+    "loadingName": "Wird geladen …",
+    "pricingPending": "Preise werden noch eingerichtet"
   },
   "patientPhysician": {
     "loadingPhysicianProfile": "Ärzteprofil wird geladen",
@@ -1727,7 +1728,8 @@
     "experience": "Erfahrung:",
     "rating": "Bewertung:",
     "languages": "Sprachen:",
-    "hospital": "Klinik:"
+    "hospital": "Klinik:",
+    "pricingPending": "Preise werden noch eingerichtet"
   },
   "patientMessages": {
     "cancelReply": "Antwort abbrechen",

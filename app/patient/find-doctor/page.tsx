@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { buildBookingQueryParams, CONSULTATION_PRICING_PENDING } from '@/lib/booking'
+import { buildBookingQueryParams } from '@/lib/booking'
 
 import Link from 'next/link'
 import { Suspense, useEffect, useMemo, useState } from 'react'
@@ -752,7 +752,7 @@ function FindDoctorPageContent() {
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('nextSlot')}</strong> {doctor.nextAvailable}</p>
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('distance2')}</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : t('notAvailable')}</p>
                         {doctor.services && doctor.services.length > 0 && (
-                          <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('fee')}</strong> {CONSULTATION_PRICING_PENDING}</p>
+                          <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('fee')}</strong> {t('pricingPending')}</p>
                         )}
                       </div>
 
