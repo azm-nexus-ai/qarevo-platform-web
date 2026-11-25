@@ -5931,5 +5931,12 @@
     "theEarlierWhitepaperDescribedCapabilities": "The earlier whitepaper described capabilities and certifications that have not been verified for the current platform. An updated overview will reflect tested functionality and documented evidence. This development environment is for synthetic testing.",
     "pageNotFound": "Page not found",
     "thePageYouAreLooking": "The page you are looking for does not exist."
+  },
+  "pageTitles": {
+    "impressum": "Impressum — development",
+    "whitepaper": "Technical overview — under review",
+    "cookies": "Cookie information — development",
+    "home": "Qarevo Health — European Healthcare Platform",
+    "description": "Qarevo Health connects patients and independent practices through a clinician-led digital care journey. Development preview."
   }
 }

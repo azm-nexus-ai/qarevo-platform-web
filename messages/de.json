@@ -5931,5 +5931,12 @@
     "theEarlierWhitepaperDescribedCapabilities": "Das frühere Whitepaper beschrieb Funktionen und Zertifizierungen, die für die aktuelle Plattform nicht belegt sind. Eine überarbeitete Übersicht wird nur getestete Funktionen und dokumentierte Nachweise enthalten. Diese Entwicklungsumgebung dient synthetischen Tests.",
     "pageNotFound": "Seite nicht gefunden",
     "thePageYouAreLooking": "Die gesuchte Seite existiert nicht."
+  },
+  "pageTitles": {
+    "impressum": "Impressum – Entwicklung",
+    "whitepaper": "Technische Übersicht – in Überarbeitung",
+    "cookies": "Cookie-Hinweise – Entwicklung",
+    "home": "Qarevo Health – Europäische Gesundheitsplattform",
+    "description": "Qarevo Health verbindet Patientinnen und Patienten mit unabhängigen Praxen – digital und ärztlich begleitet. Entwicklungsvorschau."
   }
 }

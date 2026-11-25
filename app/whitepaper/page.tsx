@@ -3,7 +3,12 @@ import type { Metadata } from 'next'
 import FeatureAvailability from '@/components/ui/FeatureAvailability'
 import { PAGE_BG } from '@/lib/tokens'
 
-export const metadata: Metadata = { title: 'Technical overview — under review', robots: { index: false, follow: false } }
+import { getTranslations } from 'next-intl/server'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pageTitles')
+  return { title: t('whitepaper'), robots: { index: false, follow: false } }
+}
 
 export default function Page() {
   const t = useTranslations('legalPages')

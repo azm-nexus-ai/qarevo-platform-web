@@ -2,7 +2,12 @@ import { useTranslations } from 'next-intl'
 import type { Metadata } from 'next'
 import FeatureAvailability from '@/components/ui/FeatureAvailability'
 
-export const metadata: Metadata = { title: 'Impressum — development', robots: { index: false, follow: false } }
+import { getTranslations } from 'next-intl/server'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pageTitles')
+  return { title: t('impressum'), robots: { index: false, follow: false } }
+}
 
 export default function ImpressumPage() {
   const t = useTranslations('legalPages')

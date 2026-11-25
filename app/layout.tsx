@@ -7,7 +7,7 @@ import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { PortalSessionBoundary } from '@/components/ui/PortalSessionBoundary'
 import { NavigationGuards } from '@/components/ui/NavigationGuards'
 import { NextIntlClientProvider } from 'next-intl'
-import { getLocale } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 
 const publicSans = localFont({
   src: '../public/fonts/PublicSans-Variable.ttf',
@@ -16,18 +16,21 @@ const publicSans = localFont({
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  title: {
-    default: 'Qarevo Health',
-    template: '%s | Qarevo Health',
-  },
-  description: 'Qarevo Health connects patients and independent practices through a clinician-led digital care journey. Development preview.',
-  keywords: ['healthcare', 'telemedicine', 'physician', 'clinical intelligence'],
-  icons: {
-    icon: '/brand/qarevo-mark.png',
-    shortcut: '/brand/qarevo-mark.png',
-    apple: '/brand/qarevo-mark.png',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pageTitles')
+  return {
+    title: {
+      default: 'Qarevo Health',
+      template: '%s | Qarevo Health',
+    },
+    description: t('description'),
+    keywords: ['healthcare', 'telemedicine', 'physician', 'clinical intelligence'],
+    icons: {
+      icon: '/brand/qarevo-mark.png',
+      shortcut: '/brand/qarevo-mark.png',
+      apple: '/brand/qarevo-mark.png',
+    },
+  }
 }
 
 export const viewport: Viewport = {
