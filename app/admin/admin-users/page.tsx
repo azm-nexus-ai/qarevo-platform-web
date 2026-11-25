@@ -49,7 +49,7 @@ export default function AdminUsersPage() {
       finally { if (!cancelled) setLoading(false) }
     }, 200)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [search, role, status, offset, revision])
+  }, [search, role, status, offset, revision, t])
 
   function open(next: Action) {
     trigger.current = document.activeElement as HTMLElement
