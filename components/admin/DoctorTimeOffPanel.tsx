@@ -55,7 +55,7 @@ function TimeOffView({ providerId, scope, pathname }: { providerId: string; scop
   const saving = savingContext === context, busy = resource.refreshing || saving
   const current = () => Boolean(scope && scope === readScope() && currentPortal() === 'admin' && window.location.pathname === pathname && latest.current === context)
   const mayWrite = () => current() && !busy && !inFlight.current && !changingPage.current && !reconcile && data?.canManage === true && !invalid
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'your browser timezone'
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || t('yourBrowserTimezone')
   const preview = absenceRequest(draft.start, draft.end, draft.reason, { incomplete: t('err.incomplete'), missing: t('err.missing'), ambiguous: t('err.ambiguous'), order: t('err.order'), reason: t('err.reason') })
   const refresh = () => { if (current() && !inFlight.current && !changingPage.current) resource.retry() }
   const navigate = (offset: number, status = page.status) => {

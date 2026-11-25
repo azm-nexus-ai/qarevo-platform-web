@@ -216,7 +216,10 @@
     "practiceHome": "Qarevo Health practice dashboard",
     "doctorMainNavigation": "Doctor main navigation",
     "doctorHome": "Qarevo Health doctor dashboard",
-    "doctorSummary": "Doctor summary"
+    "doctorSummary": "Doctor summary",
+    "adminMainNavigation": "Admin main navigation",
+    "qarevoHealthAdminDashboard": "Qarevo Health admin dashboard",
+    "accountAppearance": "Account appearance"
   },
   "practiceOps": {
     "overviewTitle": "{name}: today and this week",
@@ -359,7 +362,8 @@
       "stateVerify": "Please confirm your email address first. We just sent you a code (unless one was sent within the last minute).",
       "stateVerifyAction": "Enter the code",
       "stateReview": "Your email address is confirmed. Qarevo is reviewing your account. You will receive an email once you can sign in.",
-      "secureClinicianVerificationCouldNot": "Secure clinician verification could not be started. Please retry."
+      "secureClinicianVerificationCouldNot": "Secure clinician verification could not be started. Please retry.",
+      "qarevoHealthHome": "Qarevo Health home"
     },
     "adminSignIn": {
       "errors": {
@@ -391,7 +395,8 @@
         "sent": "A new code was sent. The previous code no longer works.",
         "restart": "Sign in again"
       },
-      "forgotYourPassword": "Forgot your password?"
+      "forgotYourPassword": "Forgot your password?",
+      "qarevoHealthHome": "Qarevo Health home"
     },
     "practice": {
       "title": "Practice Sign In",
@@ -755,7 +760,8 @@
       "verifying": "Checking …",
       "signInAgain": "Sign in again",
       "noCode": "No code? Check your spam folder, send a new code or",
-      "contactSupport": "contact support"
+      "contactSupport": "contact support",
+      "qarevoHealthHome": "Qarevo Health home"
     },
     "doctorVerifyEmail": {
       "panelTitle": "Confirm your email address",
@@ -785,7 +791,8 @@
       "confirmedNext1": "We review your details and evidence.",
       "confirmedNext2": "You will receive an email once your account is approved.",
       "confirmedNext3": "Then sign in with your password and a sign-in code.",
-      "toSignIn": "Go to sign-in"
+      "toSignIn": "Go to sign-in",
+      "qarevoHealthHome": "Qarevo Health home"
     },
     "otp": {
       "accountCreated": "Account Created",
@@ -894,7 +901,9 @@
       "verifyYourPhone": "Verify Your Phone",
       "back": "Back",
       "verifyYourPhoneNumberTo": "Verify your phone number to complete your physician account setup",
-      "phoneVerification": "Phone Verification"
+      "phoneVerification": "Phone Verification",
+      "verificationCode": "Verification Code",
+      "enter6DigitCode": "Enter 6-digit code"
     },
     "verifyLink": {
       "checkingYourLink": "Checking your link…",
@@ -985,7 +994,8 @@
       "completingYourProfileAllowsUs": "Completing your profile allows us to better understand your needs, recommend suitable physicians, improve consultations, and provide a more personalized healthcare experience.",
       "beforeWeConnectYouWith": "Before we connect you with trusted healthcare professionals, let's take a few moments to personalize your healthcare experience.",
       "welcomeToYourHealthJourney": "Welcome to Your Health Journey",
-      "yourProfileHelpsUsMatch": "Your profile helps us match you with the right physicians and enable more meaningful, secure consultations."
+      "yourProfileHelpsUsMatch": "Your profile helps us match you with the right physicians and enable more meaningful, secure consultations.",
+      "n35Minutes": "3-5 Minutes"
     },
     "socialConnect": {
       "accountConnections": "Account connections",
@@ -3279,7 +3289,8 @@
     "resendIntro": "Send a replacement invitation to {email}. The previous link will stop working. This applies only to an invitation that has not been accepted.",
     "saving": "Saving…",
     "sendInvitation": "Send invitation",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "unableToLoadAdministratorsPlease": "Unable to load administrators. Please retry."
   },
   "adminExceptions": {
     "resolution": "Resolution:",
@@ -4707,7 +4718,8 @@
     "noVisits": "No visits yet",
     "consultations": "Consultations",
     "next": "Next",
-    "previous": "Previous"
+    "previous": "Previous",
+    "searchPatients": "Search patients..."
   },
   "patientDirectory": {
     "selectPatient": "Select Patient",
@@ -4724,7 +4736,8 @@
     "none": "No assigned patients are available on this page.",
     "pages": "Assigned patient result pages",
     "previous": "Previous patients",
-    "next": "Next patients"
+    "next": "Next patients",
+    "chooseAPatient": "-- Choose a patient --"
   },
   "medicationCards": {
     "saveFailed": "Your report could not be saved. Please retry.",
@@ -4762,7 +4775,8 @@
     "unavailable": "Review status unavailable",
     "clinicianMissing": "Clinician name not recorded",
     "note": "Uploading, opening or marking a notification read does not record clinical review.",
-    "unconfirmed": "A review acknowledgement for the current available file could not be confirmed."
+    "unconfirmed": "A review acknowledgement for the current available file could not be confirmed.",
+    "recordsReviewOnly": "This records review of this file; it does not describe the result or change treatment instructions."
   },
   "doctorOutcomes": {
     "title": "Outcomes",
@@ -5576,7 +5590,8 @@
       "ambiguous": "This local time occurs twice during a clock change. Choose an unambiguous time.",
       "order": "The end must be later than the start.",
       "reason": "Use at most 500 characters; do not include patient information."
-    }
+    },
+    "yourBrowserTimezone": "your browser timezone"
   },
   "clinicalHistory": {
     "unavailable": "Unavailable",
@@ -5807,7 +5822,9 @@
     "noArticlesMatchYourSearch": "No articles match your search. Try a different term.",
     "contactSupport": "Contact support",
     "liveChatAndSupportTickets": "Live chat and support tickets are not connected in this development environment. No support request can be submitted here yet.",
-    "supportChannelsAndResponseTimes": "Support channels and response times will be published once they are configured."
+    "supportChannelsAndResponseTimes": "Support channels and response times will be published once they are configured.",
+    "help": "Help",
+    "findGuidanceAndReturnTo": "Find guidance and return to your care workspace."
   },
   "marketingNav": {
     "section": {

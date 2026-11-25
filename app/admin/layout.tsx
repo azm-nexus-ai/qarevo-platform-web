@@ -79,9 +79,9 @@ export default function AdminLayout({
       <PortalMobileNavigation portal='admin' className='admin-mobile-navigation' homeHref={ADMIN_ROUTES.dashboard} homeLabel='Admin dashboard'
         groups={ADMIN_NAV_GROUPS} isActive={isAdminNavActive} navLabel={t('adminNavigation')} summaryLabel={name}
         identity={{ name, description: t('adminSubtitle') }} onLogout={handleLogoutClick} loggingOut={loggingOut} />
-      <header className='portal-desktop-navbar portal-header' aria-label='Admin main navigation'>
+      <header className='portal-desktop-navbar portal-header' aria-label={t('adminMainNavigation')}>
         <div className='portal-navbar-row'>
-          <Link href='/admin/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health admin dashboard'><AuthenticatedLogo width={156} /></Link>
+          <Link href='/admin/dashboard' className='portal-navbar-brand' aria-label={t('qarevoHealthAdminDashboard')}><AuthenticatedLogo width={156} /></Link>
           <SidebarToggle role='admin' />
           <div className='portal-navbar-title'>
             <h2 className='portal-header-title'>{t('adminPortal')}</h2>

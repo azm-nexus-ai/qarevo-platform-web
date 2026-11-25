@@ -216,7 +216,10 @@
     "practiceHome": "Qarevo Health Praxis-Dashboard",
     "doctorMainNavigation": "Hauptnavigation Ärzteportal",
     "doctorHome": "Qarevo Health Ärzte-Dashboard",
-    "doctorSummary": "Übersicht Ärztin/Arzt"
+    "doctorSummary": "Übersicht Ärztin/Arzt",
+    "adminMainNavigation": "Hauptnavigation der Administration",
+    "qarevoHealthAdminDashboard": "Qarevo Health Administrationsübersicht",
+    "accountAppearance": "Darstellung"
   },
   "practiceOps": {
     "overviewTitle": "{name}: heute und diese Woche",
@@ -359,7 +362,8 @@
       "stateVerify": "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse. Wir haben Ihnen gerade einen Code gesendet (sofern in der letzten Minute noch keiner verschickt wurde).",
       "stateVerifyAction": "Code eingeben",
       "stateReview": "Ihre E-Mail-Adresse ist bestätigt. Qarevo prüft gerade Ihr Konto. Sie erhalten eine E-Mail, sobald Sie sich anmelden können.",
-      "secureClinicianVerificationCouldNot": "Die sichere Bestätigung konnte nicht gestartet werden. Bitte erneut versuchen."
+      "secureClinicianVerificationCouldNot": "Die sichere Bestätigung konnte nicht gestartet werden. Bitte erneut versuchen.",
+      "qarevoHealthHome": "Qarevo Health Startseite"
     },
     "adminSignIn": {
       "errors": {
@@ -391,7 +395,8 @@
         "sent": "Ein neuer Code wurde gesendet. Der vorherige Code ist nicht mehr gültig.",
         "restart": "Erneut anmelden"
       },
-      "forgotYourPassword": "Passwort vergessen?"
+      "forgotYourPassword": "Passwort vergessen?",
+      "qarevoHealthHome": "Qarevo Health Startseite"
     },
     "practice": {
       "title": "Anmeldung im Praxisportal",
@@ -755,7 +760,8 @@
       "verifying": "Wird geprüft …",
       "signInAgain": "Erneut anmelden",
       "noCode": "Keinen Code erhalten? Prüfen Sie den Spam-Ordner, senden Sie einen neuen Code oder",
-      "contactSupport": "kontaktieren Sie den Support"
+      "contactSupport": "kontaktieren Sie den Support",
+      "qarevoHealthHome": "Qarevo Health Startseite"
     },
     "doctorVerifyEmail": {
       "panelTitle": "E-Mail-Adresse bestätigen",
@@ -785,7 +791,8 @@
       "confirmedNext1": "Wir prüfen Ihre Angaben und Nachweise.",
       "confirmedNext2": "Sie erhalten eine E-Mail, sobald Ihr Konto freigeschaltet ist.",
       "confirmedNext3": "Danach melden Sie sich mit Passwort und einem Anmeldecode an.",
-      "toSignIn": "Zur Anmeldung"
+      "toSignIn": "Zur Anmeldung",
+      "qarevoHealthHome": "Qarevo Health Startseite"
     },
     "otp": {
       "accountCreated": "Konto angelegt",
@@ -894,7 +901,9 @@
       "verifyYourPhone": "Telefonnummer bestätigen",
       "back": "Zurück",
       "verifyYourPhoneNumberTo": "Bestätigen Sie Ihre Telefonnummer, um die Einrichtung Ihres Arztkontos abzuschließen",
-      "phoneVerification": "Telefonbestätigung"
+      "phoneVerification": "Telefonbestätigung",
+      "verificationCode": "Bestätigungscode",
+      "enter6DigitCode": "6-stelligen Code eingeben"
     },
     "verifyLink": {
       "checkingYourLink": "Ihr Link wird geprüft…",
@@ -985,7 +994,8 @@
       "completingYourProfileAllowsUs": "Mit einem vollständigen Profil verstehen wir Ihren Bedarf besser, schlagen passende Ärztinnen und Ärzte vor und machen Sprechstunden persönlicher.",
       "beforeWeConnectYouWith": "Bevor wir Sie mit geprüften Fachleuten verbinden, nehmen Sie sich bitte einen Moment für Ihre persönlichen Angaben.",
       "welcomeToYourHealthJourney": "Willkommen bei Qarevo Health",
-      "yourProfileHelpsUsMatch": "Mit Ihrem Profil finden wir passende Ärztinnen und Ärzte und ermöglichen aussagekräftigere, sichere Sprechstunden."
+      "yourProfileHelpsUsMatch": "Mit Ihrem Profil finden wir passende Ärztinnen und Ärzte und ermöglichen aussagekräftigere, sichere Sprechstunden.",
+      "n35Minutes": "3–5 Minuten"
     },
     "socialConnect": {
       "accountConnections": "Kontoverbindungen",
@@ -3279,7 +3289,8 @@
     "resendIntro": "Senden Sie eine neue Einladung an {email}. Der vorherige Link funktioniert dann nicht mehr. Das gilt nur für eine noch nicht angenommene Einladung.",
     "saving": "Wird gespeichert…",
     "sendInvitation": "Einladung senden",
-    "saveChanges": "Änderungen speichern"
+    "saveChanges": "Änderungen speichern",
+    "unableToLoadAdministratorsPlease": "Administratoren können nicht geladen werden. Bitte erneut versuchen."
   },
   "adminExceptions": {
     "resolution": "Lösung:",
@@ -4707,7 +4718,8 @@
     "noVisits": "Noch keine Besuche",
     "consultations": "Sprechstunden",
     "next": "Weiter",
-    "previous": "Zurück"
+    "previous": "Zurück",
+    "searchPatients": "Patienten suchen…"
   },
   "patientDirectory": {
     "selectPatient": "Patient/in auswählen",
@@ -4724,7 +4736,8 @@
     "none": "Auf dieser Seite sind keine zugewiesenen Personen verfügbar.",
     "pages": "Ergebnisseiten",
     "previous": "Vorherige Personen",
-    "next": "Nächste Personen"
+    "next": "Nächste Personen",
+    "chooseAPatient": "– Patient/in wählen –"
   },
   "medicationCards": {
     "saveFailed": "Ihre Meldung konnte nicht gespeichert werden. Bitte erneut versuchen.",
@@ -4762,7 +4775,8 @@
     "unavailable": "Prüfstatus nicht verfügbar",
     "clinicianMissing": "Name der Ärztin oder des Arztes nicht erfasst",
     "note": "Hochladen, Öffnen oder Lesen einer Mitteilung gilt nicht als ärztliche Prüfung.",
-    "unconfirmed": "Eine Prüfung der aktuellen Datei konnte nicht bestätigt werden."
+    "unconfirmed": "Eine Prüfung der aktuellen Datei konnte nicht bestätigt werden.",
+    "recordsReviewOnly": "Dies erfasst die Prüfung dieser Datei; es beschreibt weder den Befund noch ändert es Behandlungshinweise."
   },
   "doctorOutcomes": {
     "title": "Behandlungsergebnisse",
@@ -5576,7 +5590,8 @@
       "ambiguous": "Diese Ortszeit kommt bei der Zeitumstellung zweimal vor. Wählen Sie eine eindeutige Zeit.",
       "order": "Das Ende muss nach dem Beginn liegen.",
       "reason": "Höchstens 500 Zeichen; keine Patientendaten."
-    }
+    },
+    "yourBrowserTimezone": "Zeitzone Ihres Browsers"
   },
   "clinicalHistory": {
     "unavailable": "Nicht verfügbar",
@@ -5807,7 +5822,9 @@
     "noArticlesMatchYourSearch": "Keine Artikel passen zu Ihrer Suche. Versuchen Sie einen anderen Begriff.",
     "contactSupport": "Support kontaktieren",
     "liveChatAndSupportTickets": "Live-Chat und Support-Tickets sind in dieser Entwicklungsumgebung nicht angebunden. Hier können noch keine Anfragen gesendet werden.",
-    "supportChannelsAndResponseTimes": "Support-Kanäle und Antwortzeiten werden veröffentlicht, sobald sie eingerichtet sind."
+    "supportChannelsAndResponseTimes": "Support-Kanäle und Antwortzeiten werden veröffentlicht, sobald sie eingerichtet sind.",
+    "help": "Hilfe",
+    "findGuidanceAndReturnTo": "Finden Sie Hilfe und kehren Sie zu Ihrem Behandlungsbereich zurück."
   },
   "marketingNav": {
     "section": {

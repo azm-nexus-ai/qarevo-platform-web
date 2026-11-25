@@ -379,7 +379,7 @@ export default function ProfileSetupPage() {
               </div>
               <div>
                 <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('profileSetupIntro.estimatedCompletion')}</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>3-5 Minutes</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('profileSetupIntro.n35Minutes')}</p>
               </div>
             </div>
 

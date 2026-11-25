@@ -357,8 +357,8 @@ function DoctorVerifyPhonePageContent() {
             {/* Form */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Field
-                label="Verification Code"
-                placeholder="Enter 6-digit code"
+                label={t('doctorPhone.verificationCode')}
+                placeholder={t('doctorPhone.enter6DigitCode')}
                 type="text"
                 value={code}
                 onChange={setCode}

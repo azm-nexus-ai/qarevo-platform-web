@@ -109,7 +109,7 @@ export default function PatientsPage() {
             <Ico p={ICONS.search} size={16} sw={1.5} color={T.slate2} />
             <input
               type="text"
-              placeholder="Search patients..."
+              placeholder={t('searchPatients')}
               value={searchQuery}
               onChange={(event) => {
                 setSearchQuery(event.target.value)

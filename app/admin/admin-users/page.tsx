@@ -45,7 +45,7 @@ export default function AdminUsersPage() {
         if (!cancelled) {
           setUsers(data.admin_users); setTotal(data.total); setCanManage(data.can_manage); setCurrentId(data.current_admin_id)
         }
-      } catch (err) { if (!cancelled) { setError(getApiErrorDetail(err) || 'Unable to load administrators. Please retry.'); setCanManage(false) } }
+      } catch (err) { if (!cancelled) { setError(getApiErrorDetail(err) || t('unableToLoadAdministratorsPlease')); setCanManage(false) } }
       finally { if (!cancelled) setLoading(false) }
     }, 200)
     return () => { cancelled = true; clearTimeout(timer) }

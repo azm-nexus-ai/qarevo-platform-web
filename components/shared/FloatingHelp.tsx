@@ -1,14 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { T, Glass } from '@/lib/tokens'
 
 export default function FloatingHelp() {
+  const t = useTranslations('support')
   const [hovered, setHovered] = useState(false)
   return (
     <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 40 }}>
       <button
-        aria-label="Help"
+        aria-label={t('help')}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
