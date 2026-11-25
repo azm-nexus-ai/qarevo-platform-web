@@ -5733,7 +5733,6 @@
     "staySignedIn": "Stay signed in",
     "signOutNow": "Sign out now",
     "timeRemaining": "Time remaining: {seconds} seconds",
-    "yourAccountChangedReloadThis": "Your account changed. Reload this portal to continue.",
     "secureAccessCouldNotBe": "Secure access could not be confirmed. Check your connection and retry.",
     "checkingYourPortalSession": "Checking your portal session…"
   },

@@ -14,6 +14,7 @@ const button = 'rounded-xl px-5 py-3 text-sm font-semibold focus-visible:outline
 export type InitialSessionCheck = {status:SessionStatus; receivedAt:number; requestDuration:number; scope:string|null}
 export function SessionGuard({ children, initialCheck }: { children: ReactNode; initialCheck?:InitialSessionCheck }) {
   const t = useTranslations('sessionGuard')
+  // error holds a message key, translated when shown, so the session effect does not depend on the language.
   const pathname = usePathname()
   const portal = currentPortal()
   const protectedPage = protectedPortalPath(pathname)
@@ -68,7 +69,7 @@ export function SessionGuard({ children, initialCheck }: { children: ReactNode; 
       } catch (failure) {
         if (!valid()) return
         if (failure instanceof ApiError && [401, 403].includes(failure.status)) { end(); return }
-        setError(t('weCouldNotConfirmYour'))
+        setError('weCouldNotConfirmYour')
       } finally {
         pending = false; if (alive) setBusy(false)
       }
@@ -118,7 +119,7 @@ export function SessionGuard({ children, initialCheck }: { children: ReactNode; 
     {locked ? <main className='grid min-h-dvh place-items-center bg-surface-subtle px-6 text-ink'>
       <section className='w-full max-w-md rounded-2xl border border-theme bg-surface p-8 shadow-sm' aria-label={t('sessionVerification')}>
         <h1 className='text-xl font-semibold tracking-tight'>{t('secureAccess')}</h1>
-        <p className='mt-3 text-sm leading-7 text-secondary' role={error ? 'alert' : 'status'}>{error || t('checkingYourSession')}</p>
+        <p className='mt-3 text-sm leading-7 text-secondary' role={error ? 'alert' : 'status'}>{error ? t(error) : t('checkingYourSession')}</p>
         {error && <div className='mt-6 flex flex-wrap gap-3'>
           <button className={`${button} bg-blue-600 text-white hover:bg-blue-700`} onClick={() => controller.current?.check()}>{t('retryConnection')}</button>
           <button className={`${button} border border-theme bg-surface text-ink`} onClick={() => controller.current?.end()}>{t('signOut')}</button>
@@ -133,7 +134,7 @@ export function SessionGuard({ children, initialCheck }: { children: ReactNode; 
           : t('toProtectYourHealthInformation')}
       </p>
       <p className='mt-4 text-sm font-semibold tabular-nums'>{t('timeRemaining', { seconds: Number.isFinite(remaining) ? Math.max(0, Math.ceil(remaining/1000)) : 0 })}</p>
-      {error && <p role='alert' className='mt-4 rounded-xl border border-danger bg-danger-subtle p-3 text-sm text-danger'>{error}</p>}
+      {error && <p role='alert' className='mt-4 rounded-xl border border-danger bg-danger-subtle p-3 text-sm text-danger'>{t(error)}</p>}
       <div className='mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end'>
         {timing?.absolute && <button autoFocus className={`${button} bg-blue-600 text-white hover:bg-blue-700`} onClick={() => setAbsoluteDismissed(true)}>{t('returnToWorkAndSave')}</button>}
         {!timing?.absolute && <button autoFocus disabled={busy} className={`${button} bg-blue-600 text-white hover:bg-blue-700`} onClick={() => controller.current?.continue()}>{busy ? t('confirming') : t('staySignedIn')}</button>}

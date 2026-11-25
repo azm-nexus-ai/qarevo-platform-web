@@ -5733,7 +5733,6 @@
     "staySignedIn": "Angemeldet bleiben",
     "signOutNow": "Jetzt abmelden",
     "timeRemaining": "Verbleibende Zeit: {seconds} Sekunden",
-    "yourAccountChangedReloadThis": "Ihr Konto hat sich geändert. Laden Sie dieses Portal neu, um fortzufahren.",
     "secureAccessCouldNotBe": "Der sichere Zugang konnte nicht bestätigt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "checkingYourPortalSession": "Ihre Portalsitzung wird geprüft…"
   },

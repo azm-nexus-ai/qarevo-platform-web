@@ -267,7 +267,7 @@ export default function DoctorDashboard() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, t])
 
   if (loading) {
     return (

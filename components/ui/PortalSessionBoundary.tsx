@@ -34,7 +34,7 @@ function PortalBoundary({children,portal,path}:{children:ReactNode;portal:Return
     void getSessionStatus().then(result=>{
       if(!alive)return
       const identity=result.browser_session
-      if(!identity || (before && before!==JSON.stringify([portal,identity.user_id,identity.session_id]))) throw new Error(t('yourAccountChangedReloadThis'))
+      if(!identity || (before && before!==JSON.stringify([portal,identity.user_id,identity.session_id]))) throw new Error('Account changed')
       storeBrowserSession(result,portal);
       const receivedAt=performance.now();setInitialCheck({status:result,receivedAt,requestDuration:receivedAt-started,scope:readAccountScope(portal)});setReady(true)
     }).catch(failure=>{
@@ -44,10 +44,10 @@ function PortalBoundary({children,portal,path}:{children:ReactNode;portal:Return
         if(readPortalIdentity(portal)) {window.localStorage.removeItem(`qarevo:${portal}:identity`);accountChanged(portal)}
         window.location.replace(`${signIn}?${new URLSearchParams({next:entryPath})}`);return
       }
-      setError(t('secureAccessCouldNotBe'))
+      setError('secureAccessCouldNotBe')
     })
     return()=>{alive=false}
   },[portal,protectedPage,attempt,entryPath])
-  if(protectedPage&&!ready)return <main className='grid min-h-dvh place-items-center bg-surface-subtle px-6 text-ink'><section className='max-w-md rounded-2xl border border-theme bg-surface p-8'><h1 className='text-xl font-semibold'>{t('secureAccess')}</h1><p className='mt-3 text-sm' role={error?'alert':'status'}>{error||t('checkingYourPortalSession')}</p>{error&&<button className='mt-5 rounded-xl border border-theme px-5 py-3' onClick={()=>{setError('');setAttempt(x=>x+1)}}>{t('retryConnection')}</button>}</section></main>
+  if(protectedPage&&!ready)return <main className='grid min-h-dvh place-items-center bg-surface-subtle px-6 text-ink'><section className='max-w-md rounded-2xl border border-theme bg-surface p-8'><h1 className='text-xl font-semibold'>{t('secureAccess')}</h1><p className='mt-3 text-sm' role={error?'alert':'status'}>{error?t(error):t('checkingYourPortalSession')}</p>{error&&<button className='mt-5 rounded-xl border border-theme px-5 py-3' onClick={()=>{setError('');setAttempt(x=>x+1)}}>{t('retryConnection')}</button>}</section></main>
   return <BookingProvider portal={portal}><SessionGuard initialCheck={initialCheck}>{children}</SessionGuard></BookingProvider>
 }
