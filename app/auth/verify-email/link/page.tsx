@@ -1,9 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { ApiError, apiPost, getApiErrorDetail, resendVerificationEmail } from '@/lib/api'
 import { PAGE_BG, Sh, T } from '@/lib/tokens'
+
+/** A message key is translated when shown, so switching language updates it; API text is shown as sent. */
+type Message = { key: string } | { text: string }
+const textOr = (text: string | null | undefined, key: string): Message => text ? { text } : { key }
 
 type Phase = 'loading' | 'ready' | 'verifying' | 'verified' | 'error' | 'resending' | 'resent'
 
@@ -15,11 +20,12 @@ type VerificationResult = {
 }
 
 export default function VerifyEmailLinkPage() {
+  const t = useTranslations('auth')
     const initialized = useRef(false)
     const busy = useRef(false)
     const [token, setToken] = useState('')
     const [phase, setPhase] = useState<Phase>('loading')
-    const [message, setMessage] = useState('Checking your link…')
+    const [message, setMessage] = useState<Message>({ key: 'checkingYourLink' })
     const [result, setResult] = useState<VerificationResult | null>(null)
 
     useEffect(() => {
@@ -37,13 +43,13 @@ export default function VerifyEmailLinkPage() {
             if (!/^[A-Za-z0-9_-]{43}$/.test(candidate)) {
                 setToken('')
                 setPhase('error')
-                setMessage('Open the complete link from your latest verification email, or request a new email below.')
+                setMessage({ key: 'openTheCompleteLinkFrom' })
                 return
             }
 
             setToken(candidate)
             setPhase('ready')
-            setMessage('Confirm below to verify the email address associated with this link.')
+            setMessage({ key: 'confirmBelowToVerifyThe' })
         }
 
         readLink()
@@ -55,7 +61,7 @@ export default function VerifyEmailLinkPage() {
         if (!token || busy.current) return
         busy.current = true
         setPhase('verifying')
-        setMessage('Verifying your email…')
+        setMessage({ key: 'verifyingYourEmail' })
 
         try {
             const data = await apiPost<VerificationResult>(
@@ -68,13 +74,13 @@ export default function VerifyEmailLinkPage() {
                 (data.role === 'PROVIDER' && data.next_action === 'CONTINUE_CLINICIAN_ONBOARDING')
 
             if (data.email_verified !== true || !validAction || typeof data.message !== 'string') {
-                throw new Error('Unexpected response')
+                throw new Error(t('verifyLink.unexpectedResponse'))
             }
 
             setResult(data)
             setToken('')
             setPhase('verified')
-            setMessage(data.message)
+            setMessage({ text: data.message })
         } catch (error) {
             setPhase('error')
             const rejected = error instanceof ApiError && error.status >= 400 && error.status < 500
@@ -82,8 +88,8 @@ export default function VerifyEmailLinkPage() {
             if (rejected) setToken('')
 
             setMessage(rejected
-                ? getApiErrorDetail(error) || 'This link cannot be used. Request a new email below.'
-                : 'We could not confirm verification. Try again, or sign in if your email was already verified.')
+                ? textOr(getApiErrorDetail(error), 'thisLinkCannotBeUsed')
+                : { key: 'weCouldNotConfirmVerification' })
         } finally {
             busy.current = false
         }
@@ -98,18 +104,18 @@ export default function VerifyEmailLinkPage() {
 
         busy.current = true
         setPhase('resending')
-        setMessage('Requesting a new verification email…')
+        setMessage({ key: 'requestingANewVerificationEmail' })
 
         try {
             await resendVerificationEmail({ email })
             setToken('')
             setPhase('resent')
-            setMessage('A new verification email was accepted for delivery. Open the latest email to continue.')
+            setMessage({ key: 'aNewVerificationEmailWas' })
         } catch (error) {
             setPhase('error')
             setMessage(error instanceof ApiError
-                ? getApiErrorDetail(error) || 'We could not request another email. Please try again later.'
-                : 'We could not reach the service. Please try again.')
+                ? textOr(getApiErrorDetail(error), 'weCouldNotRequestAnother')
+                : { key: 'weCouldNotReachThe' })
         } finally {
             busy.current = false
         }
@@ -139,18 +145,18 @@ export default function VerifyEmailLinkPage() {
                 </Link>
 
                 <h1 id="verification-title" style={{ color: T.navy, fontSize: '28px', margin: '28px 0 12px' }}>
-                    {phase === 'verified' ? 'Email verified' : phase === 'resent' ? 'Check your inbox' : 'Verify your email'}
+                    {phase === 'verified' ? t('verifyLink.emailVerified') : phase === 'resent' ? t('verifyLink.checkYourInbox') : t('verifyLink.verifyYourEmail')}
                 </h1>
 
                 <p role={phase === 'error' ? 'alert' : 'status'} style={{
                     color: phase === 'error' ? T.red : T.slate, lineHeight: 1.65,
                 }}>
-                    {message}
+                    {'key' in message ? t(`verifyLink.${message.key}`) : message.text}
                 </p>
 
                 {token && phase !== 'verified' && (
                     <button type="button" onClick={verify} disabled={waiting} style={buttonStyle}>
-                        {phase === 'verifying' ? 'Verifying…' : 'Verify email'}
+                        {phase === 'verifying' ? t('verifyLink.verifying') : t('verifyLink.verifyEmail')}
                     </button>
                 )}
 
@@ -176,7 +182,7 @@ export default function VerifyEmailLinkPage() {
                         </summary>
 
                         <form onSubmit={resend} style={{ marginTop: '16px' }}>
-                            <label htmlFor="resend-email">Your registered email address</label>
+                            <label htmlFor="resend-email">{t('verifyLink.yourRegisteredEmailAddress')}</label>
                             <input
                                 id="resend-email"
                                 name="email"
@@ -192,7 +198,7 @@ export default function VerifyEmailLinkPage() {
                                 }}
                             />
                             <button type="submit" disabled={waiting} style={buttonStyle}>
-                                {phase === 'resending' ? 'Requesting…' : 'Send verification email'}
+                                {phase === 'resending' ? t('verifyLink.requesting') : t('verifyLink.sendVerificationEmail')}
                             </button>
                         </form>
                     </details>
@@ -200,7 +206,7 @@ export default function VerifyEmailLinkPage() {
 
                 {phase !== 'verified' && (
                     <p style={{ marginTop: '24px', fontSize: '14px', color: T.slate }}>
-                        Already verified? <Link href="/auth/sign-in">Sign in</Link>
+                        Already verified? <Link href="/auth/sign-in">{t('verifyLink.signIn')}</Link>
                     </p>
                 )}
             </section>

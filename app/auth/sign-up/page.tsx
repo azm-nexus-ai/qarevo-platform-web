@@ -1,6 +1,8 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+
+type Translate = ReturnType<typeof useTranslations>
 import { useEffect, useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -26,7 +28,7 @@ const PAGE_BG = [
 
 // ─── Password strength ────────────────────────────────────────────────────────
 
-function getStrength(pw: string) {
+function getStrength(pw: string, t: Translate) {
   const checks = {
     length: pw.length >= 8,
     upper: /[A-Z]/.test(pw),
@@ -35,7 +37,7 @@ function getStrength(pw: string) {
     noCommon: !/(password|123456|qwerty|admin)/i.test(pw),
   }
   const score = Object.values(checks).filter(Boolean).length
-  const levels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent']
+  const levels = ['', t('weak'), t('fair'), t('good'), t('strong'), t('excellent')]
   const colors = ['', T.red, T.amber, '#2563EB', T.green, T.green]
   return { checks, score, label: levels[score] ?? '', color: colors[score] ?? T.slate2 }
 }
@@ -154,8 +156,9 @@ function PasswordField({ label, value, onChange, error, showStrength, confirm }:
   label: string; value: string; onChange: (v: string) => void
   error?: string; showStrength?: boolean; confirm?: string
 }) {
+  const t = useTranslations('auth.signUp')
   const [show, setShow] = useState(false)
-  const strength = showStrength ? getStrength(value) : null
+  const strength = showStrength ? getStrength(value, t) : null
   const isMatch = confirm !== undefined ? value === confirm && value.length > 0 : undefined
 
   const toggle = (
@@ -164,7 +167,7 @@ function PasswordField({ label, value, onChange, error, showStrength, confirm }:
       tabIndex={-1}
       onClick={() => setShow(s => !s)}
       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.slate2, display: 'flex', alignItems: 'center' }}
-      aria-label={show ? 'Hide password' : 'Show password'}
+      aria-label={show ? t('hidePassword') : t('showPassword')}
     >
       <Ico p={show ? ICONS.eyeOff : ICONS.eye} size={14} sw={1.75} />
     </button>
@@ -197,9 +200,9 @@ function PasswordField({ label, value, onChange, error, showStrength, confirm }:
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {[
               { key: 'length', label: '8+ chars' },
-              { key: 'upper', label: 'Uppercase' },
-              { key: 'number', label: 'Number' },
-              { key: 'special', label: 'Symbol' },
+              { key: 'upper', label: t('uppercase') },
+              { key: 'number', label: t('number') },
+              { key: 'special', label: t('symbol') },
             ].map(({ key, label }) => {
               const met = strength.checks[key as keyof typeof strength.checks]
               return (
@@ -336,9 +339,9 @@ function LeftDecor() {
 
         {/* Social proof strip */}
         {[
-          { icon: ICONS.shield, label: 'Synthetic Data Only', color: 'rgba(165,224,218,0.85)' },
-          { icon: ICONS.lock, label: 'Development Preview', color: 'rgba(147,197,253,0.85)' },
-          { icon: ICONS.check, label: 'Test Accounts', color: 'rgba(251,191,36,0.85)' },
+          { icon: ICONS.shield, label: t('syntheticDataOnly'), color: 'rgba(165,224,218,0.85)' },
+          { icon: ICONS.lock, label: t('developmentPreview'), color: 'rgba(147,197,253,0.85)' },
+          { icon: ICONS.check, label: t('testAccounts'), color: 'rgba(251,191,36,0.85)' },
         ].map(({ icon, label, color }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
             <Ico p={icon} size={14} sw={1.75} color={color} />
@@ -407,7 +410,7 @@ export default function SignUpPage() {
     phone: touched.phone && form.phone && !PHONE_RE.test(form.phone) ? t('valPhone') : '',
   }
 
-  const strength = getStrength(form.password)
+  const strength = getStrength(form.password, t)
   const isValid = !Object.values(errors).some(Boolean)
     && EMAIL_RE.test(form.email)
     && strength.score >= 3 && form.confirmPassword === form.password
@@ -642,9 +645,9 @@ export default function SignUpPage() {
             {/* Trust row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px', paddingTop: '20px', borderTop: "1px solid var(--border)", flexWrap: 'wrap' }}>
               {[
-                { icon: ICONS.lock, label: 'Synthetic Data Only' },
-                { icon: ICONS.shield, label: 'Development Preview' },
-                { icon: ICONS.check, label: 'Test Accounts' },
+                { icon: ICONS.lock, label: t('syntheticDataOnly') },
+                { icon: ICONS.shield, label: t('developmentPreview') },
+                { icon: ICONS.check, label: t('testAccounts') },
               ].map(({ icon, label }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Ico p={icon} size={12} sw={1.75} color={T.slate2} />

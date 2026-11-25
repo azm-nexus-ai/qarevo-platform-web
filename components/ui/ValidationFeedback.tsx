@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 export function focusValidation(form: Element) {
   // Wait for React to render the error state before moving keyboard focus.
   requestAnimationFrame(() => {
@@ -23,10 +25,11 @@ export function FieldFeedback({ name, error, hint }: { name: string; error?: str
 }
 
 export function ValidationSummary({ errors }: { errors: Record<string, string | undefined> }) {
+  const t = useTranslations('common')
   const messages = [...new Set(Object.values(errors).filter(Boolean))]
   if (!messages.length) return null
   return <div role="alert" tabIndex={-1} data-validation-summary className="validation-summary">
-    <strong>Please check the following before continuing:</strong>
+    <strong>{t('validationSummary')}</strong>
     <ul>{messages.map(message => <li key={message}>{message}</li>)}</ul>
   </div>
 }

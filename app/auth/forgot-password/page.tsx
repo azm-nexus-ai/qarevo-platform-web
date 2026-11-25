@@ -215,9 +215,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'Time-limited Reset Flow', sub: 'Secure links with expiry safeguards' },
-          { icon: ICONS.shield, label: 'Privacy by Default', sub: 'No account details exposed during recovery' },
-          { icon: ICONS.check, label: 'Single-use Recovery Link', sub: 'Use the link sent to your mailbox' },
+          { icon: ICONS.lock, label: t('timeLimitedResetFlow'), sub: t('secureLinksWithExpirySafeguards') },
+          { icon: ICONS.shield, label: t('privacyByDefault'), sub: t('noAccountDetailsExposedDuring') },
+          { icon: ICONS.check, label: t('singleUseRecoveryLink'), sub: t('useTheLinkSentTo') },
         ].map(({ icon, label, sub }, i) => (
           <div
             key={label}
@@ -259,22 +259,23 @@ function LeftPanel() {
 }
 
 function AlertBanner({ kind }: { kind: Exclude<ErrorKind, 'empty' | 'invalid' | null> }) {
+  const t = useTranslations('auth.forgotPassword')
   const content = {
     network: {
-      title: 'Network connection issue',
-      body: 'We could not reach our servers. Please check your connection and try again.',
+      title: t('networkConnectionIssue'),
+      body: t('weCouldNotReachOur'),
     },
     server: {
-      title: 'Service temporarily unavailable',
-      body: 'Our recovery service is momentarily unavailable. Please try again shortly.',
+      title: t('serviceTemporarilyUnavailable'),
+      body: t('ourRecoveryServiceIsMomentarily'),
     },
     rate: {
-      title: 'Too many requests',
-      body: 'For your security, please wait a few minutes before requesting another reset link.',
+      title: t('tooManyRequests'),
+      body: t('forYourSecurityPleaseWait'),
     },
     expired: {
-      title: 'Request window expired',
-      body: 'This reset attempt expired. Please request a fresh password reset link.',
+      title: t('requestWindowExpired'),
+      body: t('thisResetAttemptExpiredPlease'),
     },
   }[kind]
 
@@ -414,7 +415,7 @@ export default function ForgotPasswordPage() {
   const [sentTo, setSentTo] = useState('')
 
   const emailValue = email.trim()
-  const emailErr = touched && !emailValue ? 'Email address is required' : touched && !EMAIL_RE.test(emailValue) ? 'Enter a valid email address' : ''
+  const emailErr = touched && !emailValue ? t('emailAddressIsRequired') : touched && !EMAIL_RE.test(emailValue) ? t('enterAValidEmailAddress') : ''
   const emailOk = EMAIL_RE.test(emailValue) && !emailErr
 
   const shouldShowBanner = errorKind && !['empty', 'invalid'].includes(errorKind)
@@ -561,7 +562,7 @@ export default function ForgotPasswordPage() {
                       {portal.title}
                     </h1>
                     <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: 0, letterSpacing: '-0.01em' }}>
-                      {portal.kind === 'admin' ? 'Enter your administrator email address. Resetting your password does not change your role or restore suspended access.' : 'Enter the email address associated with your account to request secure password-reset instructions.'}
+                      {portal.kind === 'admin' ? t('enterYourAdministratorEmailAddress') : t('enterTheEmailAddressAssociated')}
                     </p>
                   </div>
                   <div
@@ -775,7 +776,7 @@ export default function ForgotPasswordPage() {
                         {t('resending')}
                       </>
                     ) : (
-                      resendAfter > 0 ? `Resend available in ${resendAfter}s` : 'Resend Email'
+                      resendAfter > 0 ? `Resend available in ${resendAfter}s` : t('resendEmail')
                     )}
                   </button>
 
@@ -824,9 +825,9 @@ export default function ForgotPasswordPage() {
             <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
                 {[
-                  { icon: ICONS.lock, label: 'Secure Recovery' },
-                  { icon: ICONS.shield, label: 'Single-use Link' },
-                  { icon: ICONS.check, label: 'Account Recovery' },
+                  { icon: ICONS.lock, label: t('secureRecovery') },
+                  { icon: ICONS.shield, label: t('singleUseLink') },
+                  { icon: ICONS.check, label: t('accountRecovery') },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />

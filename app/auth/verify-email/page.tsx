@@ -191,7 +191,7 @@ function OtpInput({ email, onStart, onComplete }: { email: string; onStart: () =
       if (!action.isCurrent()) return
       setValues(['', '', '', '', '', ''])
       refs.current[0]?.focus()
-      setError(getApiErrorDetail(error) || 'Incorrect code. Please check your email and try again.')
+      setError(getApiErrorDetail(error) || t('incorrectCodePleaseCheckYour'))
     } finally {
       if (action.isCurrent()) setLoading(false)
     }
@@ -287,7 +287,8 @@ function OtpInput({ email, onStart, onComplete }: { email: string; onStart: () =
 
 // ─── Step bar ──────────────────────────────────────────────────────────────────
 function StepBar({ step }: { step: 0 | 1 | 2 }) {
-  const steps = ['Create Account', 'Verify Email', 'Get Started']
+  const t = useTranslations('auth.verifyEmail')
+  const steps = [t('createAccount'), t('verifyEmail'), t('getStarted')]
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: '0', marginBottom: '36px' }}>
       {steps.map((label, i) => {
@@ -371,7 +372,7 @@ export default function VerifyEmailPage() {
     setResendOk(false)
     setResendError('')
     if (!email) {
-      setResendError('Enter your email again to resend the verification code.')
+      setResendError(t('enterYourEmailAgainTo'))
       return
     }
     const action = captureAction()
@@ -385,7 +386,7 @@ export default function VerifyEmailPage() {
       action.after(4000, () => setResendOk(false))
     } catch (error) {
       if (!action.isCurrent()) return
-      setResendError(getApiErrorDetail(error) || 'We could not resend the verification email right now.')
+      setResendError(getApiErrorDetail(error) || t('weCouldNotResendThe'))
     } finally {
       resendInFlight.current = false
       if (action.isCurrent()) setResendPending(false)
@@ -564,7 +565,7 @@ export default function VerifyEmailPage() {
                 letterSpacing: '-0.01em', transition: 'all 0.14s ease',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}>
-                {resendPending ? 'Requesting verification email…' : !canResend
+                {resendPending ? t('requestingVerificationEmail') : !canResend
                   ? <><span style={{ width: '11px', height: '11px', border: `1.5px solid ${T.slate2}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block', flexShrink: 0 }} />Resend in {secs}s</>
                   : <><Ico p={ICONS.arrowFwd} size={12} sw={2} />{t('resendEmail')}</>}
               </button>
@@ -594,7 +595,7 @@ export default function VerifyEmailPage() {
               <TipRow
                 icon={ICONS.ema}
                 title="Is the email address correct?"
-                body={email ? `Your link was sent to ${m}. If this is wrong, click Change Email above and re-enter your address.` : 'Return to sign up and enter your email again.'}
+                body={email ? `Your link was sent to ${m}. If this is wrong, click Change Email above and re-enter your address.` : t('returnToSignUpAnd')}
               />
               <TipRow
                 icon={ICONS.info}
@@ -607,10 +608,10 @@ export default function VerifyEmailPage() {
           {/* Trust strip */}
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '12px 20px' }}>
             {[
-              { icon: ICONS.shield,   label: 'Secure verification'    },
-              { icon: ICONS.lock,     label: 'End-to-end encrypted'   },
-              { icon: ICONS.activity, label: 'Email verification · Protected access' },
-              { icon: ICONS.brain,    label: 'Medical-grade privacy'  },
+              { icon: ICONS.shield,   label: t('secureVerification')    },
+              { icon: ICONS.lock,     label: t('endToEndEncrypted')   },
+              { icon: ICONS.activity, label: t('emailVerificationProtectedAccess') },
+              { icon: ICONS.brain,    label: t('medicalGradePrivacy')  },
             ].map(({ icon, label }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
@@ -675,20 +676,20 @@ export default function VerifyEmailPage() {
                 {[
                   {
                     icon: ICONS.shield,
-                    label: 'Complete your profile',
-                    sub: 'Add your personal, contact and health information',
+                    label: t('completeYourProfile'),
+                    sub: t('addYourPersonalContactAnd'),
                     href: '/auth/profile-setup/personal-information',
                   },
                   {
                     icon: ICONS.steth,
-                    label: 'Book a consultation',
-                    sub: 'Available in your portal after completing profile setup',
+                    label: t('bookAConsultation'),
+                    sub: t('availableInYourPortalAfter'),
                     href: null,
                   },
                   {
                     icon: ICONS.activity,
-                    label: 'View medical records',
-                    sub: 'Review documents already added to your account',
+                    label: t('viewMedicalRecords'),
+                    sub: t('reviewDocumentsAlreadyAddedTo'),
                     href: '/patient/medical-records',
                   },
                 ].map(({ icon, label, sub, href }) => {
@@ -762,15 +763,15 @@ export default function VerifyEmailPage() {
                 <path d="M1 5.5l11 8 11-8"/>
               </svg>
             </div>
-            <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em', margin: '0 0 8px' }}>Open your inbox</h2>
+            <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, color: T.navy, letterSpacing: '-0.03em', margin: '0 0 8px' }}>{t('openYourInbox')}</h2>
             <p style={{ fontSize: '13.5px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
-              {'Look for an email from '}
+              {t('lookForAnEmailFrom')}
               <strong style={{ color: T.navy }}>noreply@qarevo.health</strong>
               {' — subject: "Confirm your Qarevo Health account".'}
             </p>
             {[
-              { label: 'Open Gmail',   href: 'https://mail.google.com'  },
-              { label: 'Open Outlook', href: 'https://outlook.live.com' },
+              { label: t('openGmail'),   href: 'https://mail.google.com'  },
+              { label: t('openOutlook'), href: 'https://outlook.live.com' },
             ].map(({ label, href }) => (
               <a key={label} href={href} target="_blank" rel="noreferrer noopener" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',

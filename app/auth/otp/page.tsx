@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -174,7 +175,8 @@ function SecurityIllustration({ state }: { state: 'idle' | 'success' | 'error' }
 
 // ─── Progress bar ──────────────────────────────────────────────────────────────
 function StepBar({ step }: { step: 0 | 1 | 2 }) {
-  const steps = ['Account Created', 'Verify Identity', 'All Set']
+  const t = useTranslations('auth')
+  const steps = [t('otp.accountCreated'), t('otp.verifyIdentity'), t('otp.allSet')]
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', marginBottom: '32px' }}>
       {steps.map((label, i) => {
@@ -317,26 +319,27 @@ function OtpCells({ value, onChange, onComplete, error, success, disabled }: Otp
 
 // ─── Error banner ──────────────────────────────────────────────────────────────
 function ErrorBanner({ kind, onDismiss }: { kind: ErrorKind; onDismiss: () => void }) {
+  const t = useTranslations('auth')
   if (!kind) return null
   const map: Record<NonNullable<ErrorKind>, { icon: string | readonly string[]; title: string; body: string; color: string; bg: string; bdr: string }> = {
     invalid: {
-      icon: ICONS.info, title: 'Incorrect code',
-      body: 'The code you entered does not match. Please check your email and try again.',
+      icon: ICONS.info, title: t('otp.incorrectCode'),
+      body: t('otp.theCodeYouEnteredDoes'),
       color: T.red, bg: 'rgba(254,242,242,0.9)', bdr: 'rgba(220,38,38,0.22)',
     },
     expired: {
-      icon: ICONS.info, title: 'Code expired',
-      body: 'Your verification code has expired. Request a new one using the Resend button below.',
+      icon: ICONS.info, title: t('otp.codeExpired'),
+      body: t('otp.yourVerificationCodeHasExpired'),
       color: T.amber, bg: 'rgba(255,251,235,0.9)', bdr: 'rgba(217,119,6,0.22)',
     },
     network: {
-      icon: ICONS.activity, title: 'Connection error',
-      body: 'We could not reach our servers. Please check your connection and try again.',
+      icon: ICONS.activity, title: t('otp.connectionError'),
+      body: t('otp.weCouldNotReachOur'),
       color: T.slate, bg: 'rgba(248,250,252,0.95)', bdr: 'rgba(4,53,77,0.12)',
     },
     toomany: {
-      icon: ICONS.shield, title: 'Too many attempts',
-      body: 'For your security, this code has been invalidated. Please request a new code.',
+      icon: ICONS.shield, title: t('otp.tooManyAttempts'),
+      body: t('otp.forYourSecurityThisCode'),
       color: T.red, bg: 'rgba(254,242,242,0.9)', bdr: 'rgba(220,38,38,0.22)',
     },
   }
@@ -407,6 +410,7 @@ function TimerRing({ secs, total }: { secs: number; total: number }) {
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 function OtpPageContent() {
+  const t = useTranslations('auth')
   const router = useRouter()
   const captureAction = usePortalAction()
   const searchParams = useSearchParams()
@@ -446,7 +450,7 @@ function OtpPageContent() {
         requestBody.country_code = countryCode
         requestBody.phone = phone
       } else {
-        throw new Error('Missing required email or phone parameters')
+        throw new Error(t('otp.missingRequiredEmailOrPhone'))
       }
 
       const response = await verifyOtp(requestBody)
@@ -464,7 +468,7 @@ function OtpPageContent() {
       setErrorKind('invalid')
       setDigits(['', '', '', '', '', ''])
     }
-  }, [tooMany, mode, router, email, countryCode, phone, captureAction])
+  }, [tooMany, mode, router, email, countryCode, phone, captureAction, t])
 
   const handleVerify = () => {
     if (!filled || loading || tooMany) return
@@ -473,7 +477,7 @@ function OtpPageContent() {
 
   const handleResend = async () => {
     if (!expired || loading || resendInFlight.current || mode !== 'email') return
-    if (!email) { setResendError('Return to email verification and enter your email address.'); return }
+    if (!email) { setResendError(t('otp.returnToEmailVerificationAnd')); return }
     const action = captureAction()
     resendInFlight.current = true
     setResending(true); setResendOk(false); setResendError('')
@@ -484,7 +488,7 @@ function OtpPageContent() {
       setResendOk(true); restart(RESEND_SECS)
       action.after(4000, () => setResendOk(false))
     } catch (error) {
-      if (action.isCurrent()) setResendError(getApiErrorDetail(error) || 'Verification email could not be requested. Please retry.')
+      if (action.isCurrent()) setResendError(getApiErrorDetail(error) || t('otp.verificationEmailCouldNotBe'))
     } finally {
       resendInFlight.current = false
       if (action.isCurrent()) setResending(false)
@@ -518,7 +522,7 @@ function OtpPageContent() {
 
       {/* Logo */}
       <div style={{ marginBottom: '28px', animation: 'fadeUp 0.4s ease both' }}>
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label='Qarevo Health home'>
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('otp.qarevoHealthHome')}>
           <Image
             src='/brand/Untitled design - 2026-08-03T165058.603.png'
             alt='Qarevo Health'
@@ -562,7 +566,7 @@ function OtpPageContent() {
               ? "Enter the six-digit code from your verification email."
               : "SMS delivery is not configured. Switch to email verification to continue."}
           </p>
-          <DestChip mode={mode} destination={mode === 'email' ? email?.replace(/(.{2}).+(@.+)/, '$1•••$2') || 'Email address unavailable' : 'SMS not configured'} onSwitch={switchMode} />
+          <DestChip mode={mode} destination={mode === 'email' ? email?.replace(/(.{2}).+(@.+)/, '$1•••$2') || t('otp.emailAddressUnavailable') : t('otp.smsNotConfigured')} onSwitch={switchMode} />
         </div>
 
         {/* Error banner */}
@@ -588,12 +592,12 @@ function OtpPageContent() {
             <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '-0.01em' }}>
               Enter 6-digit code
             </span>
-            {mode !== 'email' ? 'SMS delivery unavailable' : resending ? 'Requesting verification email…' : !expired
+            {mode !== 'email' ? t('otp.smsDeliveryUnavailable') : resending ? t('otp.requestingVerificationEmail') : !expired
               ? <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.01em' }}>Expires in</span>
+                  <span style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.01em' }}>{t('otp.expiresIn')}</span>
                   <TimerRing secs={secs} total={RESEND_SECS} />
                 </div>
-              : <span style={{ fontSize: "13px", fontWeight: 600, color: T.red, letterSpacing: '-0.01em' }}>Code expired</span>}
+              : <span style={{ fontSize: "13px", fontWeight: 600, color: T.red, letterSpacing: '-0.01em' }}>{t('otp.codeExpired')}</span>}
           </div>
           <OtpCells
             value={digits}
@@ -631,8 +635,8 @@ function OtpPageContent() {
           }}
         >
           {loading
-            ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Verifying…</>
-            : <>Verify Code <Ico p={ICONS.arrowFwd} size={14} sw={2.2} /></>}
+            ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />{t('otp.verifying')}</>
+            : <>{t('otp.verifyCode')} <Ico p={ICONS.arrowFwd} size={14} sw={2.2} /></>}
         </button>
 
         {/* Back */}
@@ -649,7 +653,7 @@ function OtpPageContent() {
         </Link>
 
         {resendError && <p role='alert' className='field-error'>{resendError}</p>}
-        {mode !== 'email' && <p role='status' className='field-error'>SMS verification delivery is unavailable. Choose email verification.</p>}
+        {mode !== 'email' && <p role='status' className='field-error'>{t('otp.smsVerificationDeliveryIsUnavailable')}</p>}
         {/* Resend row */}
         <div style={{ marginTop: '22px', paddingTop: '20px', borderTop: "1px solid var(--border)", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
           <p style={{ margin: 0, fontSize: '13px', color: T.slate2, letterSpacing: '-0.01em' }}>
@@ -669,9 +673,9 @@ function OtpPageContent() {
               transition: 'all 0.14s ease',
             }}
           >
-            {mode !== 'email' ? 'SMS delivery unavailable' : resending ? 'Requesting verification email…' : !expired
+            {mode !== 'email' ? t('otp.smsDeliveryUnavailable') : resending ? t('otp.requestingVerificationEmail') : !expired
               ? <><span style={{ width: '12px', height: '12px', border: `1.5px solid ${T.slate2}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block' }} />Resend in {secs}s</>
-              : <><Ico p={ICONS.arrowFwd} size={13} sw={2} />Resend Code</>}
+              : <><Ico p={ICONS.arrowFwd} size={13} sw={2} />{t('otp.resendCode')}</>}
           </button>
         </div>
       </div>
@@ -679,10 +683,10 @@ function OtpPageContent() {
       {/* Trust strip */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '10px 18px', animation: 'fadeUp 0.5s 0.1s ease both' }}>
         {[
-          { icon: ICONS.shield,   label: 'Identity-verified access'    },
-          { icon: ICONS.lock,     label: 'End-to-end encrypted'        },
-          { icon: ICONS.activity, label: 'Email verification · Protected access'      },
-          { icon: ICONS.brain,    label: 'Medical-grade security'      },
+          { icon: ICONS.shield,   label: t('otp.identityVerifiedAccess')    },
+          { icon: ICONS.lock,     label: t('otp.endToEndEncrypted')        },
+          { icon: ICONS.activity, label: t('otp.emailVerificationProtectedAccess')      },
+          { icon: ICONS.brain,    label: t('otp.medicalGradeSecurity')      },
         ].map(({ icon, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
@@ -693,11 +697,11 @@ function OtpPageContent() {
 
       {/* Footer */}
       <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '18px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-        <Link href="/terms"   style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
+        <Link href="/terms"   style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('otp.terms')}</Link>
         {' · '}
-        <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
+        <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('otp.privacyPolicy')}</Link>
         {' · '}
-        <Link href="/support" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>Support</Link>
+        <Link href="/support" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('otp.support')}</Link>
       </p>
     </div>
   )

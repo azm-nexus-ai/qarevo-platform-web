@@ -1,6 +1,8 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+
+type Translate = ReturnType<typeof useTranslations>
 import { Suspense, useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -48,20 +50,20 @@ function checkPasswordRules(password: string) {
   }
 }
 
-function getStrength(password: string) {
+function getStrength(password: string, t: Translate) {
   const rules = checkPasswordRules(password)
   const score = Object.values(rules).filter(Boolean).length
 
   const levels = [
-    { label: 'Weak', color: '#8298AF' },
-    { label: 'Fair', color: '#6D8BC0' },
-    { label: 'Good', color: '#4D7FE0' },
-    { label: 'Strong', color: '#2E8BCB' },
-    { label: 'Excellent', color: T.green },
+    { label: t('weak'), color: '#8298AF' },
+    { label: t('fair'), color: '#6D8BC0' },
+    { label: t('good'), color: '#4D7FE0' },
+    { label: t('strong'), color: '#2E8BCB' },
+    { label: t('excellent'), color: T.green },
   ]
 
   const idx = Math.max(0, Math.min(score - 1, levels.length - 1))
-  const active = password.length === 0 ? { label: 'Weak', color: '#8298AF' } : levels[idx]
+  const active = password.length === 0 ? { label: t('weak'), color: '#8298AF' } : levels[idx]
 
   return { rules, score, ...active }
 }
@@ -259,9 +261,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'Single-use Link', sub: 'A completed reset invalidates this link' },
-          { icon: ICONS.shield, label: 'Mailbox Access', sub: 'Use the link sent to your email address' },
-          { icon: ICONS.check, label: 'Session Protection', sub: 'Existing refresh sessions are revoked after reset' },
+          { icon: ICONS.lock, label: t('singleUseLink'), sub: t('aCompletedResetInvalidatesThis') },
+          { icon: ICONS.shield, label: t('mailboxAccess'), sub: t('useTheLinkSentTo') },
+          { icon: ICONS.check, label: t('sessionProtection'), sub: t('existingRefreshSessionsAreRevoked') },
         ].map(({ icon, label, sub }, i) => (
           <div
             key={label}
@@ -303,22 +305,23 @@ function LeftPanel() {
 }
 
 function AlertBanner({ kind }: { kind: Exclude<ErrorKind, 'mismatch' | 'weak' | null> }) {
+  const t = useTranslations('auth.resetPassword')
   const content = {
     expiredToken: {
-      title: 'Reset link expired',
-      body: 'This reset link has expired. Please request a new password reset email.',
+      title: t('resetLinkExpired'),
+      body: t('thisResetLinkHasExpired'),
     },
     invalidToken: {
-      title: 'Invalid reset link',
-      body: 'This reset link is invalid or already used. Please request a fresh link.',
+      title: t('invalidResetLink2'),
+      body: t('thisResetLinkIsInvalid'),
     },
     server: {
-      title: 'Service temporarily unavailable',
-      body: 'Password update is temporarily unavailable. Please try again shortly.',
+      title: t('serviceTemporarilyUnavailable'),
+      body: t('passwordUpdateIsTemporarilyUnavailable'),
     },
     network: {
-      title: 'Network connection issue',
-      body: 'We could not reach our servers. Check your connection and try again.',
+      title: t('networkConnectionIssue'),
+      body: t('weCouldNotReachOur'),
     },
   }[kind]
 
@@ -447,7 +450,7 @@ function PasswordField({
           <button
             type='button'
             onClick={onToggle}
-            aria-label={show ? 'Hide password' : 'Show password'}
+            aria-label={show ? t('hidePassword') : t('showPassword')}
             style={{
               background: 'none',
               border: 'none',
@@ -495,7 +498,7 @@ function RuleItem({ met, label }: { met: boolean; label: string }) {
 
 function PasswordGuide({ password, confirmPassword }: { password: string; confirmPassword: string }) {
   const t = useTranslations('auth.resetPassword')
-  const { rules, score, label, color } = getStrength(password)
+  const { rules, score, label, color } = getStrength(password, t)
   const match = password.length > 0 && confirmPassword.length > 0 && password === confirmPassword
 
   return (
@@ -530,7 +533,7 @@ function PasswordGuide({ password, confirmPassword }: { password: string; confir
 
       {confirmPassword.length > 0 ? (
         <div style={{ fontSize: "13px", color: match ? T.green : T.red, fontWeight: 600, letterSpacing: '-0.005em' }}>
-          {match ? 'Passwords match.' : 'Passwords do not match.'}
+          {match ? t('passwordsMatch') : t('passwordsDoNotMatch')}
         </div>
       ) : null}
     </div>
@@ -580,22 +583,22 @@ function ResetPasswordPageContent() {
   const newId = useId()
   const confirmId = useId()
 
-  const strength = getStrength(newPassword)
+  const strength = getStrength(newPassword, t)
   const rules = strength.rules
   const strongEnough = Object.values(rules).every(Boolean)
 
   const newErr =
     touched.newPassword && !newPassword
-      ? 'New password is required'
+      ? t('newPasswordIsRequired')
       : touched.newPassword && !strongEnough
-      ? 'Please create a stronger password that satisfies all requirements'
+      ? t('pleaseCreateAStrongerPassword')
       : ''
 
   const confirmErr =
     touched.confirmPassword && !confirmPassword
-      ? 'Please confirm your new password'
+      ? t('pleaseConfirmYourNewPassword')
       : touched.confirmPassword && confirmPassword !== newPassword
-      ? 'Passwords do not match'
+      ? t('passwordsDoNotMatch2')
       : ''
 
   const showAlert = errorKind && !['mismatch', 'weak'].includes(errorKind)
@@ -637,9 +640,9 @@ function ResetPasswordPageContent() {
       const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
       if (error instanceof ApiError && error.status === 429) {
-        setServerError(getLoginThrottleMessage(error) || 'Too many requests. Please wait before trying again.')
+        setServerError(getLoginThrottleMessage(error) || t('tooManyRequestsPleaseWait'))
       } else if (error instanceof ApiError && error.status === 422) {
-        setServerError(getApiErrorDetail(error) || 'Check the password requirements and try again.')
+        setServerError(getApiErrorDetail(error) || t('checkThePasswordRequirementsAnd'))
       } else if (detail.includes('expired') || detail.includes('expir')) {
         setErrorKind('expiredToken')
       } else if (detail.includes('invalid') || detail.includes('used')) {
@@ -972,9 +975,9 @@ function ResetPasswordPageContent() {
             <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
                 {[
-                  { icon: ICONS.lock, label: 'Secure Credentials' },
-                  { icon: ICONS.shield, label: 'Session Protection' },
-                  { icon: ICONS.check, label: 'Protected account access' },
+                  { icon: ICONS.lock, label: t('secureCredentials') },
+                  { icon: ICONS.shield, label: t('sessionProtection') },
+                  { icon: ICONS.check, label: t('protectedAccountAccess') },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />

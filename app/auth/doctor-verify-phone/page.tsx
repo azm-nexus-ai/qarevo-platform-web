@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, useId, Suspense } from 'react'
+import { useTranslations } from 'next-intl'
+
+type Translate = ReturnType<typeof useTranslations>
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -27,41 +30,41 @@ const LEFT_BG = [
   T.brandNavy,
 ].join(', ')
 
-function getFriendlyDoctorPhoneVerificationError(error: unknown) {
+function getFriendlyDoctorPhoneVerificationError(error: unknown, t: Translate) {
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
   if (detail.includes('invalid verification code')) {
-    return 'The verification code you entered is incorrect. Please check the code and try again.'
+    return t('doctorPhone.theVerificationCodeYouEntered')
   }
   if (detail.includes('expired')) {
-    return 'The verification code has expired. Please request a new code.'
+    return t('doctorPhone.theVerificationCodeHasExpired')
   }
   if (detail.includes('already used')) {
-    return 'This verification code has already been used. Please request a new code.'
+    return t('doctorPhone.thisVerificationCodeHasAlready')
   }
   if (detail.includes('replaced')) {
-    return 'This code has been replaced. Please request a new code.'
+    return t('doctorPhone.thisCodeHasBeenReplaced')
   }
   if (detail.includes('no verification code found')) {
-    return 'No verification code found. Please request a new code.'
+    return t('doctorPhone.noVerificationCodeFoundPlease')
   }
   if (detail.includes('user not found')) {
-    return 'User not found. Please register again.'
+    return t('doctorPhone.userNotFoundPleaseRegister')
   }
   if (detail.includes('already verified')) {
-    return 'This phone has already been verified. Please sign in.'
+    return t('doctorPhone.thisPhoneHasAlreadyBeen')
   }
   if (detail.includes('verify your email')) {
-    return 'Please verify your email before verifying your phone number.'
+    return t('doctorPhone.pleaseVerifyYourEmailBefore')
   }
   if (detail.includes('phone')) {
-    return 'Please check the phone number and country code.'
+    return t('doctorPhone.pleaseCheckThePhoneNumber')
   }
   if (error instanceof ApiError && error.status === 422) {
-    return 'Please check the phone verification details and try again.'
+    return t('doctorPhone.pleaseCheckThePhoneVerification')
   }
 
-  return 'We could not verify your phone right now. Please try again.'
+  return t('doctorPhone.weCouldNotVerifyYour')
 }
 
 // Field component
@@ -153,6 +156,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
 
 // Left panel component
 function LeftPanel() {
+  const t = useTranslations('auth')
   return (
     <div style={{
       width: '380px',
@@ -172,7 +176,7 @@ function LeftPanel() {
       <div aria-hidden style={{ position: 'absolute', bottom: '-80px', right: '-60px', width: '340px', height: '340px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(52,140,234,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label='Qarevo Health home'>
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('doctorPhone.qarevoHealthHome')}>
           <Image
             src='/brand/Untitled design - 2026-08-03T165058.603.png'
             alt='Qarevo Health'
@@ -196,7 +200,7 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['Email verification', 'Account security', 'Clinician review'].map(b => (
+          {[t('doctorPhone.emailVerification'), t('doctorPhone.accountSecurity'), t('doctorPhone.clinicianReview')].map(b => (
             <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
           ))}
         </div>
@@ -207,6 +211,7 @@ function LeftPanel() {
 
 // Main page
 function DoctorVerifyPhonePageContent() {
+  const t = useTranslations('auth')
   const router = useRouter()
   const captureAction = usePortalAction()
   const searchParams = useSearchParams()
@@ -219,7 +224,7 @@ function DoctorVerifyPhonePageContent() {
   const [success, setSuccess] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
 
-  const codeErr = !code ? 'Verification code is required' : ''
+  const codeErr = !code ? t('doctorPhone.verificationCodeIsRequired') : ''
 
   // Automatically send phone verification OTP when page loads
   useEffect(() => {
@@ -239,7 +244,7 @@ function DoctorVerifyPhonePageContent() {
 
   const handleVerify = async () => {
     if (!code) {
-      setAuthError('Verification code is required')
+      setAuthError(t('doctorPhone.verificationCodeIsRequired'))
       return
     }
 
@@ -258,7 +263,7 @@ function DoctorVerifyPhonePageContent() {
       return // Don't set loading to false yet
     } catch (error) {
       if (!action.isCurrent()) return
-      setAuthError(getFriendlyDoctorPhoneVerificationError(error))
+      setAuthError(getFriendlyDoctorPhoneVerificationError(error, t))
     } finally {
       if (action.isCurrent()) setLoading(false)
     }
@@ -275,7 +280,7 @@ function DoctorVerifyPhonePageContent() {
       action.after(3000, () => setSuccess(false))
     } catch (error) {
       if (!action.isCurrent()) return
-      setAuthError(getFriendlyDoctorPhoneVerificationError(error))
+      setAuthError(getFriendlyDoctorPhoneVerificationError(error, t))
     } finally {
       if (action.isCurrent()) setLoading(false)
     }
@@ -339,13 +344,13 @@ function DoctorVerifyPhonePageContent() {
             {success && (
               <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--success-soft)", border: '1px solid rgba(9,173,112,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.check} size={16} sw={2.5} color={T.green} />
-                <span style={{ fontSize: '13px', color: '#166534', lineHeight: 1.4 }}>Verification code sent successfully</span>
+                <span style={{ fontSize: '13px', color: '#166534', lineHeight: 1.4 }}>{t('doctorPhone.verificationCodeSentSuccessfully')}</span>
               </div>
             )}
 
             {/* Phone display */}
             <div style={{ padding: '12px 16px', borderRadius: '11px', background: 'rgba(32,181,223,0.06)', border: '1px solid rgba(32,181,223,0.12)', marginBottom: '20px' }}>
-              <p style={{ margin: 0, fontSize: "13px", color: T.slate2, fontWeight: 600, marginBottom: '4px' }}>Phone number</p>
+              <p style={{ margin: 0, fontSize: "13px", color: T.slate2, fontWeight: 600, marginBottom: '4px' }}>{t('doctorPhone.phoneNumber')}</p>
               <p style={{ margin: 0, fontSize: '14px', color: T.navy, fontWeight: 600 }}>+{country_code} {phone || '8116454074'}</p>
             </div>
 
@@ -387,7 +392,7 @@ function DoctorVerifyPhonePageContent() {
                   boxShadow: loading ? 'none' : '0 3px 10px rgba(32,181,223,0.32), 0 1px 3px rgba(32,181,223,0.2)',
                 }}
               >
-                {loading ? 'Verifying...' : 'Verify Phone'}
+                {loading ? t('doctorPhone.verifying') : t('doctorPhone.verifyPhone')}
                 {!loading && <Ico p={ICONS.check} size={15} sw={2.2} />}
               </button>
 

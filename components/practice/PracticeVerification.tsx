@@ -25,6 +25,6 @@ function OwnedPractices() {
   if (!owned.length) return <PortalEmptyState title={t('emptyTitle')} description={t('emptyText')} />
   return <div className='grid gap-10'>{owned.map(row => <section key={row.practice.id} aria-label={row.practice.name}>
     {owned.length > 1 && <h2 className='mb-4 text-2xl font-bold text-ink'>{row.practice.name}</h2>}
-    <VerificationWorkspace base={`/api/v1/practice/practices/${row.practice.id}`} entityLabel='practice' />
+    <VerificationWorkspace base={`/api/v1/practice/practices/${row.practice.id}`} entityKind='practice' />
   </section>)}</div>
 }

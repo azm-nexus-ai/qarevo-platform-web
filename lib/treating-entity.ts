@@ -168,26 +168,41 @@ export function neededDocuments(rules: RequirementSet, fields: Record<string, st
 }
 
 /** Client-side mirror of the server's field rules, so problems show before submission. */
-export function fieldErrors(rules: FieldRule[], values: Record<string, string>, prefix: string) {
+/** Validation text for the verification forms; English by default, translated by useVerificationText. */
+export const VERIFICATION_TEXT = {
+  label: (rule: FieldRule) => rule.label,
+  hint: (rule: FieldRule) => rule.hint,
+  required: (label: string) => `Enter the ${label}.`,
+  tooLong: (max: number) => `Use at most ${max} characters.`,
+  format: (label: string, hint: string | null) => `${label}: ${hint || 'check the format.'}`,
+  choose: (label: string) => `Choose one of the listed options for ${label}.`,
+  group: (label: string) => `Provide all statutory-insurance details together, or none of them (${label} is missing).`,
+  fileType: 'Upload a PDF, JPEG or PNG file.',
+  fileEmpty: 'The file is empty.',
+  fileSize: 'Upload a file of at most 3 MB.',
+}
+export type VerificationText = typeof VERIFICATION_TEXT
+
+export function fieldErrors(rules: FieldRule[], values: Record<string, string>, prefix: string, text: VerificationText = VERIFICATION_TEXT) {
   const errors: Record<string, string> = {}
   for (const rule of rules) {
-    const value = (values[rule.key] ?? '').trim()
-    if (!value) { if (rule.required) errors[prefix + rule.key] = `Enter the ${rule.label}.`; continue }
-    if (value.length > rule.max_length) errors[prefix + rule.key] = `Use at most ${rule.max_length} characters.`
-    else if (rule.pattern && !new RegExp(`^(?:${rule.pattern})$`).test(value)) errors[prefix + rule.key] = `${rule.label}: ${rule.hint || 'check the format.'}`
-    else if (rule.choices.length && !rule.choices.includes(value)) errors[prefix + rule.key] = `Choose one of the listed options for ${rule.label}.`
+    const value = (values[rule.key] ?? '').trim(), label = text.label(rule)
+    if (!value) { if (rule.required) errors[prefix + rule.key] = text.required(label); continue }
+    if (value.length > rule.max_length) errors[prefix + rule.key] = text.tooLong(rule.max_length)
+    else if (rule.pattern && !new RegExp(`^(?:${rule.pattern})$`).test(value)) errors[prefix + rule.key] = text.format(label, text.hint(rule))
+    else if (rule.choices.length && !rule.choices.includes(value)) errors[prefix + rule.key] = text.choose(label)
   }
   for (const group of new Set(rules.filter(rule => rule.group).map(rule => rule.group as string))) {
     const members = rules.filter(rule => rule.group === group), provided = members.filter(rule => (values[rule.key] ?? '').trim())
-    if (provided.length && provided.length !== members.length) for (const rule of members) if (!(values[rule.key] ?? '').trim()) errors[prefix + rule.key] = `Provide all statutory-insurance details together, or none of them (${rule.label} is missing).`
+    if (provided.length && provided.length !== members.length) for (const rule of members) if (!(values[rule.key] ?? '').trim()) errors[prefix + rule.key] = text.group(text.label(rule))
   }
   return errors
 }
 
-export function fileProblem(file: File): string | null {
-  if (!(EVIDENCE_TYPES as readonly string[]).includes(file.type)) return 'Upload a PDF, JPEG or PNG file.'
-  if (file.size <= 0) return 'The file is empty.'
-  if (file.size > EVIDENCE_MAX_BYTES) return 'Upload a file of at most 3 MB.'
+export function fileProblem(file: File, text: Pick<VerificationText, 'fileType' | 'fileEmpty' | 'fileSize'> = VERIFICATION_TEXT): string | null {
+  if (!(EVIDENCE_TYPES as readonly string[]).includes(file.type)) return text.fileType
+  if (file.size <= 0) return text.fileEmpty
+  if (file.size > EVIDENCE_MAX_BYTES) return text.fileSize
   return null
 }
 

@@ -246,6 +246,26 @@ test('admins review one queue and the decision carries the submission version', 
   await expect(final.getByText('A second, different administrator must give the final approval.')).toBeVisible()
 })
 
+test('verification reads in German, with German legal names and validation', async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: 'qarevo_locale', value: 'de', url: baseURL! }])
+  const state = await prepare(context, { independentExists: true })
+  await page.goto('/practice/verification')
+  await expect(page.getByText('Noch nicht eingereicht')).toBeVisible()
+  await page.getByRole('button', { name: 'Zur Verifizierung einreichen' }).click()
+  const summary = page.getByRole('alert').filter({ hasText: 'Bitte prüfen Sie Folgendes' })
+  await expect(summary).toBeVisible()
+  await expect(summary).toContainText('Plattformvereinbarung')
+  await page.getByRole('button', { name: '„Plattformvereinbarung“ lesen' }).click()
+  await expect(page.getByRole('region', { name: 'Plattformvereinbarung' })).toBeVisible()
+  // German regulatory names come from the API and stay as sent.
+  await expect(page.getByLabel('Betriebsstättennummer (BSNR) (Pflichtfeld)')).toBeVisible()
+  state.entities[PRACTICE].submission = { id: SUBMISSION, practice_id: PRACTICE, entity_type: 'PRACTICE', jurisdiction: 'DE', requirement_set: practiceRules.key, status: 'SUBMITTED', version: 1, public_insurance_eligible: true, submitted_at: '2026-11-19T09:30:00Z', first_approved_at: null, second_approved_at: null, rejected_at: null, rejection_reason: null, declaration_sha256: SHA }
+  await page.goto('/admin/verifications')
+  await expect(page.getByRole('heading', { name: 'Verifizierungen', exact: true })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Alle Arten' })).toBeAttached()
+  await expect(page.getByText(/Approve|Submitted|Waiting for/)).toHaveCount(0)
+})
+
 for (const width of [320, 1440]) for (const scheme of ['light', 'dark'] as const) {
   test(`verification screens fit ${width}px in ${scheme} mode`, async ({ page, context }) => {
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: scheme })

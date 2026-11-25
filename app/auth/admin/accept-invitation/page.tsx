@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { ApiError, acceptAdminInvitation, validateAdminInvitation, clearPortalSession, getApiErrorDetail, getLoginThrottleMessage } from '@/lib/api'
 import { ValidationSummary } from '@/components/ui/ValidationFeedback'
@@ -8,6 +9,7 @@ import { usePortalAction } from '@/lib/portal-action'
 type Status = 'checking' | 'valid' | 'unavailable' | 'error' | 'complete'
 
 export default function AcceptAdminInvitation() {
+  const t = useTranslations('auth')
   const captureAction = usePortalAction()
   const token = useRef<string | null>(null)
   const [status, setStatus] = useState<Status>('checking')
@@ -63,18 +65,18 @@ export default function AcceptAdminInvitation() {
     }).catch(error => {
       if (!current) return
       if (error instanceof ApiError && error.status === 422) { unavailable(); return }
-      setErrors({ server: getLoginThrottleMessage(error) || 'We could not check this invitation. Please retry.' })
+      setErrors({ server: getLoginThrottleMessage(error) || t('adminInvitation.weCouldNotCheckThis') })
       setStatus('error')
     })
     return () => { current = false; clearTimeout(expiryTimer) }
-  }, [retry])
+  }, [retry, t])
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (status !== 'valid' || !token.current || saving) return
     const next: Record<string, string> = {}
     if (password.length < 8 || password.length > 128 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)) next.password = 'Use 8–128 characters, including uppercase, lowercase, a number and a special character.'
-    if (!confirmation || password !== confirmation) next.confirmation = 'Enter the same password in both fields.'
+    if (!confirmation || password !== confirmation) next.confirmation = t('adminInvitation.enterTheSamePasswordIn')
     setErrors(next)
     if (Object.keys(next).length) return
     setSaving(true)
@@ -88,30 +90,30 @@ export default function AcceptAdminInvitation() {
       if (!action.isCurrent() || token.current !== submittedToken) return
       if (error instanceof ApiError && error.status === 400) {
         token.current = ''; setPassword(''); setConfirmation(''); setStatus('unavailable')
-      } else setErrors({ server: getLoginThrottleMessage(error) || getApiErrorDetail(error) || 'We could not activate this invitation. Please try again.' })
+      } else setErrors({ server: getLoginThrottleMessage(error) || getApiErrorDetail(error) || t('adminInvitation.weCouldNotActivateThis') })
     } finally { if (action.isCurrent() && token.current === submittedToken) setSaving(false) }
   }
 
   return <main className='invitation-page'><section>
-    <h1>{status === 'complete' ? 'Administrator account ready' : status === 'unavailable' ? 'Invitation unavailable' : 'Accept your administrator invitation'}</h1>
-    {status === 'checking' ? <p role='status'>Checking your invitation…</p> : status === 'complete' ? <>
-      <p>Your mailbox has been verified and your password is set. This invitation has been used and cannot be used again.</p>
-      <Link href='/auth/admin/login'>Continue to administrator sign-in</Link>
+    <h1>{status === 'complete' ? t('adminInvitation.administratorAccountReady') : status === 'unavailable' ? t('adminInvitation.invitationUnavailable') : t('adminInvitation.acceptYourAdministratorInvitation')}</h1>
+    {status === 'checking' ? <p role='status'>{t('adminInvitation.checkingYourInvitation')}</p> : status === 'complete' ? <>
+      <p>{t('adminInvitation.yourMailboxHasBeenVerified')}</p>
+      <Link href='/auth/admin/login'>{t('adminInvitation.continueToAdministratorSignIn')}</Link>
     </> : status === 'unavailable' ? <>
-      <p>This invitation is invalid, expired or already used. If you already activated your account, sign in with the password you chose.</p>
-      <p><Link href='/auth/admin/login'>Administrator sign-in</Link></p>
-      <p><Link href='/auth/admin/forgot-password'>Forgot your password?</Link></p>
-      <p>If you have not activated your account, ask the owner for a new invitation.</p>
+      <p>{t('adminInvitation.thisInvitationIsInvalidExpired')}</p>
+      <p><Link href='/auth/admin/login'>{t('adminInvitation.administratorSignIn')}</Link></p>
+      <p><Link href='/auth/admin/forgot-password'>{t('adminInvitation.forgotYourPassword')}</Link></p>
+      <p>{t('adminInvitation.ifYouHaveNotActivated')}</p>
     </> : status === 'error' ? <>
       <ValidationSummary errors={errors}/>
-      <button type='button' onClick={() => setRetry(value => value + 1)}>Retry invitation check</button>
+      <button type='button' onClick={() => setRetry(value => value + 1)}>{t('adminInvitation.retryInvitationCheck')}</button>
     </> : <>
-      <p>Choose your own password to activate the access granted by the application owner. This link can be used once and expires after 24 hours.</p>
+      <p>{t('adminInvitation.chooseYourOwnPasswordTo')}</p>
       <form noValidate onSubmit={submit}><ValidationSummary errors={errors}/>
-        <label htmlFor='invite-password'>New password (Required)</label><input id='invite-password' type='password' autoComplete='new-password' required minLength={8} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} aria-invalid={!!errors.password} aria-describedby={errors.password?'invite-password-hint invite-password-error':'invite-password-hint'}/>
+        <label htmlFor='invite-password'>{t('adminInvitation.newPasswordRequired')}</label><input id='invite-password' type='password' autoComplete='new-password' required minLength={8} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} aria-invalid={!!errors.password} aria-describedby={errors.password?'invite-password-hint invite-password-error':'invite-password-hint'}/>
         <p id='invite-password-hint'>8–128 characters, with uppercase, lowercase, a number and a special character.</p>{errors.password&&<p id='invite-password-error' role='alert'>{errors.password}</p>}
-        <label htmlFor='invite-confirm'>Confirm password (Required)</label><input id='invite-confirm' type='password' autoComplete='new-password' required maxLength={128} value={confirmation} onChange={e=>setConfirmation(e.target.value)} aria-invalid={!!errors.confirmation} aria-describedby={errors.confirmation?'invite-confirm-error':undefined}/>{errors.confirmation&&<p id='invite-confirm-error' role='alert'>{errors.confirmation}</p>}
-        <button disabled={saving} type='submit'>{saving?'Activating…':'Activate administrator account'}</button>
+        <label htmlFor='invite-confirm'>{t('adminInvitation.confirmPasswordRequired')}</label><input id='invite-confirm' type='password' autoComplete='new-password' required maxLength={128} value={confirmation} onChange={e=>setConfirmation(e.target.value)} aria-invalid={!!errors.confirmation} aria-describedby={errors.confirmation?'invite-confirm-error':undefined}/>{errors.confirmation&&<p id='invite-confirm-error' role='alert'>{errors.confirmation}</p>}
+        <button disabled={saving} type='submit'>{saving?t('adminInvitation.activating'):t('adminInvitation.activateAdministratorAccount')}</button>
       </form>
     </>}
   </section><style jsx>{`

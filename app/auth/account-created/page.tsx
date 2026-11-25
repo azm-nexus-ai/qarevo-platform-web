@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
@@ -106,6 +107,7 @@ function JourneyIllustration() {
 }
 
 function LeftPanel() {
+  const t = useTranslations('auth')
   return (
     <div
       style={{
@@ -180,7 +182,7 @@ function LeftPanel() {
             }}
           >
             A healthier future starts now.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Welcome to your care journey.</span>
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('accountCreated.welcomeToYourCareJourney')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
             Every next step is designed to be secure, personal, and effortless as you begin your Qarevo Health experience.
@@ -190,9 +192,9 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'Secure Foundation', sub: 'Encrypted identity and health records' },
-          { icon: ICONS.brain, label: 'Smart Care Intelligence', sub: 'AI-assisted recommendations tailored to you' },
-          { icon: ICONS.steth, label: 'Trusted Clinical Network', sub: 'Access verified physicians across specialties' },
+          { icon: ICONS.lock, label: t('accountCreated.secureFoundation'), sub: t('accountCreated.encryptedIdentityAndHealthRecords') },
+          { icon: ICONS.brain, label: t('accountCreated.smartCareIntelligence'), sub: t('accountCreated.aiAssistedRecommendationsTailoredTo') },
+          { icon: ICONS.steth, label: t('accountCreated.trustedClinicalNetwork'), sub: t('accountCreated.accessVerifiedPhysiciansAcrossSpecialties') },
         ].map(({ icon, label, sub }) => (
           <div
             key={label}
@@ -232,14 +234,15 @@ function LeftPanel() {
 }
 
 function StepTimeline() {
+  const t = useTranslations('auth')
   const steps = useMemo(
     () => [
-      { icon: ICONS.user, title: 'Complete Your Profile', sub: 'Set your personal and care preferences' },
-      { icon: ICONS.activity, title: 'Tell Us About Your Health', sub: 'Share key details for tailored support' },
-      { icon: ICONS.steth, title: 'Discover Physicians', sub: 'Find verified specialists you can trust' },
-      { icon: ICONS.calendar, title: 'Book Your First Consultation', sub: 'Schedule care that fits your routine' },
+      { icon: ICONS.user, title: t('accountCreated.completeYourProfile'), sub: t('accountCreated.setYourPersonalAndCare') },
+      { icon: ICONS.activity, title: t('accountCreated.tellUsAboutYourHealth'), sub: t('accountCreated.shareKeyDetailsForTailored') },
+      { icon: ICONS.steth, title: t('accountCreated.discoverPhysicians'), sub: t('accountCreated.findVerifiedSpecialistsYouCan') },
+      { icon: ICONS.calendar, title: t('accountCreated.bookYourFirstConsultation'), sub: t('accountCreated.scheduleCareThatFitsYour') },
     ],
-    [],
+    [t],
   )
 
   return (
@@ -298,6 +301,7 @@ function StepTimeline() {
 }
 
 export default function AccountCreatedPage() {
+  const t = useTranslations('auth')
   const [exploreHover, setExploreHover] = useState(false)
   const router = useRouter()
 
@@ -443,10 +447,10 @@ export default function AccountCreatedPage() {
 
             <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <TrustCard label='Secure & Encrypted' sub='End-to-end protected' icon={ICONS.lock} accent={T.blue} />
-                <TrustCard label='AI-Assisted Healthcare' sub='Smart clinical guidance' icon={ICONS.brain} accent={T.purple} />
-                <TrustCard label='Verified Physicians' sub='Trusted specialists only' icon={ICONS.steth} accent={T.teal} />
-                <TrustCard label='Personalized Care' sub='Tailored to your needs' icon={ICONS.activity} accent={T.cyan} />
+                <TrustCard label={t('accountCreated.secureEncrypted')} sub={t('accountCreated.endToEndProtected')} icon={ICONS.lock} accent={T.blue} />
+                <TrustCard label={t('accountCreated.aiAssistedHealthcare')} sub={t('accountCreated.smartClinicalGuidance')} icon={ICONS.brain} accent={T.purple} />
+                <TrustCard label={t('accountCreated.verifiedPhysicians')} sub={t('accountCreated.trustedSpecialistsOnly')} icon={ICONS.steth} accent={T.teal} />
+                <TrustCard label={t('accountCreated.personalizedCare')} sub={t('accountCreated.tailoredToYourNeeds')} icon={ICONS.activity} accent={T.cyan} />
               </div>
             </div>
 
@@ -481,7 +485,7 @@ export default function AccountCreatedPage() {
                   router.push('/auth/profile-setup/personal-information')
                 }}
               >
-                <span>Continue Setup</span>
+                <span>{t('accountCreated.continueSetup')}</span>
                 <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
               </HoverBtn>
 
@@ -511,10 +515,10 @@ export default function AccountCreatedPage() {
             <div style={{ marginTop: '20px', paddingTop: '18px', borderTop: "1px solid var(--border)" }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
                 {[
-                  { icon: ICONS.shield, label: 'Secure verification' },
-                  { icon: ICONS.lock, label: 'End-to-end encrypted' },
-                  { icon: ICONS.activity, label: 'Email verification · Protected access' },
-                  { icon: ICONS.brain, label: 'Medical-grade privacy' },
+                  { icon: ICONS.shield, label: t('accountCreated.secureVerification') },
+                  { icon: ICONS.lock, label: t('accountCreated.endToEndEncrypted') },
+                  { icon: ICONS.activity, label: t('accountCreated.emailVerificationProtectedAccess') },
+                  { icon: ICONS.brain, label: t('accountCreated.medicalGradePrivacy') },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
