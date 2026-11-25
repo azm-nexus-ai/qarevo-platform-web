@@ -58,16 +58,18 @@ export function eventLabel(event: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-export function reasonProblem(reason: string): string | null {
+export const REASON_TEXT = { short: 'Give a reason of at least 10 characters. It is stored in the audit trail.', long: 'Keep the reason to 500 characters or fewer.' }
+export function reasonProblem(reason: string, text: typeof REASON_TEXT = REASON_TEXT): string | null {
   const length = reason.trim().replace(/\s+/g, ' ').length
-  if (length < 10) return 'Give a reason of at least 10 characters. It is stored in the audit trail.'
-  if (length > 500) return 'Keep the reason to 500 characters or fewer.'
+  if (length < 10) return text.short
+  if (length > 500) return text.long
   return null
 }
 
-export function formatBerlin(value: string | null | undefined, withTime = true): string {
+/** Berlin time in the reader's language; English keeps the British day-month order. */
+export function formatBerlin(value: string | null | undefined, withTime = true, locale = 'en-GB'): string {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', day: '2-digit', month: 'short', year: 'numeric', ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}) }).format(date)
+  return new Intl.DateTimeFormat(locale, { timeZone: 'Europe/Berlin', day: '2-digit', month: 'short', year: 'numeric', ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}) }).format(date)
 }

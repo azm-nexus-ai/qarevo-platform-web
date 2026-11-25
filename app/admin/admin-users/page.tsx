@@ -6,10 +6,12 @@ import { FieldFeedback, ValidationSummary } from '@/components/ui/ValidationFeed
 import { getAdminUsers, createAdminUser, updateAdminUser, updateAdminUserStatus, resendAdminInvitation,
   getApiErrorDetail, type AdminUser, type AdminRole, type AdminStatus } from '@/lib/api'
 
+/** Role codes and their message keys; the label is translated where it is shown. */
 const ROLES: Record<AdminRole, string> = {
-  super_admin: 'Super administrator', operations_admin: 'Operations administrator',
-  compliance_admin: 'Compliance administrator', support_admin: 'Support administrator',
+  super_admin: 'roleSuper', operations_admin: 'roleOperations',
+  compliance_admin: 'roleCompliance', support_admin: 'roleSupport',
 }
+const STATUS_KEYS: Record<AdminStatus, string> = { INVITED: 'statusInvited', ACTIVE: 'statusActive', SUSPENDED: 'statusSuspended', DISABLED: 'statusDisabled' }
 const STATUSES: AdminStatus[] = ['INVITED', 'ACTIVE', 'SUSPENDED', 'DISABLED']
 type Action = { kind: 'invite' | 'edit' | 'status' | 'resend'; user?: AdminUser; status?: Exclude<AdminStatus, 'INVITED'> }
 
@@ -61,34 +63,34 @@ export default function AdminUsersPage() {
     if (!action || saving) return
     const issues: Record<string, string> = {}
     if (action.kind === 'invite' || action.kind === 'edit') {
-      if (!form.full_name.trim()) issues.full_name = 'Full name is required.'
-      else if (form.full_name.trim().split(/\s+/).length < 2) issues.full_name = 'Enter your first and last name.'
-      if (!(form.role in ROLES)) issues.role = 'Select an administrator role.'
+      if (!form.full_name.trim()) issues.full_name = t('errFullName')
+      else if (form.full_name.trim().split(/\s+/).length < 2) issues.full_name = t('errFirstLast')
+      if (!(form.role in ROLES)) issues.role = t('errRole')
     }
-    if (action.kind === 'invite' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) issues.email = 'Enter a valid email address.'
-    if (action.kind === 'status' && form.reason.trim().length < 10) issues.reason = 'Explain this access change in at least 10 characters.'
+    if (action.kind === 'invite' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) issues.email = t('errEmail')
+    if (action.kind === 'status' && form.reason.trim().length < 10) issues.reason = t('errReason')
     setErrors(issues)
     if (Object.keys(issues).length) return
     setSaving(true)
     try {
       if (action.kind === 'invite') {
         await createAdminUser({ email: form.email.trim(), full_name: form.full_name.trim(), role: form.role })
-        setNotice('Invitation accepted for email delivery. Access stays pending until the recipient sets their password.')
+        setNotice(t('noticeInvited'))
       } else if (action.kind === 'edit' && action.user) {
         await updateAdminUser(action.user.id, { full_name: form.full_name.trim(), role: form.role })
-        setNotice('Administrator updated. A role change requires a fresh sign-in.')
+        setNotice(t('noticeUpdated'))
       } else if (action.kind === 'status' && action.user && action.status) {
         await updateAdminUserStatus(action.user.id, { status: action.status, reason: form.reason.trim() })
-        setNotice('Access updated. Existing sessions have been revoked; restoring access requires a fresh sign-in.')
+        setNotice(t('noticeAccess'))
       } else if (action.kind === 'resend' && action.user) {
         await resendAdminInvitation(action.user.id)
-        setNotice('New invitation accepted for email delivery. The previous link is invalid.')
+        setNotice(t('noticeResent'))
       }
       dialog.current?.close(); setRevision(n => n + 1)
-    } catch (err) { setErrors({ server: getApiErrorDetail(err) || 'This change could not be completed. Please retry.' }) }
+    } catch (err) { setErrors({ server: getApiErrorDetail(err) || t('changeFailed') }) }
     finally { setSaving(false) }
   }
-  const title = action?.kind === 'invite' ? 'Invite administrator' : action?.kind === 'edit' ? 'Edit administrator' : action?.kind === 'resend' ? 'Send a new invitation' : 'Change administrator access'
+  const title = action?.kind === 'invite' ? t('titleInvite') : action?.kind === 'edit' ? t('titleEdit') : action?.kind === 'resend' ? t('titleResend') : t('titleAccess')
   return <section className='admin-management'>
     <header className='management-heading'>
       <div><h1>{t('adminUsers')}</h1><p>{t('inviteTrustedColleaguesAssignRoles')}</p></div>
@@ -97,26 +99,26 @@ export default function AdminUsersPage() {
     <div className='management-guide'>
       <h2>{t('ownerAdministratorSetup')}</h2>
       <p>{t('aSuperAdministratorCanManage')}</p>
-      <p>Suspend or revoke access to stop existing sessions. Restore access when appropriate. These controls preserve account and audit records; they do not permanently delete people or clinical data.</p>
+      <p>{t('controlsIntro')}</p>
       {!canManage && !loading && !error && <p>{t('youCanViewThisDirectory')}</p>}
     </div>
     <div className='management-filters'>
       <label>{t('searchAdministrators')}<input type='search' value={search} onChange={e => { setSearch(e.target.value); setOffset(0) }} maxLength={200} /></label>
-      <label>{t('role')}<select value={role} onChange={e => { setRole(e.target.value); setOffset(0) }}><option value=''>{t('allRoles')}</option>{Object.entries(ROLES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <label>{t('status')}<select value={status} onChange={e => { setStatus(e.target.value); setOffset(0) }}><option value=''>{t('allStatuses')}</option>{STATUSES.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label>{t('role')}<select value={role} onChange={e => { setRole(e.target.value); setOffset(0) }}><option value=''>{t('allRoles')}</option>{Object.entries(ROLES).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
+      <label>{t('status')}<select value={status} onChange={e => { setStatus(e.target.value); setOffset(0) }}><option value=''>{t('allStatuses')}</option>{STATUSES.map(value => <option key={value} value={value}>{t(STATUS_KEYS[value])}</option>)}</select></label>
     </div>
     {notice && <p role='status' className='management-guide'>{notice}</p>}
     {error ? <div role='alert'><p>{error}</p><button onClick={() => setRevision(n => n + 1)}>{t('retry')}</button></div> : loading ? <p role='status'>{t('loadingAdministrators')}</p> : <>
       {!users.length && <p>{t('noAdministratorsMatchTheseFilters')}</p>}
       {users.map(user => <article className='management-card' key={user.id}>
-        <div><h2>{user.full_name}{user.id === currentId ? ' (you)' : ''}</h2><p>{user.email}</p><p>{ROLES[user.role]} · <strong>{user.status}</strong></p></div>
+        <div><h2>{user.full_name}{user.id === currentId ? ` ${t('youSuffix')}` : ''}</h2><p>{user.email}</p><p>{t(ROLES[user.role])} · <strong>{t(STATUS_KEYS[user.status])}</strong></p></div>
         {canManage && <div className='management-actions'>
           <button onClick={() => open({kind:'edit',user})}>{t('edit')}</button>
           {user.status === 'INVITED' && <button onClick={() => open({kind:'resend',user})}>{t('resendInvitation')}</button>}
           {user.status === 'ACTIVE' && <button onClick={() => open({kind:'status',user,status:'SUSPENDED'})}>{t('suspendAccess')}</button>}
           {(user.status === 'SUSPENDED' || user.status === 'DISABLED') && <button onClick={() => open({kind:'status',user,status:'ACTIVE'})}>{t('restoreAccess')}</button>}
           {user.status === 'DISABLED' && <button onClick={() => open({kind:'resend',user})}>{t('reinviteUnactivatedAccount')}</button>}
-          {user.status !== 'DISABLED' && <button className='danger' onClick={() => open({kind:'status',user,status:'DISABLED'})}>{user.status === 'INVITED' ? 'Revoke invitation' : 'Revoke access'}</button>}
+          {user.status !== 'DISABLED' && <button className='danger' onClick={() => open({kind:'status',user,status:'DISABLED'})}>{user.status === 'INVITED' ? t('revokeInvitation') : t('revokeAccess')}</button>}
         </div>}
       </article>)}
       <nav aria-label={t('administratorDirectoryPages')} className='management-actions'>
@@ -138,14 +140,14 @@ export default function AdminUsersPage() {
             <small id='admin-email-hint'>{t('useADedicatedMailboxThe')}</small><FieldFeedback name='admin-email' error={errors.email} /></>}
           <label htmlFor='admin-role'>{t('roleRequired')}</label>
           <select id='admin-role' required value={form.role} onChange={e => setForm({...form,role:e.target.value as AdminRole})} aria-invalid={!!errors.role} aria-describedby={errors.role?'admin-role-hint admin-role-error':'admin-role-hint'}>
-            {Object.entries(ROLES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+            {Object.entries(ROLES).map(([value,label]) => <option key={value} value={value}>{t(label)}</option>)}
           </select><small id='admin-role-hint'>{t('superAdministratorsCanGrantAnd')}</small>
           <FieldFeedback name='admin-role' error={errors.role} />
         </>}
-        {action?.kind === 'status' && <><p>Set {action.user?.email} to <strong>{action.status}</strong>{t('currentSessionsWillBeRevoked')}</p>
+        {action?.kind === 'status' && <><p>{t.rich('setStatus', { email: action.user?.email ?? '', status: action.status ? t(STATUS_KEYS[action.status]) : '', strong: chunks => <strong>{chunks}</strong> })}</p>
           <label htmlFor='admin-reason'>{t('reasonRequired')}</label><textarea id='admin-reason' required minLength={10} maxLength={500} value={form.reason} onChange={e => setForm({...form,reason:e.target.value})} aria-invalid={!!errors.reason} aria-describedby='admin-reason-error' /><FieldFeedback name='admin-reason' error={errors.reason} /></>}
-        {action?.kind === 'resend' && <p>Send a replacement invitation to {action.user?.email}. The previous link will stop working. This applies only to an invitation that has not been accepted.</p>}
-        <div className='management-actions'><button type='button' disabled={saving} onClick={close}>{t('cancel')}</button><button className='primary' type='submit' disabled={saving}>{saving ? 'Saving…' : action?.kind === 'invite' ? 'Send invitation' : action?.kind === 'resend' ? 'Resend invitation' : 'Save changes'}</button></div>
+        {action?.kind === 'resend' && <p>{t('resendIntro', { email: action.user?.email ?? '' })}</p>}
+        <div className='management-actions'><button type='button' disabled={saving} onClick={close}>{t('cancel')}</button><button className='primary' type='submit' disabled={saving}>{saving ? t('saving') : action?.kind === 'invite' ? t('sendInvitation') : action?.kind === 'resend' ? t('resendInvitation') : t('saveChanges')}</button></div>
       </form>
     </dialog>
     <style jsx>{`

@@ -69,11 +69,11 @@ function HealthCard({ data }: { data: AdminDashboardHealth }) {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'healthy':
-        return { bg: 'rgba(15,158,119,0.12)', color: T.green, text: 'No Open Operational Alerts' }
+        return { bg: 'rgba(15,158,119,0.12)', color: T.green, text: t('noOpenOperationalAlerts') }
       case 'warning':
-        return { bg: 'rgba(217,119,6,0.12)', color: T.amber, text: 'Attention Needed' }
+        return { bg: 'rgba(217,119,6,0.12)', color: T.amber, text: t('attentionNeeded') }
       case 'critical':
-        return { bg: 'rgba(220,38,38,0.12)', color: T.red, text: 'Critical Issues' }
+        return { bg: 'rgba(220,38,38,0.12)', color: T.red, text: t('criticalIssues') }
       default:
         return { bg: 'rgba(32,181,223,0.12)', color: T.link, text: status }
     }
@@ -209,7 +209,7 @@ export default function AdminDashboard() {
           return
         }
         console.error('Failed to load admin dashboard', err)
-        if (!cancelled) setError('Unable to load dashboard data right now.')
+        if (!cancelled) setError(t('unableToLoadDashboardData'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -220,7 +220,7 @@ export default function AdminDashboard() {
     return () => {
       cancelled = true
     }
-  }, [router, retry])
+  }, [router, retry, t])
 
   if (loading) {
     return (
@@ -258,7 +258,7 @@ export default function AdminDashboard() {
         <StatCard
           title={t('totalPatients')}
           value={overview.patients.total}
-          subtitle={patientsSummary ? `${patientsSummary.new_last_7_days} new patients in the last 7 days` : undefined}
+          subtitle={patientsSummary ? t('newPatients7Days', { count: patientsSummary.new_last_7_days }) : undefined}
           icon={ICONS.user}
           color={T.blue}
         />

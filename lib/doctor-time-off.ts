@@ -35,25 +35,32 @@ export function timeOffPath(providerId: string, offset = 0, status = ''): string
 }
 
 const localText = (date: Date) => `${date.getFullYear().toString().padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-export function localAbsenceInstant(value: string): { iso?: string; error?: string } {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return { error: 'Enter a complete date and time.' }
+/** Validation text; English is the default so tests stay readable. The admin panel passes translations. */
+export const ABSENCE_TEXT = {
+  incomplete: 'Enter a complete date and time.', missing: 'This date or local time does not exist. Choose another time.',
+  ambiguous: 'This local time occurs twice during a clock change. Choose an unambiguous time.',
+  order: 'The end must be later than the start.', reason: 'Use at most 500 characters; do not include patient information.',
+}
+export type AbsenceText = typeof ABSENCE_TEXT
+export function localAbsenceInstant(value: string, text: AbsenceText = ABSENCE_TEXT): { iso?: string; error?: string } {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return { error: text.incomplete }
   const date = new Date(value)
-  if (!Number.isFinite(date.getTime()) || localText(date) !== value) return { error: 'This date or local time does not exist. Choose another time.' }
+  if (!Number.isFinite(date.getTime()) || localText(date) !== value) return { error: text.missing }
   // A repeated DST wall time has more than one possible instant. Do not silently
   // choose a fold; operators must choose an unambiguous boundary instead.
   for (const hours of [-24, 24]) {
     const neighbour = new Date(date.getTime() + hours * 3_600_000)
     const difference = neighbour.getTimezoneOffset() - date.getTimezoneOffset()
-    if (difference && localText(new Date(date.getTime() + difference * 60_000)) === value) return { error: 'This local time occurs twice during a clock change. Choose an unambiguous time.' }
+    if (difference && localText(new Date(date.getTime() + difference * 60_000)) === value) return { error: text.ambiguous }
   }
   return { iso: date.toISOString() }
 }
 
-export function absenceRequest(start: string, end: string, reason: string) {
-  const a = localAbsenceInstant(start), b = localAbsenceInstant(end), errors: Record<string, string> = {}
+export function absenceRequest(start: string, end: string, reason: string, text: AbsenceText = ABSENCE_TEXT) {
+  const a = localAbsenceInstant(start, text), b = localAbsenceInstant(end, text), errors: Record<string, string> = {}
   if (a.error) errors.start = a.error
   if (b.error) errors.end = b.error
-  if (a.iso && b.iso && a.iso >= b.iso) errors.end = 'The end must be later than the start.'
-  if (reason.trim().length > 500) errors.reason = 'Use at most 500 characters; do not include patient information.'
+  if (a.iso && b.iso && a.iso >= b.iso) errors.end = text.order
+  if (reason.trim().length > 500) errors.reason = text.reason
   return { errors, payload: Object.keys(errors).length || !a.iso || !b.iso ? null : { start_datetime: a.iso, end_datetime: b.iso, reason: reason.trim() || null } }
 }

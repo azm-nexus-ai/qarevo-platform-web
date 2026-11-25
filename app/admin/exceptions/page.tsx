@@ -244,7 +244,7 @@ export default function AdminExceptionsPage() {
           return
         }
         console.error('Failed to load exceptions', err)
-        if (!cancelled) setError('Unable to load exceptions right now.')
+        if (!cancelled) setError(t('unableToLoadExceptionsRight'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -255,10 +255,10 @@ export default function AdminExceptionsPage() {
     return () => {
       cancelled = true
     }
-  }, [router, statusFilter, severityFilter, typeFilter, retry])
+  }, [router, statusFilter, severityFilter, typeFilter, retry, t])
 
   const handleAssign = async (exceptionId: string) => {
-    const adminId = prompt('Enter admin user ID to assign this exception:')
+    const adminId = prompt(t('enterAdminUserIdTo'))
     if (!adminId) return
 
     try {
@@ -266,13 +266,13 @@ export default function AdminExceptionsPage() {
       const data = await getAdminExceptions(statusFilter, severityFilter, typeFilter)
       setExceptions(data.exceptions)
     } catch (err) {
-      console.error('Failed to assign exception', err)
-      alert('Failed to assign exception')
+      console.error('Exception assignment failed', err)
+      alert(t('failedToAssignException'))
     }
   }
 
   const handleResolve = async (exceptionId: string) => {
-    const notes = prompt('Enter resolution notes:')
+    const notes = prompt(t('enterResolutionNotes'))
     if (!notes) return
 
     try {
@@ -280,21 +280,21 @@ export default function AdminExceptionsPage() {
       const data = await getAdminExceptions(statusFilter, severityFilter, typeFilter)
       setExceptions(data.exceptions)
     } catch (err) {
-      console.error('Failed to resolve exception', err)
-      alert('Failed to resolve exception')
+      console.error('Exception resolution failed', err)
+      alert(t('failedToResolveException'))
     }
   }
 
   const handleClose = async (exceptionId: string) => {
-    if (!confirm('Are you sure you want to close this exception?')) return
+    if (!confirm(t('areYouSureYouWant'))) return
 
     try {
       await closeException(exceptionId)
       const data = await getAdminExceptions(statusFilter, severityFilter, typeFilter)
       setExceptions(data.exceptions)
     } catch (err) {
-      console.error('Failed to close exception', err)
-      alert('Failed to close exception')
+      console.error('Exception close failed', err)
+      alert(t('failedToCloseException'))
     }
   }
 

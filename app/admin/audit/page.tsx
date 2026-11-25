@@ -121,7 +121,7 @@ function AdminActionAuditPanel() {
           return
         }
         console.error('Failed to load audit logs', err)
-        if (!cancelled) setError('Unable to load audit logs right now.')
+        if (!cancelled) setError(t('unableToLoadAuditLogs'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -132,15 +132,15 @@ function AdminActionAuditPanel() {
     return () => {
       cancelled = true
     }
-  }, [router, actionFilter, targetTypeFilter, dateFrom, dateTo, retry])
+  }, [router, actionFilter, targetTypeFilter, dateFrom, dateTo, retry, t])
 
   const handleExport = async () => {
     try {
       await exportAdminAuditLogs(dateFrom, dateTo, 'json')
-      alert('Audit logs exported successfully')
+      alert(t('auditLogsExportedSuccessfully'))
     } catch (err) {
-      console.error('Failed to export audit logs', err)
-      alert('Failed to export audit logs')
+      console.error('Audit log export failed', err)
+      alert(t('failedToExportAuditLogs'))
     }
   }
 

@@ -53,7 +53,7 @@ function ConfigCard({ config, onEdit, onDelete }: {
           )}
         </div>
         <p style={{ margin: 0, fontSize: "13px", color: T.slate2, marginBottom: '4px' }}>
-          {config.description || 'No description'}
+          {config.description || t('noDescription')}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: "13px", color: T.slate }}>Category: {config.category}</span>
@@ -148,7 +148,7 @@ export default function SystemConfigPage() {
           return
         }
         console.error('Failed to load configs', err)
-        if (!cancelled) setError('Unable to load system config right now.')
+        if (!cancelled) setError(t('unableToLoadSystemConfig'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -159,7 +159,7 @@ export default function SystemConfigPage() {
     return () => {
       cancelled = true
     }
-  }, [router, categoryFilter, searchQuery])
+  }, [router, categoryFilter, searchQuery, t])
 
   const handleCreateConfig = async () => {
     try {
@@ -169,21 +169,21 @@ export default function SystemConfigPage() {
       const data = await getAdminConfigs(categoryFilter, searchQuery)
       setConfigs(data.configs)
     } catch (err) {
-      console.error('Failed to create config', err)
-      alert('Failed to create config')
+      console.error('Config create failed', err)
+      alert(t('failedToCreateConfig'))
     }
   }
 
   const handleDeleteConfig = async (configId: string) => {
-    if (!confirm('Are you sure you want to delete this config?')) return
+    if (!confirm(t('areYouSureYouWant'))) return
 
     try {
       await deleteAdminConfig(configId)
       const data = await getAdminConfigs(categoryFilter, searchQuery)
       setConfigs(data.configs)
     } catch (err) {
-      console.error('Failed to delete config', err)
-      alert('Failed to delete config')
+      console.error('Config delete failed', err)
+      alert(t('failedToDeleteConfig'))
     }
   }
 

@@ -109,33 +109,54 @@ const within = (value: string | null | undefined, low: number, high: number) => 
   return length >= low && length <= high
 }
 
-export function safetyContentErrors(title: string, content: SafetyContent): string[] {
+/** Validation text; English is the default so tests and other callers stay readable. The admin editor passes translations. */
+export const SAFETY_TEXT = {
+  route: (route: SafetyRoute) => ROUTE_LABELS[route],
+  title: 'Title must be 3 to 160 characters.',
+  intro: 'Introduction must be at most 1,000 characters.',
+  questionCount: 'Add 1 to 30 questions.',
+  question: (number: number) => `Question ${number}`,
+  questionId: (label: string) => `${label} needs an id of 2–48 lowercase letters, digits or hyphens.`,
+  questionRepeat: (label: string, id: string) => `${label} repeats the id “${id}”.`,
+  questionPrompt: (label: string) => `${label} prompt must be 3 to 300 characters.`,
+  questionHelp: (label: string) => `${label} help must be at most 500 characters.`,
+  questionRoute: (label: string) => `${label} needs a route for a yes answer.`,
+  guidanceMissing: (route: string) => `Write the patient guidance for ${route}.`,
+  guidanceTitle: (route: string) => `${route}: title must be 3 to 120 characters.`,
+  guidanceBody: (route: string) => `${route}: guidance must be 3 to 1,200 characters.`,
+  guidancePair: (route: string) => `${route}: give both an action label and a link, or neither.`,
+  guidanceHref: (route: string) => `${route}: the link must be tel:… or https://…`,
+  continueMessage: 'Continue message must be at most 500 characters.',
+}
+export type SafetyText = typeof SAFETY_TEXT
+
+export function safetyContentErrors(title: string, content: SafetyContent, text: SafetyText = SAFETY_TEXT): string[] {
   const problems: string[] = []
-  if (!within(title, 3, 160)) problems.push('Title must be 3 to 160 characters.')
-  if (content.intro && !within(content.intro, 1, 1000)) problems.push('Introduction must be at most 1,000 characters.')
-  if (!content.questions.length || content.questions.length > 30) problems.push('Add 1 to 30 questions.')
+  if (!within(title, 3, 160)) problems.push(text.title)
+  if (content.intro && !within(content.intro, 1, 1000)) problems.push(text.intro)
+  if (!content.questions.length || content.questions.length > 30) problems.push(text.questionCount)
   const ids = new Set<string>()
   const used = new Set<SafetyRoute>()
   content.questions.forEach((question, index) => {
-    const label = `Question ${index + 1}`
-    if (!SLUG.test(question.id)) problems.push(`${label} needs an id of 2–48 lowercase letters, digits or hyphens.`)
-    if (ids.has(question.id)) problems.push(`${label} repeats the id “${question.id}”.`)
+    const label = text.question(index + 1)
+    if (!SLUG.test(question.id)) problems.push(text.questionId(label))
+    if (ids.has(question.id)) problems.push(text.questionRepeat(label, question.id))
     ids.add(question.id)
-    if (!within(question.prompt, 3, 300)) problems.push(`${label} prompt must be 3 to 300 characters.`)
-    if (question.help && !within(question.help, 1, 500)) problems.push(`${label} help must be at most 500 characters.`)
-    if (!SAFETY_ROUTES.includes(question.route_if_yes)) problems.push(`${label} needs a route for a yes answer.`)
+    if (!within(question.prompt, 3, 300)) problems.push(text.questionPrompt(label))
+    if (question.help && !within(question.help, 1, 500)) problems.push(text.questionHelp(label))
+    if (!SAFETY_ROUTES.includes(question.route_if_yes)) problems.push(text.questionRoute(label))
     else used.add(question.route_if_yes)
   })
   for (const route of SAFETY_ROUTES) {
-    const guidance = content.outcomes[route]
-    if (!guidance) { if (used.has(route)) problems.push(`Write the patient guidance for ${ROUTE_LABELS[route]}.`); continue }
-    if (!within(guidance.title, 3, 120)) problems.push(`${ROUTE_LABELS[route]}: title must be 3 to 120 characters.`)
-    if (!within(guidance.body, 3, 1200)) problems.push(`${ROUTE_LABELS[route]}: guidance must be 3 to 1,200 characters.`)
+    const guidance = content.outcomes[route], name = text.route(route)
+    if (!guidance) { if (used.has(route)) problems.push(text.guidanceMissing(name)); continue }
+    if (!within(guidance.title, 3, 120)) problems.push(text.guidanceTitle(name))
+    if (!within(guidance.body, 3, 1200)) problems.push(text.guidanceBody(name))
     const hasLabel = Boolean(guidance.action_label?.trim()), hasHref = Boolean(guidance.action_href?.trim())
-    if (hasLabel !== hasHref) problems.push(`${ROUTE_LABELS[route]}: give both an action label and a link, or neither.`)
-    if (hasHref && !HREF.test(guidance.action_href!.trim())) problems.push(`${ROUTE_LABELS[route]}: the link must be tel:… or https://…`)
+    if (hasLabel !== hasHref) problems.push(text.guidancePair(name))
+    if (hasHref && !HREF.test(guidance.action_href!.trim())) problems.push(text.guidanceHref(name))
   }
-  if (content.continue_message && !within(content.continue_message, 1, 500)) problems.push('Continue message must be at most 500 characters.')
+  if (content.continue_message && !within(content.continue_message, 1, 500)) problems.push(text.continueMessage)
   return problems
 }
 
