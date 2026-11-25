@@ -122,9 +122,9 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const errors: Record<string, string> = {}
-    if (!name.trim() || name.trim().length > 200) errors.name = 'Enter a service name (1–200 characters).'
+    if (!name.trim() || name.trim().length > 200) errors.name = t('extra.serviceNameError')
     if (!/^\d+$/.test(price) || !Number.isSafeInteger(Number(price))) errors.price = t('priceWholeEuros')
-    if (!/^\d+$/.test(duration) || !Number.isSafeInteger(Number(duration)) || Number(duration) < 5) errors.duration = 'Enter a whole number of minutes, at least 5.'
+    if (!/^\d+$/.test(duration) || !Number.isSafeInteger(Number(duration)) || Number(duration) < 5) errors.duration = t('extra.minutesError')
     setFormErrors(errors)
     if (Object.keys(errors).length) { focusValidation(e.currentTarget); return }
     const data: ConsultationServiceCreate | ConsultationServiceUpdate = {
@@ -251,7 +251,7 @@ function ConsultationServiceForm({ service, onSave, onCancel }: ConsultationServ
           type="submit"
           style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
         >
-          {service ? 'Update Service' : 'Add Service'}
+          {service ? t('extra.updateService') : t('extra.addService')}
         </button>
       </div>
     </form>
@@ -306,8 +306,8 @@ export default function DoctorProfilePage() {
           router.replace('/auth/doctor/login')
           return
         }
-        console.error('Failed to load doctor profile', err)
-        if (!cancelled) setError('Unable to load profile right now.')
+        console.error(t('extra.loadFailedTech'), err)
+        if (!cancelled) setError(t('extra.loadFailed'))
       } finally {
         if (!cancelled && scope === readAccountScope('doctor')) setLoading(false)
       }
@@ -318,7 +318,7 @@ export default function DoctorProfilePage() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, t])
 
   if (loading) {
     return (
@@ -335,7 +335,7 @@ export default function DoctorProfilePage() {
   if (!profileData) return null
   if (!draft) return null
 
-  const profileName = profileData.full_name || 'Doctor'
+  const profileName = profileData.full_name || t('extra.doctor')
   const displayName = profileName.toLowerCase().startsWith('dr.') ? profileName : `Dr. ${profileName}`
 
   const updateDraft = <K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) => {
@@ -347,7 +347,7 @@ export default function DoctorProfilePage() {
 
   const saveProfile = async () => {
     if (!profileOwner || profileOwner !== readAccountScope('doctor')) {
-      setSaveError('Your session changed. Reload your profile before saving.')
+      setSaveError(t('extra.sessionChanged'))
       return
     }
     setSaving(true)
@@ -369,8 +369,8 @@ export default function DoctorProfilePage() {
           reader.readAsDataURL(draft.avatar_file!)
         })
       } catch (err) {
-        console.error('Failed to read avatar file', err)
-        setSaveError('Unable to process profile picture.')
+        console.error(t('extra.avatarReadFailed'), err)
+        setSaveError(t('extra.avatarFailed'))
         setSaving(false)
         return
       }
@@ -408,7 +408,7 @@ export default function DoctorProfilePage() {
       if (profileOwner !== readAccountScope('doctor')) return
       setProfileData(saved)
       setDraft(createProfileDraft(saved))
-      setSaveMessage('Professional profile updated.')
+      setSaveMessage(t('extra.updated'))
       setHasUnsavedChanges(false)
       // Auto-dismiss success message after 4 seconds
       setTimeout(() => setSaveMessage(null), 4000)
@@ -419,8 +419,8 @@ export default function DoctorProfilePage() {
         router.replace('/auth/doctor/login')
         return
       }
-      console.error('Failed to save doctor profile', err)
-      setSaveError('Unable to save professional profile right now.')
+      console.error(t('extra.saveFailedTech'), err)
+      setSaveError(t('extra.saveFailed'))
       // Auto-dismiss error message after 6 seconds
       setTimeout(() => setSaveError(null), 6000)
     } finally {
@@ -478,7 +478,7 @@ export default function DoctorProfilePage() {
           <ProfileAvatar name={displayName} src={profileData.avatar_url} size={100} kind='doctor' />
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{displayName}</h2>
-            <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{profileData.specialty || 'General Practice'} · {profileData.hospital || 'Qarevo Virtual Clinic'}</p>
+            <p style={{ margin: '0 0 8px', fontSize: '14px', color: T.slate2 }}>{profileData.specialty || t('extra.generalPractice')} · {profileData.hospital || t('extra.virtualClinic')}</p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <span style={{ padding: '6px 12px', borderRadius: '999px', background: 'rgba(15,158,119,0.12)', color: T.green, fontSize: "13px", fontWeight: 700 }}>
                 {profileData.license_verified ? 'VERIFIED' : 'UNVERIFIED'}
@@ -497,11 +497,11 @@ export default function DoctorProfilePage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '24px' }}>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('specialty')}</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.specialty || 'Not provided'}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.specialty || t('extra.notProvided')}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('licenseNumber')}</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.license_number || 'Not provided'}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.license_number || t('extra.notProvided')}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('email')}</p>
@@ -509,23 +509,23 @@ export default function DoctorProfilePage() {
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('phone')}</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.phone || 'Not provided'}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.phone || t('extra.notProvided')}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('location')}</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.city && profileData.state ? `${profileData.city}, ${profileData.state}` : 'Not provided'}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.city && profileData.state ? `${profileData.city}, ${profileData.state}` : t('extra.notProvided')}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('languages')}</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.languages || 'Not provided'}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.languages || t('extra.notProvided')}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('certifications')}</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.certifications || 'Not provided'}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.certifications || t('extra.notProvided')}</p>
           </div>
           <div>
             <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('insuranceAccepted')}</p>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.insurance || 'Not provided'}</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy }}>{profileData.insurance || t('extra.notProvided')}</p>
           </div>
         </div>
       </div>
@@ -551,7 +551,7 @@ export default function DoctorProfilePage() {
             onClick={saveProfile}
             style={{ minHeight: '42px', padding: '0 18px', borderRadius: '11px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.72 : 1, whiteSpace: 'nowrap' }}
           >
-            {saving ? 'Saving...' : 'Save Profile'}
+            {saving ? t('extra.saving') : t('extra.saveProfile')}
           </button>
         </div>
 
@@ -584,7 +584,7 @@ export default function DoctorProfilePage() {
               onClick={saveProfile}
               style={{ minHeight: '36px', padding: '0 16px', borderRadius: '8px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: "13px", fontWeight: 700, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.72 : 1, whiteSpace: 'nowrap' }}
             >
-              {saving ? 'Saving...' : 'Save Now'}
+              {saving ? t('extra.saving') : t('extra.saveNow')}
             </button>
           </div>
         )}
@@ -621,7 +621,7 @@ export default function DoctorProfilePage() {
               onClick={() => updateDraft('is_independent', !draft.is_independent)}
               style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}
             >
-              <span>{draft.is_independent ? 'Independent practitioner' : 'Clinic or hospital affiliated'}</span>
+              <span>{draft.is_independent ? t('extra.independent') : t('extra.affiliated')}</span>
               <span style={{ width: '36px', height: '20px', borderRadius: '999px', background: draft.is_independent ? T.green : "var(--surface-hover)", position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                 <span style={{ width: '16px', height: '16px', borderRadius: '50%', background: "var(--surface)", position: 'absolute', top: '2px', left: draft.is_independent ? '18px' : '2px', transition: 'left 0.15s ease' }} />
               </span>
@@ -684,7 +684,7 @@ export default function DoctorProfilePage() {
                   const file = event.target.files?.[0] || null
                   setAvatarError('')
                   if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024)) {
-                    setAvatarError('Choose a JPEG, PNG or WebP image, up to 2 MB.')
+                    setAvatarError(t('extra.imageHint'))
                     setDraft(current => current ? { ...current, avatar_file: null } : current)
                     event.target.value = ''
                     return
@@ -716,7 +716,7 @@ export default function DoctorProfilePage() {
                   gap: '6px',
                 }}
               >
-                {draft.avatar_file ? 'Change Profile Picture' : 'Upload Profile Picture'}
+                {draft.avatar_file ? t('extra.changePicture') : t('extra.uploadPicture')}
               </button>
               {draft.avatar_file && (
                 <span style={{ fontSize: "13px", color: T.slate2 }}>{draft.avatar_file.name}</span>
@@ -783,7 +783,7 @@ export default function DoctorProfilePage() {
                       }}
                       style={{ display: 'none' }}
                     />
-                    {day.label}
+                    {t(`extra.day.${day.value}`)}
                   </label>
                 )
               })}
@@ -829,7 +829,7 @@ export default function DoctorProfilePage() {
         {showServiceForm && (
           <div style={{ background: "var(--surface-glass)", borderRadius: '14px', border: "1px solid var(--border)", padding: '20px', marginBottom: '20px' }}>
             <h4 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 700, color: T.navy }}>
-              {editingService ? 'Edit Service' : 'Add New Service'}
+              {editingService ? t('extra.editService') : t('extra.addNewService')}
             </h4>
             <ConsultationServiceForm
               service={editingService}
@@ -844,10 +844,10 @@ export default function DoctorProfilePage() {
                   }
                   setShowServiceForm(false)
                   setEditingService(null)
-                  setSaveMessage(editingService ? 'Service updated.' : 'Service added.')
+                  setSaveMessage(editingService ? t('extra.serviceUpdated') : t('extra.serviceAdded'))
                 } catch (err) {
-                  console.error('Failed to save service', err)
-                  setSaveError('Unable to save service.')
+                  console.error(t('extra.serviceSaveFailedTech'), err)
+                  setSaveError(t('extra.serviceSaveFailed'))
                 }
               }}
               onCancel={() => {
@@ -908,14 +908,14 @@ export default function DoctorProfilePage() {
                   <button
                     type="button"
                     onClick={async () => {
-                      if (confirm('Are you sure you want to delete this service?')) {
+                      if (confirm(t('extra.deleteConfirm'))) {
                         try {
                           await deleteDoctorConsultationService(service.id)
                           setConsultationServices(services => services.filter(s => s.id !== service.id))
-                          setSaveMessage('Service deleted.')
+                          setSaveMessage(t('extra.serviceDeleted'))
                         } catch (err) {
-                          console.error('Failed to delete service', err)
-                          setSaveError('Unable to delete service.')
+                          console.error(t('extra.serviceDeleteFailedTech'), err)
+                          setSaveError(t('extra.serviceDeleteFailed'))
                         }
                       }
                     }}

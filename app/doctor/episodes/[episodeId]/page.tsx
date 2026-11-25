@@ -3,6 +3,7 @@
 import { getApiErrorDetail } from '@/lib/api'
 
 import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
@@ -17,9 +18,9 @@ import {
   type EpisodeTimelineResponse,
 } from '@/lib/api'
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return 'Not set'
-  return new Date(value).toLocaleString('en-US', {
+function formatDate(value: string | null | undefined, empty: string, locale: string) {
+  if (!value) return empty
+  return new Date(value).toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -28,8 +29,8 @@ function formatDate(value: string | null | undefined) {
   })
 }
 
-function displayValue(value: unknown): string {
-  if (value === null || value === undefined || value === '') return 'Not provided'
+function displayValue(value: unknown, empty: string): string {
+  if (value === null || value === undefined || value === '') return empty
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return String(value)
   }
@@ -48,6 +49,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export default function DoctorEpisodeDetailPage() {
+  const t = useTranslations('doctorEpisode'), dateLocale = useLocale().startsWith('de') ? 'de-DE' : 'en-US'
   const router = useRouter()
   const params = useParams()
   const episodeId = params.episodeId as string
@@ -77,7 +79,7 @@ export default function DoctorEpisodeDetailPage() {
       setContext(data)
       setTimeline(timelineData)
     } catch (err) {
-      setActionError(getApiErrorDetail(err) || 'Failed to accept AI draft')
+      setActionError(getApiErrorDetail(err) || t('acceptFailed'))
     } finally {
       setActionLoading(null)
     }
@@ -85,7 +87,7 @@ export default function DoctorEpisodeDetailPage() {
 
   const handleRejectDraft = async (draftId: string) => {
     if (!rejectReason.trim()) {
-      setActionError('Please provide a reason for rejection')
+      setActionError(t('reasonRequired'))
       return
     }
     setActionLoading(draftId)
@@ -106,7 +108,7 @@ export default function DoctorEpisodeDetailPage() {
       setContext(data)
       setTimeline(timelineData)
     } catch (err) {
-      setActionError(getApiErrorDetail(err) || 'Failed to reject AI draft')
+      setActionError(getApiErrorDetail(err) || t('rejectFailed'))
     } finally {
       setActionLoading(null)
     }
@@ -138,7 +140,7 @@ export default function DoctorEpisodeDetailPage() {
           router.replace('/auth/sign-in')
           return
         }
-        setError(getApiErrorDetail(err) || 'Unable to load episode clinical context')
+        setError(getApiErrorDetail(err) || t('loadFailed'))
       } finally {
         if (!cancelled) {
           setLoading(false)
@@ -152,10 +154,10 @@ export default function DoctorEpisodeDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [episodeId, router])
+  }, [episodeId, router, t])
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-muted">Loading clinical context...</div>
+    return <div className="flex items-center justify-center h-64 text-muted">{t('loading')}</div>
   }
 
   if (error) {
@@ -192,7 +194,7 @@ export default function DoctorEpisodeDetailPage() {
           >
             ← Back to Workspace
           </button>
-          <h1 className="text-2xl font-bold text-ink">Clinical Episode Review</h1>
+          <h1 className="text-2xl font-bold text-ink">{t('title')}</h1>
           <p className="text-muted mt-1">Episode ID: {episode.episode_id}</p>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
@@ -208,20 +210,20 @@ export default function DoctorEpisodeDetailPage() {
       <Section title="Patient">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-medium text-muted">Name</p>
+            <p className="text-sm font-medium text-muted">{t('name')}</p>
             <p className="mt-1 font-semibold text-ink">{episode.patient.name}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-muted">Email</p>
-            <p className="mt-1 text-ink">{episode.patient.email || 'Not available'}</p>
+            <p className="text-sm font-medium text-muted">{t('email')}</p>
+            <p className="mt-1 text-ink">{episode.patient.email || t('notAvailable')}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-muted">Phone</p>
-            <p className="mt-1 text-ink">{episode.patient.phone || 'Not available'}</p>
+            <p className="text-sm font-medium text-muted">{t('phone')}</p>
+            <p className="mt-1 text-ink">{episode.patient.phone || t('notAvailable')}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-muted">Consultation</p>
-            <p className="mt-1 text-ink">{episode.consultation_id || 'Not linked yet'}</p>
+            <p className="text-sm font-medium text-muted">{t('consultation')}</p>
+            <p className="mt-1 text-ink">{episode.consultation_id || t('notLinked')}</p>
           </div>
         </div>
       </Section>
@@ -229,15 +231,15 @@ export default function DoctorEpisodeDetailPage() {
       <Section title="Workflow Status">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-sm font-medium text-muted">Created</p>
-            <p className="mt-1 text-ink">{formatDate(episode.created_at)}</p>
+            <p className="text-sm font-medium text-muted">{t('created')}</p>
+            <p className="mt-1 text-ink">{formatDate(episode.created_at, t('notSet'), dateLocale)}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-muted">Intake Submitted</p>
-            <p className="mt-1 text-ink">{formatDate(episode.intake_submitted_at)}</p>
+            <p className="text-sm font-medium text-muted">{t('intakeSubmitted')}</p>
+            <p className="mt-1 text-ink">{formatDate(episode.intake_submitted_at, t('notSet'), dateLocale)}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-muted">Field Verification</p>
+            <p className="text-sm font-medium text-muted">{t('fieldVerification')}</p>
             <p className="mt-1 text-ink">
               {episode.verification_verified_count} of {episode.verification_total_count}
             </p>
@@ -247,13 +249,13 @@ export default function DoctorEpisodeDetailPage() {
 
       <Section title="Intake Response">
         {Object.keys(intakeResponses).length === 0 ? (
-          <p className="text-muted">No intake response has been submitted yet.</p>
+          <p className="text-muted">{t('noIntake')}</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(intakeResponses).map(([key, value]) => (
               <div key={key} className="rounded-lg border border-theme p-4 bg-canvas">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted">{key.replaceAll('_', ' ')}</p>
-                <p className="mt-2 text-sm text-ink">{displayValue(value)}</p>
+                <p className="mt-2 text-sm text-ink">{displayValue(value, t('notProvided'))}</p>
               </div>
             ))}
           </div>
@@ -261,14 +263,14 @@ export default function DoctorEpisodeDetailPage() {
       </Section>
 
       <Section title="AI Drafts">
-        {!ai_available && <p className="mb-4 text-sm text-amber-700">AI Services is currently unavailable. Episode data is still available.</p>}
+        {!ai_available && <p className="mb-4 text-sm text-amber-700">{t('aiUnavailable')}</p>}
         {actionError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-800">{actionError}</p>
           </div>
         )}
         {ai_drafts.length === 0 ? (
-          <p className="text-muted">No AI draft job exists for this episode yet.</p>
+          <p className="text-muted">{t('noDraftJob')}</p>
         ) : (
           <div className="space-y-4">
             {ai_drafts.map((job) => {
@@ -286,8 +288,8 @@ export default function DoctorEpisodeDetailPage() {
                   </div>
                   {draft ? (
                     <div className="mt-3 text-sm text-secondary">
-                      <p className="font-medium text-ink">Physician review required</p>
-                      <p className="mt-1">{displayValue(draft.summary_text)}</p>
+                      <p className="font-medium text-ink">{t('reviewRequired')}</p>
+                      <p className="mt-1">{displayValue(draft.summary_text, t('notProvided'))}</p>
                       {isReady && (
                         <div className="mt-4 flex gap-2">
                           <button
@@ -296,7 +298,7 @@ export default function DoctorEpisodeDetailPage() {
                             disabled={actionLoading === draftId}
                             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                           >
-                            {actionLoading === draftId ? 'Processing...' : 'Accept Draft'}
+                            {actionLoading === draftId ? t('processing') : t('accept')}
                           </button>
                           <button
                             type="button"
@@ -310,11 +312,11 @@ export default function DoctorEpisodeDetailPage() {
                       )}
                     </div>
                   ) : (
-                    <p className="mt-3 text-sm text-muted">Draft output is not ready yet.</p>
+                    <p className="mt-3 text-sm text-muted">{t('notReady')}</p>
                   )}
                   {showRejectDialog === draftId && (
                     <div className="mt-4 p-4 bg-surface border border-theme rounded-lg">
-                      <p className="text-sm font-medium text-ink mb-2">Reason for rejection</p>
+                      <p className="text-sm font-medium text-ink mb-2">{t('rejectReason')}</p>
                       <textarea
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
@@ -329,7 +331,7 @@ export default function DoctorEpisodeDetailPage() {
                           disabled={actionLoading === draftId}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                         >
-                          {actionLoading === draftId ? 'Processing...' : 'Submit Rejection'}
+                          {actionLoading === draftId ? t('processing') : t('reject')}
                         </button>
                         <button
                           type="button"
@@ -353,18 +355,18 @@ export default function DoctorEpisodeDetailPage() {
 
       <Section title="CWS Field Values">
         {field_values.length === 0 ? (
-          <p className="text-muted">No structured field values have been created for this episode yet.</p>
+          <p className="text-muted">{t('noFields')}</p>
         ) : (
           <div className="space-y-3">
             {field_values.map((field) => (
               <div key={String(field.id || field.field_id)} className="rounded-lg border border-theme p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-ink">{String(field.field_id || 'Field')}</p>
+                  <p className="font-semibold text-ink">{String(field.field_id || t('field'))}</p>
                   <span className="text-xs font-semibold text-muted">
                     {String(field.verification_status || 'unverified').toUpperCase()}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-secondary">{displayValue(field.verified_value ?? field.original_value)}</p>
+                <p className="mt-2 text-sm text-secondary">{displayValue(field.verified_value ?? field.original_value, t('notProvided'))}</p>
               </div>
             ))}
           </div>
@@ -373,9 +375,9 @@ export default function DoctorEpisodeDetailPage() {
 
       <Section title="Episode Timeline">
         {timelineLoading ? (
-          <p className="text-muted">Loading timeline...</p>
+          <p className="text-muted">{t('loadingTimeline')}</p>
         ) : !timeline || timeline.events.length === 0 ? (
-          <p className="text-muted">No timeline events available for this episode.</p>
+          <p className="text-muted">{t('noTimeline')}</p>
         ) : (
           <div className="space-y-4">
             {timeline.events.map((event) => (
@@ -386,7 +388,7 @@ export default function DoctorEpisodeDetailPage() {
                 <div className="bg-canvas rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold text-ink">{event.description}</p>
-                    <span className="text-xs text-muted">{formatDate(event.timestamp)}</span>
+                    <span className="text-xs text-muted">{formatDate(event.timestamp, t('notSet'), dateLocale)}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-secondary">
                     <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700">

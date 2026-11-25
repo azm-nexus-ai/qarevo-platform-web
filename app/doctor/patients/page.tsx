@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -15,6 +16,7 @@ import {
 } from '@/lib/api'
 
 export default function PatientsPage() {
+  const t = useTranslations('doctorPatients')
   const router = useRouter()
   const [patientsData, setPatientsData] = useState<DoctorPatientsResponse | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -49,8 +51,8 @@ export default function PatientsPage() {
           router.replace('/auth/sign-in')
           return
         }
-        console.error('Failed to load doctor patients', err)
-        if (!cancelled) setError('Unable to load patients right now.')
+        console.error(t('loadFailedTech'), err)
+        if (!cancelled) setError(t('loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -60,12 +62,12 @@ export default function PatientsPage() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [router, searchQuery, page])
+  }, [router, searchQuery, page, t])
 
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
-        <p style={{ color: T.slate2 }}>Loading patients...</p>
+        <p style={{ color: T.slate2 }}>{t('loading')}</p>
       </div>
     )
   }
@@ -91,8 +93,8 @@ export default function PatientsPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Patients</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage your patient directory</p>
+          <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('title')}</h1>
+          <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>{t('intro')}</p>
         </div>
         <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
           <div style={{
@@ -137,7 +139,7 @@ export default function PatientsPage() {
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Total Patients</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('total')}</p>
           <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{patientsData.total_count}</p>
         </div>
         <div style={{
@@ -149,7 +151,7 @@ export default function PatientsPage() {
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Active</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('active')}</p>
           <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.green }}>{patientsData.patients.filter((p: DoctorPatient) => p.status === 'active').length}</p>
         </div>
         <div style={{
@@ -161,7 +163,7 @@ export default function PatientsPage() {
           boxShadow: Sh.card,
           padding: '20px',
         }}>
-          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Visible Patients</p>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('visible')}</p>
           <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', color: T.link }}>{visiblePatients.length}</p>
         </div>
       </div>
@@ -177,12 +179,12 @@ export default function PatientsPage() {
         overflow: 'hidden',
       }}>
         <div style={{ padding: '20px 24px', borderBottom: "1px solid var(--border)" }}>
-          <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Patient Directory</h3>
+          <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{t('directory')}</h3>
         </div>
         <div style={{ padding: '16px 24px 24px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {visiblePatients.length === 0 ? (
-              <p style={{ margin: 0, padding: '28px', textAlign: 'center', color: T.slate2, fontSize: '13px' }}>No patients found</p>
+              <p style={{ margin: 0, padding: '28px', textAlign: 'center', color: T.slate2, fontSize: '13px' }}>{t('none')}</p>
             ) : visiblePatients.map((patient: DoctorPatient) => (
               <div key={patient.patient_id} style={{
                 display: 'flex',
@@ -203,15 +205,15 @@ export default function PatientsPage() {
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{patient.name}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{patient.email || 'No email'} · {patient.phone || 'No phone'}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{patient.email || t('noEmail')} · {patient.phone || t('noPhone')}</p>
                     <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>
-                      {patient.gender || 'Unknown gender'}, {patient.age ?? 'Unknown'} years · Last visit: {patient.last_visit ? formatDate(patient.last_visit) : 'No visits yet'}
+                      {patient.gender || t('unknownGender')}, {patient.age ?? t('unknown')} years · Last visit: {patient.last_visit ? formatDate(patient.last_visit) : t('noVisits')}
                     </p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Consultations</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{t('consultations')}</p>
                     <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: T.navy }}>{patient.total_consultations}</p>
                   </div>
                   <span style={{

@@ -3,6 +3,7 @@
 import { getApiErrorDetail } from '@/lib/api'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import HoverBtn from '@/components/buttons/HoverBtn'
 import Ico from '@/components/ui/Ico'
@@ -45,11 +46,12 @@ function Avatar({ name, online = false }: { name: string; online?: boolean }) {
 }
 
 function ReplyPreview({ message, onClear }: { message: PortalMessage; onClear: () => void }) {
+  const t = useTranslations('doctorMessages')
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.16)' }}>
       <div style={{ flex: 1, minWidth: 0, borderLeft: `3px solid ${T.blue}`, paddingLeft: '10px' }}>
-        <p style={{ margin: '0 0 2px', color: T.navy, fontSize: "13px", fontWeight: 800 }}>{message.senderId === 'doctor' ? 'Replying to you' : 'Replying to patient'}</p>
-        <p style={{ margin: 0, color: T.slate, fontSize: "13px", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.text || message.attachmentName || 'Message'}</p>
+        <p style={{ margin: '0 0 2px', color: T.navy, fontSize: "13px", fontWeight: 800 }}>{message.senderId === 'doctor' ? t('replyingToYou') : t('replyingToPatient')}</p>
+        <p style={{ margin: 0, color: T.slate, fontSize: "13px", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.text || message.attachmentName || t('message')}</p>
       </div>
       <button type="button" aria-label="Cancel reply" onClick={onClear} style={{ width: '30px', height: '30px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", display: 'grid', placeItems: 'center', color: T.slate, cursor: 'pointer' }}>
         <Ico p={ICONS.x} size={15} sw={2} />
@@ -70,6 +72,7 @@ function saveBlob(blob: Blob, filename: string) {
 }
 
 export default function DoctorMessagesPage() {
+  const t = useTranslations('doctorMessages')
   const router = useRouter()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversations, setConversations] = useState<PortalConversation[]>([])
@@ -116,11 +119,11 @@ export default function DoctorMessagesPage() {
         router.replace('/auth/doctor/login')
         return
       }
-      setError(getApiErrorDetail(err) || 'Unable to load conversations.')
+      setError(getApiErrorDetail(err) || t('loadFailed'))
     } finally {
       if (showLoading) setLoading(false)
     }
-  }, [conversationPage, router])
+  }, [conversationPage, router, t])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -178,7 +181,7 @@ export default function DoctorMessagesPage() {
       ? activeConversation.contactId.replace('patient:', '')
       : ''
     if (!patientId) {
-      setError('This conversation is missing a patient reference.')
+      setError(t('noPatientRef'))
       return
     }
 
@@ -206,7 +209,7 @@ export default function DoctorMessagesPage() {
       setReplyToMessage(null)
       setError(null)
     } catch (err) {
-      setError(getApiErrorDetail(err) || 'Unable to send reply.')
+      setError(getApiErrorDetail(err) || t('sendFailed'))
     } finally {
       setSending(false)
     }
@@ -219,7 +222,7 @@ export default function DoctorMessagesPage() {
       const blob = await downloadAuthenticatedFile(message.attachmentUrl)
       saveBlob(blob, message.attachmentName || 'attachment')
     } catch (err) {
-      setError(getApiErrorDetail(err) || 'Unable to download attachment.')
+      setError(getApiErrorDetail(err) || t('downloadFailed'))
     }
   }
 
@@ -227,9 +230,9 @@ export default function DoctorMessagesPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start' }}>
         <div>
-          <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: "var(--link)" }}>Doctor Platform</p>
-          <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '30px', fontWeight: 800, color: T.navy }}>Messages</h1>
-          <p style={{ margin: 0, color: T.slate, fontSize: '14px' }}>Read and reply to patient conversations connected to your care team.</p>
+          <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: "var(--link)" }}>{t('eyebrow')}</p>
+          <h1 style={{ margin: '0 0 8px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '30px', fontWeight: 800, color: T.navy }}>{t('title')}</h1>
+          <p style={{ margin: 0, color: T.slate, fontSize: '14px' }}>{t('intro')}</p>
         </div>
       </header>
 
@@ -252,16 +255,16 @@ export default function DoctorMessagesPage() {
             <div style={{ display: 'flex', gap: '8px' }}>
               {(['All', 'Unread'] as FilterType[]).map((item) => (
                 <button key={item} type="button" onClick={() => setFilter(item)} style={{ minHeight: '34px', padding: '0 14px', borderRadius: '999px', border: `1px solid ${filter === item ? T.blue : "var(--border)"}`, background: filter === item ? 'rgba(32,181,223,0.1)' : 'transparent', color: filter === item ? T.link : T.slate, fontSize: "13px", fontWeight: 700, cursor: 'pointer' }}>
-                  {item}
+                  {t(item === 'All' ? 'filterAll' : 'filterUnread')}
                 </button>
               ))}
             </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
             {loading ? (
-              <p style={{ margin: 0, padding: '30px', textAlign: 'center', color: T.slate2 }}>Loading conversations...</p>
+              <p style={{ margin: 0, padding: '30px', textAlign: 'center', color: T.slate2 }}>{t('loading')}</p>
             ) : filteredConversations.length === 0 ? (
-              <p style={{ margin: 0, padding: '30px', textAlign: 'center', color: T.slate2 }}>No patient conversations yet.</p>
+              <p style={{ margin: 0, padding: '30px', textAlign: 'center', color: T.slate2 }}>{t('noConversations')}</p>
             ) : (
               <div style={{ display: 'grid', gap: '6px' }}>
                 {filteredConversations.map((conversation) => {
@@ -274,7 +277,7 @@ export default function DoctorMessagesPage() {
                           <strong style={{ color: T.navy, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conversation.contactName}</strong>
                           <span style={{ color: conversation.unreadCount ? T.link : T.slate2, fontSize: "13px", fontWeight: 700 }}>{conversation.lastMessageTime}</span>
                         </div>
-                        <p style={{ margin: '3px 0 0', color: T.slate, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conversation.lastMessage || 'No messages yet'}</p>
+                        <p style={{ margin: '3px 0 0', color: T.slate, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conversation.lastMessage || t('noMessages')}</p>
                       </div>
                     </button>
                   )
@@ -305,7 +308,7 @@ export default function DoctorMessagesPage() {
                 <div>
                   <h2 style={{ margin: '0 0 2px', fontSize: '17px', fontWeight: 800, color: T.navy }}>{activeConversation.contactName}</h2>
                   <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>
-                    {activeConversation.contactRole} · <span style={{ color: activeConversation.isOnline ? T.green : T.amber, fontWeight: 800 }}>{activeConversation.isOnline ? 'Active now' : 'Offline'}</span>
+                    {activeConversation.contactRole} · <span style={{ color: activeConversation.isOnline ? T.green : T.amber, fontWeight: 800 }}>{activeConversation.isOnline ? t('activeNow') : t('offline')}</span>
                   </p>
                 </div>
               </div>
@@ -317,7 +320,7 @@ export default function DoctorMessagesPage() {
                       <div style={{ padding: '12px 16px', borderRadius: '18px', borderTopRightRadius: isDoctor ? '4px' : '18px', borderTopLeftRadius: isDoctor ? '18px' : '4px', background: isDoctor ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface)", border: isDoctor ? 'none' : "1px solid var(--border)", color: isDoctor ? '#fff' : T.navy, fontSize: '14px', lineHeight: 1.5, boxShadow: isDoctor ? '0 4px 12px rgba(32,181,223,0.2)' : '0 2px 8px rgba(4,53,77,0.04)' }}>
                         {message.replyToText ? (
                           <div style={{ margin: '0 0 8px', padding: '7px 9px', borderRadius: '10px', background: isDoctor ? 'rgba(255,255,255,0.18)' : 'rgba(32,181,223,0.08)', borderLeft: `3px solid ${isDoctor ? "var(--border)" : T.blue}` }}>
-                            <p style={{ margin: '0 0 2px', fontSize: "13px", fontWeight: 800, color: isDoctor ? '#fff' : T.navy }}>{message.replyToSenderId === 'doctor' ? 'Doctor' : 'Patient'}</p>
+                            <p style={{ margin: '0 0 2px', fontSize: "13px", fontWeight: 800, color: isDoctor ? '#fff' : T.navy }}>{message.replyToSenderId === 'doctor' ? t('doctor') : t('patient')}</p>
                             <p style={{ margin: 0, fontSize: "13px", color: isDoctor ? 'rgba(255,255,255,0.86)' : T.slate, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.replyToText}</p>
                           </div>
                         ) : null}
@@ -328,7 +331,7 @@ export default function DoctorMessagesPage() {
                               <Ico p={ICONS.paperclip} size={18} sw={1.8} color={isDoctor ? '#fff' : T.blue} />
                               <div style={{ minWidth: 0, flex: 1 }}>
                                 <p style={{ margin: 0, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.attachmentName}</p>
-                                <p style={{ margin: 0, opacity: 0.78, fontSize: "13px" }}>{message.attachmentSize} • {message.attachmentContentType || 'File'}</p>
+                                <p style={{ margin: 0, opacity: 0.78, fontSize: "13px" }}>{message.attachmentSize} • {message.attachmentContentType || t('file')}</p>
                               </div>
                             </div>
                             <button type="button" onClick={() => handleDownloadAttachment(message)} style={{ minHeight: '32px', borderRadius: '10px', border: isDoctor ? '1px solid rgba(255,255,255,0.35)' : '1px solid rgba(32,181,223,0.18)', background: isDoctor ? 'rgba(255,255,255,0.16)' : "var(--surface)", color: isDoctor ? '#fff' : T.link, fontSize: "13px", fontWeight: 800, cursor: 'pointer' }}>
@@ -383,8 +386,8 @@ export default function DoctorMessagesPage() {
                 <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(32,181,223,0.1)', border: '1px solid rgba(32,181,223,0.2)', display: 'grid', placeItems: 'center', margin: '0 auto 18px', color: T.link }}>
                   <Ico p={ICONS.message} size={28} sw={1.5} />
                 </div>
-                <h2 style={{ margin: '0 0 8px', color: T.navy, fontSize: '20px', fontWeight: 800 }}>No conversation selected</h2>
-                <p style={{ margin: 0, color: T.slate, fontSize: '14px' }}>Patient conversations will appear here once they message you.</p>
+                <h2 style={{ margin: '0 0 8px', color: T.navy, fontSize: '20px', fontWeight: 800 }}>{t('noneSelected')}</h2>
+                <p style={{ margin: 0, color: T.slate, fontSize: '14px' }}>{t('noneSelectedText')}</p>
               </div>
             </div>
           )}

@@ -129,9 +129,9 @@ export default function DoctorLayout({
           .doctor-portal-shell .portal-page-content { padding: 16px !important; }
         }
       `}</style>
-      <header className='portal-desktop-navbar portal-header' aria-label='Doctor main navigation'>
+      <header className='portal-desktop-navbar portal-header' aria-label={t('doctorMainNavigation')}>
         <div className='portal-navbar-row'>
-          <Link href='/doctor/dashboard' className='portal-navbar-brand' aria-label='Qarevo Health doctor dashboard'><AuthenticatedLogo width={156} /></Link>
+          <Link href='/doctor/dashboard' className='portal-navbar-brand' aria-label={t('doctorHome')}><AuthenticatedLogo width={156} /></Link>
           <SidebarToggle role='doctor' />
           <div className='portal-navbar-title'>
             <h2 className='portal-header-title'>{t('welcome', { name: fullName })}</h2>

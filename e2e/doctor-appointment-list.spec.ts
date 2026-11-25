@@ -79,3 +79,13 @@ test('late appointment results cannot replace the selected status', async ({ pag
   await expect(page.getByRole('button', { name: /Completed Patient/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Booked Patient/ })).toHaveCount(0)
 })
+
+test('the appointment list reads in German', async ({ page, context, baseURL }) => {
+  await prepare(context)
+  await context.addCookies([{ name: 'qarevo_locale', value: 'de', url: baseURL! }])
+  await page.goto('/doctor/appointments')
+  await expect(page.getByRole('heading', { name: 'Termine', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Terminstatus', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Termine aktualisieren' })).toBeVisible()
+  await expect(page.getByText('Appointment status')).toHaveCount(0)
+})

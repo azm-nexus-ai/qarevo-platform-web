@@ -64,6 +64,12 @@ export function clinicalValidationErrors(error: unknown): Record<string, string>
   if (!(error instanceof ApiError) || error.status !== 422) return {}
   try { const detail = JSON.parse(error.body).detail; if (!Array.isArray(detail)) return {}; return Object.fromEntries(detail.flatMap(value => { const item = object(value), loc = Array.isArray(item.loc) ? item.loc.filter(value => typeof value === 'string' && value !== 'body') : []; return loc.length && typeof item.msg === 'string' ? [[String(loc[0]), item.msg]] : [] })) } catch { return {} }
 }
+/** Message keys for a quality warning: instructionRecords.quality.field.* and .problem.* */
+export function qualityKeys(warning: { field: string; code: string }) {
+  const field = MEDICATION_FIELDS.some(item => item.key === warning.field) || ['times', 'status', 'title', 'progress', 'id'].includes(warning.field) ? warning.field : 'other'
+  const problem = warning.code === 'historical_adherence_status' ? 'historicalAdherence' : ['missing_value', 'blank_value'].includes(warning.code) ? 'notRecorded' : warning.code === 'unknown_status' ? 'needsReview' : 'historicalReview'
+  return { field, problem }
+}
 export function qualityDescription(warning: { field: string; code: string }) {
   const field = MEDICATION_FIELDS.find(item => item.key === warning.field)?.label || ({ times: 'Schedule', status: 'Clinical status', title: 'Title', progress: 'Progress', id: 'Record identifier' } as Record<string, string>)[warning.field] || 'Saved field'
   return `${field}: ${warning.code === 'historical_adherence_status' ? 'an old adherence report is stored as clinical status; clinician review is needed.' : ['missing_value', 'blank_value'].includes(warning.code) ? 'not recorded.' : warning.code === 'unknown_status' ? 'the recorded value needs review.' : 'the historical value requires clinician review.'}`

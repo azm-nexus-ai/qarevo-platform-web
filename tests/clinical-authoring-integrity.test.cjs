@@ -96,11 +96,14 @@ const cards = load('components/clinical/InstructionRecords.tsx', {
   '@/components/ui/ClinicalStatusBadge': { default: ({ status, domain }) => React.createElement('span', { 'data-tone': statuses.clinicalStatus(status, domain).tone }, statuses.clinicalStatus(status, domain).label) },
   '@/components/patient/PatientPortalPrimitives': { PortalCard: ({ children, ...props }) => React.createElement('section', props, children), PortalButton: ({ children, tone, ...props }) => React.createElement('button', props, children) },
 })
+// The cards translate their labels, so they render inside the same provider as the app.
+const { NextIntlClientProvider } = require('next-intl')
+const inEnglish = element => renderToStaticMarkup(React.createElement(NextIntlClientProvider, { locale: 'en', messages: JSON.parse(fs.readFileSync('messages/en.json', 'utf8')) }, element))
 test('record cards safely show gaps and escaped text without fabricated dosage, schedule or progress', () => {
-  const html = renderToStaticMarkup(React.createElement(cards.MedicationRecordCard, { medication: helpers.medicationInstruction({ name: '<script>synthetic</script>', times: {}, status: 'Stopped' }) }))
+  const html = inEnglish(React.createElement(cards.MedicationRecordCard, { medication: helpers.medicationInstruction({ name: '<script>synthetic</script>', times: {}, status: 'Stopped' }) }))
   assert.match(html, /Not recorded/); assert.match(html, /Schedule unavailable/); assert.match(html, /data-tone="neutral"/); assert.match(html, /&lt;script&gt;/)
   assert.doesNotMatch(html, /<script>|Once daily|1 tablet/)
-  const plan = renderToStaticMarkup(React.createElement(cards.CarePlanRecordCard, { plan: helpers.careInstruction({ title: 'Synthetic', progress: null }) }))
+  const plan = inEnglish(React.createElement(cards.CarePlanRecordCard, { plan: helpers.careInstruction({ title: 'Synthetic', progress: null }) }))
   assert.doesNotMatch(plan, /<progress|0%/)
 })
 

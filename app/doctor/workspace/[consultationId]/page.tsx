@@ -4,6 +4,7 @@ import { getApiErrorDetail } from '@/lib/api'
 import '@/components/doctor/doctor-clinical.css'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter, useParams } from 'next/navigation'
 import ClinicalRecordEditor from '@/components/doctor/ClinicalRecordEditor'
 import WorkCertificates from '@/components/doctor/WorkCertificates'
@@ -16,6 +17,7 @@ import {
 } from '@/lib/api'
 
 export default function ConsultationDetailPage() {
+  const t = useTranslations('doctorConsultation')
   const router = useRouter()
   const params = useParams()
   const consultationId = params.consultationId as string
@@ -43,7 +45,7 @@ export default function ConsultationDetailPage() {
           router.replace('/auth/doctor/login')
           return
         }
-        setError(getApiErrorDetail(err) || 'Failed to fetch consultation details')
+        setError(getApiErrorDetail(err) || t('loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -54,10 +56,10 @@ export default function ConsultationDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [consultationId, router])
+  }, [consultationId, router, t])
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Not set'
+    if (!dateString) return t('notSet')
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -78,7 +80,7 @@ export default function ConsultationDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted">Loading consultation details...</div>
+        <div className="text-muted">{t('loading')}</div>
       </div>
     )
   }
@@ -113,7 +115,7 @@ export default function ConsultationDetailPage() {
             ← Back
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-ink">Consultation Details</h1>
+            <h1 className="text-2xl font-bold text-ink">{t('title')}</h1>
             <p className="text-muted mt-1 break-all">ID: {consultation.consultation_id}</p>
           </div>
         </div>
@@ -126,14 +128,14 @@ export default function ConsultationDetailPage() {
               Join Video
             </button>
           )}
-          {consultation.episode_id && <button type="button" className="clinical-action clinical-action--ai" onClick={()=>router.push(`/doctor/episodes/${consultation.episode_id}`)}>View Intake & AI Draft</button>}
+          {consultation.episode_id && <button type="button" className="clinical-action clinical-action--ai" onClick={()=>router.push(`/doctor/episodes/${consultation.episode_id}`)}>{t('viewIntake')}</button>}
         </div>
       </div>
 
       {/* Patient Information */}
       <div className="bg-surface rounded-lg shadow-sm border border-theme">
         <div className="p-6 border-b border-theme">
-          <h3 className="text-lg font-semibold text-ink">Patient Information</h3>
+          <h3 className="text-lg font-semibold text-ink">{t('patient')}</h3>
         </div>
         <div className="p-6">
           <div className="flex items-start space-x-4">
@@ -147,16 +149,16 @@ export default function ConsultationDetailPage() {
               <div className="mt-2 space-y-1">
                 {consultation.patient_email && (
                   <p className="text-sm text-secondary">
-                    <span className="font-medium">Email:</span> {consultation.patient_email}
+                    <span className="font-medium">{t('email')}</span> {consultation.patient_email}
                   </p>
                 )}
                 {consultation.patient_phone && (
                   <p className="text-sm text-secondary">
-                    <span className="font-medium">Phone:</span> {consultation.patient_phone}
+                    <span className="font-medium">{t('phone')}</span> {consultation.patient_phone}
                   </p>
                 )}
                 <p className="text-sm text-secondary">
-                  <span className="font-medium">Patient ID:</span> {consultation.patient_id}
+                  <span className="font-medium">{t('patientId')}</span> {consultation.patient_id}
                 </p>
               </div>
             </div>
@@ -167,37 +169,37 @@ export default function ConsultationDetailPage() {
       {/* Consultation Details */}
       <div className="bg-surface rounded-lg shadow-sm border border-theme">
         <div className="p-6 border-b border-theme">
-          <h3 className="text-lg font-semibold text-ink">Consultation Details</h3>
+          <h3 className="text-lg font-semibold text-ink">{t('title')}</h3>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <p className="text-sm font-medium text-secondary">Status</p>
+              <p className="text-sm font-medium text-secondary">{t('status')}</p>
               <p className="mt-1 text-ink">{consultation.status.replace('_', ' ').toUpperCase()}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Modality</p>
-              <p className="mt-1 text-ink">{consultation.consultation_modality || 'Not specified'}</p>
+              <p className="text-sm font-medium text-secondary">{t('modality')}</p>
+              <p className="mt-1 text-ink">{consultation.consultation_modality || t('notSpecified')}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Scheduled Time</p>
+              <p className="text-sm font-medium text-secondary">{t('scheduled')}</p>
               <p className="mt-1 text-ink">{formatDate(consultation.scheduled_time)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Started At</p>
+              <p className="text-sm font-medium text-secondary">{t('started')}</p>
               <p className="mt-1 text-ink">{formatDate(consultation.started_at)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Ended At</p>
+              <p className="text-sm font-medium text-secondary">{t('ended')}</p>
               <p className="mt-1 text-ink">{formatDate(consultation.ended_at)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Appointment ID</p>
-              <p className="mt-1 text-ink">{consultation.appointment_id || 'None'}</p>
+              <p className="text-sm font-medium text-secondary">{t('appointmentId')}</p>
+              <p className="mt-1 text-ink">{consultation.appointment_id || t('none')}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-secondary">Video Session ID</p>
-              <p className="mt-1 text-ink">{consultation.video_session_id || 'None'}</p>
+              <p className="text-sm font-medium text-secondary">{t('videoSessionId')}</p>
+              <p className="mt-1 text-ink">{consultation.video_session_id || t('none')}</p>
             </div>
           </div>
         </div>

@@ -74,6 +74,7 @@ const inputStyle = {
 
 function DoctorLabOrdersPageContent() {
   const t = useTranslations('doctorLabOrders');
+  const priorityLabel = (value: string) => ({ routine: t('routine'), urgent: t('urgent'), high: t('high') } as Record<string, string>)[value.trim().toLowerCase()] ?? value;
   const router = useRouter()
   const renderedScope = readAccountScope('doctor'), renderedPath = usePathname()
   const parameters = useSearchParams()
@@ -106,9 +107,9 @@ function DoctorLabOrdersPageContent() {
   const [documentAccess, setDocumentAccess] = useState<{ patientId: string; orderId: string; fileId: string; title: string } | null>(null)
   const closeDocumentAccess = useCallback(() => setDocumentAccess(null), [])
   const loadDocument = useCallback(() => {
-    if (!documentAccess || documentAccess.patientId !== patientScope.current || !isRenderedContext()) return Promise.reject(new Error('Choose the patient and refresh this result.'))
+    if (!documentAccess || documentAccess.patientId !== patientScope.current || !isRenderedContext()) return Promise.reject(new Error(t('choosePatientRefresh')))
     return getDoctorLabResultAccess(documentAccess.patientId, documentAccess.orderId)
-  }, [documentAccess, isRenderedContext])
+  }, [documentAccess, isRenderedContext, t])
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const lookupPatientId = selectedPatientId || (!appliedLink.current ? linked.target?.patientId || '' : '')
   const selectedDirectory = usePortalResource<unknown>(clinicalSelectedPatientPath(lookupPatientId), false, { refreshOnFocus: true, abortOnCleanup: true })
@@ -153,9 +154,9 @@ function DoctorLabOrdersPageContent() {
     } catch (err) {
       if (!isCurrent()) return
       if (isAuthError(err)) { router.replace('/auth/doctor/login'); return }
-      ordersReadFailed.current = true; setError(getApiErrorDetail(err) ?? 'Unable to load lab orders. Use Refresh to retry.')
+      ordersReadFailed.current = true; setError(getApiErrorDetail(err) ?? t('loadFailed'))
     } finally { if (isCurrent()) setLoading(false) }
-  }, [captureAction, router, isRenderedContext])
+  }, [captureAction, router, isRenderedContext, t])
 
   const changePatient = useCallback((patientId: string) => {
     if (operationInFlight.current || !isRenderedContext()) return
@@ -185,15 +186,15 @@ function DoctorLabOrdersPageContent() {
   useEffect(() => {
     if (selectedAuthorized || !patientScope.current) return
     setDocumentAccess(null); setReviewSelection(null); setLabTests([]); setLoading(false); setQuickRecovery([...quickWrites.current.keys()])
-    if (operationInFlight.current && creatingOrder.current) { uncertainCreateRef.current = true; setUncertainCreate(true); if (creationAttempt.current) creationAttempt.current.uncertain = true; setError('The earlier order may have been saved, but access was lost before confirmation. Reload the saved orders and explicitly discard this unconfirmed draft before creating another order.') }
-  }, [selectedAuthorized])
+    if (operationInFlight.current && creatingOrder.current) { uncertainCreateRef.current = true; setUncertainCreate(true); if (creationAttempt.current) creationAttempt.current.uncertain = true; setError(t('accessLostDraft')) }
+  }, [selectedAuthorized, t])
 
   const beginEdit = (test: PatientLabRequest) => {
-    if (operationInFlight.current || !isRenderedContext() || test.can_edit !== true) { setError('Editing is unavailable until the server confirms your authority for this order.'); return }
-    if (quickWrites.current.has(test.id)) { setError('Reload and review the saved order, then discard its earlier quick-action attempt before opening an editor.'); return }
+    if (operationInFlight.current || !isRenderedContext() || test.can_edit !== true) { setError(t('editUnconfirmed')); return }
+    if (quickWrites.current.has(test.id)) { setError(t('reloadDiscardQuick')); return }
     const version = recordWriteVersion(test)
     if (!version) { setError(MISSING_CLINICAL_VERSION); return }
-    if (creationAttempt.current?.uncertain && !creationResetReady) { setError('Refresh and review the saved orders before discarding this unconfirmed create.'); return }
+    if (creationAttempt.current?.uncertain && !creationResetReady) { setError(t('refreshBeforeDiscard')); return }
     creationAttempt.current = null; setCreateRecovery(false)
     editorWriteVersion.current = version; setEditorConflict(false)
     setEditingId(test.id)
@@ -222,9 +223,9 @@ function DoctorLabOrdersPageContent() {
 
   const resetForm = (confirmed = false) => {
     if (!isRenderedContext() || operationInFlight.current && !confirmed) return
-    if (!confirmed && editorConflict && !writeResetReady) { setError('Reload and review the changed order before discarding these edits.'); return }
+    if (!confirmed && editorConflict && !writeResetReady) { setError(t('reloadBeforeDiscardEdits')); return }
     editorWriteVersion.current = null; setEditorConflict(false)
-    if ((uncertainCreateRef.current || creationAttempt.current?.uncertain) && (!creationResetReady || !selectedAuthorized)) { setError('Reload the saved orders before discarding this unconfirmed create.'); return }
+    if ((uncertainCreateRef.current || creationAttempt.current?.uncertain) && (!creationResetReady || !selectedAuthorized)) { setError(t('reloadBeforeDiscardCreate')); return }
     uncertainCreateRef.current = false; setUncertainCreate(false); creationAttempt.current = null; setCreateRecovery(false)
     setEditingId(null)
     setShowAddForm(false)
@@ -237,7 +238,7 @@ function DoctorLabOrdersPageContent() {
   // portal, session and page that started the request.
   const beginMutation = (intent: 'write' | 'create' = 'write') => {
     if (!selectedPatientId || selectedPatientId !== patientScope.current || operationInFlight.current || !renderedScope || !isRenderedContext() || authority.current.id !== patientScope.current || !authority.current.allowed || selectedDirectory.refreshing) return null
-    if (intent === 'create' && uncertainCreateRef.current) { setError('Review the saved orders and explicitly discard this unconfirmed draft before creating a new order.'); return null }
+    if (intent === 'create' && uncertainCreateRef.current) { setError(t('discardDraftFirst')); return null }
     creatingOrder.current = intent === 'create'; operationInFlight.current = true
     ++readVersion.current
     const action = captureAction()
@@ -248,18 +249,18 @@ function DoctorLabOrdersPageContent() {
   }
 
   const handleSave = async () => {
-    if (editingId && editorConflict) { setError('Reload and review the saved order, then discard and reopen these edits before saving.'); return }
+    if (editingId && editorConflict) { setError(t('reloadReopen')); return }
     if (editingId && !editorWriteVersion.current) { setError(MISSING_CLINICAL_VERSION); return }
-    if (editingId && currentOrders.current.find(order => order.id === editingId)?.can_edit !== true) { setError('This order cannot be edited by this account. Refresh the order list.'); return }
-    if (!selectedPatientId || !form.title.trim()) { setError('Select a patient and enter a lab test title.'); return }
+    if (editingId && currentOrders.current.find(order => order.id === editingId)?.can_edit !== true) { setError(t('cannotEdit')); return }
+    if (!selectedPatientId || !form.title.trim()) { setError(t('selectPatientTitle')); return }
     let dates: { scheduled_for: string; recommended_date: string }
     try {
       dates = { scheduled_for: orderDateToIso(form.scheduled_for, originalDates.current.scheduled_for),
         recommended_date: orderDateToIso(form.recommended_date, originalDates.current.recommended_date) }
-    } catch (err) { setError(err instanceof Error ? err.message : 'Check the lab order dates.'); return }
+    } catch (err) { setError(err instanceof Error ? err.message : t('checkDates')); return }
     const payload = { ...form, ...dates, patient_id: patientScope.current, title: form.title.trim() }
     const owner = JSON.stringify([renderedScope, renderedPath, renderedQuery, patientScope.current, 'lab_request'])
-    if (!editingId && creationAttempt.current?.uncertain && !sameClinicalCreateIntent(creationAttempt.current.intent, owner, 'lab_request', payload)) { setError('These details differ from the unconfirmed creation. Restore its original details to retry, or refresh and review the saved orders, then explicitly discard this draft before starting a new creation.'); return }
+    if (!editingId && creationAttempt.current?.uncertain && !sameClinicalCreateIntent(creationAttempt.current.intent, owner, 'lab_request', payload)) { setError(t('detailsDiffer')); return }
     const operation = beginMutation(editingId ? 'write' : 'create')
     if (!operation) return
     let sent = false
@@ -276,9 +277,9 @@ function DoctorLabOrdersPageContent() {
       const response = editingId ? await updateDoctorLabOrder({ ...changes, patient_id: operation.patientId, test_id: editingId }, editorWriteVersion.current!) : await createDoctorLabOrder({ ...payload, creation_id: intent!.creationId })
       if (!operation.isCurrent()) return
       const receipt = intent ? clinicalCreationReceipt(response, intent) : null
-      if (intent && !receipt) throw new Error('The creation could not be confirmed. Retry the same details to recover this attempt; it may already have been saved.')
+      if (intent && !receipt) throw new Error(t('createUnconfirmed'))
       setLabTests(response.test_requests || []); creationAttempt.current = null; setCreateRecovery(false); uncertainCreateRef.current = false; setUncertainCreate(false); resetForm(true)
-      if (receipt) setUploadNotice(!receipt.available ? 'The earlier creation was recorded but is no longer in the current order list. It has not been restored.' : receipt.replayed ? 'This order was already saved. Its current recorded details are shown below.' : 'Lab order saved.')
+      if (receipt) setUploadNotice(!receipt.available ? t('createGone') : receipt.replayed ? t('alreadySaved') : t('saved'))
     } catch (err) {
       if (!operation.isCurrent()) return
       const fieldErrors = clinicalValidationErrors(err)
@@ -287,13 +288,13 @@ function DoctorLabOrdersPageContent() {
         if (!creationAttempt.current.uncertain && err instanceof ApiError && err.status === 422 && Object.keys(fieldErrors).length) { creationAttempt.current = null; setCreateRecovery(false) }
         else { creationAttempt.current.uncertain = true; creationAttempt.current.reviewEpoch = ordersReadEpoch.current; setCreateRecovery(true) }
       }
-      setError(getApiErrorDetail(err) ?? 'Unable to save this lab order. Your changes are still here.')
+      setError(getApiErrorDetail(err) ?? t('saveFailed'))
     } finally { operation.finish() }
   }
 
   const quickVersion = (test: PatientLabRequest) => {
     const original = quickWrites.current.get(test.id)
-    if (original?.conflicted) { setError('Reload and review the saved order, then discard this stale action before trying again.'); return null }
+    if (original?.conflicted) { setError(t('discardStale')); return null }
     const version = original?.version || recordWriteVersion(test)
     if (!version) { setError(MISSING_CLINICAL_VERSION); return null }
     return original || { version, conflicted: false, reviewEpoch: ordersReadEpoch.current, label: test.title }
@@ -301,21 +302,21 @@ function DoctorLabOrdersPageContent() {
   const discardQuickWrite = (id: string) => {
     const original = quickWrites.current.get(id)
     if (!isRenderedContext() || operationInFlight.current || !selectedAuthorized || loading || ordersReadFailed.current || !original || ordersReadEpoch.current <= original.reviewEpoch) return
-    quickWrites.current.delete(id); setQuickRecovery(previous => previous.filter(value => value !== id)); setError(null); setUploadNotice('The earlier action was discarded. Review the current order before choosing a new action.')
+    quickWrites.current.delete(id); setQuickRecovery(previous => previous.filter(value => value !== id)); setError(null); setUploadNotice(t('actionDiscarded'))
   }
   const handleStatusChange = async (test: PatientLabRequest, status: string) => {
-    if (currentOrders.current.find(order => order.id === test.id)?.can_edit !== true) { setError('Status changes are unavailable for this order.'); return }
+    if (currentOrders.current.find(order => order.id === test.id)?.can_edit !== true) { setError(t('statusUnavailable')); return }
     const attempt = quickVersion(test); if (!attempt) return
     const operation = beginMutation(); if (!operation) return
     quickWrites.current.set(test.id, attempt)
     try {
       const response = await updateDoctorLabOrder({ patient_id: operation.patientId, test_id: test.id, status }, attempt.version)
       if (operation.isCurrent()) { quickWrites.current.delete(test.id); setQuickRecovery(previous => previous.filter(value => value !== test.id)); setLabTests(response.test_requests || []) }
-    } catch (err) { if (operation.isCurrent()) { attempt.conflicted = err instanceof ApiError && clinicalRecordChanged(err.status, err.body); attempt.reviewEpoch = ordersReadEpoch.current; setQuickRecovery(previous => previous.includes(test.id) ? previous : [...previous, test.id]); setError(getApiErrorDetail(err) ?? 'Unable to confirm the order status. Its original version has been retained.') } }
+    } catch (err) { if (operation.isCurrent()) { attempt.conflicted = err instanceof ApiError && clinicalRecordChanged(err.status, err.body); attempt.reviewEpoch = ordersReadEpoch.current; setQuickRecovery(previous => previous.includes(test.id) ? previous : [...previous, test.id]); setError(getApiErrorDetail(err) ?? t('statusUnconfirmed')) } }
     finally { operation.finish() }
   }
   const handleDelete = async (test: PatientLabRequest) => {
-    if (currentOrders.current.find(order => order.id === test.id)?.can_delete !== true) { setError('Deletion is unavailable for this order.'); return }
+    if (currentOrders.current.find(order => order.id === test.id)?.can_delete !== true) { setError(t('deleteUnavailable')); return }
     const attempt = quickVersion(test); if (!attempt) return
     const operation = beginMutation(); if (!operation) return
     quickWrites.current.set(test.id, attempt)
@@ -324,18 +325,18 @@ function DoctorLabOrdersPageContent() {
       if (!operation.isCurrent()) return
       quickWrites.current.delete(test.id); setQuickRecovery(previous => previous.filter(value => value !== test.id)); setLabTests(response.test_requests || [])
       if (editingId === test.id) resetForm(true)
-    } catch (err) { if (operation.isCurrent()) { attempt.conflicted = err instanceof ApiError && clinicalRecordChanged(err.status, err.body); attempt.reviewEpoch = ordersReadEpoch.current; setQuickRecovery(previous => previous.includes(test.id) ? previous : [...previous, test.id]); setError(getApiErrorDetail(err) ?? 'Unable to confirm removal. The original order version has been retained.') } }
+    } catch (err) { if (operation.isCurrent()) { attempt.conflicted = err instanceof ApiError && clinicalRecordChanged(err.status, err.body); attempt.reviewEpoch = ordersReadEpoch.current; setQuickRecovery(previous => previous.includes(test.id) ? previous : [...previous, test.id]); setError(getApiErrorDetail(err) ?? t('removeUnconfirmed')) } }
     finally { operation.finish() }
   }
 
   const handleUploadResult = async (test: PatientLabRequest, file?: File, retryNote?: string) => {
     if (!file) return
-    if (test.can_upload_result !== true) { setError('Only the ordering clinician can upload a result for this request.'); return }
-    const uploadError = medicalUploadError(file.size) || (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? 'Choose a PDF, PNG, JPEG or WebP file.' : null)
+    if (test.can_upload_result !== true) { setError(t('onlyOrderingUpload')); return }
+    const uploadError = medicalUploadError(file.size) || (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? t('fileType') : null)
     if (uploadError) { setError(uploadError); return }
     const operation = beginMutation()
     if (!operation) return
-    const note = retryNote ?? 'Lab result uploaded by clinician'
+    const note = retryNote ?? t('uploadedByClinician')
     setUploadNotice('')
     try {
       const attempt = await labUploadAttempt(uploadAttempt.current, JSON.stringify([operation.scope, operation.patientId, test.id]), file, note)
@@ -346,18 +347,18 @@ function DoctorLabOrdersPageContent() {
       const response = await uploadDoctorLabResult(operation.patientId, test.id, formData)
       if (!operation.isCurrent()) return
       const receipt = labUploadReceipt(response.upload_receipt, attempt.uploadId)
-      if (!receipt) throw new Error('Upload confirmation is unavailable. Retry this same file to recover its saved upload safely.')
+      if (!receipt) throw new Error(t('uploadUnconfirmed'))
       setLabTests(response.test_requests || []); uploadAttempt.current = null; setFailedUpload(null)
-      setUploadNotice(receipt.current ? (receipt.replayed ? 'This upload was already saved. No second file was created.' : 'Result upload saved. Uploading does not record clinical review.') : 'The earlier upload was already recorded; it is no longer the current available result. Review this lab request before uploading again.')
-    } catch (err) { if (operation.isCurrent()) { setFailedUpload({ orderId: test.id, file, note }); setError(getApiErrorDetail(err) ?? 'Unable to upload this lab result. Retry the same file safely.') } }
+      setUploadNotice(receipt.current ? (receipt.replayed ? t('uploadReplayed') : t('uploadSaved')) : t('uploadSuperseded'))
+    } catch (err) { if (operation.isCurrent()) { setFailedUpload({ orderId: test.id, file, note }); setError(getApiErrorDetail(err) ?? t('uploadFailed')) } }
     finally { operation.finish() }
   }
   const saveReview = async (signal: AbortSignal) => {
-    if (!reviewSelection || !reviewTargetCurrent(reviewSelection)) throw new Error('The selected file or your authority changed. Close this dialog and refresh the order.')
-    const operation = beginMutation(); if (!operation) throw new Error('Wait for the current operation, then retry review acknowledgement.')
+    if (!reviewSelection || !reviewTargetCurrent(reviewSelection)) throw new Error(t('fileOrAuthorityChanged'))
+    const operation = beginMutation(); if (!operation) throw new Error(t('waitThenReview'))
     try {
       const response = await recordDoctorLabResultReview(reviewSelection.patientId, reviewSelection.orderId, reviewSelection.fileId, signal)
-      if (!operation.isCurrent() || !reviewTargetCurrent(reviewSelection)) throw new Error('The selected result context changed. Refresh the order before continuing.')
+      if (!operation.isCurrent() || !reviewTargetCurrent(reviewSelection)) throw new Error(t('contextChanged'))
       return response
     } finally { operation.finish() }
   }
@@ -388,7 +389,7 @@ function DoctorLabOrdersPageContent() {
 
       {(linked.target || linked.invalid) && <section aria-label={t('selectedLabResult')} className='dl-card'>
         <h2 className='portal-h2'>{t('resultSelectedFromNotifications')}</h2>
-        <p className='text-sm leading-7 text-secondary'>{linked.invalid ? 'This result link is invalid. Open an update from your notification inbox.' : !patientsReady ? 'Confirming access to the selected patient…' : lookupPatientId === linked.target?.patientId && !selectedAuthorized ? 'The selected patient is not available to this clinician account.' : selectedPatientId !== linked.target?.patientId ? 'Choose the selected patient to view this order. Unsaved changes must be resolved first.' : loading ? 'Loading the selected order…' : error ? 'The selected result could not be confirmed. Refresh the order list to retry.' : !linkedOrder ? 'The selected order is no longer available to this account.' : !linkedFileMatches ? linkedOrder.result_file_id ? 'This notification refers to a different upload. The current result shown below is a separate file; it has not been opened automatically.' : 'The referenced result file is no longer available. No file has been opened automatically.' : 'The exact file from this notification is selected. Use Open selected result below to request access. Opening this file does not record review.'}</p>
+        <p className='text-sm leading-7 text-secondary'>{linked.invalid ? t('linkInvalid') : !patientsReady ? t('confirmingAccess') : lookupPatientId === linked.target?.patientId && !selectedAuthorized ? t('patientUnavailable') : selectedPatientId !== linked.target?.patientId ? t('choosePatientFirst') : loading ? t('loadingOrder') : error ? t('resultUnconfirmed') : !linkedOrder ? t('orderGone') : !linkedFileMatches ? linkedOrder.result_file_id ? t('differentUpload') : t('fileGone') : t('exactFile')}</p>
         <div className='mt-3 flex flex-wrap gap-3'>{linkedOrder && <button className='dl-btn' onClick={() => { const order = document.getElementById(`lab-order-${linkedOrder.id}`); order?.focus(); order?.scrollIntoView({ block: 'center' }) }}>{t('jumpToSelectedOrder')}</button>}<Link href='/doctor/notifications' className='portal-button portal-button-secondary q-button q-button-secondary'>{t('backToResultUpdates')}</Link>
           {patientsReady && linked.target && selectedPatientId !== linked.target.patientId && <button className='dl-btn' disabled={saving} onClick={() => handlePatientChange(linked.target!.patientId)}>{t('showSelectedPatient')}</button>}
         </div>
@@ -407,19 +408,19 @@ function DoctorLabOrdersPageContent() {
 
       {error && <div role='alert' className='dl-card' style={{ color: T.red, border: '1px solid rgba(220,38,38,0.2)' }}>{error}</div>}
 
-      <ClinicalPatientDirectory selectLabel='Select patient' selectedId={selectedPatientId} selectedPatient={selectedPatient?.id === selectedPatientId ? selectedPatient : null} disabled={saving || Boolean(reviewSelection)} isCurrent={isRenderedContext} onSelect={handlePatientChange} />
-      {lookupPatientId && <section className='dl-card'>{selectedDirectory.refreshing && <p role='status'>{t('confirmingAccessToTheSelected')}</p>}{!selectedDirectory.loading && !selectedAuthorized && <div role='alert'><p>{selectedDirectory.errorMessage || 'The selected patient is unavailable to this clinician account. Clinical actions are blocked until access is confirmed.'}</p><button className='dl-btn' disabled={selectedDirectory.refreshing} onClick={selectedDirectory.retry}>{t('retrySelectedPatientAccess')}</button></div>}</section>}
+      <ClinicalPatientDirectory selectLabel={t('selectPatient')} selectedId={selectedPatientId} selectedPatient={selectedPatient?.id === selectedPatientId ? selectedPatient : null} disabled={saving || Boolean(reviewSelection)} isCurrent={isRenderedContext} onSelect={handlePatientChange} />
+      {lookupPatientId && <section className='dl-card'>{selectedDirectory.refreshing && <p role='status'>{t('confirmingAccessToTheSelected')}</p>}{!selectedDirectory.loading && !selectedAuthorized && <div role='alert'><p>{selectedDirectory.errorMessage || t('patientBlocked')}</p><button className='dl-btn' disabled={selectedDirectory.refreshing} onClick={selectedDirectory.retry}>{t('retrySelectedPatientAccess')}</button></div>}</section>}
 
       {uncertainCreate && <p role='alert' className='dl-card'>{t('theEarlierCreateHasAn')}</p>}
       {createRecovery && !uncertainCreate && <section role='alert' className='dl-card'><p>{t('thisOrderMayAlreadyHave')}</p><button className='dl-btn' type='button' disabled={saving || loading} onClick={() => fetchLabTests()}>{t('refreshSavedOrders')}</button></section>}
       {editorConflict && <section role='alert' className='dl-card'><p>{t('thisOrderChangedAfterYou')}</p><button className='dl-btn' disabled={saving || loading} onClick={() => fetchLabTests()}>{t('reloadChangedOrder')}</button></section>}
-      {quickRecovery.map(id => { const attempt = quickWrites.current.get(id); return <section role='alert' className='dl-card' key={id}><p className='mb-2 font-semibold'>{attempt?.label || 'Lab order'}</p><p>{t('theQuickActionCouldNot')}</p><div className='mt-3 flex flex-wrap gap-3'><button className='dl-btn' disabled={saving || loading} onClick={() => fetchLabTests()}>{t('reloadActionOutcome')}</button><button className='dl-btn' disabled={saving || loading || !selectedAuthorized || ordersReadFailed.current || !attempt || ordersReadEpoch.current <= attempt.reviewEpoch} onClick={() => discardQuickWrite(id)}>{t('discardStaleAction')}</button></div></section> })}
+      {quickRecovery.map(id => { const attempt = quickWrites.current.get(id); return <section role='alert' className='dl-card' key={id}><p className='mb-2 font-semibold'>{attempt?.label || t('labOrder')}</p><p>{t('theQuickActionCouldNot')}</p><div className='mt-3 flex flex-wrap gap-3'><button className='dl-btn' disabled={saving || loading} onClick={() => fetchLabTests()}>{t('reloadActionOutcome')}</button><button className='dl-btn' disabled={saving || loading || !selectedAuthorized || ordersReadFailed.current || !attempt || ordersReadEpoch.current <= attempt.reviewEpoch} onClick={() => discardQuickWrite(id)}>{t('discardStaleAction')}</button></div></section> })}
       {showAddForm && selectedPatientId && selectedAuthorized && (
         <section className='dl-card'>
           <div className='dl-header' style={{ marginBottom: '14px' }}>
             <div>
-              <p className='dl-eyebrow' style={{ margin: 0 }}>{editingId ? 'Edit request' : 'New request'}</p>
-              <h2 style={{ margin: '5px 0 0', color: T.navy }}>{editingId ? 'Update lab order' : 'Order a lab test'}</h2>
+              <p className='dl-eyebrow' style={{ margin: 0 }}>{editingId ? t('editRequest') : t('newRequest')}</p>
+              <h2 style={{ margin: '5px 0 0', color: T.navy }}>{editingId ? t('updateOrder') : t('orderTest')}</h2>
             </div>
             <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ cancel: true }) : resetForm()} disabled={saving || ((uncertainCreate || createRecovery) && !creationResetReady) || (editorConflict && !writeResetReady)}>{t('cancel')}</button>
           </div>
@@ -442,7 +443,7 @@ function DoctorLabOrdersPageContent() {
             <label className='dl-field'><span>{t('preparationInstructions')}</span><textarea style={{ ...inputStyle, minHeight: '92px' }} value={form.preparation_instructions} onChange={(event) => setForm({ ...form, preparation_instructions: event.target.value })} /></label>
           </div>
           <button className='dl-btn primary' type='button' onClick={handleSave} disabled={saving || uncertainCreate || editorConflict} style={{ marginTop: '14px' }}>
-            {saving ? 'Saving...' : editingId ? 'Save Changes' : createRecovery ? 'Retry same creation' : 'Create Lab Request'}
+            {saving ? t('saving') : editingId ? t('saveChanges') : createRecovery ? t('retryCreation') : t('createRequest')}
           </button>
           </fieldset>
           <p style={{ margin: '12px 0 0', color: T.slate2, fontSize: '13px' }}>{t('datesAndTimesUseYour')}</p>
@@ -455,7 +456,7 @@ function DoctorLabOrdersPageContent() {
             <p className='dl-eyebrow' style={{ margin: 0 }}>{t('patientRequests')}</p>
             <h2 style={{ margin: '5px 0 0', color: T.navy }}>{t('labTestOrders')}</h2>
           </div>
-          <button className='dl-btn' type='button' onClick={() => fetchLabTests()} disabled={!selectedPatientId || !selectedAuthorized || loading || saving}>{loading ? 'Loading...' : 'Refresh'}</button>
+          <button className='dl-btn' type='button' onClick={() => fetchLabTests()} disabled={!selectedPatientId || !selectedAuthorized || loading || saving}>{loading ? t('loading') : t('refresh')}</button>
         </div>
         {!selectedPatientId && <div className='dl-empty'>{t('chooseAPatientToView')}</div>}
         {loading && <p role='status'>{t('loadingLabRequests')}</p>}
@@ -466,10 +467,10 @@ function DoctorLabOrdersPageContent() {
               <div className='dl-header'>
                 <div>
                   <h3 style={{ margin: '0 0 4px', color: T.navy }}>{test.title}</h3>
-                  <p style={{ margin: 0, color: T.slate }}>{test.description || test.test || 'No description added.'}</p>
+                  <p style={{ margin: 0, color: T.slate }}>{test.description || test.test || t('noDescription')}</p>
                 </div>
                 <select
-                  aria-label={`Status for ${test.title}`}
+                  aria-label={t('statusFor', { title: test.title })}
                   style={{ ...inputStyle, width: '190px' }}
                   value={test.status}
                   onChange={(event) => handleStatusChange(test, event.target.value)}
@@ -484,22 +485,22 @@ function DoctorLabOrdersPageContent() {
                 </select>
               </div>
               <div className='dl-meta'>
-                <span>Category: {test.category || 'Diagnostic Test'}</span>
-                <span>Priority: {test.priority || 'Routine'}</span>
-                <span>Recommended: {test.completionDate || test.recommended_date || 'Not set'}</span>
-                <span>Recommended lab: {test.recommended_lab_name || 'Any accredited lab'}</span>
+                <span>Category: {test.category || t('diagnosticTest')}</span>
+                <span>{t('priorityLine', { priority: priorityLabel(test.priority || 'Routine') })}</span>
+                <span>Recommended: {test.completionDate || test.recommended_date || t('notSet')}</span>
+                <span>Recommended lab: {test.recommended_lab_name || t('anyLabShort')}</span>
                 {test.result_filename && <span>Result: {test.result_filename}</span>}
               </div>
               <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
                 <div style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
                   <div className='dl-eyebrow'>{t('doctorLabGuidance')}</div>
-                  <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.recommended_lab_name || 'Any accredited laboratory'}</div>
+                  <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.recommended_lab_name || t('anyLab')}</div>
                   {test.recommended_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.recommended_lab_address}</div>}
                 </div>
                 <div style={{ padding: '10px 12px', borderRadius: '12px', background: "var(--surface-glass)", border: "1px solid var(--border)" }}>
                   <div className='dl-eyebrow'>{t('patientRecordedAppointment')}</div>
-                  <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.selected_lab_name || 'Not recorded yet'}</div>
-                  <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.scheduledForLabel || test.scheduled_for || 'No date recorded'}{test.home_collection ? ' - home collection' : ''}</div>
+                  <div style={{ marginTop: '4px', color: T.navy, fontSize: '13px', fontWeight: 800 }}>{test.selected_lab_name || t('notRecordedYet')}</div>
+                  <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.scheduledForLabel || test.scheduled_for || t('noDate')}{test.home_collection ? ` - ${t('homeCollection')}` : ''}</div>
                   {test.selected_lab_address && <div style={{ marginTop: '2px', color: T.slate, fontSize: "13px" }}>{test.selected_lab_address}</div>}
                 </div>
               </div>
@@ -510,8 +511,8 @@ function DoctorLabOrdersPageContent() {
                 {test.can_review_result !== true && <span className='text-sm text-secondary'>{t('reviewAcknowledgementIsUnavailableFor')}</span>}
                 {test.can_edit !== true && <span className='text-sm text-secondary'>{t('editingAndStatusChangesAre')}</span>}
                 {test.can_delete !== true && <span className='text-sm text-secondary'>{t('deletionIsUnavailableForThis')}</span>}
-                {test.result_file_id ? <button className='dl-btn' type='button' aria-haspopup='dialog' aria-label={`Open result for ${test.title}`} disabled={saving || Boolean(reviewSelection)}
-                  onClick={() => setDocumentAccess(current => current ?? { patientId: patientScope.current, orderId: test.id, fileId: test.result_file_id!, title: test.title })}>{linked.target?.requestId === test.id ? linkedFileMatches ? 'Open selected result' : 'Open current result (different upload)' : 'Open result'}</button>
+                {test.result_file_id ? <button className='dl-btn' type='button' aria-haspopup='dialog' aria-label={t('openResultFor', { title: test.title })} disabled={saving || Boolean(reviewSelection)}
+                  onClick={() => setDocumentAccess(current => current ?? { patientId: patientScope.current, orderId: test.id, fileId: test.result_file_id!, title: test.title })}>{linked.target?.requestId === test.id ? linkedFileMatches ? t('openSelected') : t('openCurrentDifferent') : t('openResult')}</button>
                   : <span className='text-sm text-muted'>{t('noResultFileAvailable')}</span>}
                 <button className='dl-btn' type='button' onClick={() => dirty ? setPendingChange({ edit: test }) : beginEdit(test)} disabled={saving || test.can_edit !== true}>{t('edit')}</button>
                 <input
@@ -533,9 +534,9 @@ function DoctorLabOrdersPageContent() {
           ))}
         </div>
       </section>
-      {reviewSelection && reviewStillCurrent && <LabResultReviewDialog key={`${reviewSelection.patientId}:${reviewSelection.orderId}:${reviewSelection.fileId}`} target={reviewSelection} isTargetCurrent={() => reviewTargetCurrent(reviewSelection)} save={saveReview} onClose={closeReview} onSaved={(response, current) => { if (!reviewTargetCurrent(reviewSelection)) return; setLabTests(response.test_requests || []); setReviewSelection(null); setUploadNotice(current ? 'Review recorded for the selected result file. Order status and treatment instructions are unchanged.' : 'The review acknowledgement was already recorded for the selected file, which is no longer current. Review the refreshed order before continuing.') }} />}
+      {reviewSelection && reviewStillCurrent && <LabResultReviewDialog key={`${reviewSelection.patientId}:${reviewSelection.orderId}:${reviewSelection.fileId}`} target={reviewSelection} isTargetCurrent={() => reviewTargetCurrent(reviewSelection)} save={saveReview} onClose={closeReview} onSaved={(response, current) => { if (!reviewTargetCurrent(reviewSelection)) return; setLabTests(response.test_requests || []); setReviewSelection(null); setUploadNotice(current ? t('reviewRecorded') : t('reviewStale')) }} />}
       {documentAccess && documentStillCurrent && <SecureDocumentAccessDialog key={`${documentAccess.patientId}:${documentAccess.orderId}:${documentAccess.fileId}`}
-        documentTitle={documentAccess.title} documentKind='Lab result' expectedFileId={documentAccess.fileId} loadDocument={loadDocument} onClose={closeDocumentAccess} />}
+        documentTitle={documentAccess.title} documentKind={t('labResult')} expectedFileId={documentAccess.fileId} loadDocument={loadDocument} onClose={closeDocumentAccess} />}
       <UnsavedChangesDialog open={pendingChange !== null || navigation.active} busy={saving}
         onKeepEditing={() => { setPendingChange(null); if (navigation.active) navigation.reject() }}
         onDiscard={() => {

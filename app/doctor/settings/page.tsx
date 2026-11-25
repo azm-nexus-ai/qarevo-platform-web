@@ -2,6 +2,7 @@
 import AccountSecurity from '@/components/security/AccountSecurity'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -19,6 +20,7 @@ import {
 const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export default function DoctorSettingsPage() {
+  const t = useTranslations('doctorSettings')
   const router = useRouter()
   const [settingsData, setSettingsData] = useState<DoctorSettingsResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,8 +50,8 @@ export default function DoctorSettingsPage() {
           router.replace('/auth/doctor/login')
           return
         }
-        console.error('Failed to load doctor settings', err)
-        if (!cancelled) setError('Unable to load settings right now.')
+        console.error(t('loadFailedTech'), err)
+        if (!cancelled) setError(t('loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -60,7 +62,7 @@ export default function DoctorSettingsPage() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, t])
 
   const updateDraft = <K extends keyof DoctorSettingsResponse>(key: K, value: DoctorSettingsResponse[K]) => {
     setSettingsData((current) => current ? { ...current, [key]: value } : current)
@@ -81,8 +83,8 @@ export default function DoctorSettingsPage() {
         router.replace('/auth/doctor/login')
         return
       }
-      console.error('Failed to save doctor settings', err)
-      setError('Unable to save settings right now.')
+      console.error(t('saveFailedTech'), err)
+      setError(t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -101,7 +103,7 @@ export default function DoctorSettingsPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
-        <p style={{ color: T.slate2 }}>Loading settings...</p>
+        <p style={{ color: T.slate2 }}>{t('loading')}</p>
       </div>
     )
   }
@@ -116,8 +118,8 @@ export default function DoctorSettingsPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
       <div>
-        <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Settings</h1>
-        <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Manage your account and preferences</p>
+        <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>{t('title')}</h1>
+        <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>{t('intro')}</p>
         {message && <p style={{ margin: '8px 0 0', fontSize: '13px', fontWeight: 600, color: T.green }}>{message}</p>}
         {error && <p style={{ margin: '8px 0 0', fontSize: '13px', fontWeight: 600, color: T.red }}>{error}</p>}
       </div>
@@ -138,11 +140,11 @@ export default function DoctorSettingsPage() {
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(32,181,223,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Ico p={ICONS.user} size={20} sw={1.5} color={T.blue} />
             </div>
-            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Account Settings</h3>
+            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{t('account')}</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: "13px", fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>Email Address</label>
+              <label style={{ display: 'block', fontSize: "13px", fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>{t('email')}</label>
               <input
                 type="email"
                 value={settingsData.email || ''}
@@ -151,7 +153,7 @@ export default function DoctorSettingsPage() {
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: "13px", fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>Phone Number</label>
+              <label style={{ display: 'block', fontSize: "13px", fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>{t('phone')}</label>
               <input
                 type="tel"
                 value={settingsData.phone || ''}
@@ -161,10 +163,10 @@ export default function DoctorSettingsPage() {
             </div>
             <button
               disabled={saving}
-              onClick={() => saveSettings({ email: settingsData.email || '', phone: settingsData.phone || '' }, 'Account settings updated.')}
+              onClick={() => saveSettings({ email: settingsData.email || '', phone: settingsData.phone || '' }, t('accountUpdated'))}
               style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', marginTop: '8px', opacity: saving ? 0.7 : 1 }}
             >
-              {saving ? 'Saving...' : 'Update Account'}
+              {saving ? t('saving') : t('updateAccount')}
             </button>
           </div>
         </div>
@@ -183,14 +185,14 @@ export default function DoctorSettingsPage() {
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(217,119,6,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Ico p={ICONS.info} size={20} sw={1.5} color={T.amber} />
             </div>
-            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Notifications</h3>
+            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{t('notifications')}</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {[
-                { key: 'email_notifications' as const, label: 'Email notifications for new appointments', checked: settingsData.email_notifications },
-                { key: 'sms_notifications' as const, label: 'SMS reminders for scheduled consultations', checked: settingsData.sms_notifications },
-                { key: 'push_notifications' as const, label: 'Push notifications for urgent messages', checked: settingsData.push_notifications },
-                { key: 'weekly_reports' as const, label: 'Weekly summary reports', checked: settingsData.weekly_reports },
+                { key: 'email_notifications' as const, label: t('notifEmail'), checked: settingsData.email_notifications },
+                { key: 'sms_notifications' as const, label: t('notifSms'), checked: settingsData.sms_notifications },
+                { key: 'push_notifications' as const, label: t('notifPush'), checked: settingsData.push_notifications },
+                { key: 'weekly_reports' as const, label: t('notifWeekly'), checked: settingsData.weekly_reports },
               ].map((item, index) => (
                 <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '13px', color: T.navy }}>{item.label}</span>
@@ -211,10 +213,10 @@ export default function DoctorSettingsPage() {
                 sms_notifications: settingsData.sms_notifications,
                 push_notifications: settingsData.push_notifications,
                 weekly_reports: settingsData.weekly_reports,
-              }, 'Notification preferences updated.')}
+              }, t('notificationsUpdated'))}
               style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', marginTop: '8px', opacity: saving ? 0.7 : 1 }}
             >
-              {saving ? 'Saving...' : 'Save Notifications'}
+              {saving ? t('saving') : t('saveNotifications')}
             </button>
           </div>
         </div>
@@ -246,11 +248,11 @@ export default function DoctorSettingsPage() {
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(15,158,119,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Ico p={ICONS.calendar} size={20} sw={1.5} color={T.green} />
             </div>
-            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Availability</h3>
+            <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{t('availability')}</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: "13px", fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>Working Hours</label>
+              <label style={{ display: 'block', fontSize: "13px", fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>{t('workingHours')}</label>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <input
                   type="time"
@@ -268,7 +270,7 @@ export default function DoctorSettingsPage() {
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: "13px", fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>Available Days</label>
+              <label style={{ display: 'block', fontSize: "13px", fontWeight: 600, color: T.slate2, marginBottom: '6px' }}>{t('availableDays')}</label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {WEEK_DAYS.map((day) => {
                   const selected = settingsData.available_days.includes(day)
@@ -279,7 +281,7 @@ export default function DoctorSettingsPage() {
                     onClick={() => toggleDay(day)}
                     style={{ padding: '8px 14px', borderRadius: '8px', border: selected ? `1px solid ${T.blue}` : "1px solid var(--border)", background: selected ? 'rgba(32,181,223,0.12)' : "var(--surface-glass)", color: selected ? T.link : T.slate2, fontSize: "13px", fontWeight: 600, cursor: 'pointer' }}
                   >
-                    {day}
+                    {t(`day.${day}`)}
                   </button>
                   )
                 })}
@@ -291,10 +293,10 @@ export default function DoctorSettingsPage() {
                 working_hours_start: settingsData.working_hours_start,
                 working_hours_end: settingsData.working_hours_end,
                 available_days: settingsData.available_days,
-              }, 'Availability updated.')}
+              }, t('availabilityUpdated'))}
               style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, color: '#fff', fontSize: '13px', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', marginTop: '8px', opacity: saving ? 0.7 : 1 }}
             >
-              {saving ? 'Saving...' : 'Update Availability'}
+              {saving ? t('saving') : t('updateAvailability')}
             </button>
           </div>
         </div>

@@ -1,16 +1,18 @@
 'use client'
+import { useTranslations } from 'next-intl'
 
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 
 export default function OutcomesPage() {
+  const t = useTranslations('doctorOutcomes')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
       <div>
-        <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>Outcomes</h1>
-        <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>Track and manage patient outcomes</p>
+        <h1 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>{t('title')}</h1>
+        <p style={{ margin: '4px 0 0', fontSize: '14px', color: T.slate2 }}>{t('intro')}</p>
       </div>
 
       {/* Coming Soon Card */}
@@ -27,7 +29,7 @@ export default function OutcomesPage() {
         <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'rgba(15,158,119,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
           <Ico p={ICONS.heart} size={36} sw={1.5} color={T.green} />
         </div>
-        <h2 style={{ margin: '0 0 12px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>Outcomes Management</h2>
+        <h2 style={{ margin: '0 0 12px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{t('heading')}</h2>
         <p style={{ margin: '0 0 24px', fontSize: '15px', color: T.slate2, lineHeight: 1.6, maxWidth: '400px', marginLeft: 'auto', marginRight: 'auto' }}>
           This feature is coming soon. You&apos;ll be able to track patient treatment outcomes, measure effectiveness, and generate reports.
         </p>

@@ -45,7 +45,7 @@ export default function AppointmentDetailPage() {
           router.replace('/auth/doctor/login')
           return
         }
-        setError(getApiErrorDetail(err) || 'Failed to fetch appointment details')
+        setError(getApiErrorDetail(err) || t('extra.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -56,7 +56,7 @@ export default function AppointmentDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [appointmentId, router])
+  }, [appointmentId, router, t])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -80,7 +80,7 @@ export default function AppointmentDetailPage() {
         router.replace('/auth/doctor/login')
         return
       }
-      setError(getApiErrorDetail(err) || 'Failed to update status')
+      setError(getApiErrorDetail(err) || t('extra.statusFailed'))
     } finally {
       setUpdatingStatus(false)
     }
@@ -156,14 +156,14 @@ export default function AppointmentDetailPage() {
               onClick={handleGoToEpisode}
               className="clinical-action clinical-action--ai"
             >
-              {appointmentData.ai_draft_ready ? 'View AI Draft' : 'View Intake & AI Draft'}
+              {appointmentData.ai_draft_ready ? t('extra.viewDraft') : t('extra.viewIntake')}
             </button>
           )}
         </div>
       </div>
 
-      {appointmentData.ai_available === false && <p className="clinical-info" role="status">AI draft status is temporarily unavailable. Your saved appointment and intake remain accessible; open intake to retry clinical review.</p>}
-      {appointmentData.clinical_context_available === false && <p className="clinical-info" role="status">Clinical context could not be checked. The appointment is still saved; open intake to retry.</p>}
+      {appointmentData.ai_available === false && <p className="clinical-info" role="status">{t('extra.draftUnavailable')}</p>}
+      {appointmentData.clinical_context_available === false && <p className="clinical-info" role="status">{t('extra.contextUnchecked')}</p>}
       {/* Patient Information */}
       <div className="bg-surface rounded-lg shadow-sm border border-theme">
         <div className="p-6 border-b border-theme">
@@ -211,7 +211,7 @@ export default function AppointmentDetailPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-secondary">{t('consultationModality')}</p>
-              <p className="mt-1 text-ink">{appointmentData.consultation_modality || 'Not specified'}</p>
+              <p className="mt-1 text-ink">{appointmentData.consultation_modality || t('extra.notSpecified')}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-secondary">{t('startTime')}</p>
@@ -223,11 +223,11 @@ export default function AppointmentDetailPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-secondary">{t('consultationId')}</p>
-              <p className="mt-1 text-ink">{appointmentData.consultation_id || 'None'}</p>
+              <p className="mt-1 text-ink">{appointmentData.consultation_id || t('extra.none')}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-secondary">{t('consultationStatus')}</p>
-              <p className="mt-1 text-ink">{appointmentData.consultation_status || 'None'}</p>
+              <p className="mt-1 text-ink">{appointmentData.consultation_status || t('extra.none')}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-secondary">{t('createdAt')}</p>

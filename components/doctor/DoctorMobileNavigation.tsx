@@ -79,8 +79,8 @@ export default function DoctorMobileNavigation() {
 
   return (
     <>
-      <PortalMobileNavigation portal='doctor' className='dmn-topbar' homeHref={DOCTOR_ROUTES.dashboard} homeLabel='Qarevo Health Doctor Dashboard'
-        groups={DOCTOR_NAV_GROUPS} isActive={isDoctorNavActive} navLabel={t('doctorNavigation')} summaryLabel='Doctor summary'
+      <PortalMobileNavigation portal='doctor' className='dmn-topbar' homeHref={DOCTOR_ROUTES.dashboard} homeLabel={t('doctorHome')}
+        groups={DOCTOR_NAV_GROUPS} isActive={isDoctorNavActive} navLabel={t('doctorNavigation')} summaryLabel={t('doctorSummary')}
         identity={{ name: displayName, description: specialty, avatar: <ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={42} /> }}
         accountMenu={<PortalAccountMenu portal='doctor' name={displayName} description={specialty} avatar={<ProfileAvatar name={displayName} src={doctorProfile?.avatar_url} kind='doctor' size={34} />} profileHref='/doctor/profile' settingsHref='/doctor/settings' />}
         onLogout={() => setShowLogoutModal(true)} loggingOut={loggingOut} />
