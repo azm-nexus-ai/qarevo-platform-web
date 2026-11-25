@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { T, Sh } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
@@ -15,6 +16,7 @@ type ReviewModalProps = {
 }
 
 export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }: ReviewModalProps) {
+  const t = useTranslations('reviewModal')
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [comment, setComment] = useState('')
@@ -41,7 +43,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Write a review"
+        aria-label={t('writeAReview')}
         style={{
           position: 'relative',
           zIndex: 1,
@@ -65,7 +67,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
             </h2>
             <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>{physicianName}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: "1px solid var(--border)", borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} aria-label={t('close')} style={{ background: 'none', border: "1px solid var(--border)", borderRadius: '8px', cursor: 'pointer', padding: '6px 9px', color: T.slate, fontSize: '16px', lineHeight: 1 }}>✕</button>
         </div>
 
         <div style={{ marginBottom: '24px' }}>
@@ -100,7 +102,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
           </div>
           {rating > 0 && (
             <p style={{ margin: '8px 0 0', fontSize: '13px', color: T.link, fontWeight: 600 }}>
-              {rating === 5 ? 'Excellent' : rating === 4 ? 'Very Good' : rating === 3 ? 'Good' : rating === 2 ? 'Fair' : 'Poor'}
+              {rating === 5 ? t('excellent') : rating === 4 ? t('veryGood') : rating === 3 ? t('good') : rating === 2 ? t('fair') : t('poor')}
             </p>
           )}
         </div>
@@ -112,7 +114,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Share your experience with this provider..."
+            placeholder={t('shareYourExperienceWithThis')}
             rows={4}
             style={{
               width: '100%',
@@ -148,7 +150,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
             }}
             on={rating > 0 && !isSubmitting ? { transform: 'translateY(-1px)' } : {}}
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            {isSubmitting ? t('submitting') : t('submitReview')}
           </HoverBtn>
           <HoverBtn
             onClick={onClose}

@@ -964,7 +964,8 @@
     "summary": "Patient summary",
     "account": "Patient account",
     "logout": "Logout",
-    "portal": "Patient portal"
+    "portal": "Patient portal",
+    "navigation": "Patient navigation"
   },
   "doctorDashboard": {
     "clinicalWorkflowEpisodes": "Clinical Workflow Episodes",
@@ -1060,7 +1061,14 @@
     "minutes": "{count} min",
     "durationUnavailable": "Duration unavailable",
     "consultation": "Consultation",
-    "confirmCancel": "Cancel appointment"
+    "confirmCancel": "Cancel appointment",
+    "cancelFailed": "Cancellation failed. Your appointment remains booked. Please retry.",
+    "loadFailed": "Failed to load appointments.",
+    "reviewFailed": "Failed to submit review. Please try again.",
+    "thisAppointmentHasNoLinked": "This appointment has no linked consultation. Contact support.",
+    "appointmentRescheduledSuccessfully": "Appointment rescheduled successfully.",
+    "appointmentCancelledNoPaymentOr": "Appointment cancelled. No payment or refund was processed.",
+    "reviewSubmittedSuccessfully": "Review submitted successfully!"
   },
   "bookingSuccess": {
     "checkingYourSavedAppointment": "Checking your saved appointment…",
@@ -1079,7 +1087,14 @@
     "consultationBooking": "Consultation booking",
     "yourSavedAppointmentIsThe": "Your saved appointment is the source of truth. Review its details and prepare for your consultation.",
     "bookingNavigation": "Booking navigation",
-    "openingYourBooking": "Opening your booking…"
+    "openingYourBooking": "Opening your booking…",
+    "theSavedAppointmentDetailsAre": "The saved appointment details are incomplete. Please open your appointments list.",
+    "yourSavedBookingCouldNot": "Your saved booking could not be loaded. Please retry.",
+    "yourAppointmentStatus": "Your appointment status",
+    "bookingConfirmationUnavailable": "Booking confirmation unavailable",
+    "assignedClinician": "Assigned clinician",
+    "yourClinician": "your clinician",
+    "savedStatus": "Saved status: {status}"
   },
   "bookingSafety": {
     "ifThisIsAnEmergency": "If this is an emergency, call 112 now.",
@@ -1100,7 +1115,13 @@
     "cancel": "Cancel",
     "beforeYouBook": "Before you book",
     "aFewSafetyQuestions": "A few safety questions",
-    "someSymptomsNeedEmergencyOr": "Some symptoms need emergency or in-person care rather than a video appointment. Your answers help us send you to the right place."
+    "someSymptomsNeedEmergencyOr": "Some symptoms need emergency or in-person care rather than a video appointment. Your answers help us send you to the right place.",
+    "theSafetyQuestionsCouldNot": "The safety questions could not be loaded.",
+    "yourAnswersCouldNotBe": "Your answers could not be saved. Please try again.",
+    "aVideoConsultationIsNot": "A video consultation is not the right next step",
+    "pleaseSeekCareInPerson": "Please seek care in person.",
+    "checking": "Checking…",
+    "continue": "Continue"
   },
   "bookingDateTime": {
     "retryDoctorDetails": "Retry doctor details",
@@ -1198,7 +1219,12 @@
     "trustReview": "Review before confirmation",
     "trustAccount": "Account access required",
     "notConfigured": "Not configured",
-    "notProvided": "Not provided"
+    "notProvided": "Not provided",
+    "daypart": {
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening"
+    }
   },
   "bookingReview": {
     "bookingProgress": "Booking Progress",
@@ -1334,7 +1360,17 @@
     "eGLeftSideOf": "e.g., left side of head, lower back",
     "eGSuddenGradual": "e.g., sudden, gradual",
     "anythingThatMakesItBetter": "Anything that makes it better or worse (e.g., rest, movement, certain foods)",
-    "loadingIntakeForm": "Loading intake form..."
+    "loadingIntakeForm": "Loading intake form...",
+    "doctorLoadFailed": "We could not load the selected physician details. Please go back and choose the doctor again.",
+    "yourIntakeCouldNotBe": "Your intake could not be submitted. Please retry; your existing care episode will be reused.",
+    "describeYourMainConcernIn": "Describe your main concern in up to 2,000 characters.",
+    "youCanStillAddInsurance": "You can still add insurance before you continue.",
+    "thisIsADevelopmentAcknowledgement": "This is a development acknowledgement, not acceptance of final legal terms. See the draft status on the privacy page.",
+    "submitting": "Submitting...",
+    "continueToReview": "Continue to Review",
+    "opensInNewTab": "(opens in a new tab; this page updates when you come back)",
+    "insuranceLoadFailedSelfPay": "We could not load your saved insurance. This consultation will be billed to you as <strong>{selfPay}</strong>.",
+    "noInsuranceSelfPay": "You have not added a health insurer. This consultation will be billed to you as <strong>{selfPay}</strong>."
   },
   "patientDashboard": {
     "logout": "Logout",
@@ -1753,7 +1789,8 @@
       "emergencyNameHint": "Full name of another person, 2–100 characters.",
       "hideEmergencyFields": "Hide optional emergency fields",
       "addEmergencyDetails": "Add optional emergency contact details",
-      "continue": "Continue"
+      "continue": "Continue",
+      "postcodeHint": "Germany: exactly 5 digits, for example 10115. Keep any leading zero."
     },
     "personal": {
       "yourProfileShapesYourCare": "Your profile shapes your care.",
@@ -2090,7 +2127,37 @@
     "rating": "Rating:",
     "languages": "Languages:",
     "hospital": "Hospital:",
-    "pricingPending": "Pricing pending setup"
+    "pricingPending": "Pricing pending setup",
+    "invalidLink": "This physician link is not valid. Find the physician again from the search.",
+    "loadFailed": "We could not load this physician profile.",
+    "specialtyMissing": "Specialty not listed",
+    "yearsExperience": "{years, plural, one {# year} other {# years}} experience",
+    "responseTime": "Response time: {time}",
+    "statRating": "Rating",
+    "statPatients": "Patients Treated",
+    "statYears": "Years Experience",
+    "statConsultations": "Consultations",
+    "statLanguages": "Languages",
+    "noRatings": "No ratings yet",
+    "aboutName": "About {name}",
+    "noBiography": "This physician has not added a description yet.",
+    "readMore": "Read More",
+    "readLess": "Read Less",
+    "notListed": "Not listed yet",
+    "showLess": "Show Less",
+    "viewAllCount": "View All ({count})",
+    "duration": "Duration: {duration}",
+    "serviceAvailability": "Availability: {value}",
+    "timezone": "Timezone: {zone}",
+    "notConfigured": "Not configured",
+    "nextAppointment": "Next available appointment: {value}",
+    "sortRecent": "Most Recent",
+    "sortHighest": "Highest Rated",
+    "sortHelpful": "Most Helpful",
+    "loadReviews": "{count, plural, one {Load # review} other {Load # reviews}}",
+    "reviewMeta": "{date} · Helpful {count}",
+    "loadFaq": "{count, plural, one {Load # question} other {Load # questions}}",
+    "years": "{years, plural, one {# year} other {# years}}"
   },
   "patientMessages": {
     "cancelReply": "Cancel reply",
@@ -2126,7 +2193,19 @@
     "selectRecipient": "Select a recipient…",
     "findFreeAppointments": "Find free appointments",
     "sending": "Sending…",
-    "chooseRecipientFirst": "Choose a recipient first."
+    "chooseRecipientFirst": "Choose a recipient first.",
+    "replyingToYou": "Replying to you",
+    "replyingToDoctor": "Replying to doctor",
+    "activeNow": "Active now",
+    "offline": "Offline",
+    "unableToLoadConversations": "Unable to load conversations.",
+    "unableToSendMessage": "Unable to send message.",
+    "unableToDownloadAttachment": "Unable to download attachment.",
+    "noConversationsYet": "No conversations yet.",
+    "noConversationsFound": "No conversations found.",
+    "patient": "Patient",
+    "doctor": "Doctor",
+    "file": "File"
   },
   "patientAppointmentDetails": {
     "loadingYourAppointment": "Loading your appointment…",
@@ -2148,7 +2227,9 @@
     "backToAppointments": "Back to appointments",
     "appointmentDetails": "Appointment details",
     "yourSavedAppointmentCareTeam": "Your saved appointment, care team and preparation steps.",
-    "loadingAppointment": "Loading appointment…"
+    "loadingAppointment": "Loading appointment…",
+    "yourAppointmentCouldNotBe": "Your appointment could not be loaded. Please retry.",
+    "assignedClinician": "Assigned clinician"
   },
   "patientEpisode": {
     "returnToDashboard": "Return to Dashboard",
@@ -2170,7 +2251,10 @@
     "error": "Error",
     "weEncounteredAnIssueLoading": "We encountered an issue loading your episode.",
     "yourCareEpisode": "Your Care Episode",
-    "viewYourEpisodeDetailsIntake": "View your episode details, intake information, and clinical timeline."
+    "viewYourEpisodeDetailsIntake": "View your episode details, intake information, and clinical timeline.",
+    "failedToLoadEpisodeData": "Failed to load episode data. Please try again.",
+    "episodeNotFound": "Episode not found",
+    "notSet": "Not set"
   },
   "patientSettings": {
     "cancel": "Cancel",
@@ -2999,7 +3083,82 @@
     "previous": "Previous",
     "next": "Next",
     "pages": "Pages",
-    "loadingAccounts": "Loading accounts…"
+    "loadingAccounts": "Loading accounts…",
+    "action": {
+      "suspend": {
+        "title": "Suspend account",
+        "body": "Sign-in is blocked and every active session is ended now. The account can be reactivated later.",
+        "button": "Suspend account",
+        "done": "Account suspended and sessions ended."
+      },
+      "reactivate": {
+        "title": "Reactivate account",
+        "body": "The person can sign in again. Sessions ended earlier stay ended.",
+        "button": "Reactivate account",
+        "done": "Account reactivated."
+      },
+      "delete": {
+        "title": "Request account deletion",
+        "body": "Sign-in is blocked and sessions end now. Contact data becomes eligible for erasure after the cooling-off period. Records that must be kept by law are retained until their retention period ends.",
+        "button": "Request deletion",
+        "done": "Deletion requested. Sign-in is blocked."
+      },
+      "cancelDelete": {
+        "title": "Cancel deletion request",
+        "body": "The deletion request is withdrawn. The account stays suspended until someone reactivates it deliberately.",
+        "button": "Cancel deletion request",
+        "done": "Deletion request cancelled. The account stays suspended."
+      }
+    },
+    "statusLabel": {
+      "pendingVerification": "Awaiting verification",
+      "active": "Active",
+      "suspended": "Suspended",
+      "deactivated": "Deactivated"
+    },
+    "history": {
+      "suspendAccount": "Suspended",
+      "reactivateAccount": "Reactivated",
+      "requestAccountDeletion": "Deletion requested",
+      "cancelAccountDeletion": "Deletion cancelled",
+      "updateDoctorStatus": "Doctor status changed",
+      "verifyDoctor": "Verification decision"
+    },
+    "emailMismatch": "Type the account’s email address exactly.",
+    "saveFailed": "The change could not be saved. Nothing was changed.",
+    "unnamed": "Unnamed account",
+    "reasonHelp": "Stored in the audit trail with your name and the time.",
+    "saving": "Saving…",
+    "loadFailed": "This account could not be loaded.",
+    "erasedBanner": "<strong>Contact data erased</strong> on {date}. The identity kept with the medical documentation remains.",
+    "deletionBanner": "<strong>Deletion requested</strong> on {date} by {by}. Contact data becomes eligible for erasure from {from}.",
+    "erasureEnabled": "A super or compliance administrator erases it from the erasure plan below the account list.",
+    "erasureDryRun": "Erasure is a dry run only on this deployment.",
+    "roleDoctor": "Doctor",
+    "rolePatient": "Patient",
+    "licenceVerification": "Licence verification",
+    "emailVerification": "Email verification",
+    "verified": "Verified",
+    "pendingReview": "Pending review",
+    "notVerified": "Not verified",
+    "phoneVerified": "verified",
+    "phoneNotVerified": "not verified",
+    "unknownDevice": "Unknown device",
+    "unknownNetwork": "unknown",
+    "sessionLine": "Network {network} · started {started} · last seen {seen}",
+    "failedSuffix": "(failed)",
+    "historyLine": "{action} by {by}",
+    "listFailed": "Accounts could not be loaded.",
+    "licenceVerified": "Licence verified",
+    "licencePending": "Licence pending",
+    "emailVerified": "Email verified",
+    "emailNotVerified": "Email not verified",
+    "patients": "Patients",
+    "doctors": "Doctors",
+    "doctorCount": "{count, plural, one {# doctor account} other {# doctor accounts}}",
+    "patientCount": "{count, plural, one {# patient account} other {# patient accounts}}",
+    "openAccount": "Open account {name}",
+    "rowDates": "Registered {registered} · last sign-in {signedIn}"
   },
   "adminUsers": {
     "adminUsers": "Admin Users",
@@ -4649,5 +4808,202 @@
     "confirm": "I will act as the treating party for my patients and keep my details and documents current. (Required)",
     "creating": "Creating…",
     "create": "Create independent practice"
+  },
+  "doctorVerification": {
+    "verified": "Verified physician",
+    "pending": "Pending verification",
+    "unavailable": "Verification unavailable",
+    "select": "Select {name}",
+    "loading": "Loading clinician details…",
+    "clinicalFocus": "Clinical focus"
+  },
+  "profileImage": {
+    "yourProfileImageCouldNot": "Your profile image could not be loaded.",
+    "thisPhotoCouldNotBe": "This photo could not be prepared. Choose another file.",
+    "signInAgainBeforeChanging": "Sign in again before changing your profile image.",
+    "profileImageRemoved": "Profile image removed.",
+    "profileImageUpdated": "Profile image updated.",
+    "yourImageCouldNotBe": "Your image could not be saved. Please try again.",
+    "selectedProfileImagePreview": "Selected profile image preview",
+    "profileImage": "Profile image",
+    "replacePhoto": "Replace photo",
+    "uploadPhoto": "Upload photo",
+    "saveImage": "Save image",
+    "cancelSelection": "Cancel selection",
+    "removeImage": "Remove image",
+    "confirmRemoval": "Confirm removal",
+    "removeYourPhotoYourInitials": "Remove your photo? Your initials are shown instead until you upload a new one.",
+    "removePhoto": "Remove photo",
+    "keepPhoto": "Keep photo",
+    "jpegPngWebpOrHeic": "JPEG, PNG, WebP or HEIC, up to 20 MB. Photos are resized on your device and their location and camera data removed before upload.",
+    "preparingYourPhoto": "Preparing your photo…",
+    "savingProfileImage": "Saving profile image…",
+    "retryImage": "Retry image"
+  },
+  "documentAccess": {
+    "documentAccessWasCancelled": "Document access was cancelled.",
+    "thisDocumentIsUnavailableRetry": "This document is unavailable. Retry access or close this dialog and refresh the records.",
+    "closeDocumentAccess": "Close document access",
+    "close": "Close",
+    "accessIsRequestedForThe": "Access is requested for the file associated with this record. Opening a file does not mark it as clinically reviewed.",
+    "preparingDocumentAccess": "Preparing document access…",
+    "retryDocumentAccess": "Retry document access",
+    "thisDocumentLinkHasExpired": "This document link has expired. Request fresh access to download the file.",
+    "requestFreshAccess": "Request fresh access",
+    "originalFilename": "Original filename",
+    "formatAndSize": "Format and size",
+    "uploadSource": "Upload source",
+    "uploadedByPatient": "Uploaded by patient",
+    "uploadedByCareTeam": "Uploaded by care team",
+    "uploadSourceUnavailable": "Upload source unavailable",
+    "expiresAt": "This download link expires at <stamp>{time}</stamp>. Files download with a generic name for privacy. Request a new link after it expires."
+  },
+  "reschedule": {
+    "thisAppointmentHasNoAssigned": "This appointment has no assigned clinician. Contact support to reschedule.",
+    "noNewTimesAreAvailable": "No new times are available. Your existing appointment is unchanged.",
+    "availabilityCouldNotBeLoaded": "Availability could not be loaded. Close and retry.",
+    "noTimesRemainOnThis": "No times remain on this date. Choose another date.",
+    "timesCouldNotBeLoaded": "Times could not be loaded. Choose a date to retry.",
+    "selectAnAvailableDateAnd": "Select an available date and time before confirming.",
+    "reschedulingFailedYourExistingAppointment": "Rescheduling failed. Your existing appointment is unchanged.",
+    "rescheduleAppointment": "Reschedule appointment",
+    "selectADate": "Select a date",
+    "selectATime": "Select a time",
+    "loadingCurrentAvailability": "Loading current availability…",
+    "savingAppointment": "Saving appointment…",
+    "confirmReschedule": "Confirm reschedule",
+    "keepCurrentAppointment": "Keep current appointment"
+  },
+  "healthMetrics": {
+    "failedToSaveHealthMetric": "Failed to save health metric. Please try again.",
+    "failedToDeleteHealthMetric": "Failed to delete health metric. Please try again.",
+    "bloodPressure": "Blood Pressure",
+    "heartRate": "Heart Rate",
+    "weight": "Weight",
+    "temperature": "Temperature",
+    "bloodSugar": "Blood Sugar",
+    "oxygenSaturation": "Oxygen Saturation",
+    "loadingHealthMetrics": "Loading health metrics...",
+    "healthMetrics": "Health Metrics",
+    "trackYourVitalSignsAnd": "Track your vital signs and health measurements",
+    "noHealthMetricsYet": "No Health Metrics Yet",
+    "startTrackingYourHealthBy": "Start tracking your health by adding your first metric",
+    "editHealthMetric": "Edit Health Metric",
+    "addHealthMetric": "Add Health Metric",
+    "metricType": "Metric Type",
+    "value": "Value",
+    "unit": "Unit",
+    "dateTime": "Date & Time",
+    "notesOptional": "Notes (Optional)",
+    "update": "Update",
+    "add": "Add"
+  },
+  "reviewModal": {
+    "writeAReview": "Write a review",
+    "close": "Close",
+    "excellent": "Excellent",
+    "veryGood": "Very Good",
+    "good": "Good",
+    "fair": "Fair",
+    "poor": "Poor",
+    "shareYourExperienceWithThis": "Share your experience with this provider...",
+    "submitting": "Submitting...",
+    "submitReview": "Submit Review"
+  },
+  "patientMobileNav": {
+    "patientAccount": "Patient account",
+    "openMessages": "Open messages",
+    "profile": "Profile",
+    "qarevoHealthPatientDashboard": "Qarevo Health Patient Dashboard",
+    "closeNavigationMenu": "Close navigation menu",
+    "openNavigationMenu": "Open navigation menu",
+    "navigationMenu": "Navigation menu",
+    "patientSummary": "Patient summary",
+    "patientNavigation": "Patient navigation"
+  },
+  "practiceLocation": {
+    "thePracticeHasNotPublished": "The practice has not published its address yet. Video consultations do not need a visit.",
+    "theMapIsProvidedBy": "The map is provided by OpenStreetMap. Showing it sends your IP address to the OpenStreetMap Foundation. Nothing is loaded until you choose to show it.",
+    "showMap": "Show map",
+    "aMapAppearsHereOnce": "A map appears here once the practice has confirmed its location.",
+    "openInOpenstreetmapNewTab": "Open in OpenStreetMap (new tab)"
+  },
+  "clinicalRecordsView": {
+    "weCouldnTLoadYour": "We couldn’t load your records",
+    "tryAgain": "Try again",
+    "yourRecordsHaveNotBeen": "Your records have not been changed. Please try again.",
+    "backToDashboard": "Back to dashboard"
+  },
+  "patientCareRecords": {
+    "followUpCare": "Follow-up care",
+    "followUpInstructionsRecordedFor": "Follow-up instructions recorded for your account.",
+    "yourFollowUpRecord": "Your follow-up record",
+    "noFollowUpInstructionsRecorded": "No follow-up instructions recorded",
+    "yourClinicianSFollowUp": "Your clinician’s follow-up instructions will appear here when available.",
+    "prescriptionsCarePlan": "Prescriptions & Care Plan",
+    "myAppointments": "My appointments",
+    "referrals": "Referrals",
+    "specialistReferralsRecordedForYour": "Specialist referrals recorded for your account.",
+    "noReferralsRecorded": "No referrals recorded",
+    "ifYourClinicianArrangesA": "If your clinician arranges a referral, its recorded details will appear here.",
+    "specialistReferral": "Specialist referral",
+    "medicationInstructionsAndCarePlans": "Medication instructions and care plans recorded for your account. Missing or historical fields remain visible for clinician review.",
+    "yourMedications": "Your medications",
+    "noMedicationsRecorded": "No medications recorded",
+    "medicationInstructionsWillAppearHere": "Medication instructions will appear here when your clinician records them. No medication plan is available for this account yet.",
+    "yourCarePlans": "Your care plans",
+    "noCarePlanRecorded": "No care plan recorded",
+    "yourClinicianSCarePlan": "Your clinician’s care plan will appear here when it is available.",
+    "someHistoricalEntriesCouldNot": "Some historical entries could not be fully displayed in this bounded view. The saved data has not been changed; contact your care team if information is missing."
+  },
+  "appointmentStatus": {
+    "booked": "Booked",
+    "scheduled": "Scheduled",
+    "confirmed": "Confirmed",
+    "pending": "Pending",
+    "pendingPayment": "Waiting for payment",
+    "inProgress": "In progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "noShow": "No show",
+    "rescheduled": "Rescheduled",
+    "expired": "Expired",
+    "unavailable": "Status unavailable"
+  },
+  "treatingEntityChoice": {
+    "coverage": {
+      "gkv": "Statutory insurance (GKV)",
+      "pkv": "Private insurance (PKV)",
+      "selfPay": "Self-pay"
+    },
+    "checking": "Checking who can treat you…",
+    "notForCoverage": "This doctor can’t be booked for your coverage. Choose another doctor.",
+    "chooseEntity": "Choose the practice you want to be treated by.",
+    "confirmPrice": "Confirm the self-pay price before booking.",
+    "title": "Your treating practice",
+    "cannotTreat": "This doctor can’t treat patients with {coverage} through Qarevo. Go back and choose another doctor, or check your insurance details in Settings.",
+    "coverageFallback": "your coverage",
+    "chooseOne": "This doctor treats for several practices. Choose one (Required)",
+    "singleKind": "{kind}. They are your treating party and bill the consultation.",
+    "kindIndependent": "independent practitioner",
+    "kindPractice": "practice",
+    "selfPayPrice": "Self-pay price for this video consultation",
+    "referencePrice": "Reference price",
+    "practicePrice": "Price set by the practice",
+    "invoiceNote": "The practice invoices you under the GOÄ; nothing is charged through Qarevo.",
+    "confirmPay": "I confirm I will pay {amount} myself for this consultation. (Required)"
+  },
+  "patientPages": {
+    "openingSavedReview": "Opening your saved booking review…",
+    "openingReview": "Opening booking review…",
+    "openingOptions": "Opening appointment options…",
+    "redirectingScheduling": "Redirecting to scheduling…",
+    "summaryTitle": "Consultation summary",
+    "summaryDescription": "Read the latest clinician-published account of your consultation and follow-up advice.",
+    "loadingConsultation": "Loading consultation…",
+    "notificationsTitle": "Notifications",
+    "notificationsDescription": "Read account and care updates, open the related record, and manage your read receipts.",
+    "videoTitle": "Video consultation",
+    "videoDescription": "Meet your clinician in your saved consultation room."
   }
 }

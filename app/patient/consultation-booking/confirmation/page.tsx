@@ -1,10 +1,12 @@
 'use client'
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { buildBookingQueryParams } from '@/lib/booking'
 
 /** Legacy confirmation route rejoins the single API-backed review/submit flow. */
 function LegacyConfirmation() {
+  const t=useTranslations('patientPages')
   const router=useRouter()
   const query=useSearchParams()
   useEffect(()=>{
@@ -12,6 +14,9 @@ function LegacyConfirmation() {
     const target=next.get('appointmentId')?'success':'review'
     router.replace(`/patient/consultation-booking/${target}?${next.toString()}`)
   },[router,query])
-  return <p role='status' className='p-6'>Opening your saved booking review…</p>
+  return <p role='status' className='p-6'>{t('openingSavedReview')}</p>
 }
-export default function ConfirmationPage(){return <Suspense fallback={<p role='status'>Opening booking review…</p>}><LegacyConfirmation/></Suspense>}
+export default function ConfirmationPage(){
+  const t=useTranslations('patientPages')
+  return <Suspense fallback={<p role='status'>{t('openingReview')}</p>}><LegacyConfirmation/></Suspense>
+}

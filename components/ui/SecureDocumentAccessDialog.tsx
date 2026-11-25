@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { ACCOUNT_CHANGED } from '@/lib/account-storage'
 import { getApiErrorDetail, getApiErrorRequestId } from '@/lib/api'
 import { usePortalAction } from '@/lib/portal-action'
@@ -25,6 +26,7 @@ export default function SecureDocumentAccessDialog(props: Props) {
 }
 
 function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document', expectedFileId, maxLifetimeSeconds = 300, loadDocument, onClose }: Props) {
+  const t = useTranslations('documentAccess'), german = useLocale().startsWith('de')
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   const descriptionId = useId()
@@ -66,7 +68,7 @@ function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document',
     let request = pendingRequest.current
     if (!request || request.fileId !== expectedFileId || request.revision !== revision || request.scope !== action.scope || request.loader !== loadDocument) {
       const promise = Promise.resolve().then(() => {
-        if (closed.current || !action.isCurrent()) throw new Error('Document access was cancelled.')
+        if (closed.current || !action.isCurrent()) throw new Error(t('documentAccessWasCancelled'))
         return loadDocument()
       })
       const created = { fileId: expectedFileId, revision, scope: action.scope, loader: loadDocument, requestedAt: Date.now(), promise }
@@ -83,12 +85,12 @@ function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document',
         if (!current || closed.current || !action.isCurrent()) return
         setState({ status: 'ready', access: validateDocumentAccess(metadata, expectedFileId, requestedAt, Date.now(), maxLifetimeSeconds) })
       } catch (failure) {
-        if (current && !closed.current && action.isCurrent()) setState({ status: 'error', message: getApiErrorDetail(failure) || 'This document is unavailable. Retry access or close this dialog and refresh the records.', requestId: getApiErrorRequestId(failure) })
+        if (current && !closed.current && action.isCurrent()) setState({ status: 'error', message: getApiErrorDetail(failure) || t('thisDocumentIsUnavailableRetry'), requestId: getApiErrorRequestId(failure) })
       } finally { if (current) pending.current = false }
     }
     void run()
     return () => { current = false }
-  }, [captureAction, close, expectedFileId, loadDocument, maxLifetimeSeconds, revision])
+  }, [captureAction, close, expectedFileId, loadDocument, maxLifetimeSeconds, revision, t])
 
   useEffect(() => {
     const check = (event?: Event) => {
@@ -125,20 +127,20 @@ function DocumentAccessDialogContent({ documentTitle, documentKind = 'Document',
     className='m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-theme bg-surface p-5 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-7'>
     <div className='flex items-start justify-between gap-4'>
       <div className='min-w-0'><h2 id={titleId} className='portal-h2'>{documentKind} access</h2><p className='break-words text-sm text-secondary'>{documentTitle}</p></div>
-      <PortalButton autoFocus type='button' aria-label='Close document access' onClick={close}>Close</PortalButton>
+      <PortalButton autoFocus type='button' aria-label={t('closeDocumentAccess')} onClick={close}>{t('close')}</PortalButton>
     </div>
-    <p id={descriptionId} className='mt-4 text-sm leading-6 text-muted'>Access is requested for the file associated with this record. Opening a file does not mark it as clinically reviewed.</p>
+    <p id={descriptionId} className='mt-4 text-sm leading-6 text-muted'>{t('accessIsRequestedForThe')}</p>
     <div className='mt-5' aria-busy={state.status === 'loading'}>
-      {state.status === 'loading' && <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm text-secondary'>Preparing document access…</p>}
-      {state.status === 'error' && <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-6'>{state.message}</p><SupportReference requestId={state.requestId} /><PortalButton type='button' onClick={retry}>Retry document access</PortalButton></div>}
-      {state.status === 'expired' && <div role='status' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-6'>This document link has expired. Request fresh access to download the file.</p><PortalButton type='button' onClick={retry}>Request fresh access</PortalButton></div>}
+      {state.status === 'loading' && <p role='status' className='rounded-xl bg-surface-subtle p-4 text-sm text-secondary'>{t('preparingDocumentAccess')}</p>}
+      {state.status === 'error' && <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-6'>{state.message}</p><SupportReference requestId={state.requestId} /><PortalButton type='button' onClick={retry}>{t('retryDocumentAccess')}</PortalButton></div>}
+      {state.status === 'expired' && <div role='status' className='rounded-xl border border-theme bg-surface-subtle p-4'><p className='mb-4 text-sm leading-6'>{t('thisDocumentLinkHasExpired')}</p><PortalButton type='button' onClick={retry}>{t('requestFreshAccess')}</PortalButton></div>}
       {state.status === 'ready' && <>
         <dl className='grid gap-3 rounded-xl border border-theme bg-surface-subtle p-4 text-sm'>
-          <div className='min-w-0'><dt className='font-semibold text-secondary'>Original filename</dt><dd className='mt-1 break-all text-ink'>{state.access.filename}</dd></div>
-          <div><dt className='font-semibold text-secondary'>Format and size</dt><dd className='mt-1 break-words text-ink'>{state.access.contentType} · {documentFileSize(state.access.fileSizeBytes)}</dd></div>
-          <div><dt className='font-semibold text-secondary'>Upload source</dt><dd className='mt-1 text-ink'>{state.access.uploadedBy === 'patient' ? 'Uploaded by patient' : state.access.uploadedBy === 'care_team' ? 'Uploaded by care team' : 'Upload source unavailable'}</dd></div>
+          <div className='min-w-0'><dt className='font-semibold text-secondary'>{t('originalFilename')}</dt><dd className='mt-1 break-all text-ink'>{state.access.filename}</dd></div>
+          <div><dt className='font-semibold text-secondary'>{t('formatAndSize')}</dt><dd className='mt-1 break-words text-ink'>{state.access.contentType} · {documentFileSize(state.access.fileSizeBytes)}</dd></div>
+          <div><dt className='font-semibold text-secondary'>{t('uploadSource')}</dt><dd className='mt-1 text-ink'>{state.access.uploadedBy === 'patient' ? t('uploadedByPatient') : state.access.uploadedBy === 'care_team' ? t('uploadedByCareTeam') : t('uploadSourceUnavailable')}</dd></div>
         </dl>
-        <p className='my-4 text-sm leading-6 text-muted'>This download link expires at <time dateTime={new Date(state.access.expiresAt).toISOString()}>{new Date(state.access.expiresAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>. Files download with a generic name for privacy. Request a new link after it expires.</p>
+        <p className='my-4 text-sm leading-6 text-muted'>{t.rich('expiresAt', { time: new Date(state.access.expiresAt).toLocaleString(german ? 'de-DE' : undefined, { dateStyle: 'medium', timeStyle: 'short' }), stamp: chunks => <time dateTime={new Date(state.access.expiresAt).toISOString()}>{chunks}</time> })}</p>
         <a className='portal-button portal-button-primary q-button q-button-primary inline-flex min-h-11 max-w-full items-center justify-center rounded-xl px-4 py-2 text-center text-sm font-semibold' href={state.access.downloadUrl} target='_blank' rel='noopener noreferrer' referrerPolicy='no-referrer'
           onClick={event => {
             const action = originAction.current

@@ -74,9 +74,9 @@ function formatWorkingTime(value: string | null | undefined, notSet: string, twe
 
 function groupSlots(slots: string[]) {
   const groups = [
-    { label: 'Morning', slots: [] as string[] },
-    { label: 'Afternoon', slots: [] as string[] },
-    { label: 'Evening', slots: [] as string[] },
+    { label: 'morning', slots: [] as string[] },
+    { label: 'afternoon', slots: [] as string[] },
+    { label: 'evening', slots: [] as string[] },
   ]
 
   slots.forEach((slot) => {
@@ -628,7 +628,7 @@ function DateTimeSelectionPageContent() {
 	                  </div>
 	                ) : slotGroups.map((group) => (
 	                  <div key={group.label}>
-	                    <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{group.label}</p>
+	                    <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t(`daypart.${group.label}`)}</p>
 	                    <div className='dt-slot-grid'>
 	                      {group.slots.map((slot) => {
 	                        const disabled = !availableSlots.includes(slot)
@@ -695,7 +695,7 @@ function DateTimeSelectionPageContent() {
                   <div style={{ display: 'grid', gap: '12px' }}>
 	                    {slotGroups.map((group) => (
 	                      <div key={group.label}>
-	                        <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{group.label}</p>
+	                        <p style={{ margin: '0 0 8px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t(`daypart.${group.label}`)}</p>
 	                        <div className='dt-slot-grid'>
 	                          {group.slots.map((slot) => {
 	                            const disabled = !availableSlots.includes(slot)

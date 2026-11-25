@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { appointmentStatusKey } from '@/lib/appointment-status'
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -22,11 +23,13 @@ type Appointment = {
 
 function AppointmentDetails() {
   const t = useTranslations('patientAppointmentDetails')
+  const tStatus = useTranslations('appointmentStatus')
+  const appointmentStatus = (status?: string | null) => { const key = appointmentStatusKey(status); return key ? tStatus(key) : status?.replaceAll('_', ' ') || tStatus('unavailable') }
   const params = useSearchParams()
   const id = params.get('appointmentId')
   const resource = usePatientResource<Appointment>(id ? `/api/v1/patient/appointments/${encodeURIComponent(id)}` : null)
   const { data: appointment, loading } = resource
-  const error = resource.error ? resource.errorMessage || 'Your appointment could not be loaded. Please retry.' : ''
+  const error = resource.error ? resource.errorMessage || t('yourAppointmentCouldNotBe') : ''
   const [rescheduleFor, setRescheduleFor] = useState<string | null>(null)
   const active = appointment && ['BOOKED', 'SCHEDULED', 'CONFIRMED'].includes(appointment.status || '')
   const formatTime = (value: string) => new Date(value).toLocaleString('en-GB', {
@@ -39,8 +42,8 @@ function AppointmentDetails() {
       {!id && <p>{t('selectAnAppointmentToView')}</p>}
       {error && <div role="alert"><p>{error}</p><button className="mt-4 min-h-11 text-link underline" onClick={() => resource.retry()}>{t('retryLoadingAppointment')}</button></div>}
       {appointment && <>
-        <p className="text-sm font-medium text-muted">{appointment.status?.replaceAll('_', ' ') || 'Status unavailable'}</p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight">{appointment.provider_name || 'Assigned clinician'}</h2>
+        <p className="text-sm font-medium text-muted">{appointmentStatus(appointment.status)}</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight">{appointment.provider_name || t('assignedClinician')}</h2>
         {appointment.specialty && <p className="mt-2 text-muted">{appointment.specialty}</p>}
         <dl className="my-6 grid gap-5 sm:grid-cols-2">
           <div><dt className="text-sm text-muted">{t('starts')}</dt><dd className="mt-1 font-medium">{formatTime(appointment.start_at)}</dd></div>
@@ -66,7 +69,7 @@ function AppointmentDetails() {
       </>}
       <Link className="mt-6 inline-flex min-h-11 items-center text-link underline" href="/patient/appointments">{t('backToAppointments')}</Link>
     </section>
-    {rescheduleFor === id && appointment && <AppointmentRescheduleDialog appointment={{ id: appointment.id, providerId: appointment.provider_id, physician: appointment.provider_name || 'Assigned clinician' }} onClose={() => setRescheduleFor(null)} onSaved={() => { setRescheduleFor(null); resource.retry() }} />}
+    {rescheduleFor === id && appointment && <AppointmentRescheduleDialog appointment={{ id: appointment.id, providerId: appointment.provider_id, physician: appointment.provider_name || t('assignedClinician') }} onClose={() => setRescheduleFor(null)} onSaved={() => { setRescheduleFor(null); resource.retry() }} />}
   </PatientPortalShell>
 }
 

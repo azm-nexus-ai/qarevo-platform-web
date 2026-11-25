@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
@@ -19,6 +20,7 @@ import { logoutCurrentUser, clearPortalSession, getPatientSettings, isAuthError,
 import { NavLabel } from '@/components/ui/NavLabel'
 
 export default function PatientMobileNavigation() {
+  const t = useTranslations('patientMobileNav')
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -78,7 +80,7 @@ export default function PatientMobileNavigation() {
     const fetchPatientChrome = async () => {
       try {
         const settings = await getPatientSettings()
-        if (active && scope === readAccountScope('patient')) setPatientName([settings.first_name, settings.last_name].filter(Boolean).join(' ') || 'Patient account')
+        if (active && scope === readAccountScope('patient')) setPatientName([settings.first_name, settings.last_name].filter(Boolean).join(' ') || t('patientAccount'))
       } catch (error) {
         if (!active || scope !== readAccountScope('patient')) return
         if (isAuthError(error)) {
@@ -87,16 +89,16 @@ export default function PatientMobileNavigation() {
           return
         }
         console.error('Failed to fetch dashboard profile:', error)
-        if (active && scope === readAccountScope('patient')) setPatientName('Patient account')
+        if (active && scope === readAccountScope('patient')) setPatientName(t('patientAccount'))
       }
     }
 
     void fetchPatientChrome()
-    const reset = (event: Event) => { if (!isPortalIdentityEvent(event, 'patient')) return; setPatientName('Patient account'); setIdentityRevision(value => value + 1) }
+    const reset = (event: Event) => { if (!isPortalIdentityEvent(event, 'patient')) return; setPatientName(t('patientAccount')); setIdentityRevision(value => value + 1) }
     window.addEventListener(ACCOUNT_CHANGED, reset)
     window.addEventListener('storage', reset)
     return () => { active = false; window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset) }
-  }, [router, identityRevision])
+  }, [router, identityRevision, t])
 
   return (
     <div>
@@ -118,7 +120,7 @@ export default function PatientMobileNavigation() {
           box-shadow: var(--shadow-sm);
         }
         @media(max-width:460px) {
-          .pmn-topbar button[aria-label="Open messages"], .pmn-topbar button[aria-label="Profile"] { display: none !important; }
+          .pmn-topbar button[aria-label={t('openMessages')}], .pmn-topbar button[aria-label={t('profile')}] { display: none !important; }
         }
         @media(max-width:360px) {
           .pmn-topbar { padding-inline: 10px; gap: 8px; }
@@ -204,7 +206,7 @@ export default function PatientMobileNavigation() {
       <div className="pmn-topbar portal-mobile-navbar" role="banner">
           <Link
             href="/patient/dashboard"
-            aria-label="Qarevo Health Patient Dashboard"
+            aria-label={t('qarevoHealthPatientDashboard')}
             style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', minWidth: 0, width: '100px', flexShrink: 0 }}
           >
             <AuthenticatedLogo width={100} />
@@ -213,7 +215,7 @@ export default function PatientMobileNavigation() {
           <button
             ref={hamburgerRef}
             className="pmn-hamburger"
-            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-label={mobileOpen ? t('closeNavigationMenu') : t('openNavigationMenu')}
             aria-expanded={mobileOpen}
             aria-controls="pmn-drawer"
             onClick={() => setMobileOpen(true)}
@@ -228,7 +230,7 @@ export default function PatientMobileNavigation() {
           <ThemeToggle />
           <button
             type="button"
-            aria-label="Open messages"
+            aria-label={t('openMessages')}
             onClick={() => router.push(PATIENT_ROUTES.messages)}
             style={{
               width: '40px',
@@ -268,10 +270,10 @@ export default function PatientMobileNavigation() {
         aria-modal={mobileOpen ? true : undefined}
         aria-hidden={!mobileOpen}
         inert={!mobileOpen}
-        aria-label="Navigation menu"
+        aria-label={t('navigationMenu')}
         className={`pmn-drawer${mobileOpen ? ' pmn-drawer--open' : ''}`}
       >
-        <button className="pmn-drawer-close" aria-label="Close navigation menu" onClick={closeDrawer}>
+        <button className="pmn-drawer-close" aria-label={t('closeNavigationMenu')} onClick={closeDrawer}>
           ✕
         </button>
 
@@ -283,19 +285,19 @@ export default function PatientMobileNavigation() {
         </div>
 
         <section
-          aria-label="Patient summary"
+          aria-label={t('patientSummary')}
           style={{ ...Glass.aiCard, borderRadius: '16px', padding: '13px', marginBottom: '14px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <ProfileImage name={patientName} size={42} />
             <div>
               <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy }}>{patientName}</p>
-              <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>Patient account</p>
+              <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>{t('patientAccount')}</p>
             </div>
           </div>
         </section>
 
-        <nav aria-label="Patient navigation" style={{ flex: 1 }}>
+        <nav aria-label={t('patientNavigation')} style={{ flex: 1 }}>
           <div style={{ display: 'grid', gap: '4px' }}>
             {PATIENT_SIDEBAR_ITEMS.map((item) => {
               const isActive = isPatientNavActive(pathname, item.href)

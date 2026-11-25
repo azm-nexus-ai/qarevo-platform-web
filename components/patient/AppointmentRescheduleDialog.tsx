@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { apiPost, getApiErrorDetail, getPatientBookingAvailability, getPatientBookingSlots, type PatientBookingSlot } from '@/lib/api'
 import { resolveBookingSlot } from '@/lib/booking-slot'
 
@@ -11,6 +12,7 @@ type Props = {
 }
 
 export default function AppointmentRescheduleDialog({ appointment, onClose, onSaved }: Props) {
+  const t = useTranslations('reschedule')
   const dialog = useRef<HTMLDialogElement>(null)
   const [dates, setDates] = useState<string[]>([])
   const [date, setDate] = useState('')
@@ -30,19 +32,19 @@ export default function AppointmentRescheduleDialog({ appointment, onClose, onSa
     let active = true
     if (!appointment.providerId) {
       setLoading(false)
-      setError('This appointment has no assigned clinician. Contact support to reschedule.')
+      setError(t('thisAppointmentHasNoAssigned'))
       return
     }
     getPatientBookingAvailability(appointment.providerId).then(data => {
       if (!active) return
       const available = data.availability.filter(day => (day.slot_count || 0) > 0).map(day => day.date)
       setDates(available)
-      if (!available.length) setError('No new times are available. Your existing appointment is unchanged.')
+      if (!available.length) setError(t('noNewTimesAreAvailable'))
     }).catch(error => {
-      if (active) setError(getApiErrorDetail(error) || 'Availability could not be loaded. Close and retry.')
+      if (active) setError(getApiErrorDetail(error) || t('availabilityCouldNotBeLoaded'))
     }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [appointment.providerId])
+  }, [appointment.providerId, t])
 
   useEffect(() => {
     if (!date || !appointment.providerId) return
@@ -52,18 +54,18 @@ export default function AppointmentRescheduleDialog({ appointment, onClose, onSa
     getPatientBookingSlots(appointment.providerId, date).then(data => {
       if (!active) return
       setSlots(data.slot_details || [])
-      if (!data.slot_details?.length) setError('No times remain on this date. Choose another date.')
+      if (!data.slot_details?.length) setError(t('noTimesRemainOnThis'))
     }).catch(error => {
-      if (active) setError(getApiErrorDetail(error) || 'Times could not be loaded. Choose a date to retry.')
+      if (active) setError(getApiErrorDetail(error) || t('timesCouldNotBeLoaded'))
     }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [date, appointment.providerId])
+  }, [date, appointment.providerId, t])
 
   async function save(event: React.FormEvent) {
     event.preventDefault()
     if (saving) return
     if (!date || !selected || !appointment.providerId) {
-      setError('Select an available date and time before confirming.')
+      setError(t('selectAnAvailableDateAnd'))
       return
     }
     setSaving(true)
@@ -77,7 +79,7 @@ export default function AppointmentRescheduleDialog({ appointment, onClose, onSa
       })
       onSaved()
     } catch (error) {
-      setError(getApiErrorDetail(error) || (error instanceof Error ? error.message : 'Rescheduling failed. Your existing appointment is unchanged.'))
+      setError(getApiErrorDetail(error) || (error instanceof Error ? error.message : t('reschedulingFailedYourExistingAppointment')))
     } finally { setSaving(false) }
   }
 
@@ -90,25 +92,25 @@ export default function AppointmentRescheduleDialog({ appointment, onClose, onSa
       .qarevo-reschedule-dialog select, .qarevo-reschedule-dialog button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-subtle); color: var(--ink); }
     `}</style>
     <form onSubmit={save} noValidate aria-busy={saving || loading}>
-      <h2 id="reschedule-title" className="text-2xl font-semibold tracking-tight">Reschedule appointment</h2>
+      <h2 id="reschedule-title" className="text-2xl font-semibold tracking-tight">{t('rescheduleAppointment')}</h2>
       <p className="mt-2 text-muted">{appointment.physician}. Your current time stays booked until the new time is confirmed.</p>
       <label htmlFor="reschedule-date">Date — required
         <select id="reschedule-date" value={date} disabled={saving} onChange={event => { setDate(event.target.value); setSelected(''); setSlots([]); setError('') }}>
-          <option value="">Select a date</option>
+          <option value="">{t('selectADate')}</option>
           {dates.map(value => <option key={value} value={value}>{new Date(`${value}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long', timeZone: 'UTC' })}</option>)}
         </select>
       </label>
       <label htmlFor="reschedule-time">Time — required
         <select id="reschedule-time" value={selected} disabled={saving} onChange={event => { setSelected(event.target.value); setError('') }}>
-          <option value="">Select a time</option>
+          <option value="">{t('selectATime')}</option>
           {slots.map(slot => <option key={slot.start_at} value={slot.start_at}>{slot.label} · {slot.time_zone} · {slot.duration_minutes} min</option>)}
         </select>
       </label>
-      {loading && <p role="status" className="mt-4">Loading current availability…</p>}
+      {loading && <p role="status" className="mt-4">{t('loadingCurrentAvailability')}</p>}
       {error && <p role="alert" className="mt-4 text-red-700 dark:text-red-300">{error}</p>}
       <div className="mt-6 flex flex-wrap gap-3">
-        <button type="submit" disabled={saving} className="font-semibold">{saving ? 'Saving appointment…' : 'Confirm reschedule'}</button>
-        <button type="button" disabled={saving} onClick={onClose}>Keep current appointment</button>
+        <button type="submit" disabled={saving} className="font-semibold">{saving ? t('savingAppointment') : t('confirmReschedule')}</button>
+        <button type="button" disabled={saving} onClick={onClose}>{t('keepCurrentAppointment')}</button>
       </div>
     </form>
   </dialog>

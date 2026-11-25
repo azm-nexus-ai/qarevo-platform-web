@@ -57,7 +57,7 @@ function SidebarContent({ pathname, onNavigate, userSettings }: { pathname: stri
       </section>
 
       {/* Nav */}
-      <nav aria-label='Patient navigation' style={{ flex: 1 }}>
+      <nav aria-label={t('navigation')} style={{ flex: 1 }}>
         <div style={{ display: 'grid', gap: '4px' }}>
           {PATIENT_SIDEBAR_ITEMS.map((item) => {
             const isActive = isPatientNavActive(pathname, item.href)

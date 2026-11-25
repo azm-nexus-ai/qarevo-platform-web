@@ -50,7 +50,7 @@ export default function PatientEpisodeDetailPage() {
         setFields(fieldsData)
       } catch (err) {
         console.error('Failed to load episode data:', err)
-        setError('Failed to load episode data. Please try again.')
+        setError(t('failedToLoadEpisodeData'))
       } finally {
         setLoading(false)
       }
@@ -59,7 +59,7 @@ export default function PatientEpisodeDetailPage() {
     if (episodeId) {
       loadData()
     }
-  }, [episodeId])
+  }, [episodeId, t])
 
   if (loading) {
     return (
@@ -91,7 +91,7 @@ export default function PatientEpisodeDetailPage() {
         description={t('weEncounteredAnIssueLoading')}
       >
         <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <p style={{ color: T.red, marginBottom: '20px' }}>{error || 'Episode not found'}</p>
+          <p style={{ color: T.red, marginBottom: '20px' }}>{error || t('episodeNotFound')}</p>
           <button
             onClick={() => router.push(PATIENT_ROUTES.dashboard)}
             style={{
@@ -236,7 +236,7 @@ export default function PatientEpisodeDetailPage() {
                         {field.field_name}
                       </p>
                       <p style={{ margin: 0, fontSize: '14px', color: T.navy, fontWeight: 700 }}>
-                        {field.verified_value || field.original_value || 'Not set'}
+                        {field.verified_value || field.original_value || t('notSet')}
                       </p>
                     </div>
                     <span style={{

@@ -1,6 +1,7 @@
 'use client'
 import dynamic from 'next/dynamic'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import 'leaflet/dist/leaflet.css'
 
 // Leaflet touches `window`, so it is only loaded in the browser, and only after consent.
@@ -27,6 +28,7 @@ export function validCoordinates(latitude?: number | null, longitude?: number | 
 export default function PracticeLocation({ name, practice, address, latitude, longitude }: {
   name: string; practice?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null
 }) {
+  const t = useTranslations('practiceLocation')
   // Coordinates arrive only after the client-side profile fetch, so reading the
   // stored choice up front cannot change the server-rendered markup.
   const [consented, setConsented] = useState(() => typeof window !== 'undefined' && readConsent())
@@ -51,7 +53,7 @@ export default function PracticeLocation({ name, practice, address, latitude, lo
     `}</style>
     {cleanAddress
       ? <address>{practice && <strong>{practice}</strong>}{cleanAddress}</address>
-      : <p className='pl-note'>The practice has not published its address yet. Video consultations do not need a visit.</p>}
+      : <p className='pl-note'>{t('thePracticeHasNotPublished')}</p>}
     {coordinates && (consented
       ? <div className='pl-map' role='region' aria-label={`Map showing the practice of ${name}`}>
           <MapContainer center={coordinates} zoom={16} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
@@ -60,10 +62,10 @@ export default function PracticeLocation({ name, practice, address, latitude, lo
           </MapContainer>
         </div>
       : <div className='pl-gate'>
-          <p>The map is provided by OpenStreetMap. Showing it sends your IP address to the OpenStreetMap Foundation. Nothing is loaded until you choose to show it.</p>
-          <button type='button' className='pl-button' onClick={() => { rememberConsent(); setConsented(true) }}>Show map</button>
+          <p>{t('theMapIsProvidedBy')}</p>
+          <button type='button' className='pl-button' onClick={() => { rememberConsent(); setConsented(true) }}>{t('showMap')}</button>
         </div>)}
-    {!coordinates && cleanAddress && <p className='pl-note'>A map appears here once the practice has confirmed its location.</p>}
-    {externalHref && <a className='pl-link' href={externalHref} target='_blank' rel='noopener noreferrer'>Open in OpenStreetMap (new tab)</a>}
+    {!coordinates && cleanAddress && <p className='pl-note'>{t('aMapAppearsHereOnce')}</p>}
+    {externalHref && <a className='pl-link' href={externalHref} target='_blank' rel='noopener noreferrer'>{t('openInOpenstreetmapNewTab')}</a>}
   </div>
 }

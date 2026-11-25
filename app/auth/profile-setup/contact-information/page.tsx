@@ -513,7 +513,7 @@ export default function ContactInformationPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label htmlFor='postalCode' style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>{t('postalCodeRequired')}</label>
                   <input id='postalCode' aria-invalid={!!(touched.postalCode && errors.postalCode)} aria-describedby={['postalCode-hint', touched.postalCode && errors.postalCode ? 'postalCode-error' : null].filter(Boolean).join(' ') || undefined} required aria-required='true' value={form.postalCode} autoComplete='postal-code' onChange={(e) => updateField('postalCode', e.target.value)} onBlur={(event) => markTouched('postalCode', event.relatedTarget)} inputMode='numeric' placeholder='10115' style={{ width: '100%', padding: '11px 12px', borderRadius: '11px', border: fieldBorder('postalCode'), background: "var(--surface-glass)", color: T.navy, fontSize: '14px', fontFamily: 'inherit', outline: 'none' }} />
-                  <FieldFeedback name='postalCode' error={touched.postalCode ? errors.postalCode : undefined} hint='Germany: exactly 5 digits, for example 10115. Keep any leading zero.' />
+                  <FieldFeedback name='postalCode' error={touched.postalCode ? errors.postalCode : undefined} hint={t('postcodeHint')} />
                 </div>
               </div>
 

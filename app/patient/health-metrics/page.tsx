@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from 'next-intl'
+
 import { useState, useEffect } from "react"
 import { getHealthMetrics, createHealthMetric, updateHealthMetric, deleteHealthMetric, type HealthMetric, type HealthMetricCreate } from "@/lib/api"
 import { ICONS } from "@/constants/icons"
@@ -14,6 +16,7 @@ const T = {
 }
 
 export default function HealthMetricsPage() {
+  const t = useTranslations('healthMetrics')
   const [metrics, setMetrics] = useState<HealthMetric[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -65,7 +68,7 @@ export default function HealthMetricsPage() {
       loadMetrics()
     } catch (error) {
       console.error("Failed to save health metric:", error)
-      alert("Failed to save health metric. Please try again.")
+      alert(t('failedToSaveHealthMetric'))
     }
   }
 
@@ -88,23 +91,23 @@ export default function HealthMetricsPage() {
       loadMetrics()
     } catch (error) {
       console.error("Failed to delete health metric:", error)
-      alert("Failed to delete health metric. Please try again.")
+      alert(t('failedToDeleteHealthMetric'))
     }
   }
 
   const metricTypeOptions = [
-    { value: "blood_pressure", label: "Blood Pressure", unit: "mmHg" },
-    { value: "heart_rate", label: "Heart Rate", unit: "bpm" },
-    { value: "weight", label: "Weight", unit: "kg" },
-    { value: "temperature", label: "Temperature", unit: "°C" },
-    { value: "blood_sugar", label: "Blood Sugar", unit: "mg/dL" },
-    { value: "oxygen_saturation", label: "Oxygen Saturation", unit: "%" },
+    { value: "blood_pressure", label: t('bloodPressure'), unit: "mmHg" },
+    { value: "heart_rate", label: t('heartRate'), unit: "bpm" },
+    { value: "weight", label: t('weight'), unit: "kg" },
+    { value: "temperature", label: t('temperature'), unit: "°C" },
+    { value: "blood_sugar", label: t('bloodSugar'), unit: "mg/dL" },
+    { value: "oxygen_saturation", label: t('oxygenSaturation'), unit: "%" },
   ]
 
   if (isLoading) {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
-        <p>Loading health metrics...</p>
+        <p>{t('loadingHealthMetrics')}</p>
       </div>
     )
   }
@@ -113,8 +116,8 @@ export default function HealthMetricsPage() {
     <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <div>
-          <h1 style={{ fontSize: "28px", fontWeight: 700, margin: 0, marginBottom: "8px" }}>Health Metrics</h1>
-          <p style={{ color: T.gray, margin: 0 }}>Track your vital signs and health measurements</p>
+          <h1 style={{ fontSize: "28px", fontWeight: 700, margin: 0, marginBottom: "8px" }}>{t('healthMetrics')}</h1>
+          <p style={{ color: T.gray, margin: 0 }}>{t('trackYourVitalSignsAnd')}</p>
         </div>
         <button
           onClick={() => {
@@ -148,8 +151,8 @@ export default function HealthMetricsPage() {
           <svg width={64} height={64} viewBox="0 0 24 24" fill="none" stroke={T.gray} strokeWidth={1.5} style={{ marginBottom: "16px" }}>
             <path d={ICONS.activity} />
           </svg>
-          <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0, marginBottom: "8px" }}>No Health Metrics Yet</h3>
-          <p style={{ color: T.gray, margin: 0 }}>Start tracking your health by adding your first metric</p>
+          <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0, marginBottom: "8px" }}>{t('noHealthMetricsYet')}</h3>
+          <p style={{ color: T.gray, margin: 0 }}>{t('startTrackingYourHealthBy')}</p>
         </div>
       ) : (
         <div style={{ display: "grid", gap: "16px" }}>
@@ -223,11 +226,11 @@ export default function HealthMetricsPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
           <div style={{ background: "var(--surface)", padding: "32px", borderRadius: "16px", width: "100%", maxWidth: "480px" }}>
             <h2 style={{ fontSize: "24px", fontWeight: 700, margin: 0, marginBottom: "24px" }}>
-              {editingMetric ? "Edit Health Metric" : "Add Health Metric"}
+              {editingMetric ? t('editHealthMetric') : t('addHealthMetric')}
             </h2>
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Metric Type</label>
+                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>{t('metricType')}</label>
                 <select
                   value={formData.metric_type}
                   onChange={(e) => {
@@ -245,7 +248,7 @@ export default function HealthMetricsPage() {
                 </select>
               </div>
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Value</label>
+                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>{t('value')}</label>
                 <input
                   type="text"
                   value={formData.value}
@@ -255,7 +258,7 @@ export default function HealthMetricsPage() {
                 />
               </div>
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Unit</label>
+                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>{t('unit')}</label>
                 <input
                   type="text"
                   value={formData.unit}
@@ -265,7 +268,7 @@ export default function HealthMetricsPage() {
                 />
               </div>
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Date & Time</label>
+                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>{t('dateTime')}</label>
                 <input
                   type="datetime-local"
                   value={formData.recorded_at?.slice(0, 16) || ''}
@@ -275,7 +278,7 @@ export default function HealthMetricsPage() {
                 />
               </div>
               <div style={{ marginBottom: "24px" }}>
-                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Notes (Optional)</label>
+                <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>{t('notesOptional')}</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -318,7 +321,7 @@ export default function HealthMetricsPage() {
                     cursor: "pointer",
                   }}
                 >
-                  {editingMetric ? "Update" : "Add"}
+                  {editingMetric ? t('update') : t('add')}
                 </button>
               </div>
             </form>

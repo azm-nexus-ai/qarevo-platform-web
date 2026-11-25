@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useId, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { apiDelete, apiGet, apiPost, getApiErrorDetail } from '@/lib/api'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import ProfileAvatar from '@/components/branding/ProfileAvatar'
@@ -25,6 +26,7 @@ function loadImage() {
  * person's photo is never shown for another.
  */
 function useProfileImage() {
+  const t = useTranslations('profileImage')
   const [image, setImage] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -33,7 +35,7 @@ function useProfileImage() {
     const scope = readAccountScope('patient')
     void loadImage()
       .then(result => { if (active && scope === readAccountScope('patient')) { setImage(result.image); setError('') } })
-      .catch(() => { if (active && scope === readAccountScope('patient')) setError('Your profile image could not be loaded.') })
+      .catch(() => { if (active && scope === readAccountScope('patient')) setError(t('yourProfileImageCouldNot')) })
     const refresh = () => { const owner = readAccountScope('patient'); if (owner) requests.delete(owner); setError(''); setAttempt(value => value + 1) }
     const switchAccount = (event?: Event) => { if (event && !isPortalIdentityEvent(event, 'patient')) return; setImage(null); refresh() }
     const unsubscribe = subscribeProfileChanges('patient', refresh)
@@ -41,7 +43,7 @@ function useProfileImage() {
     const crossTab = (event: StorageEvent) => { if (isPortalIdentityEvent(event, 'patient')) switchAccount() }
     window.addEventListener('storage', crossTab)
     return () => { active = false; unsubscribe(); window.removeEventListener(ACCOUNT_CHANGED, switchAccount); window.removeEventListener('storage', crossTab) }
-  }, [attempt])
+  }, [attempt, t])
   return { image, error, retry: () => setAttempt(value => value + 1) }
 }
 
@@ -51,6 +53,7 @@ export default function ProfileImage({ name, size = 42 }: { name: string; size?:
 }
 
 export function ProfileImageEditor({ name }: { name: string }) {
+  const t = useTranslations('profileImage')
   const { image, error: loadError, retry } = useProfileImage()
   const [prepared, setPrepared] = useState<PreparedProfileImage | null>(null)
   const [preparing, setPreparing] = useState(false)
@@ -77,7 +80,7 @@ export function ProfileImageEditor({ name }: { name: string }) {
     if (problem) { setPrepared(null); setError(problem); clearInput(); return }
     setPreparing(true)
     try { setPrepared(await prepareProfileImage(file)) }
-    catch (cause) { setPrepared(null); setError(cause instanceof ProfileImageError ? cause.message : 'This photo could not be prepared. Choose another file.'); clearInput() }
+    catch (cause) { setPrepared(null); setError(cause instanceof ProfileImageError ? cause.message : t('thisPhotoCouldNotBe')); clearInput() }
     finally { setPreparing(false) }
   }
 
@@ -85,7 +88,7 @@ export function ProfileImageEditor({ name }: { name: string }) {
     const owner = readAccountScope('patient')
     setError(''); setMessage(''); setBusy(true)
     try {
-      if (!owner) throw new Error('Sign in again before changing your profile image.')
+      if (!owner) throw new Error(t('signInAgainBeforeChanging'))
       if (remove) await apiDelete('/api/v1/patient/profile-image')
       else if (prepared) await apiPost('/api/v1/patient/profile-image', { content_type: prepared.contentType, content_base64: prepared.base64 })
       else return
@@ -93,14 +96,14 @@ export function ProfileImageEditor({ name }: { name: string }) {
       setPrepared(null); setConfirmRemove(false); clearInput()
       requests.delete(owner)
       notifyProfileChanged('patient')
-      setMessage(remove ? 'Profile image removed.' : 'Profile image updated.')
+      setMessage(remove ? t('profileImageRemoved') : t('profileImageUpdated'))
     } catch (cause) {
-      if (owner === readAccountScope('patient')) setError(getApiErrorDetail(cause) || (cause instanceof Error && cause.message) || 'Your image could not be saved. Please try again.')
+      if (owner === readAccountScope('patient')) setError(getApiErrorDetail(cause) || (cause instanceof Error && cause.message) || t('yourImageCouldNotBe'))
     } finally { if (owner === readAccountScope('patient')) setBusy(false) }
   }
 
   const disabled = busy || preparing
-  return <section aria-label='Profile image' className='pie'>
+  return <section aria-label={t('profileImage')} className='pie'>
     <style>{`
       .pie { display: grid; gap: 12px; justify-items: start; max-width: 100%; }
       .pie-frame { position: relative; width: 96px; height: 96px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--border); }
@@ -119,32 +122,32 @@ export function ProfileImageEditor({ name }: { name: string }) {
       .pie-confirm p { margin: 0; font-size: 13px; line-height: 1.5; }
     `}</style>
     {preview
-      ? <div className='pie-frame'><img src={preview} width={96} height={96} alt='Selected profile image preview' /></div>
+      ? <div className='pie-frame'><img src={preview} width={96} height={96} alt={t('selectedProfileImagePreview')} /></div>
       : <ProfileAvatar name={name} src={image} size={96} kind='patient' />}
     <div className='pie-actions'>
-      <input ref={input} id={`${helpId}-file`} className='pie-file' type='file' accept={PROFILE_IMAGE_ACCEPT} disabled={disabled} aria-label='Profile image'
+      <input ref={input} id={`${helpId}-file`} className='pie-file' type='file' accept={PROFILE_IMAGE_ACCEPT} disabled={disabled} aria-label={t('profileImage')}
         aria-describedby={helpId} onChange={event => { void choose(event.target.files?.[0]) }} />
-      {!prepared && <label htmlFor={`${helpId}-file`} className='pie-button' aria-disabled={disabled || undefined}>{image ? 'Replace photo' : 'Upload photo'}</label>}
+      {!prepared && <label htmlFor={`${helpId}-file`} className='pie-button' aria-disabled={disabled || undefined}>{image ? t('replacePhoto') : t('uploadPhoto')}</label>}
       {prepared && <>
-        <button type='button' className='pie-button primary' disabled={disabled} onClick={() => save()}>Save image</button>
-        <button type='button' className='pie-button' disabled={disabled} onClick={() => { setPrepared(null); clearInput() }}>Cancel selection</button>
+        <button type='button' className='pie-button primary' disabled={disabled} onClick={() => save()}>{t('saveImage')}</button>
+        <button type='button' className='pie-button' disabled={disabled} onClick={() => { setPrepared(null); clearInput() }}>{t('cancelSelection')}</button>
       </>}
-      {image && !prepared && !confirmRemove && <button type='button' className='pie-button danger' disabled={disabled} onClick={() => setConfirmRemove(true)}>Remove image</button>}
+      {image && !prepared && !confirmRemove && <button type='button' className='pie-button danger' disabled={disabled} onClick={() => setConfirmRemove(true)}>{t('removeImage')}</button>}
     </div>
-    {confirmRemove && <div className='pie-confirm' role='group' aria-label='Confirm removal'>
-      <p>Remove your photo? Your initials are shown instead until you upload a new one.</p>
+    {confirmRemove && <div className='pie-confirm' role='group' aria-label={t('confirmRemoval')}>
+      <p>{t('removeYourPhotoYourInitials')}</p>
       <div className='pie-actions'>
-        <button type='button' className='pie-button danger' disabled={disabled} onClick={() => save(true)}>Remove photo</button>
-        <button type='button' className='pie-button' disabled={disabled} onClick={() => setConfirmRemove(false)}>Keep photo</button>
+        <button type='button' className='pie-button danger' disabled={disabled} onClick={() => save(true)}>{t('removePhoto')}</button>
+        <button type='button' className='pie-button' disabled={disabled} onClick={() => setConfirmRemove(false)}>{t('keepPhoto')}</button>
       </div>
     </div>}
-    <p id={helpId} className='pie-help'>JPEG, PNG, WebP or HEIC, up to 20 MB. Photos are resized on your device and their location and camera data removed before upload.</p>
+    <p id={helpId} className='pie-help'>{t('jpegPngWebpOrHeic')}</p>
     <div aria-live='polite' className='pie-note'>
-      {preparing && <span role='status'>Preparing your photo…</span>}
-      {busy && <span role='status'>Saving profile image…</span>}
+      {preparing && <span role='status'>{t('preparingYourPhoto')}</span>}
+      {busy && <span role='status'>{t('savingProfileImage')}</span>}
       {message && <span role='status'>{message}</span>}
     </div>
     {error && <p role='alert' className='pie-note error'>{error}</p>}
-    {loadError && <p role='alert' className='pie-note error'>{loadError} <button type='button' className='pie-button' onClick={retry}>Retry image</button></p>}
+    {loadError && <p role='alert' className='pie-note error'>{loadError} <button type='button' className='pie-button' onClick={retry}>{t('retryImage')}</button></p>}
   </section>
 }

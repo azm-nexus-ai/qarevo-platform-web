@@ -87,3 +87,18 @@ for (const width of [375, 1280]) test(`the profile header scrolls with the page 
   await expect.poll(() => header.evaluate(node => node.getBoundingClientRect().bottom)).toBeLessThan(0)
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
 })
+
+test('the profile shows only what the physician supplied, and reads in German', async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: 'qarevo_locale', value: 'de', url: baseURL! }])
+  await prepare(context)
+  await page.goto(`/patient/physicians/dr-anna-lena-mueller--${token}`)
+  await expect(page.getByRole('heading', { level: 1, name: 'Dr. Anna-Lena Müller' })).toBeVisible()
+  // Nothing invented: no training, career, biography, response time or questions the physician never supplied.
+  await expect(page.getByText(/Medical Degree|Residency|Consultant Physician|evidence-based|Response time|Antwortzeit|Within 24 hours/)).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /Ausbildung|Education|Berufserfahrung|Häufige Fragen|Ähnliche/ })).toHaveCount(0)
+  await expect(page.getByText('Für dieses Profil gibt es noch keine Beschreibung.')).toBeVisible()
+  await expect(page.getByText('5 Jahre Erfahrung', { exact: false })).toBeVisible()
+  await expect(page.locator('.pp-service-grid')).toContainText('Dauer: 30 min')
+  await expect(page.getByText('Zeitzone: Nicht festgelegt')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Karte anzeigen', exact: true })).toBeVisible()
+})

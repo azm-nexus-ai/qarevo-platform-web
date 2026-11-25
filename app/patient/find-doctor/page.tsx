@@ -105,7 +105,7 @@ function buildBookingHref(
 
 
 function FindDoctorPageContent() {
-  const t = useTranslations('patientFindDoctor')
+  const t = useTranslations('patientFindDoctor'), tVerification = useTranslations('doctorVerification')
   const bookingParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -726,7 +726,7 @@ function FindDoctorPageContent() {
                   filteredPhysicians.map((doctor) => (
                     <article key={doctor.id} style={{ background: "var(--surface-glass)", borderRadius: '20px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '14px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
-	                        <span style={{ ...Glass.chip, color: doctorVerification(doctor.verification).verified ? T.link : T.slate, fontSize: "13px", fontWeight: 700, padding: '4px 9px', borderRadius: '999px' }}>{doctorVerification(doctor.verification).label}</span>
+	                        <span style={{ ...Glass.chip, color: doctorVerification(doctor.verification).verified ? T.link : T.slate, fontSize: "13px", fontWeight: 700, padding: '4px 9px', borderRadius: '999px' }}>{tVerification(doctorVerification(doctor.verification).key)}</span>
                         <button
                           type='button'
                           onClick={() => toggleFavorite(doctor.id)}

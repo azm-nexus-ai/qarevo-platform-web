@@ -18,13 +18,13 @@ export default function PatientAccountMenu({ name }: { name?: string }) {
     let active = true
     const requestScope = readAccountScope('patient')
     if (requestScope) void getPatientSettings().then(settings => {
-      if (active && requestScope === readAccountScope('patient')) setIdentity({ scope: requestScope, name: [settings.first_name, settings.last_name].filter(Boolean).join(' ') || 'Patient account' })
+      if (active && requestScope === readAccountScope('patient')) setIdentity({ scope: requestScope, name: [settings.first_name, settings.last_name].filter(Boolean).join(' ') || '' })
     }).catch(() => { if (active) setIdentity(null) })
     const reset = (event: Event) => { if (!isPortalIdentityEvent(event, 'patient')) return; setIdentity(null); setAttempt(value => value + 1) }
     window.addEventListener(ACCOUNT_CHANGED, reset)
     window.addEventListener('storage', reset)
     return () => { active = false; window.removeEventListener(ACCOUNT_CHANGED, reset); window.removeEventListener('storage', reset) }
   }, [name, attempt])
-  const displayName = name || (identity?.scope === scope ? identity?.name : '') || 'Patient account'
+  const displayName = name || (identity?.scope === scope ? identity?.name : '') || t('account')
   return <PortalAccountMenu portal='patient' name={displayName} description={t('portal')} avatar={<ProfileImage name={displayName} size={36} />} profileHref='/patient/settings' settingsHref='/patient/settings' />
 }

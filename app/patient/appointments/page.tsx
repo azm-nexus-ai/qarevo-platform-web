@@ -166,7 +166,7 @@ function TodayBanner({ appt, onJoin, onDetails }: { appt: Appointment; onJoin: (
     update()
     const interval = setInterval(update, 30000)
     return () => clearInterval(interval)
-  }, [appt.startAt])
+  }, [appt.startAt, t])
 
   return (
     <div style={{
@@ -501,7 +501,7 @@ function CancelModal({ appt, onClose, onConfirm }: { appt: Appointment; onClose:
     if (busy) return
     setBusy(true); setError('')
     try { await onConfirm(reason.trim() || t('defaultCancelReason')) }
-    catch (error) { setError(getApiErrorDetail(error) || 'Cancellation failed. Your appointment remains booked. Please retry.') }
+    catch (error) { setError(getApiErrorDetail(error) || t('cancelFailed')) }
     finally { setBusy(false) }
   }
   return <dialog ref={dialog} onCancel={event => { if (busy) event.preventDefault(); else onClose() }}
@@ -603,19 +603,19 @@ function AppointmentsPageInner() {
         setPast(pastApts)
       } catch (error) {
         console.error('Failed to fetch appointments:', error)
-        if (active) setToast(getApiErrorDetail(error) || 'Failed to load appointments.')
+        if (active) setToast(getApiErrorDetail(error) || t('loadFailed'))
       } finally {
         if (active) setLoading(false)
       }
     }
     fetchAppointments()
     return () => { active = false }
-  }, [refresh])
+  }, [refresh, t, dateLocale])
 
   const todayAppt = upcoming.find(a => a.date === 'Today')
 
   const handleJoin = (appointment: Appointment) => {
-    if (!appointment.consultationId) { setToast('This appointment has no linked consultation. Contact support.'); return }
+    if (!appointment.consultationId) { setToast(t('thisAppointmentHasNoLinked')); return }
     router.push(`/patient/video-consultation/waiting-room?consultationId=${encodeURIComponent(appointment.consultationId)}`)
   }
 
@@ -626,7 +626,7 @@ function AppointmentsPageInner() {
   const handleRescheduleConfirm = () => {
     setRescheduleTarget(null)
     setRefresh(value => value + 1)
-    setToast('Appointment rescheduled successfully.')
+    setToast(t('appointmentRescheduledSuccessfully'))
   }
 
   const handleCancelConfirm = async (reason: string) => {
@@ -638,7 +638,7 @@ function AppointmentsPageInner() {
       setUpcoming(prev => prev.filter(a => a.id !== cancelTarget.id))
       setCancelled(prev => [appt, ...prev])
       setCancelTarget(null)
-      setToast('Appointment cancelled. No payment or refund was processed.')
+      setToast(t('appointmentCancelledNoPaymentOr'))
       if (upcoming.filter(a => a.id !== cancelTarget.id).length === 0) {
         setActiveTab('cancelled')
       }
@@ -656,11 +656,11 @@ function AppointmentsPageInner() {
         comment,
         appointment_id: reviewTarget.id,
       })
-      setToast('Review submitted successfully!')
+      setToast(t('reviewSubmittedSuccessfully'))
       setPast(prev => prev.map(appt => appt.id === reviewTarget.id ? { ...appt, hasReviewed: true } : appt))
       setReviewTarget(null)
     } catch (error) {
-      setToast(getApiErrorDetail(error) || 'Failed to submit review. Please try again.')
+      setToast(getApiErrorDetail(error) || t('reviewFailed'))
     }
   }
 

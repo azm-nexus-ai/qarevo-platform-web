@@ -964,7 +964,8 @@
     "summary": "Patientenübersicht",
     "account": "Patientenkonto",
     "logout": "Abmelden",
-    "portal": "Patientenportal"
+    "portal": "Patientenportal",
+    "navigation": "Patientennavigation"
   },
   "doctorDashboard": {
     "clinicalWorkflowEpisodes": "Klinische Behandlungsfälle",
@@ -1060,7 +1061,14 @@
     "minutes": "{count} Min.",
     "durationUnavailable": "Dauer nicht angegeben",
     "consultation": "Sprechstunde",
-    "confirmCancel": "Termin absagen"
+    "confirmCancel": "Termin absagen",
+    "cancelFailed": "Die Stornierung ist fehlgeschlagen. Ihr Termin bleibt gebucht. Bitte versuchen Sie es erneut.",
+    "loadFailed": "Termine konnten nicht geladen werden.",
+    "reviewFailed": "Die Bewertung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+    "thisAppointmentHasNoLinked": "Zu diesem Termin gibt es keine verknüpfte Sprechstunde. Wenden Sie sich an den Support.",
+    "appointmentRescheduledSuccessfully": "Termin verschoben.",
+    "appointmentCancelledNoPaymentOr": "Termin storniert. Es wurde keine Zahlung oder Erstattung ausgelöst.",
+    "reviewSubmittedSuccessfully": "Bewertung gesendet."
   },
   "bookingSuccess": {
     "checkingYourSavedAppointment": "Ihr gespeicherter Termin wird geprüft…",
@@ -1079,7 +1087,14 @@
     "consultationBooking": "Terminbuchung",
     "yourSavedAppointmentIsThe": "Maßgeblich ist Ihr gespeicherter Termin. Prüfen Sie die Details und bereiten Sie sich auf Ihre Sprechstunde vor.",
     "bookingNavigation": "Navigation der Buchung",
-    "openingYourBooking": "Ihre Buchung wird geöffnet…"
+    "openingYourBooking": "Ihre Buchung wird geöffnet…",
+    "theSavedAppointmentDetailsAre": "Die gespeicherten Termindaten sind unvollständig. Bitte öffnen Sie Ihre Terminliste.",
+    "yourSavedBookingCouldNot": "Ihre gespeicherte Buchung konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "yourAppointmentStatus": "Ihr Terminstatus",
+    "bookingConfirmationUnavailable": "Buchungsbestätigung nicht verfügbar",
+    "assignedClinician": "Zugeordnete Ärztin / zugeordneter Arzt",
+    "yourClinician": "Ihre Ärztin bzw. Ihr Arzt",
+    "savedStatus": "Gespeicherter Status: {status}"
   },
   "bookingSafety": {
     "ifThisIsAnEmergency": "Wenn es sich um einen Notfall handelt, rufen Sie jetzt die 112 an.",
@@ -1100,7 +1115,13 @@
     "cancel": "Abbrechen",
     "beforeYouBook": "Bevor Sie buchen",
     "aFewSafetyQuestions": "Einige Sicherheitsfragen",
-    "someSymptomsNeedEmergencyOr": "Manche Beschwerden erfordern eine Notfall- oder Vor-Ort-Behandlung statt einer Videosprechstunde. Ihre Antworten helfen uns, Sie richtig zu leiten."
+    "someSymptomsNeedEmergencyOr": "Manche Beschwerden erfordern eine Notfall- oder Vor-Ort-Behandlung statt einer Videosprechstunde. Ihre Antworten helfen uns, Sie richtig zu leiten.",
+    "theSafetyQuestionsCouldNot": "Die Sicherheitsfragen konnten nicht geladen werden.",
+    "yourAnswersCouldNotBe": "Ihre Antworten konnten nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    "aVideoConsultationIsNot": "Eine Videosprechstunde ist nicht der richtige nächste Schritt",
+    "pleaseSeekCareInPerson": "Bitte lassen Sie sich persönlich behandeln.",
+    "checking": "Wird geprüft…",
+    "continue": "Weiter"
   },
   "bookingDateTime": {
     "retryDoctorDetails": "Arztangaben erneut laden",
@@ -1198,7 +1219,12 @@
     "trustReview": "Prüfung vor der Bestätigung",
     "trustAccount": "Anmeldung erforderlich",
     "notConfigured": "Nicht festgelegt",
-    "notProvided": "Nicht angegeben"
+    "notProvided": "Nicht angegeben",
+    "daypart": {
+      "morning": "Vormittag",
+      "afternoon": "Nachmittag",
+      "evening": "Abend"
+    }
   },
   "bookingReview": {
     "bookingProgress": "Buchungsfortschritt",
@@ -1334,7 +1360,17 @@
     "eGLeftSideOf": "z. B. linke Kopfseite, unterer Rücken",
     "eGSuddenGradual": "z. B. plötzlich, allmählich",
     "anythingThatMakesItBetter": "Was es besser oder schlechter macht (z. B. Ruhe, Bewegung, bestimmte Lebensmittel)",
-    "loadingIntakeForm": "Anamnesebogen wird geladen…"
+    "loadingIntakeForm": "Anamnesebogen wird geladen…",
+    "doctorLoadFailed": "Die Angaben zur gewählten Ärztin bzw. zum gewählten Arzt konnten nicht geladen werden. Bitte gehen Sie zurück und wählen Sie erneut.",
+    "yourIntakeCouldNotBe": "Ihre Angaben konnten nicht gesendet werden. Bitte versuchen Sie es erneut; Ihr bestehender Behandlungsfall wird weiterverwendet.",
+    "describeYourMainConcernIn": "Beschreiben Sie Ihr Hauptanliegen in höchstens 2.000 Zeichen.",
+    "youCanStillAddInsurance": "Sie können vor dem Fortfahren noch eine Versicherung hinzufügen.",
+    "thisIsADevelopmentAcknowledgement": "Dies ist eine Bestätigung für die Entwicklungsphase, keine Annahme endgültiger Rechtstexte. Den Entwurfsstatus finden Sie auf der Datenschutzseite.",
+    "submitting": "Wird gesendet…",
+    "continueToReview": "Weiter zur Übersicht",
+    "opensInNewTab": "(öffnet in einem neuen Tab; diese Seite aktualisiert sich, wenn Sie zurückkehren)",
+    "insuranceLoadFailedSelfPay": "Ihre gespeicherte Versicherung konnte nicht geladen werden. Diese Sprechstunde wird Ihnen als <strong>{selfPay}</strong> berechnet.",
+    "noInsuranceSelfPay": "Sie haben noch keine Krankenversicherung hinzugefügt. Diese Sprechstunde wird Ihnen als <strong>{selfPay}</strong> berechnet."
   },
   "patientDashboard": {
     "logout": "Abmelden",
@@ -1753,7 +1789,8 @@
       "emergencyNameHint": "Vollständiger Name einer anderen Person, 2–100 Zeichen.",
       "hideEmergencyFields": "Optionale Notfallfelder ausblenden",
       "addEmergencyDetails": "Weitere Angaben zum Notfallkontakt hinzufügen",
-      "continue": "Weiter"
+      "continue": "Weiter",
+      "postcodeHint": "Deutschland: genau 5 Ziffern, zum Beispiel 10115. Führende Null beibehalten."
     },
     "personal": {
       "yourProfileShapesYourCare": "Ihr Profil prägt Ihre Versorgung.",
@@ -2090,7 +2127,37 @@
     "rating": "Bewertung:",
     "languages": "Sprachen:",
     "hospital": "Klinik:",
-    "pricingPending": "Preise werden noch eingerichtet"
+    "pricingPending": "Preise werden noch eingerichtet",
+    "invalidLink": "Dieser Link ist ungültig. Suchen Sie die Ärztin oder den Arzt erneut über die Suche.",
+    "loadFailed": "Das Profil konnte nicht geladen werden.",
+    "specialtyMissing": "Fachrichtung nicht angegeben",
+    "yearsExperience": "{years, plural, one {# Jahr} other {# Jahre}} Erfahrung",
+    "responseTime": "Antwortzeit: {time}",
+    "statRating": "Bewertung",
+    "statPatients": "Behandelte Patienten",
+    "statYears": "Jahre Erfahrung",
+    "statConsultations": "Sprechstunden",
+    "statLanguages": "Sprachen",
+    "noRatings": "Noch keine Bewertungen",
+    "aboutName": "Über {name}",
+    "noBiography": "Für dieses Profil gibt es noch keine Beschreibung.",
+    "readMore": "Weiterlesen",
+    "readLess": "Weniger anzeigen",
+    "notListed": "Noch nicht angegeben",
+    "showLess": "Weniger anzeigen",
+    "viewAllCount": "Alle anzeigen ({count})",
+    "duration": "Dauer: {duration}",
+    "serviceAvailability": "Verfügbarkeit: {value}",
+    "timezone": "Zeitzone: {zone}",
+    "notConfigured": "Nicht festgelegt",
+    "nextAppointment": "Nächster freier Termin: {value}",
+    "sortRecent": "Neueste",
+    "sortHighest": "Beste Bewertung",
+    "sortHelpful": "Hilfreichste",
+    "loadReviews": "{count, plural, one {# Bewertung laden} other {# Bewertungen laden}}",
+    "reviewMeta": "{date} · Hilfreich {count}",
+    "loadFaq": "{count, plural, one {# Frage laden} other {# Fragen laden}}",
+    "years": "{years, plural, one {# Jahr} other {# Jahre}}"
   },
   "patientMessages": {
     "cancelReply": "Antwort abbrechen",
@@ -2126,7 +2193,19 @@
     "selectRecipient": "Empfänger auswählen …",
     "findFreeAppointments": "Freie Termine suchen",
     "sending": "Wird gesendet …",
-    "chooseRecipientFirst": "Wählen Sie zuerst einen Empfänger aus."
+    "chooseRecipientFirst": "Wählen Sie zuerst einen Empfänger aus.",
+    "replyingToYou": "Antwort an Sie",
+    "replyingToDoctor": "Antwort an Ihre Ärztin / Ihren Arzt",
+    "activeNow": "Jetzt aktiv",
+    "offline": "Offline",
+    "unableToLoadConversations": "Unterhaltungen konnten nicht geladen werden.",
+    "unableToSendMessage": "Nachricht konnte nicht gesendet werden.",
+    "unableToDownloadAttachment": "Anhang konnte nicht heruntergeladen werden.",
+    "noConversationsYet": "Noch keine Unterhaltungen.",
+    "noConversationsFound": "Keine Unterhaltungen gefunden.",
+    "patient": "Patient/in",
+    "doctor": "Ärztin/Arzt",
+    "file": "Datei"
   },
   "patientAppointmentDetails": {
     "loadingYourAppointment": "Ihr Termin wird geladen…",
@@ -2148,7 +2227,9 @@
     "backToAppointments": "Zurück zu den Terminen",
     "appointmentDetails": "Termindetails",
     "yourSavedAppointmentCareTeam": "Ihr gespeicherter Termin, Ihr Behandlungsteam und die Vorbereitung.",
-    "loadingAppointment": "Termin wird geladen…"
+    "loadingAppointment": "Termin wird geladen…",
+    "yourAppointmentCouldNotBe": "Ihr Termin konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "assignedClinician": "Zugeordnete Ärztin / zugeordneter Arzt"
   },
   "patientEpisode": {
     "returnToDashboard": "Zurück zur Übersicht",
@@ -2170,7 +2251,10 @@
     "error": "Fehler",
     "weEncounteredAnIssueLoading": "Beim Laden Ihres Behandlungsfalls ist ein Problem aufgetreten.",
     "yourCareEpisode": "Ihr Behandlungsfall",
-    "viewYourEpisodeDetailsIntake": "Sehen Sie Falldetails, Anamnese und klinischen Verlauf."
+    "viewYourEpisodeDetailsIntake": "Sehen Sie Falldetails, Anamnese und klinischen Verlauf.",
+    "failedToLoadEpisodeData": "Die Falldaten konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "episodeNotFound": "Behandlungsfall nicht gefunden",
+    "notSet": "Nicht angegeben"
   },
   "patientSettings": {
     "cancel": "Abbrechen",
@@ -2999,7 +3083,82 @@
     "previous": "Zurück",
     "next": "Weiter",
     "pages": "Seiten",
-    "loadingAccounts": "Konten werden geladen…"
+    "loadingAccounts": "Konten werden geladen…",
+    "action": {
+      "suspend": {
+        "title": "Konto sperren",
+        "body": "Die Anmeldung wird blockiert und alle aktiven Sitzungen werden sofort beendet. Das Konto kann später wieder freigeschaltet werden.",
+        "button": "Konto sperren",
+        "done": "Konto gesperrt, Sitzungen beendet."
+      },
+      "reactivate": {
+        "title": "Konto wieder freischalten",
+        "body": "Die Person kann sich wieder anmelden. Bereits beendete Sitzungen bleiben beendet.",
+        "button": "Konto freischalten",
+        "done": "Konto wieder freigeschaltet."
+      },
+      "delete": {
+        "title": "Kontolöschung beantragen",
+        "body": "Die Anmeldung wird blockiert und Sitzungen enden sofort. Kontaktdaten können nach der Karenzzeit gelöscht werden. Gesetzlich aufzubewahrende Unterlagen bleiben bis zum Ende ihrer Aufbewahrungsfrist erhalten.",
+        "button": "Löschung beantragen",
+        "done": "Löschung beantragt. Die Anmeldung ist blockiert."
+      },
+      "cancelDelete": {
+        "title": "Löschantrag zurückziehen",
+        "body": "Der Löschantrag wird zurückgezogen. Das Konto bleibt gesperrt, bis es jemand bewusst wieder freischaltet.",
+        "button": "Löschantrag zurückziehen",
+        "done": "Löschantrag zurückgezogen. Das Konto bleibt gesperrt."
+      }
+    },
+    "statusLabel": {
+      "pendingVerification": "Wartet auf Bestätigung",
+      "active": "Aktiv",
+      "suspended": "Gesperrt",
+      "deactivated": "Deaktiviert"
+    },
+    "history": {
+      "suspendAccount": "Gesperrt",
+      "reactivateAccount": "Wieder freigeschaltet",
+      "requestAccountDeletion": "Löschung beantragt",
+      "cancelAccountDeletion": "Löschung zurückgezogen",
+      "updateDoctorStatus": "Arztstatus geändert",
+      "verifyDoctor": "Prüfentscheidung"
+    },
+    "emailMismatch": "Geben Sie die E-Mail-Adresse des Kontos exakt ein.",
+    "saveFailed": "Die Änderung konnte nicht gespeichert werden. Es wurde nichts geändert.",
+    "unnamed": "Konto ohne Namen",
+    "reasonHelp": "Wird mit Ihrem Namen und der Uhrzeit im Prüfprotokoll gespeichert.",
+    "saving": "Wird gespeichert…",
+    "loadFailed": "Dieses Konto konnte nicht geladen werden.",
+    "erasedBanner": "<strong>Kontaktdaten gelöscht</strong> am {date}. Die mit der medizinischen Dokumentation aufbewahrte Identität bleibt erhalten.",
+    "deletionBanner": "<strong>Löschung beantragt</strong> am {date} von {by}. Kontaktdaten können ab {from} gelöscht werden.",
+    "erasureEnabled": "Eine Super- oder Compliance-Administration löscht sie über den Löschplan unter der Kontoliste.",
+    "erasureDryRun": "Auf dieser Umgebung ist die Löschung nur ein Probelauf.",
+    "roleDoctor": "Ärztin/Arzt",
+    "rolePatient": "Patient/in",
+    "licenceVerification": "Prüfung der Approbation",
+    "emailVerification": "E-Mail-Bestätigung",
+    "verified": "Bestätigt",
+    "pendingReview": "Prüfung ausstehend",
+    "notVerified": "Nicht bestätigt",
+    "phoneVerified": "bestätigt",
+    "phoneNotVerified": "nicht bestätigt",
+    "unknownDevice": "Unbekanntes Gerät",
+    "unknownNetwork": "unbekannt",
+    "sessionLine": "Netzwerk {network} · gestartet {started} · zuletzt aktiv {seen}",
+    "failedSuffix": "(fehlgeschlagen)",
+    "historyLine": "{action} durch {by}",
+    "listFailed": "Konten konnten nicht geladen werden.",
+    "licenceVerified": "Approbation bestätigt",
+    "licencePending": "Approbation ausstehend",
+    "emailVerified": "E-Mail bestätigt",
+    "emailNotVerified": "E-Mail nicht bestätigt",
+    "patients": "Patientinnen und Patienten",
+    "doctors": "Ärztinnen und Ärzte",
+    "doctorCount": "{count, plural, one {# Arztkonto} other {# Arztkonten}}",
+    "patientCount": "{count, plural, one {# Patientenkonto} other {# Patientenkonten}}",
+    "openAccount": "Konto {name} öffnen",
+    "rowDates": "Registriert {registered} · letzte Anmeldung {signedIn}"
   },
   "adminUsers": {
     "adminUsers": "Administration",
@@ -4649,5 +4808,202 @@
     "confirm": "Ich trete gegenüber meinen Patientinnen und Patienten als behandelnde Partei auf und halte meine Angaben und Dokumente aktuell. (Pflichtfeld)",
     "creating": "Wird angelegt…",
     "create": "Einzelpraxis anlegen"
+  },
+  "doctorVerification": {
+    "verified": "Verifizierte Ärztin / verifizierter Arzt",
+    "pending": "Verifizierung ausstehend",
+    "unavailable": "Verifizierung nicht verfügbar",
+    "select": "{name} auswählen",
+    "loading": "Angaben werden geladen…",
+    "clinicalFocus": "Schwerpunkte"
+  },
+  "profileImage": {
+    "yourProfileImageCouldNot": "Ihr Profilbild konnte nicht geladen werden.",
+    "thisPhotoCouldNotBe": "Dieses Foto konnte nicht vorbereitet werden. Wählen Sie eine andere Datei.",
+    "signInAgainBeforeChanging": "Melden Sie sich erneut an, bevor Sie Ihr Profilbild ändern.",
+    "profileImageRemoved": "Profilbild entfernt.",
+    "profileImageUpdated": "Profilbild aktualisiert.",
+    "yourImageCouldNotBe": "Ihr Bild konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    "selectedProfileImagePreview": "Vorschau des ausgewählten Profilbilds",
+    "profileImage": "Profilbild",
+    "replacePhoto": "Foto ersetzen",
+    "uploadPhoto": "Foto hochladen",
+    "saveImage": "Bild speichern",
+    "cancelSelection": "Auswahl abbrechen",
+    "removeImage": "Bild entfernen",
+    "confirmRemoval": "Entfernen bestätigen",
+    "removeYourPhotoYourInitials": "Foto entfernen? Bis Sie ein neues hochladen, werden Ihre Initialen angezeigt.",
+    "removePhoto": "Foto entfernen",
+    "keepPhoto": "Foto behalten",
+    "jpegPngWebpOrHeic": "JPEG, PNG, WebP oder HEIC, bis 20 MB. Fotos werden auf Ihrem Gerät verkleinert; Standort- und Kameradaten werden vor dem Hochladen entfernt.",
+    "preparingYourPhoto": "Ihr Foto wird vorbereitet…",
+    "savingProfileImage": "Profilbild wird gespeichert…",
+    "retryImage": "Bild erneut laden"
+  },
+  "documentAccess": {
+    "documentAccessWasCancelled": "Der Dokumentzugriff wurde abgebrochen.",
+    "thisDocumentIsUnavailableRetry": "Dieses Dokument ist nicht verfügbar. Versuchen Sie es erneut oder schließen Sie den Dialog und laden Sie die Unterlagen neu.",
+    "closeDocumentAccess": "Dokumentzugriff schließen",
+    "close": "Schließen",
+    "accessIsRequestedForThe": "Der Zugriff wird für die Datei zu diesem Eintrag angefordert. Das Öffnen einer Datei gilt nicht als ärztliche Prüfung.",
+    "preparingDocumentAccess": "Dokumentzugriff wird vorbereitet…",
+    "retryDocumentAccess": "Dokumentzugriff erneut versuchen",
+    "thisDocumentLinkHasExpired": "Dieser Link ist abgelaufen. Fordern Sie neuen Zugriff an, um die Datei herunterzuladen.",
+    "requestFreshAccess": "Neuen Zugriff anfordern",
+    "originalFilename": "Ursprünglicher Dateiname",
+    "formatAndSize": "Format und Größe",
+    "uploadSource": "Hochgeladen von",
+    "uploadedByPatient": "Von Ihnen hochgeladen",
+    "uploadedByCareTeam": "Vom Behandlungsteam hochgeladen",
+    "uploadSourceUnavailable": "Herkunft nicht verfügbar",
+    "expiresAt": "Dieser Download-Link läuft am <stamp>{time}</stamp> ab. Dateien werden aus Datenschutzgründen mit einem neutralen Namen gespeichert. Fordern Sie nach Ablauf einen neuen Link an."
+  },
+  "reschedule": {
+    "thisAppointmentHasNoAssigned": "Diesem Termin ist keine Ärztin und kein Arzt zugeordnet. Wenden Sie sich zum Verschieben an den Support.",
+    "noNewTimesAreAvailable": "Es sind keine neuen Zeiten verfügbar. Ihr bestehender Termin bleibt unverändert.",
+    "availabilityCouldNotBeLoaded": "Die Verfügbarkeit konnte nicht geladen werden. Schließen und erneut versuchen.",
+    "noTimesRemainOnThis": "An diesem Tag sind keine Zeiten mehr frei. Wählen Sie einen anderen Tag.",
+    "timesCouldNotBeLoaded": "Die Zeiten konnten nicht geladen werden. Wählen Sie einen Tag, um es erneut zu versuchen.",
+    "selectAnAvailableDateAnd": "Wählen Sie vor dem Bestätigen einen freien Tag und eine Uhrzeit.",
+    "reschedulingFailedYourExistingAppointment": "Das Verschieben ist fehlgeschlagen. Ihr bestehender Termin bleibt unverändert.",
+    "rescheduleAppointment": "Termin verschieben",
+    "selectADate": "Tag wählen",
+    "selectATime": "Uhrzeit wählen",
+    "loadingCurrentAvailability": "Aktuelle Verfügbarkeit wird geladen…",
+    "savingAppointment": "Termin wird gespeichert…",
+    "confirmReschedule": "Verschieben bestätigen",
+    "keepCurrentAppointment": "Aktuellen Termin behalten"
+  },
+  "healthMetrics": {
+    "failedToSaveHealthMetric": "Der Messwert konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    "failedToDeleteHealthMetric": "Der Messwert konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+    "bloodPressure": "Blutdruck",
+    "heartRate": "Herzfrequenz",
+    "weight": "Gewicht",
+    "temperature": "Temperatur",
+    "bloodSugar": "Blutzucker",
+    "oxygenSaturation": "Sauerstoffsättigung",
+    "loadingHealthMetrics": "Messwerte werden geladen…",
+    "healthMetrics": "Messwerte",
+    "trackYourVitalSignsAnd": "Erfassen Sie Ihre Vitalwerte und Messungen",
+    "noHealthMetricsYet": "Noch keine Messwerte",
+    "startTrackingYourHealthBy": "Fügen Sie Ihren ersten Messwert hinzu",
+    "editHealthMetric": "Messwert bearbeiten",
+    "addHealthMetric": "Messwert hinzufügen",
+    "metricType": "Art des Messwerts",
+    "value": "Wert",
+    "unit": "Einheit",
+    "dateTime": "Datum und Uhrzeit",
+    "notesOptional": "Notizen (optional)",
+    "update": "Aktualisieren",
+    "add": "Hinzufügen"
+  },
+  "reviewModal": {
+    "writeAReview": "Bewertung schreiben",
+    "close": "Schließen",
+    "excellent": "Ausgezeichnet",
+    "veryGood": "Sehr gut",
+    "good": "Gut",
+    "fair": "Mittelmäßig",
+    "poor": "Schlecht",
+    "shareYourExperienceWithThis": "Teilen Sie Ihre Erfahrung mit dieser Praxis…",
+    "submitting": "Wird gesendet…",
+    "submitReview": "Bewertung senden"
+  },
+  "patientMobileNav": {
+    "patientAccount": "Patientenkonto",
+    "openMessages": "Nachrichten öffnen",
+    "profile": "Profil",
+    "qarevoHealthPatientDashboard": "Qarevo Health Patientenübersicht",
+    "closeNavigationMenu": "Navigationsmenü schließen",
+    "openNavigationMenu": "Navigationsmenü öffnen",
+    "navigationMenu": "Navigationsmenü",
+    "patientSummary": "Patientenübersicht",
+    "patientNavigation": "Patientennavigation"
+  },
+  "practiceLocation": {
+    "thePracticeHasNotPublished": "Die Praxis hat ihre Adresse noch nicht veröffentlicht. Für Videosprechstunden ist kein Besuch nötig.",
+    "theMapIsProvidedBy": "Die Karte stammt von OpenStreetMap. Beim Anzeigen wird Ihre IP-Adresse an die OpenStreetMap Foundation übermittelt. Es wird nichts geladen, bevor Sie die Karte anzeigen.",
+    "showMap": "Karte anzeigen",
+    "aMapAppearsHereOnce": "Eine Karte erscheint hier, sobald die Praxis ihren Standort bestätigt hat.",
+    "openInOpenstreetmapNewTab": "In OpenStreetMap öffnen (neuer Tab)"
+  },
+  "clinicalRecordsView": {
+    "weCouldnTLoadYour": "Ihre Unterlagen konnten nicht geladen werden",
+    "tryAgain": "Erneut versuchen",
+    "yourRecordsHaveNotBeen": "Ihre Unterlagen wurden nicht verändert. Bitte versuchen Sie es erneut.",
+    "backToDashboard": "Zurück zur Übersicht"
+  },
+  "patientCareRecords": {
+    "followUpCare": "Nachsorge",
+    "followUpInstructionsRecordedFor": "Für Ihr Konto erfasste Hinweise zur Nachsorge.",
+    "yourFollowUpRecord": "Ihre Nachsorge",
+    "noFollowUpInstructionsRecorded": "Keine Hinweise zur Nachsorge erfasst",
+    "yourClinicianSFollowUp": "Die Hinweise Ihrer Ärztin bzw. Ihres Arztes zur Nachsorge erscheinen hier, sobald sie vorliegen.",
+    "prescriptionsCarePlan": "Medikation und Behandlungsplan",
+    "myAppointments": "Meine Termine",
+    "referrals": "Überweisungen",
+    "specialistReferralsRecordedForYour": "Für Ihr Konto erfasste Überweisungen.",
+    "noReferralsRecorded": "Keine Überweisungen erfasst",
+    "ifYourClinicianArrangesA": "Wenn Ihre Ärztin bzw. Ihr Arzt eine Überweisung veranlasst, erscheinen die Angaben hier.",
+    "specialistReferral": "Facharztüberweisung",
+    "medicationInstructionsAndCarePlans": "Für Ihr Konto erfasste Medikationshinweise und Behandlungspläne. Fehlende oder ältere Angaben bleiben für die ärztliche Prüfung sichtbar.",
+    "yourMedications": "Ihre Medikamente",
+    "noMedicationsRecorded": "Keine Medikamente erfasst",
+    "medicationInstructionsWillAppearHere": "Medikationshinweise erscheinen hier, sobald Ihre Ärztin bzw. Ihr Arzt sie erfasst. Für dieses Konto gibt es noch keinen Medikationsplan.",
+    "yourCarePlans": "Ihre Behandlungspläne",
+    "noCarePlanRecorded": "Kein Behandlungsplan erfasst",
+    "yourClinicianSCarePlan": "Der Behandlungsplan Ihrer Ärztin bzw. Ihres Arztes erscheint hier, sobald er vorliegt.",
+    "someHistoricalEntriesCouldNot": "Einige ältere Einträge können in dieser Ansicht nicht vollständig angezeigt werden. Die gespeicherten Daten wurden nicht verändert; wenden Sie sich an Ihr Behandlungsteam, wenn Angaben fehlen."
+  },
+  "appointmentStatus": {
+    "booked": "Gebucht",
+    "scheduled": "Geplant",
+    "confirmed": "Bestätigt",
+    "pending": "Ausstehend",
+    "pendingPayment": "Zahlung ausstehend",
+    "inProgress": "Läuft",
+    "completed": "Abgeschlossen",
+    "cancelled": "Storniert",
+    "noShow": "Nicht erschienen",
+    "rescheduled": "Verschoben",
+    "expired": "Abgelaufen",
+    "unavailable": "Status nicht verfügbar"
+  },
+  "treatingEntityChoice": {
+    "coverage": {
+      "gkv": "Gesetzlich versichert (GKV)",
+      "pkv": "Privat versichert (PKV)",
+      "selfPay": "Selbstzahler"
+    },
+    "checking": "Es wird geprüft, wer Sie behandeln kann…",
+    "notForCoverage": "Diese Ärztin bzw. dieser Arzt kann für Ihren Versicherungsstatus nicht gebucht werden. Wählen Sie eine andere Ärztin oder einen anderen Arzt.",
+    "chooseEntity": "Wählen Sie die Praxis, von der Sie behandelt werden möchten.",
+    "confirmPrice": "Bestätigen Sie vor der Buchung den Selbstzahlerpreis.",
+    "title": "Ihre behandelnde Praxis",
+    "cannotTreat": "Diese Ärztin bzw. dieser Arzt kann bei „{coverage}“ nicht über Qarevo behandeln. Gehen Sie zurück und wählen Sie eine andere Ärztin oder einen anderen Arzt, oder prüfen Sie Ihre Versicherungsangaben in den Einstellungen.",
+    "coverageFallback": "Ihrem Versicherungsstatus",
+    "chooseOne": "Diese Ärztin bzw. dieser Arzt behandelt für mehrere Praxen. Wählen Sie eine aus (Pflichtfeld)",
+    "singleKind": "{kind}. Diese Stelle behandelt Sie und stellt die Sprechstunde in Rechnung.",
+    "kindIndependent": "Selbstständige Praxis",
+    "kindPractice": "Praxis",
+    "selfPayPrice": "Selbstzahlerpreis für diese Videosprechstunde",
+    "referencePrice": "Richtpreis",
+    "practicePrice": "Von der Praxis festgelegter Preis",
+    "invoiceNote": "Die Praxis rechnet nach der GOÄ mit Ihnen ab; über Qarevo wird nichts berechnet.",
+    "confirmPay": "Ich bestätige, dass ich {amount} für diese Sprechstunde selbst bezahle. (Pflichtfeld)"
+  },
+  "patientPages": {
+    "openingSavedReview": "Ihre gespeicherte Buchungsübersicht wird geöffnet…",
+    "openingReview": "Buchungsübersicht wird geöffnet…",
+    "openingOptions": "Terminoptionen werden geöffnet…",
+    "redirectingScheduling": "Weiterleitung zur Terminwahl…",
+    "summaryTitle": "Zusammenfassung der Sprechstunde",
+    "summaryDescription": "Lesen Sie die zuletzt ärztlich veröffentlichte Zusammenfassung Ihrer Sprechstunde und die Hinweise zur Nachsorge.",
+    "loadingConsultation": "Sprechstunde wird geladen…",
+    "notificationsTitle": "Benachrichtigungen",
+    "notificationsDescription": "Lesen Sie Neuigkeiten zu Konto und Behandlung, öffnen Sie den zugehörigen Eintrag und verwalten Sie Lesebestätigungen.",
+    "videoTitle": "Videosprechstunde",
+    "videoDescription": "Treffen Sie Ihre Ärztin bzw. Ihren Arzt in Ihrem gespeicherten Sprechstundenraum."
   }
 }

@@ -35,9 +35,9 @@ function SafetyScreenContent() {
     setLoadError('')
     getPatientSafetyScreen()
       .then(value => { if (!cancelled) { setScreen(value); setAnswers({}); setResult(null) } })
-      .catch(error => { if (!cancelled) setLoadError(getApiErrorDetail(error) || 'The safety questions could not be loaded.') })
+      .catch(error => { if (!cancelled) setLoadError(getApiErrorDetail(error) || t('theSafetyQuestionsCouldNot')) })
     return () => { cancelled = true }
-  }, [revision])
+  }, [revision, t])
 
   useEffect(() => { if (result && !result.allows_booking) outcomeHeading.current?.focus() }, [result])
   useEffect(() => { if (summaryRequest) summary.current?.focus() }, [summaryRequest])
@@ -58,7 +58,7 @@ function SafetyScreenContent() {
       if (outcome.allows_booking) router.replace(next)
     } catch (error) {
       const detail = getApiErrorDetail(error)
-      setSubmitError(detail || 'Your answers could not be saved. Please try again.')
+      setSubmitError(detail || t('yourAnswersCouldNotBe'))
       if (/updated/i.test(detail || '')) setRevision(n => n + 1)
     } finally { setSubmitting(false) }
   }
@@ -94,8 +94,8 @@ function SafetyScreenContent() {
     const guidance = result.guidance
     return <Shell>
       <section className={`outcome ${result.outcome.toLowerCase()}`} aria-labelledby='outcome-title'>
-        <h2 id='outcome-title' ref={outcomeHeading} tabIndex={-1}>{guidance?.title || 'A video consultation is not the right next step'}</h2>
-        <p className='outcome-body'>{guidance?.body || 'Please seek care in person.'}</p>
+        <h2 id='outcome-title' ref={outcomeHeading} tabIndex={-1}>{guidance?.title || t('aVideoConsultationIsNot')}</h2>
+        <p className='outcome-body'>{guidance?.body || t('pleaseSeekCareInPerson')}</p>
         {guidance?.action_href && guidance.action_label && <a className='call' href={guidance.action_href}>{guidance.action_label}</a>}
         <p className='fine'>{t('yourAnswersHaveBeenSaved')}</p>
         <div className='actions'>
@@ -136,7 +136,7 @@ function SafetyScreenContent() {
       </ol>
       <div className='actions'>
         <Link className='secondary' href='/patient/dashboard'>{t('cancel')}</Link>
-        <button className='primary' type='submit' disabled={submitting}>{submitting ? 'Checking…' : 'Continue'}</button>
+        <button className='primary' type='submit' disabled={submitting}>{submitting ? t('checking') : t('continue')}</button>
       </div>
     </form>
   </Shell>

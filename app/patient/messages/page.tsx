@@ -62,8 +62,8 @@ function ReplyPreview({ message, onClear }: { message: PortalMessage; onClear: (
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.16)' }}>
       <div style={{ flex: 1, minWidth: 0, borderLeft: `3px solid ${T.blue}`, paddingLeft: '10px' }}>
-        <p style={{ margin: '0 0 2px', color: T.navy, fontSize: "13px", fontWeight: 800 }}>{message.senderId === 'patient' ? 'Replying to you' : 'Replying to doctor'}</p>
-        <p style={{ margin: 0, color: T.slate, fontSize: "13px", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.text || message.attachmentName || 'Message'}</p>
+        <p style={{ margin: '0 0 2px', color: T.navy, fontSize: "13px", fontWeight: 800 }}>{message.senderId === 'patient' ? t('replyingToYou') : t('replyingToDoctor')}</p>
+        <p style={{ margin: 0, color: T.slate, fontSize: "13px", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.text || message.attachmentName || t('messageFallback')}</p>
       </div>
       <button type="button" aria-label={t('cancelReply')} onClick={onClear} style={{ width: '30px', height: '30px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", display: 'grid', placeItems: 'center', color: T.slate, cursor: 'pointer' }}>
         <Ico p={ICONS.x} size={15} sw={2} />
@@ -125,7 +125,7 @@ function ContactDetailsDialog({
             <p style={{ margin: 0, color: T.slate, fontSize: '14px' }}>{conversation.contactRole}</p>
           </div>
           <span style={{ borderRadius: '999px', padding: '7px 12px', background: conversation.isOnline ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.12)', color: conversation.isOnline ? T.green : T.amber, fontSize: "13px", fontWeight: 800 }}>
-            {conversation.lastSeenLabel || (conversation.isOnline ? 'Active now' : 'Offline')}
+            {conversation.lastSeenLabel || (conversation.isOnline ? t('activeNow') : t('offline'))}
           </span>
         </div>
         <div style={{ display: 'grid', gap: '12px', paddingTop: '18px' }}>
@@ -310,11 +310,11 @@ function MessagesPageInner() {
         router.replace('/auth/sign-in')
         return
       }
-      setError(getApiErrorDetail(err) || 'Unable to load conversations.')
+      setError(getApiErrorDetail(err) || t('unableToLoadConversations'))
     } finally {
       if (showLoading) setLoading(false)
     }
-  }, [conversationPage, initialContactId, router])
+  }, [conversationPage, initialContactId, router, t])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -405,7 +405,7 @@ function MessagesPageInner() {
       setSelectedAttachment(null)
       setReplyToMessage(null)
     } catch (err) {
-      setError(getApiErrorDetail(err) || 'Unable to send message.')
+      setError(getApiErrorDetail(err) || t('unableToSendMessage'))
     } finally {
       setSending(false)
     }
@@ -426,7 +426,7 @@ function MessagesPageInner() {
       setIsComposing(false)
       setReplyToMessage(null)
     } catch (err) {
-      setError(getApiErrorDetail(err) || 'Unable to send message.')
+      setError(getApiErrorDetail(err) || t('unableToSendMessage'))
     } finally {
       setSending(false)
     }
@@ -455,7 +455,7 @@ function MessagesPageInner() {
       const blob = await downloadAuthenticatedFile(message.attachmentUrl)
       saveBlob(blob, message.attachmentName || 'attachment')
     } catch (err) {
-      setError(getApiErrorDetail(err) || 'Unable to download attachment.')
+      setError(getApiErrorDetail(err) || t('unableToDownloadAttachment'))
     }
   }
 
@@ -661,7 +661,7 @@ function MessagesPageInner() {
               </div>
             ) : filteredConversations.length === 0 ? (
               <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>{conversations.length === 0 ? 'No conversations yet.' : 'No conversations found.'}</p>
+                <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>{conversations.length === 0 ? t('noConversationsYet') : t('noConversationsFound')}</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -743,7 +743,7 @@ function MessagesPageInner() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: T.slate2 }}>
                     <span>{activeConversation.contactRole}</span>
                     <span>·</span>
-                    <span style={{ color: activeConversation.isOnline ? T.green : T.amber, fontWeight: 800 }}>{activeConversation.isOnline ? 'Active now' : 'Offline'}</span>
+                    <span style={{ color: activeConversation.isOnline ? T.green : T.amber, fontWeight: 800 }}>{activeConversation.isOnline ? t('activeNow') : t('offline')}</span>
                     {activeConversation.context && (
                       <>
                         <span>·</span>
@@ -795,7 +795,7 @@ function MessagesPageInner() {
                         }}>
                           {msg.replyToText ? (
                             <div style={{ margin: '0 0 8px', padding: '7px 9px', borderRadius: '10px', background: isPatient ? 'rgba(255,255,255,0.18)' : 'rgba(32,181,223,0.08)', borderLeft: `3px solid ${isPatient ? "var(--border)" : T.blue}` }}>
-                              <p style={{ margin: '0 0 2px', fontSize: "13px", fontWeight: 800, color: isPatient ? '#fff' : T.navy }}>{msg.replyToSenderId === 'patient' ? 'Patient' : 'Doctor'}</p>
+                              <p style={{ margin: '0 0 2px', fontSize: "13px", fontWeight: 800, color: isPatient ? '#fff' : T.navy }}>{msg.replyToSenderId === 'patient' ? t('patient') : t('doctor')}</p>
                               <p style={{ margin: 0, fontSize: "13px", color: isPatient ? 'rgba(255,255,255,0.86)' : T.slate, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.replyToText}</p>
                             </div>
                           ) : null}
@@ -823,7 +823,7 @@ function MessagesPageInner() {
                             </div>
                             <div style={{ minWidth: 0, flex: 1 }}>
                               <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.attachmentName}</p>
-                              <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{msg.attachmentSize} • {msg.attachmentContentType || 'File'}</p>
+                              <p style={{ margin: 0, fontSize: "13px", color: T.slate }}>{msg.attachmentSize} • {msg.attachmentContentType || t('file')}</p>
                             </div>
                           </div>
                           <button type="button" onClick={() => handleDownloadAttachment(msg)} style={{ minHeight: '34px', borderRadius: '10px', border: '1px solid rgba(32,181,223,0.18)', background: "var(--surface)", color: T.link, fontSize: "13px", fontWeight: 800, cursor: 'pointer' }}>
@@ -935,7 +935,7 @@ function MessagesPageInner() {
                 <p style={{ margin: 0, color: T.slate, fontSize: '13px' }}>{activeConversation.contactRole}</p>
               </div>
               <span style={{ borderRadius: '999px', padding: '6px 10px', background: activeConversation.isOnline ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.12)', color: activeConversation.isOnline ? T.green : T.amber, fontSize: "13px", fontWeight: 800 }}>
-                {activeConversation.lastSeenLabel || (activeConversation.isOnline ? 'Active now' : 'Offline')}
+                {activeConversation.lastSeenLabel || (activeConversation.isOnline ? t('activeNow') : t('offline'))}
               </span>
             </div>
             <div style={{ display: 'grid', gap: '12px', paddingTop: '16px' }}>

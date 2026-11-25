@@ -8,7 +8,6 @@ import { Glass, PAGE_BG } from '@/lib/tokens'
 import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
 import { getPatientDoctor, getPatientSettings, createPatientEpisode, authorizeBilling, submitPatientEpisodeIntake, getApiErrorDetail, type PatientDoctor, type Insurance } from '@/lib/api'
 import { bookingFunding, selfPayPricingBasis } from '@/lib/booking-funding'
-import { PHYSICIANS } from '@/constants/physicians'
 import { PortalButton } from '@/components/patient/PatientPortalPrimitives'
 import { FieldFeedback, ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
 
@@ -33,10 +32,9 @@ function IntakePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
-  const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
   const [doctorLoadError, setDoctorLoadError] = useState('')
-  const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor) ?? physician, [remoteDoctor, physician])
+  const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor), [remoteDoctor])
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
 
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
@@ -70,7 +68,7 @@ function IntakePageContent() {
   const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
-    if (!physicianId || physician) return
+    if (!physicianId) return
 
     let cancelled = false
     getPatientDoctor(physicianId)
@@ -83,14 +81,14 @@ function IntakePageContent() {
         console.error('Failed to load selected doctor', error)
         if (!cancelled) {
           setRemoteDoctor(null)
-          setDoctorLoadError('We could not load the selected physician details. Please go back and choose the doctor again.')
+          setDoctorLoadError(t('doctorLoadFailed'))
         }
       })
 
     return () => {
       cancelled = true
     }
-  }, [physicianId, physician])
+  }, [physicianId, t])
 
   useEffect(() => {
     let cancelled = false
@@ -178,7 +176,7 @@ function IntakePageContent() {
       router.push(`/patient/consultation-booking/review?${reviewParams.toString()}`)
     } catch (error) {
       console.error('Failed to submit intake:', error)
-      setSubmitError(getApiErrorDetail(error) || 'Your intake could not be submitted. Please retry; your existing care episode will be reused.')
+      setSubmitError(getApiErrorDetail(error) || t('yourIntakeCouldNotBe'))
     } finally {
       submitting.current = false
       setIsSubmitting(false)
@@ -254,7 +252,7 @@ function IntakePageContent() {
               />
             </div>
 
-            <FieldFeedback name="complaint" error={attempted ? errors.complaint : undefined} hint="Describe your main concern in up to 2,000 characters." />
+            <FieldFeedback name="complaint" error={attempted ? errors.complaint : undefined} hint={t('describeYourMainConcernIn')} />
 
             <div>
               <label htmlFor="symptoms" style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '14px' }}>
@@ -371,19 +369,18 @@ function IntakePageContent() {
               ) : funding.needsSelfPayConfirmation ? (
                 <div style={{ display: 'grid', gap: 12 }}>
                   <p id="funding-summary" style={{ margin: 0, fontSize: '14px', lineHeight: 1.6 }}>
-                    {insuranceLoadFailed ? 'We could not load your saved insurance. ' : 'You have not added a health insurer. '}
-                    This consultation will be billed to you as <strong>{t('selfPay')}</strong>.
+                    {t.rich(insuranceLoadFailed ? 'insuranceLoadFailedSelfPay' : 'noInsuranceSelfPay', { selfPay: t('selfPay'), strong: chunks => <strong>{chunks}</strong> })}
                   </p>
                   <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--text-muted)' }}>{selfPayPricingBasis(physicianData.consultationFee)}</p>
                   <p style={{ margin: 0, fontSize: '13px' }}>
                     <Link href="/patient/settings" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--link, var(--action-primary))', fontWeight: 600 }}>{t('addYourInsurance')}</Link>
-                    <span style={{ color: 'var(--text-muted)' }}> (opens in a new tab; this page updates when you come back)</span>
+                    <span style={{ color: 'var(--text-muted)' }}> {t('opensInNewTab')}</span>
                   </p>
                   <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <input type="checkbox" checked={selfPayConfirmed} onChange={e => setSelfPayConfirmed(e.target.checked)} aria-invalid={attempted && Boolean(errors.selfPay)} aria-describedby="selfPay-hint selfPay-error" />
                     <span>{t('iUnderstandThisConsultationIs')}</span>
                   </label>
-                  <FieldFeedback name="selfPay" error={attempted ? errors.selfPay : undefined} hint="You can still add insurance before you continue." />
+                  <FieldFeedback name="selfPay" error={attempted ? errors.selfPay : undefined} hint={t('youCanStillAddInsurance')} />
                 </div>
               ) : (
                 <p id="funding-summary" style={{ margin: 0, fontSize: '14px', lineHeight: 1.6 }}>
@@ -397,7 +394,7 @@ function IntakePageContent() {
                 <input type="checkbox" checked={processingConsent} onChange={e => setProcessingConsent(e.target.checked)} aria-invalid={attempted && Boolean(errors.processing)} aria-describedby="processing-hint processing-error" />
                 <span>{t('iAgreeToProcessingThis')}</span>
               </label>
-              <FieldFeedback name="processing" error={attempted ? errors.processing : undefined} hint="This is a development acknowledgement, not acceptance of final legal terms. See the draft status on the privacy page." />
+              <FieldFeedback name="processing" error={attempted ? errors.processing : undefined} hint={t('thisIsADevelopmentAcknowledgement')} />
               <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 16 }}>
                 <input type="checkbox" checked={aiConsent} onChange={e => setAiConsent(e.target.checked)} />
                 <span>{t('allowOptionalAiAssistanceTo')}</span>
@@ -417,7 +414,7 @@ function IntakePageContent() {
                 tone="primary"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Submitting...' : 'Continue to Review'}
+                {isSubmitting ? t('submitting') : t('continueToReview')}
               </PortalButton>
             </div>
           </form>

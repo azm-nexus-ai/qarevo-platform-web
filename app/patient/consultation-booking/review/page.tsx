@@ -11,7 +11,6 @@ import { buildBookingQueryParams, getBookingPhysician } from '@/lib/booking'
 import { declaredDoctorFundingOptions } from '@/lib/insurance-presentation'
 import TreatingEntityChoice, { type EntitySelection } from '@/components/booking/TreatingEntityChoice'
 import { createPatientAppointment, getPatientDoctor, getPatientBookingSlots, getPatientSettings, type PatientSettings, type PatientDoctor, type PatientBookingSlot } from '@/lib/api'
-import { PHYSICIANS } from '@/constants/physicians'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
@@ -52,11 +51,10 @@ function ReviewPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const physicianId = searchParams.get('physicianId') ?? searchParams.get('provider_id') ?? ''
-  const physician = PHYSICIANS.find((item) => item.id === physicianId)
   const [remoteDoctor, setRemoteDoctor] = useState<PatientDoctor | null>(null)
   const [verifiedSlot, setVerifiedSlot] = useState<PatientBookingSlot | null>(null)
   const [doctorLoadError, setDoctorLoadError] = useState('')
-  const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor) ?? physician, [remoteDoctor, physician])
+  const bookingFallback = useMemo(() => doctorToBookingFallback(remoteDoctor), [remoteDoctor])
   const physicianData = useMemo(() => getBookingPhysician(searchParams, bookingFallback), [searchParams, bookingFallback])
   const service = searchParams.get('service') ?? searchParams.get('service_type') ?? 'video'
   const duration = verifiedSlot ? t('minutes', { minutes: verifiedSlot.duration_minutes }) : t('notYetVerified')
@@ -87,7 +85,7 @@ function ReviewPageContent() {
   const [showPolicy, setShowPolicy] = useState(false)
 
   useEffect(() => {
-    if (!physicianId || physician) return
+    if (!physicianId) return
 
     let cancelled = false
     getPatientDoctor(physicianId)
@@ -107,7 +105,7 @@ function ReviewPageContent() {
     return () => {
       cancelled = true
     }
-  }, [physicianId, physician, t])
+  }, [physicianId, t])
 
   const [slotError, setSlotError] = useState('')
   const requestedStart = searchParams.get('start_at')
@@ -383,8 +381,8 @@ function ReviewPageContent() {
             <section style={{ background: "var(--surface-glass)", borderRadius: '22px', border: "1px solid var(--border)", boxShadow: Sh.float, padding: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <div style={{ width: '50px', height: '50px', borderRadius: '14px', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(32,181,223,0.22), rgba(52,140,234,0.3))', display: 'grid', placeItems: 'center' }}>
-                  {physician ? (
-                    <img src={physician.imageUrl} alt={physician.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {remoteDoctor?.imageUrl ? (
+                    <img src={remoteDoctor.imageUrl} alt={remoteDoctor.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <Ico p={ICONS.steth} size={22} sw={1.5} color={T.navy} />
                   )}
