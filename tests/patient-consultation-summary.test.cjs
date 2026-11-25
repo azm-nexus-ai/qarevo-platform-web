@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
 const React = require('react')
-const { renderToStaticMarkup } = require('react-dom/server')
+const { renderToStaticMarkup, renderToStaticMarkup: renderStatic } = require('react-dom/server')
 
 function load(file, dependencies = {}) {
   const compiled = { exports: {} }
@@ -68,6 +68,10 @@ const records = load('components/patient/ClinicalRecords.tsx', {
   },
 })
 test('shared clinical states retain actionable errors and safely render escaped multiline records', () => {
+  // The record states translate their labels, so they render inside the same provider as the app.
+  const { NextIntlClientProvider } = require('next-intl')
+  const messages = JSON.parse(fs.readFileSync('messages/en.json', 'utf8'))
+  const renderToStaticMarkup = element => renderStatic(React.createElement(NextIntlClientProvider, { locale: 'en', messages }, element))
   const error = renderToStaticMarkup(React.createElement(records.RecordLoadState, { loading: false, error: true, errorMessage: 'Synthetic service unavailable', retry() {} }, 'hidden'))
   assert.match(error, /role="alert"/)
   assert.match(error, /Synthetic service unavailable/)

@@ -7,6 +7,18 @@ const ts = require('typescript')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
 
+// The card is also called as a plain function to inspect its props, so translations come from a
+// stub that reads the real English messages instead of a provider.
+const english = JSON.parse(fs.readFileSync('messages/en.json', 'utf8'))
+const intlStub = {
+  useLocale: () => 'en',
+  useTranslations: namespace => (key, values = {}) => {
+    const text = `${namespace}.${key}`.split('.').reduce((node, part) => node?.[part], english)
+    if (typeof text !== 'string') throw new Error(`Missing message ${namespace}.${key}`)
+    return text.replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? `{${name}}`))
+  },
+}
+
 // Load the real TSX component; no alternate implementation or browser is required.
 const cache = new Map()
 function load(source) {
@@ -18,6 +30,7 @@ function load(source) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
   }).outputText
   function resolveImport(name) {
+    if (name === 'next-intl') return intlStub
     if (!name.startsWith('@/') && !name.startsWith('.')) return require(name)
     const base = name.startsWith('@/') ? path.resolve(name.slice(2)) : path.resolve(path.dirname(filename), name)
     const extension = ['.tsx', '.ts', ''].find(ext => fs.existsSync(base + ext))
