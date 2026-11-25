@@ -342,13 +342,13 @@ export default function DoctorRegisterPage() {
       !gender.trim() ||
       (!!normalizedUsername && (!USERNAME_RE.test(normalizedUsername) || normalizedUsername.length < 3 || usernameAvailable === false))
     ) {
-      setAuthError('Please correct the highlighted fields before continuing.')
+      setAuthError(t('pleaseCorrectTheHighlightedFields'))
       focusValidation(e.currentTarget)
       return
     }
 
     if (!consentAccepted) {
-      setAuthError('Please acknowledge the development test conditions')
+      setAuthError(t('pleaseAcknowledgeTheDevelopmentTest'))
       return
     }
 

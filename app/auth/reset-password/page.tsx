@@ -254,7 +254,7 @@ function LeftPanel() {
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('yourRecordsStayProtected')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Protecting your medical information is Qarevo Health&apos;s highest priority. Create a strong password to safely restore account access.
+            {t('protectingYourMedicalInformationIs')}
           </p>
         </div>
       </div>
@@ -742,7 +742,7 @@ function ResetPasswordPageContent() {
                       {t('invalidResetLink')}
                     </h1>
                     <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 22px', letterSpacing: '-0.01em' }}>
-                      The password reset link is missing or invalid. Reopen the full link from your newest reset email. Refreshing this page removes the link from memory; request a new email only if the original link has expired.
+                      {t('thePasswordResetLinkIs')}
                     </p>
                     <Link
                       href={portal.forgot}

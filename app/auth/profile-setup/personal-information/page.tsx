@@ -496,7 +496,7 @@ export default function PersonalInformationPage() {
                 {t('tellUsAboutYourself')}
               </h1>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>
-                Let&apos;s begin with some basic personal information so we can personalize your healthcare experience.
+                {t('letSBeginWithSome')}
               </p>
             </header>
 

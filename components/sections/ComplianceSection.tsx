@@ -1,10 +1,15 @@
 'use client'
+import { useTranslations } from 'next-intl'
 
 import { T } from '@/lib/tokens'
 import TrustCard from '@/components/cards/TrustCard'
 import { TRUST_FRAMEWORKS } from '@/constants/healthcare'
 
+/** Message keys for TRUST_FRAMEWORKS, in the same order. */
+const TRUST_KEYS = ['account', 'choices', 'access', 'preview'] as const
+
 export default function ComplianceSection() {
+  const t = useTranslations('landing')
   return (
     <div
       id="security-governance"
@@ -32,11 +37,11 @@ export default function ComplianceSection() {
               minWidth: '136px',
             }}
           >
-            Built around trust
+            {t('builtAroundTrust')}
           </span>
           <div className="trust-flex">
-            {TRUST_FRAMEWORKS.map((framework) => (
-              <TrustCard key={framework.label} {...framework} />
+            {TRUST_FRAMEWORKS.map((framework, index) => (
+              <TrustCard key={framework.label} {...framework} label={t(`trust.${TRUST_KEYS[index]}.label`)} sub={t(`trust.${TRUST_KEYS[index]}.sub`)} />
             ))}
           </div>
         </div>

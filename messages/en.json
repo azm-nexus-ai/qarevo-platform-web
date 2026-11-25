@@ -358,7 +358,8 @@
       "verifiedNotice": "Your email address is confirmed. Once Qarevo has approved your account, you can sign in here.",
       "stateVerify": "Please confirm your email address first. We just sent you a code (unless one was sent within the last minute).",
       "stateVerifyAction": "Enter the code",
-      "stateReview": "Your email address is confirmed. Qarevo is reviewing your account. You will receive an email once you can sign in."
+      "stateReview": "Your email address is confirmed. Qarevo is reviewing your account. You will receive an email once you can sign in.",
+      "secureClinicianVerificationCouldNot": "Secure clinician verification could not be started. Please retry."
     },
     "adminSignIn": {
       "errors": {
@@ -389,7 +390,8 @@
         "resendIn": "New code in {seconds} s",
         "sent": "A new code was sent. The previous code no longer works.",
         "restart": "Sign in again"
-      }
+      },
+      "forgotYourPassword": "Forgot your password?"
     },
     "practice": {
       "title": "Practice Sign In",
@@ -463,7 +465,8 @@
       "symbol": "Symbol",
       "syntheticDataOnly": "Synthetic Data Only",
       "developmentPreview": "Development Preview",
-      "testAccounts": "Test Accounts"
+      "testAccounts": "Test Accounts",
+      "n8Chars": "8+ chars"
     },
     "forgotPassword": {
       "recoverAccessSafely": "Recover access safely.",
@@ -503,7 +506,8 @@
       "resendEmail": "Resend Email",
       "secureRecovery": "Secure Recovery",
       "singleUseLink": "Single-use Link",
-      "accountRecovery": "Account Recovery"
+      "accountRecovery": "Account Recovery",
+      "ifAnEligibleAccountExists": "If an eligible account exists, we will attempt to send reset instructions. Check your inbox and spam folder. Use the newest email; requesting another link replaces earlier links. If you refreshed the reset page, reopen the full link from the email."
     },
     "doctorRegister": {
       "optional": "Optional",
@@ -621,7 +625,9 @@
       "socialVerified": "Continuing with {provider}: your email address is confirmed. Add your professional details and a password; Qarevo then reviews your account.",
       "socialUnverified": "Continuing with {provider}: enter your email address. We will send you a confirmation code.",
       "socialCancel": "Register without {provider}",
-      "errSocial": "Provider sign-up is not possible: the email must be the one the provider confirmed, the provider account must not be connected yet, and the sign-up is valid for 30 minutes. Otherwise register without the provider."
+      "errSocial": "Provider sign-up is not possible: the email must be the one the provider confirmed, the provider account must not be connected yet, and the sign-up is valid for 30 minutes. Otherwise register without the provider.",
+      "pleaseCorrectTheHighlightedFields": "Please correct the highlighted fields before continuing.",
+      "pleaseAcknowledgeTheDevelopmentTest": "Please acknowledge the development test conditions"
     },
     "verifyEmail": {
       "codeVerifiedActivatingYourAccount": "Code verified — activating your account…",
@@ -728,7 +734,9 @@
       "tooManyRequestsPleaseWait": "Too many requests. Please wait before trying again.",
       "checkThePasswordRequirementsAnd": "Check the password requirements and try again.",
       "secureCredentials": "Secure Credentials",
-      "protectedAccountAccess": "Protected account access"
+      "protectedAccountAccess": "Protected account access",
+      "thePasswordResetLinkIs": "The password reset link is missing or invalid. Reopen the full link from your newest reset email. Refreshing this page removes the link from memory; request a new email only if the original link has expired.",
+      "protectingYourMedicalInformationIs": "Protecting your medical information is Qarevo Health's highest priority. Create a strong password to safely restore account access."
     },
     "doctorTwoFactor": {
       "back": "Back to sign-in",
@@ -810,7 +818,12 @@
       "medicalGradeSecurity": "Medical-grade security",
       "terms": "Terms",
       "privacyPolicy": "Privacy Policy",
-      "support": "Support"
+      "support": "Support",
+      "backToEmailVerification": "Back to Email Verification",
+      "enter6DigitCode": "Enter 6-digit code",
+      "verificationEmailRequestedCheckYour": "Verification email requested. Check your inbox and spam folder.",
+      "verifyYourIdentity": "Verify Your Identity",
+      "change": "Change"
     },
     "accountCreated": {
       "welcomeToYourCareJourney": "Welcome to your care journey.",
@@ -840,7 +853,19 @@
       "secureVerification": "Secure verification",
       "endToEndEncrypted": "End-to-end encrypted",
       "emailVerificationProtectedAccess": "Email verification · Protected access",
-      "medicalGradePrivacy": "Medical-grade privacy"
+      "medicalGradePrivacy": "Medical-grade privacy",
+      "support": "Support",
+      "privacyPolicy": "Privacy Policy",
+      "terms": "Terms",
+      "returnToHome": "Return to Home",
+      "explorePlatform": "Explore Platform",
+      "healthcareShouldFeelPersonalSimple": "Healthcare should feel personal, simple, and always within reach. We're excited to help you take the next step in your health journey.",
+      "nextSteps": "Next steps",
+      "accountCreatedSuccessfully": "Account Created Successfully",
+      "youAreNowReadyTo": "You are now ready to experience a smarter, more connected approach to healthcare, from finding trusted physicians to managing consultations and ongoing care, all in one secure platform.",
+      "yourAccountHasBeenSuccessfully": "Your account has been successfully created.",
+      "welcomeToQarevoHealth": "Welcome to Qarevo Health!",
+      "everyNextStepIsDesigned": "Every next step is designed to be secure, personal, and effortless as you begin your Qarevo Health experience."
     },
     "doctorPhone": {
       "theVerificationCodeYouEntered": "The verification code you entered is incorrect. Please check the code and try again.",
@@ -862,7 +887,14 @@
       "verificationCodeSentSuccessfully": "Verification code sent successfully",
       "phoneNumber": "Phone number",
       "verifying": "Verifying...",
-      "verifyPhone": "Verify Phone"
+      "verifyPhone": "Verify Phone",
+      "contactSupport": "Contact Support",
+      "resendVerificationCode": "Resend Verification Code",
+      "enterThe6DigitCode": "Enter the 6-digit code sent to your phone",
+      "verifyYourPhone": "Verify Your Phone",
+      "back": "Back",
+      "verifyYourPhoneNumberTo": "Verify your phone number to complete your physician account setup",
+      "phoneVerification": "Phone Verification"
     },
     "verifyLink": {
       "checkingYourLink": "Checking your link…",
@@ -884,7 +916,10 @@
       "yourRegisteredEmailAddress": "Your registered email address",
       "requesting": "Requesting…",
       "sendVerificationEmail": "Send verification email",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "requestANewVerificationEmail": "Request a new verification email",
+      "returnToYourClinicianRegistration": "Return to your clinician registration tab to complete the remaining onboarding checks.",
+      "signInAndCompleteYour": "Sign in and complete your profile"
     },
     "adminInvitation": {
       "weCouldNotCheckThis": "We could not check this invitation. Please retry.",
@@ -905,7 +940,8 @@
       "newPasswordRequired": "New password (Required)",
       "confirmPasswordRequired": "Confirm password (Required)",
       "activating": "Activating…",
-      "activateAdministratorAccount": "Activate administrator account"
+      "activateAdministratorAccount": "Activate administrator account",
+      "n8128CharactersWithUppercase": "8–128 characters, with uppercase, lowercase, a number and a special character."
     },
     "profileSetupIntro": {
       "builtAroundYourHealthStory": "Built around your health story.",
@@ -943,7 +979,13 @@
       "accountBasedAccess": "Account-Based Access",
       "aiAssistedHealthcare": "AI-Assisted Healthcare",
       "privateMedicalRecords": "Private Medical Records",
-      "startProfileSetup": "Start Profile Setup"
+      "startProfileSetup": "Start Profile Setup",
+      "back": "Back",
+      "whyWeNeedThis": "Why we need this",
+      "completingYourProfileAllowsUs": "Completing your profile allows us to better understand your needs, recommend suitable physicians, improve consultations, and provide a more personalized healthcare experience.",
+      "beforeWeConnectYouWith": "Before we connect you with trusted healthcare professionals, let's take a few moments to personalize your healthcare experience.",
+      "welcomeToYourHealthJourney": "Welcome to Your Health Journey",
+      "yourProfileHelpsUsMatch": "Your profile helps us match you with the right physicians and enable more meaningful, secure consultations."
     },
     "socialConnect": {
       "accountConnections": "Account connections",
@@ -965,7 +1007,9 @@
     "account": "Patient account",
     "logout": "Logout",
     "portal": "Patient portal",
-    "navigation": "Patient navigation"
+    "navigation": "Patient navigation",
+    "patientAppearance": "Patient appearance",
+    "qarevoHealthPatientDashboard": "Qarevo Health patient dashboard"
   },
   "doctorDashboard": {
     "clinicalWorkflowEpisodes": "Clinical Workflow Episodes",
@@ -978,7 +1022,10 @@
     "aiDraftsReady": "AI Drafts Ready",
     "recentAppointments": "Recent Appointments",
     "recentConsultations": "Recent Consultations",
-    "todaysAppointments": "Today's Appointments"
+    "todaysAppointments": "Today's Appointments",
+    "unableToLoadDashboardData": "Unable to load dashboard data right now.",
+    "aiReady": "AI READY",
+    "noAiDraft": "NO AI DRAFT"
   },
   "adminDashboard": {
     "operationalStatus": "Operational Status",
@@ -1865,7 +1912,8 @@
       "natBrazilian": "Brazilian",
       "natOther": "Other",
       "langGerman": "German",
-      "langEnglish": "English"
+      "langEnglish": "English",
+      "letSBeginWithSome": "Let's begin with some basic personal information so we can personalize your healthcare experience."
     },
     "coverage": {
       "coverageHandledCarefully": "Coverage, handled carefully.",
@@ -2467,7 +2515,8 @@
     "cardDescription": "Patient-uploaded insurance card",
     "cardProvider": "Insurance provider",
     "contactNameError": "Enter the contact’s name using 2–100 characters without HTML.",
-    "contactRelationshipError": "Enter the contact’s relationship using 2–100 characters without HTML."
+    "contactRelationshipError": "Enter the contact’s relationship using 2–100 characters without HTML.",
+    "passkeyFallback": "Passkey"
   },
   "patientLabRequests": {
     "careSummary": "Care summary",
@@ -2783,7 +2832,8 @@
       "draftUnavailable": "AI draft status is temporarily unavailable. Your saved appointment and intake remain accessible; open intake to retry clinical review.",
       "contextUnchecked": "Clinical context could not be checked. The appointment is still saved; open intake to retry.",
       "notSpecified": "Not specified",
-      "none": "None"
+      "none": "None",
+      "noIntakeInformationAvailableClick": "No intake information available. Click “View Intake & AI Draft” to see full episode details."
     }
   },
   "doctorLabOrders": {
@@ -3047,7 +3097,8 @@
         "FRIDAY": "Friday",
         "SATURDAY": "Saturday",
         "SUNDAY": "Sunday"
-      }
+      },
+      "noConsultationServicesConfiguredYet": "No consultation services configured yet. Click \"Add Service\" to create one."
     }
   },
   "adminAccounts": {
@@ -3904,7 +3955,9 @@
     "addInsurance": "Add insurance in settings ->",
     "closeNotice": "Close billing notice",
     "gotIt": "Got it",
-    "notAvailable": "Not available"
+    "notAvailable": "Not available",
+    "downloadPdf": "Download PDF",
+    "addCard": "Add Card"
   },
   "patientDeviceCheck": {
     "eyebrow": "Device readiness",
@@ -4072,7 +4125,8 @@
     "signOutAllBody": "This includes your current session. Save any unfinished work before continuing.",
     "required": "(Required)",
     "showField": "Show {field}",
-    "hideField": "Hide {field}"
+    "hideField": "Hide {field}",
+    "theSecurityActionFailedPlease": "The security action failed. Please retry."
   },
   "patientFeedback": {
     "eyebrow": "Post-consultation",
@@ -4406,7 +4460,10 @@
     "approvePublish": "Approve and publish",
     "createAmendment": "Create amendment",
     "confirming": "Confirming…",
-    "confirmCompletion": "Confirm consultation completion"
+    "confirmCompletion": "Confirm consultation completion",
+    "n4500CharactersTheOriginal": "4–500 characters. The original published record will be retained. This reason is also visible to the patient.",
+    "requiredSuffix": "(required)",
+    "requiredToPublish": "(required to publish)"
   },
   "doctorLabNotifications": {
     "retryMarkNamed": "Retry marking result update {id} as read",
@@ -4470,7 +4527,19 @@
     "noFields": "No structured field values have been created for this episode yet.",
     "field": "Field",
     "loadingTimeline": "Loading timeline...",
-    "noTimeline": "No timeline events available for this episode."
+    "noTimeline": "No timeline events available for this episode.",
+    "cancel": "Cancel",
+    "rejectDraft": "Reject Draft",
+    "backToWorkspace": "Back to Workspace",
+    "pleaseExplainWhyYouAre": "Please explain why you are rejecting this AI draft...",
+    "aiDraftReady": "AI DRAFT READY",
+    "noAiDraft": "NO AI DRAFT",
+    "sectionPatient": "Patient",
+    "sectionWorkflow": "Workflow Status",
+    "sectionIntake": "Intake Response",
+    "sectionDrafts": "AI Drafts",
+    "sectionFields": "CWS Field Values",
+    "sectionTimeline": "Episode Timeline"
   },
   "workCertificates": {
     "maxDays": "After a video consultation a certificate covers at most {days} days.",
@@ -4586,7 +4655,17 @@
     "patient": "Patient",
     "file": "File",
     "noneSelected": "No conversation selected",
-    "noneSelectedText": "Patient conversations will appear here once they message you."
+    "noneSelectedText": "Patient conversations will appear here once they message you.",
+    "reply": "Reply",
+    "download": "Download",
+    "next": "Next",
+    "prev": "Prev",
+    "cancelReply": "Cancel reply",
+    "searchPatientsOrMessages": "Search patients or messages...",
+    "addAttachment": "Add attachment",
+    "typeYourReply": "Type your reply...",
+    "sendReply": "Send reply",
+    "removeAttachment": "Remove attachment"
   },
   "doctorConsultation": {
     "loadFailed": "Failed to fetch consultation details",
@@ -4606,7 +4685,9 @@
     "ended": "Ended At",
     "appointmentId": "Appointment ID",
     "none": "None",
-    "videoSessionId": "Video Session ID"
+    "videoSessionId": "Video Session ID",
+    "joinVideo": "Join Video",
+    "backToWorkspace": "Back to Workspace"
   },
   "doctorPatients": {
     "loadFailedTech": "Failed to load doctor patients",
@@ -4624,7 +4705,9 @@
     "unknownGender": "Unknown gender",
     "unknown": "Unknown",
     "noVisits": "No visits yet",
-    "consultations": "Consultations"
+    "consultations": "Consultations",
+    "next": "Next",
+    "previous": "Previous"
   },
   "patientDirectory": {
     "selectPatient": "Select Patient",
@@ -4684,7 +4767,9 @@
   "doctorOutcomes": {
     "title": "Outcomes",
     "intro": "Track and manage patient outcomes",
-    "heading": "Outcomes Management"
+    "heading": "Outcomes Management",
+    "forNowPleaseUseThe": "For now, please use the Workspace to track consultation progress",
+    "thisFeatureIsComingSoon": "This feature is coming soon. You'll be able to track patient treatment outcomes, measure effectiveness, and generate reports."
   },
   "doctorClinicalRecords": {
     "title": "Published care summaries",
@@ -4982,7 +5067,10 @@
     "dateTime": "Date & Time",
     "notesOptional": "Notes (Optional)",
     "update": "Update",
-    "add": "Add"
+    "add": "Add",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit"
   },
   "reviewModal": {
     "writeAReview": "Write a review",
@@ -4994,7 +5082,11 @@
     "poor": "Poor",
     "shareYourExperienceWithThis": "Share your experience with this provider...",
     "submitting": "Submitting...",
-    "submitReview": "Submit Review"
+    "submitReview": "Submit Review",
+    "cancel": "Cancel",
+    "yourReview": "Your Review",
+    "yourRating": "Your Rating",
+    "writeAReview2": "Write a Review"
   },
   "patientMobileNav": {
     "patientAccount": "Patient account",
@@ -5005,7 +5097,8 @@
     "openNavigationMenu": "Open navigation menu",
     "navigationMenu": "Navigation menu",
     "patientSummary": "Patient summary",
-    "patientNavigation": "Patient navigation"
+    "patientNavigation": "Patient navigation",
+    "logout": "Logout"
   },
   "practiceLocation": {
     "thePracticeHasNotPublished": "The practice has not published its address yet. Video consultations do not need a visit.",
@@ -5573,5 +5666,271 @@
       "noMatch": "No events match this file ID.",
       "eventLabel": "Patient document event"
     }
+  },
+  "authWelcome": {
+    "home": "Qarevo Health home",
+    "heroLine1": "Clinical intelligence.",
+    "heroLine2": "Beautifully coordinated.",
+    "heroText": "Find verified physicians, book video consultations and keep your care coordinated in one place. This is a development preview with synthetic test data.",
+    "badgeEmail": "Email verification",
+    "badgeClinician": "Clinician review",
+    "badgeSecurity": "Account security",
+    "welcomeLine1": "Welcome to",
+    "intro": "Securely access your healthcare journey powered by intelligent care coordination.",
+    "getStarted": "Get Started",
+    "physicianRegistration": "Physician Registration",
+    "orContinue": "or continue with",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign In",
+    "or": "or",
+    "physicianPortal": "Physician Portal",
+    "footerNote": "Email verification · Protected account access"
+  },
+  "sessionPolicy": {
+    "forYourSecuritySessionsExpire": "For your security, sessions expire after inactivity or the maximum session duration. Save your work when an expiry warning appears."
+  },
+  "logoutModal": {
+    "yes": "Yes",
+    "no": "No",
+    "logOut": "Log Out"
+  },
+  "footer": {
+    "thisPortalSAppearancePreferences": "This portal’s appearance preferences were cleared. Your other portals, account and sign-in are unchanged.",
+    "appearanceResetForThisPage": "Appearance reset for this page. Browser storage could not be updated.",
+    "qarevoHealthHome": "Qarevo Health home",
+    "connectingPatientsAndIndependentPractices": "Connecting patients and independent practices through clinician-led digital care.",
+    "developmentPreviewSyntheticTestData": "Development preview · Synthetic test data only",
+    "qarevoHealthSocialProfiles": "Qarevo Health social profiles",
+    "legalAndSupport": "Legal and support",
+    "cookiePreferences": "Cookie preferences",
+    "cookieStoragePreferences": "Cookie & storage preferences",
+    "theseControlsManageThisPortal": "These controls manage this portal’s theme and sidebar layout in this browser. Other portals keep their own appearance preferences.",
+    "signInSecurityAndAccount": "Sign-in, security and account-specific working data are managed separately. Clearing appearance preferences does not sign you out or delete your profile.",
+    "readTheCurrentStatus": "Read the current status",
+    "clearAppearancePreferences": "Clear appearance preferences",
+    "closePreferences": "Close preferences",
+    "linkImpressum": "Impressum",
+    "linkPrivacy": "Privacy",
+    "linkTerms": "Patient terms",
+    "linkCookies": "Cookie information",
+    "linkSupport": "Support",
+    "opensNewTab": "{label} (opens in a new tab)",
+    "copyright": "© {year} Qarevo Health. All rights reserved.",
+    "noticeUnderReview": "The complete cookie and storage notice remains under review."
+  },
+  "sessionGuard": {
+    "weCouldNotConfirmYour": "We could not confirm your session. Check your connection and try again.",
+    "sessionVerification": "Session verification",
+    "secureAccess": "Secure access",
+    "checkingYourSession": "Checking your session…",
+    "retryConnection": "Retry connection",
+    "signOut": "Sign out",
+    "yourSessionIsEndingSoon": "Your session is ending soon",
+    "forYourSecurityThisSession": "For your security, this session has reached its maximum duration. Save your work and sign in again.",
+    "toProtectYourHealthInformation": "To protect your health information, we sign you out after inactivity. Stay signed in to continue your work. Unsaved changes will be lost when this session ends.",
+    "returnToWorkAndSave": "Return to work and save",
+    "confirming": "Confirming…",
+    "staySignedIn": "Stay signed in",
+    "signOutNow": "Sign out now",
+    "timeRemaining": "Time remaining: {seconds} seconds",
+    "yourAccountChangedReloadThis": "Your account changed. Reload this portal to continue.",
+    "secureAccessCouldNotBe": "Secure access could not be confirmed. Check your connection and retry.",
+    "checkingYourPortalSession": "Checking your portal session…"
+  },
+  "unsavedChanges": {
+    "yourRecordIsBeingSaved": "Your record is being saved",
+    "keepYourClinicalNotes": "Keep your clinical notes?",
+    "waitForThisOperationTo": "Wait for this operation to finish before leaving. Your clinical record is still being processed.",
+    "youHaveUnsavedChangesKeep": "You have unsaved changes. Keep editing to save your draft, or discard these changes and leave. Previously saved versions will remain available.",
+    "stayOnThisPage": "Stay on this page",
+    "keepEditing": "Keep editing",
+    "discardAndLeave": "Discard and leave"
+  },
+  "supportReference": {
+    "clipboardUnavailable": "Clipboard unavailable",
+    "supportReferenceCopied": "Support reference copied.",
+    "selectTheReferenceAndCopy": "Select the reference and copy it using your keyboard or device menu.",
+    "supportReference": "Support reference",
+    "shareThisReferenceWithSupport": "Share this reference with support if the problem continues.",
+    "copySupportReference": "Copy support reference",
+    "copyReference": "Copy reference"
+  },
+  "portalAccess": {
+    "otherPortals": "Other portals",
+    "otherPortalSignIn": "Other portal sign-in",
+    "eachPortalVerifiesItsOwn": "Each portal verifies its own permissions and session. Opening another portal does not switch your current access.",
+    "patientPortalSignIn": "Patient portal sign-in",
+    "doctorPortalSignIn": "Doctor portal sign-in",
+    "practicePortalSignIn": "Practice portal sign-in"
+  },
+  "portalSignIn": {
+    "otherSignInPortal": "Other sign-in portal",
+    "areYouAPhysician": "Are you a physician?",
+    "lookingForPatientCare": "Looking for patient care?",
+    "physicianSignIn": "Physician sign-in",
+    "patientSignIn": "Patient sign-in",
+    "wrongPortalProvider": "This account is registered for the physician portal.",
+    "wrongPortalPatient": "This account is registered for the patient portal.",
+    "useDedicated": "Use its dedicated sign-in page to continue securely.",
+    "continueProvider": "Continue to physician sign-in",
+    "continuePatient": "Continue to patient sign-in",
+    "chooseYourSignInPortal": "Choose your sign-in portal",
+    "clinicianSignIn": "Clinician sign-in",
+    "administratorSignIn": "Administrator sign-in"
+  },
+  "support": {
+    "supportTicketUnavailable": "Support ticket unavailable",
+    "supportTicketsAreNotConnected": "Support tickets are not connected in this development environment. No ticket data is available for this reference.",
+    "backToSupport": "Back to Support",
+    "reference": "Reference:",
+    "faq": {
+      "signIn": {
+        "question": "I cannot sign in",
+        "answer": "Use Forgot password from your portal’s sign-in page. Open the newest recovery email and choose a new password. A successful reset clears the password-attempt lockout."
+      },
+      "recoveryLink": {
+        "question": "My recovery link is missing or invalid",
+        "answer": "Reopen the full link in your newest recovery email. Requesting another email replaces earlier links. Refreshing the recovery page removes the link from page memory."
+      },
+      "joinConsultation": {
+        "question": "I cannot join my consultation",
+        "answer": "Open your scheduled consultation from your dashboard. Check your connection and browser camera and microphone permissions."
+      },
+      "changeProfile": {
+        "question": "I need to change my profile",
+        "answer": "Open Settings in your portal. Required fields and validation messages explain what must be completed."
+      }
+    },
+    "helpSupport": "Help & Support",
+    "searchHelpArticles": "Search help articles",
+    "searchByTopic": "Search by topic",
+    "helpArticles": "Help articles",
+    "noArticlesMatchYourSearch": "No articles match your search. Try a different term.",
+    "contactSupport": "Contact support",
+    "liveChatAndSupportTickets": "Live chat and support tickets are not connected in this development environment. No support request can be submitted here yet.",
+    "supportChannelsAndResponseTimes": "Support channels and response times will be published once they are configured."
+  },
+  "marketingNav": {
+    "section": {
+      "overview": "Platform Overview",
+      "clinical": "Clinical Intelligence",
+      "security": "Security & Governance"
+    },
+    "accessPlatform": "Access Platform",
+    "signIn": "Sign In",
+    "physicianPortal": "Physician Portal",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "mainNavigation": "Main navigation",
+    "qarevoHealthHome": "Qarevo Health home",
+    "closeNavigationMenu": "Close navigation menu",
+    "openNavigationMenu": "Open navigation menu",
+    "navigationMenu": "Navigation menu",
+    "mobileNavigation": "Mobile navigation"
+  },
+  "landing": {
+    "readTheWhitepaper": "Read the Whitepaper",
+    "bookAConsultation": "Book a Consultation",
+    "weAreBuildingAClearer": "We are building a clearer path from your first question to a clinician-led consultation and follow-up. Explore the Qarevo development preview with synthetic test data.",
+    "heroLine1": "Care that fits your life,",
+    "heroLine2": "guided by clinicians.",
+    "builtAroundTrust": "Built around trust",
+    "physician": {
+      "accountVerification": "Account verification",
+      "approvalRequired": "Approval required",
+      "aConnectedCareJourney": "A connected care journey",
+      "document": "Document",
+      "notes": "Notes",
+      "review": "Review",
+      "intake": "Intake",
+      "illustrativeWorkflow": "Illustrative workflow",
+      "practiceWorkspace": "Practice workspace",
+      "physicianSignIn": "Physician Sign In",
+      "registerAsPhysician": "Register as Physician",
+      "explorePatientIntakeAssignedClinical": "Explore patient intake, assigned clinical work and care coordination in our development preview for independent practices.",
+      "forHealthcareProviders": "For Healthcare Providers",
+      "featureVerified": "Verified Physicians",
+      "featureVerifiedText": "Professional access follows administrator review",
+      "featureVideo": "Virtual Consultations",
+      "featureVideoText": "Video consultation workflow under development",
+      "featureDrafting": "Optional Drafting",
+      "featureDraftingText": "Consent-based draft assistance requiring clinician review",
+      "featureSecure": "Secure Platform",
+      "featureSecureText": "Account verification and controlled clinical access",
+      "joinLine1": "Join the network of",
+      "joinLine2": "verified physicians"
+    },
+    "reviewPatientIntake": "Review patient intake",
+    "documentFollowUp": "Document follow-up",
+    "trust": {
+      "account": {
+        "label": "Your account",
+        "sub": "Email verification"
+      },
+      "choices": {
+        "label": "Your choices",
+        "sub": "Explicit processing choices"
+      },
+      "access": {
+        "label": "Clinical access",
+        "sub": "Role and assignment checks"
+      },
+      "preview": {
+        "label": "Development preview",
+        "sub": "Synthetic test data only"
+      }
+    },
+    "journey": {
+      "eyebrow": "YOUR CARE JOURNEY",
+      "title": "One place to prepare for your care",
+      "step1": "Create your account",
+      "step1Text": "Verify your email and save your profile with clearly labelled required fields.",
+      "step2": "Explore the clinician directory",
+      "step2Text": "See the approved clinician profiles available in your account. Availability is shown in the booking flow.",
+      "step3": "Prepare for your consultation",
+      "step3Text": "Share your concern and make an explicit choice about optional AI assistance.",
+      "register": "Patient registration",
+      "preview": "Development preview. Consultation delivery and payment are being validated before patient use."
+    },
+    "clinician": {
+      "eyebrow": "CLINICIAN-LED CARE",
+      "title": "Technology supports the clinician",
+      "contextTitle": "Your information, in context",
+      "contextText": "The consultation starts with your own account and saved intake. Sample medical records are not presented as your care.",
+      "aiTitle": "Optional assistance, explicit choice",
+      "aiText": "AI drafting remains optional and under validation. Generated drafts require clinician review and cannot independently approve care."
+    }
+  },
+  "accountMenu": {
+    "viewProfile": "View profile",
+    "settingsAndSecurity": "Settings and security"
+  },
+  "profileAvatar": {
+    "doctor": "Doctor",
+    "admin": "Administrator",
+    "patient": "Patient"
+  },
+  "sidebarToggle": {
+    "show": "Show sidebar",
+    "hide": "Hide sidebar",
+    "showRight": "Show right sidebar",
+    "hideRight": "Hide right sidebar"
+  },
+  "legalPages": {
+    "impressumAwaitingApproval": "Impressum awaiting approval",
+    "thisDevelopmentPreviewIsNot": "This development preview is not open for real-patient care. The company, representative, register and contact details in the supplied legal drafts must be confirmed and approved before the legal notice is published.",
+    "privacyInformation": "Privacy information",
+    "returnHome": "Return home",
+    "privacyPolicy": "Privacy Policy",
+    "developmentEnvironmentSyntheticTestData": "Development environment — synthetic test data only. Approved privacy policy text is not yet published. The supplied drafts require completed company and service details, alignment with the implementation, and qualified legal review before use with real patients. Development acknowledgements do not authorise clinical care.",
+    "returnToHome": "Return to Home",
+    "termsOfService": "Terms of Service",
+    "developmentEnvironmentSyntheticTestData2": "Development environment — synthetic test data only. Approved terms of service text is not yet published. The supplied drafts require completed company and service details, alignment with the implementation, and qualified legal review before use with real patients. Development acknowledgements do not authorise clinical care.",
+    "cookieInformationIsUnderReview": "Cookie information is under review",
+    "developmentEnvironmentSyntheticTestData3": "Development environment — synthetic test data only. The supplied cookie text remains a draft. The storage inventory, provider details and any required consent controls must be checked against the implementation before an approved policy is published. Display preferences are currently remembered in your browser.",
+    "ourTechnicalOverviewIsBeing": "Our technical overview is being updated",
+    "theEarlierWhitepaperDescribedCapabilities": "The earlier whitepaper described capabilities and certifications that have not been verified for the current platform. An updated overview will reflect tested functionality and documented evidence. This development environment is for synthetic testing.",
+    "pageNotFound": "Page not found",
+    "thePageYouAreLooking": "The page you are looking for does not exist."
   }
 }

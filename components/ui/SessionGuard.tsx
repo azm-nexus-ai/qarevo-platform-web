@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { ACCOUNT_CHANGED, readAccountScope } from '@/lib/account-storage'
 import { ApiError, getSessionStatus, logoutCurrentUser } from '@/lib/api'
@@ -12,6 +13,7 @@ const button = 'rounded-xl px-5 py-3 text-sm font-semibold focus-visible:outline
 
 export type InitialSessionCheck = {status:SessionStatus; receivedAt:number; requestDuration:number; scope:string|null}
 export function SessionGuard({ children, initialCheck }: { children: ReactNode; initialCheck?:InitialSessionCheck }) {
+  const t = useTranslations('sessionGuard')
   const pathname = usePathname()
   const portal = currentPortal()
   const protectedPage = protectedPortalPath(pathname)
@@ -66,7 +68,7 @@ export function SessionGuard({ children, initialCheck }: { children: ReactNode; 
       } catch (failure) {
         if (!valid()) return
         if (failure instanceof ApiError && [401, 403].includes(failure.status)) { end(); return }
-        setError('We could not confirm your session. Check your connection and try again.')
+        setError(t('weCouldNotConfirmYour'))
       } finally {
         pending = false; if (alive) setBusy(false)
       }
@@ -114,28 +116,28 @@ export function SessionGuard({ children, initialCheck }: { children: ReactNode; 
   const locked = protectedPage && (!checked || !scope || !timing || remaining <= 0)
   return <>
     {locked ? <main className='grid min-h-dvh place-items-center bg-surface-subtle px-6 text-ink'>
-      <section className='w-full max-w-md rounded-2xl border border-theme bg-surface p-8 shadow-sm' aria-label='Session verification'>
-        <h1 className='text-xl font-semibold tracking-tight'>Secure access</h1>
-        <p className='mt-3 text-sm leading-7 text-secondary' role={error ? 'alert' : 'status'}>{error || 'Checking your session…'}</p>
+      <section className='w-full max-w-md rounded-2xl border border-theme bg-surface p-8 shadow-sm' aria-label={t('sessionVerification')}>
+        <h1 className='text-xl font-semibold tracking-tight'>{t('secureAccess')}</h1>
+        <p className='mt-3 text-sm leading-7 text-secondary' role={error ? 'alert' : 'status'}>{error || t('checkingYourSession')}</p>
         {error && <div className='mt-6 flex flex-wrap gap-3'>
-          <button className={`${button} bg-blue-600 text-white hover:bg-blue-700`} onClick={() => controller.current?.check()}>Retry connection</button>
-          <button className={`${button} border border-theme bg-surface text-ink`} onClick={() => controller.current?.end()}>Sign out</button>
+          <button className={`${button} bg-blue-600 text-white hover:bg-blue-700`} onClick={() => controller.current?.check()}>{t('retryConnection')}</button>
+          <button className={`${button} border border-theme bg-surface text-ink`} onClick={() => controller.current?.end()}>{t('signOut')}</button>
         </div>}
       </section>
     </main> : children}
     <dialog ref={dialog} onCancel={event => event.preventDefault()} aria-labelledby={titleId} aria-describedby={descriptionId}
       className='m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-theme bg-surface p-6 text-ink shadow-2xl backdrop:bg-slate-950/60 sm:p-8'>
-      <h2 id={titleId} className='text-xl font-semibold tracking-tight'>Your session is ending soon</h2>
+      <h2 id={titleId} className='text-xl font-semibold tracking-tight'>{t('yourSessionIsEndingSoon')}</h2>
       <p id={descriptionId} className='mt-3 text-sm leading-7 text-secondary'>
-        {timing?.absolute ? 'For your security, this session has reached its maximum duration. Save your work and sign in again.'
-          : 'To protect your health information, we sign you out after inactivity. Stay signed in to continue your work. Unsaved changes will be lost when this session ends.'}
+        {timing?.absolute ? t('forYourSecurityThisSession')
+          : t('toProtectYourHealthInformation')}
       </p>
-      <p className='mt-4 text-sm font-semibold tabular-nums'>Time remaining: {Number.isFinite(remaining) ? Math.max(0, Math.ceil(remaining/1000)) : 0} seconds</p>
+      <p className='mt-4 text-sm font-semibold tabular-nums'>{t('timeRemaining', { seconds: Number.isFinite(remaining) ? Math.max(0, Math.ceil(remaining/1000)) : 0 })}</p>
       {error && <p role='alert' className='mt-4 rounded-xl border border-danger bg-danger-subtle p-3 text-sm text-danger'>{error}</p>}
       <div className='mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end'>
-        {timing?.absolute && <button autoFocus className={`${button} bg-blue-600 text-white hover:bg-blue-700`} onClick={() => setAbsoluteDismissed(true)}>Return to work and save</button>}
-        {!timing?.absolute && <button autoFocus disabled={busy} className={`${button} bg-blue-600 text-white hover:bg-blue-700`} onClick={() => controller.current?.continue()}>{busy ? 'Confirming…' : 'Stay signed in'}</button>}
-        <button className={`${button} border border-theme bg-surface text-ink hover:bg-surface-subtle`} onClick={() => controller.current?.end()}>Sign out now</button>
+        {timing?.absolute && <button autoFocus className={`${button} bg-blue-600 text-white hover:bg-blue-700`} onClick={() => setAbsoluteDismissed(true)}>{t('returnToWorkAndSave')}</button>}
+        {!timing?.absolute && <button autoFocus disabled={busy} className={`${button} bg-blue-600 text-white hover:bg-blue-700`} onClick={() => controller.current?.continue()}>{busy ? t('confirming') : t('staySignedIn')}</button>}
+        <button className={`${button} border border-theme bg-surface text-ink hover:bg-surface-subtle`} onClick={() => controller.current?.end()}>{t('signOutNow')}</button>
       </div>
     </dialog>
   </>

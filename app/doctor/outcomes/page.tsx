@@ -31,11 +31,11 @@ export default function OutcomesPage() {
         </div>
         <h2 style={{ margin: '0 0 12px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: T.navy }}>{t('heading')}</h2>
         <p style={{ margin: '0 0 24px', fontSize: '15px', color: T.slate2, lineHeight: 1.6, maxWidth: '400px', marginLeft: 'auto', marginRight: 'auto' }}>
-          This feature is coming soon. You&apos;ll be able to track patient treatment outcomes, measure effectiveness, and generate reports.
+          {t('thisFeatureIsComingSoon')}
         </p>
         <div style={{ padding: '16px 24px', borderRadius: '12px', background: 'rgba(15,158,119,0.06)', border: '1px solid rgba(15,158,119,0.18)' }}>
           <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: T.navy }}>
-            For now, please use the Workspace to track consultation progress
+            {t('forNowPleaseUseThe')}
           </p>
         </div>
       </div>

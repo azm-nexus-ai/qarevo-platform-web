@@ -191,10 +191,10 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
         <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
-          Phone Verification
+          {t('doctorPhone.phoneVerification')}
         </h2>
         <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-          Verify your phone number to complete your physician account setup
+          {t('doctorPhone.verifyYourPhoneNumberTo')}
         </p>
       </div>
 
@@ -304,7 +304,7 @@ function DoctorVerifyPhonePageContent() {
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back
+            {t('doctorPhone.back')}
           </button>
 
           {/* Form card */}
@@ -321,10 +321,10 @@ function DoctorVerifyPhonePageContent() {
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
                 <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
-                  Verify Your Phone
+                  {t('doctorPhone.verifyYourPhone')}
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                  Enter the 6-digit code sent to your phone
+                  {t('doctorPhone.enterThe6DigitCode')}
                 </p>
               </div>
               <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -413,7 +413,7 @@ function DoctorVerifyPhonePageContent() {
                   textAlign: 'center',
                 }}
               >
-                Resend Verification Code
+                {t('doctorPhone.resendVerificationCode')}
               </button>
             </div>
 
@@ -421,7 +421,7 @@ function DoctorVerifyPhonePageContent() {
             <p style={{ textAlign: 'center', fontSize: '13px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
               Didn&apos;t receive the code?{' '}
               <Link href="/support" style={{ color: T.link, fontWeight: 600, textDecoration: 'none' }}>
-                Contact Support
+                {t('doctorPhone.contactSupport')}
               </Link>
             </p>
           </div>

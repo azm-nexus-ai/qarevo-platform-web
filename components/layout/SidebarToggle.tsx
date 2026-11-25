@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react'
 
@@ -8,6 +9,7 @@ export const SIDEBAR_PREFERENCE_CHANGED = 'qarevo:sidebar-preference'
 export type PortalRole = import('@/lib/portal-scope').Portal
 
 export default function SidebarToggle({ role, side = 'left' }: { role: PortalRole; side?: 'left' | 'right' }) {
+  const t = useTranslations('sidebarToggle')
   const path = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [available, setAvailable] = useState(false)
@@ -37,7 +39,8 @@ export default function SidebarToggle({ role, side = 'left' }: { role: PortalRol
     return () => { observer.disconnect(); window.removeEventListener('storage', sync); window.removeEventListener(SIDEBAR_PREFERENCE_CHANGED, sync) }
   }, [attribute, key, path, role, sidebarId])
   if (!available) return null
-  return <button type='button' className='theme-toggle sidebar-toggle' aria-controls={sidebarId} aria-expanded={!collapsed} title={`${collapsed ? 'Show' : 'Hide'} ${side} sidebar`} aria-label={`${collapsed ? 'Show' : 'Hide'} ${side === 'right' ? 'right ' : ''}sidebar`}
+  const label = t(`${collapsed ? 'show' : 'hide'}${side === 'right' ? 'Right' : ''}`)
+  return <button type='button' className='theme-toggle sidebar-toggle' aria-controls={sidebarId} aria-expanded={!collapsed} title={label} aria-label={label}
     onClick={() => {
       const next = !collapsed
       setCollapsed(next)
@@ -46,6 +49,6 @@ export default function SidebarToggle({ role, side = 'left' }: { role: PortalRol
       window.dispatchEvent(new Event(SIDEBAR_PREFERENCE_CHANGED))
     }}>
     {side === 'right' ? (collapsed ? <PanelRightOpen size={18} aria-hidden='true' /> : <PanelRightClose size={18} aria-hidden='true' />) : (collapsed ? <PanelLeftOpen size={18} aria-hidden='true' /> : <PanelLeftClose size={18} aria-hidden='true' />)}
-    <span>{collapsed ? 'Show' : 'Hide'} {side === 'right' ? 'right ' : ''}sidebar</span>
+    <span>{label}</span>
   </button>
 }

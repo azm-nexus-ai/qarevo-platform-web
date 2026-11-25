@@ -242,7 +242,7 @@ export default function DoctorLoginPage() {
       if (!current()) return
 
       // Store TEMP_AUTH token for 2FA flow
-      if (!response.mfa_pending) throw new Error('Secure clinician verification could not be started. Please retry.')
+      if (!response.mfa_pending) throw new Error(t('secureClinicianVerificationCouldNot'))
       sessionStorage.setItem('qarevo:doctor:identifier', identifier)
 
       // Redirect to 2FA verification page

@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl'
 function PatientPortalLabel() { return <>{useTranslations('patientShell')('portal')}</> }
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('patientShell')
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
@@ -39,8 +40,8 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
   return (
     <>
       <PatientMobileNavigation />
-      <nav aria-label="Patient appearance" className="patient-appearance-navigation">
-        <Link href='/patient/dashboard' aria-label='Qarevo Health patient dashboard' className='portal-navbar-brand'><AuthenticatedLogo width={156} /></Link><SidebarToggle role='patient' /><span className='patient-portal-label'><PatientPortalLabel /></span><NotificationBell portal='patient' /><span className='portal-header-divider' aria-hidden='true' /><ThemeToggle /><LanguageSwitch /><SidebarToggle role='patient' side='right' /><PatientAccountMenu />
+      <nav aria-label={t('patientAppearance')} className="patient-appearance-navigation">
+        <Link href='/patient/dashboard' aria-label={t('qarevoHealthPatientDashboard')} className='portal-navbar-brand'><AuthenticatedLogo width={156} /></Link><SidebarToggle role='patient' /><span className='patient-portal-label'><PatientPortalLabel /></span><NotificationBell portal='patient' /><span className='portal-header-divider' aria-hidden='true' /><ThemeToggle /><LanguageSwitch /><SidebarToggle role='patient' side='right' /><PatientAccountMenu />
       </nav>
       {mounted ? <div className='patient-application'>{children}</div> : null}
     </>

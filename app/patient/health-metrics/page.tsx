@@ -199,7 +199,7 @@ export default function HealthMetricsPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Edit
+                  {t('edit')}
                 </button>
                 <button
                   onClick={() => handleDelete(metric.id)}
@@ -214,7 +214,7 @@ export default function HealthMetricsPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Delete
+                  {t('delete')}
                 </button>
               </div>
             </div>
@@ -305,7 +305,7 @@ export default function HealthMetricsPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"

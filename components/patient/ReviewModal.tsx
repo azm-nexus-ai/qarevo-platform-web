@@ -63,7 +63,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div>
             <h2 style={{ margin: '0 0 4px', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', color: T.navy }}>
-              Write a Review
+              {t('writeAReview2')}
             </h2>
             <p style={{ margin: 0, fontSize: '13px', color: T.slate2 }}>{physicianName}</p>
           </div>
@@ -72,7 +72,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
 
         <div style={{ marginBottom: '24px' }}>
           <p style={{ margin: '0 0 12px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: T.slate2 }}>
-            Your Rating
+            {t('yourRating')}
           </p>
           <div style={{ display: 'flex', gap: '8px' }}>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -109,7 +109,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
 
         <div style={{ marginBottom: '24px' }}>
           <p style={{ margin: '0 0 12px', fontSize: "13px", fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: T.slate2 }}>
-            Your Review
+            {t('yourReview')}
           </p>
           <textarea
             value={comment}
@@ -167,7 +167,7 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, physicianName }
             }}
             on={{ background: "var(--surface-glass)", transform: 'translateY(-1px)' }}
           >
-            Cancel
+            {t('cancel')}
           </HoverBtn>
         </div>
       </div>

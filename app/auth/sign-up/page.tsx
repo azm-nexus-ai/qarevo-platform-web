@@ -199,7 +199,7 @@ function PasswordField({ label, value, onChange, error, showStrength, confirm }:
           {/* Requirement pills */}
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {[
-              { key: 'length', label: '8+ chars' },
+              { key: 'length', label: t('n8Chars') },
               { key: 'upper', label: t('uppercase') },
               { key: 'number', label: t('number') },
               { key: 'special', label: t('symbol') },

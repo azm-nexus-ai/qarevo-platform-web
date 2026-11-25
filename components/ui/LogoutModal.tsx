@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 
 import { T } from '@/lib/tokens'
 import HoverBtn from '@/components/buttons/HoverBtn'
@@ -11,6 +12,7 @@ interface LogoutModalProps {
 }
 
 export default function LogoutModal({ isOpen, onClose, onConfirm, description = 'Are you sure you want to log out?' }: LogoutModalProps) {
+  const t = useTranslations('logoutModal')
   if (!isOpen) return null
 
   return (
@@ -52,7 +54,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm, description = 
             color: T.navy,
           }}
         >
-          Log Out
+          {t('logOut')}
         </h2>
         <p
           style={{
@@ -85,7 +87,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm, description = 
               boxShadow: '0 4px 12px rgba(4,53,77,0.1)',
             }}
           >
-            No
+            {t('no')}
           </HoverBtn>
           <HoverBtn
             onClick={onConfirm}
@@ -108,7 +110,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm, description = 
               boxShadow: '0 6px 16px rgba(52,140,234,0.4)',
             }}
           >
-            Yes
+            {t('yes')}
           </HoverBtn>
         </div>
       </div>

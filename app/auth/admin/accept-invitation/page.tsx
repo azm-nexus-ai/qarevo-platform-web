@@ -111,7 +111,7 @@ export default function AcceptAdminInvitation() {
       <p>{t('adminInvitation.chooseYourOwnPasswordTo')}</p>
       <form noValidate onSubmit={submit}><ValidationSummary errors={errors}/>
         <label htmlFor='invite-password'>{t('adminInvitation.newPasswordRequired')}</label><input id='invite-password' type='password' autoComplete='new-password' required minLength={8} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} aria-invalid={!!errors.password} aria-describedby={errors.password?'invite-password-hint invite-password-error':'invite-password-hint'}/>
-        <p id='invite-password-hint'>8–128 characters, with uppercase, lowercase, a number and a special character.</p>{errors.password&&<p id='invite-password-error' role='alert'>{errors.password}</p>}
+        <p id='invite-password-hint'>{t('adminInvitation.n8128CharactersWithUppercase')}</p>{errors.password&&<p id='invite-password-error' role='alert'>{errors.password}</p>}
         <label htmlFor='invite-confirm'>{t('adminInvitation.confirmPasswordRequired')}</label><input id='invite-confirm' type='password' autoComplete='new-password' required maxLength={128} value={confirmation} onChange={e=>setConfirmation(e.target.value)} aria-invalid={!!errors.confirmation} aria-describedby={errors.confirmation?'invite-confirm-error':undefined}/>{errors.confirmation&&<p id='invite-confirm-error' role='alert'>{errors.confirmation}</p>}
         <button disabled={saving} type='submit'>{saving?t('adminInvitation.activating'):t('adminInvitation.activateAdministratorAccount')}</button>
       </form>

@@ -358,7 +358,8 @@
       "verifiedNotice": "Ihre E-Mail-Adresse ist bestätigt. Sobald Qarevo Ihr Konto freigeschaltet hat, können Sie sich hier anmelden.",
       "stateVerify": "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse. Wir haben Ihnen gerade einen Code gesendet (sofern in der letzten Minute noch keiner verschickt wurde).",
       "stateVerifyAction": "Code eingeben",
-      "stateReview": "Ihre E-Mail-Adresse ist bestätigt. Qarevo prüft gerade Ihr Konto. Sie erhalten eine E-Mail, sobald Sie sich anmelden können."
+      "stateReview": "Ihre E-Mail-Adresse ist bestätigt. Qarevo prüft gerade Ihr Konto. Sie erhalten eine E-Mail, sobald Sie sich anmelden können.",
+      "secureClinicianVerificationCouldNot": "Die sichere Bestätigung konnte nicht gestartet werden. Bitte erneut versuchen."
     },
     "adminSignIn": {
       "errors": {
@@ -389,7 +390,8 @@
         "resendIn": "Neuer Code in {seconds} s",
         "sent": "Ein neuer Code wurde gesendet. Der vorherige Code ist nicht mehr gültig.",
         "restart": "Erneut anmelden"
-      }
+      },
+      "forgotYourPassword": "Passwort vergessen?"
     },
     "practice": {
       "title": "Anmeldung im Praxisportal",
@@ -463,7 +465,8 @@
       "symbol": "Sonderzeichen",
       "syntheticDataOnly": "Nur synthetische Daten",
       "developmentPreview": "Entwicklungsvorschau",
-      "testAccounts": "Testkonten"
+      "testAccounts": "Testkonten",
+      "n8Chars": "8+ Zeichen"
     },
     "forgotPassword": {
       "recoverAccessSafely": "Zugang sicher wiederherstellen.",
@@ -503,7 +506,8 @@
       "resendEmail": "E-Mail erneut senden",
       "secureRecovery": "Sichere Wiederherstellung",
       "singleUseLink": "Einmal-Link",
-      "accountRecovery": "Kontowiederherstellung"
+      "accountRecovery": "Kontowiederherstellung",
+      "ifAnEligibleAccountExists": "Wenn ein passendes Konto existiert, senden wir Hinweise zum Zurücksetzen. Prüfen Sie Ihren Posteingang und den Spam-Ordner. Verwenden Sie die neueste E-Mail; ein neuer Link ersetzt frühere Links. Wenn Sie die Seite zum Zurücksetzen neu geladen haben, öffnen Sie den vollständigen Link aus der E-Mail erneut."
     },
     "doctorRegister": {
       "optional": "Optional",
@@ -621,7 +625,9 @@
       "socialVerified": "Weiter mit {provider}: Ihre E-Mail-Adresse ist bestätigt. Ergänzen Sie Ihre beruflichen Angaben und ein Passwort; danach prüft Qarevo Ihr Konto.",
       "socialUnverified": "Weiter mit {provider}: Geben Sie Ihre E-Mail-Adresse an. Wir senden Ihnen einen Bestätigungscode.",
       "socialCancel": "Ohne {provider} registrieren",
-      "errSocial": "Die Registrierung über den Anbieter ist nicht möglich: Die E-Mail-Adresse muss die vom Anbieter bestätigte sein, das Anbieterkonto darf noch nicht verbunden sein, und die Sitzung gilt 30 Minuten. Registrieren Sie sich andernfalls ohne Anbieter."
+      "errSocial": "Die Registrierung über den Anbieter ist nicht möglich: Die E-Mail-Adresse muss die vom Anbieter bestätigte sein, das Anbieterkonto darf noch nicht verbunden sein, und die Sitzung gilt 30 Minuten. Registrieren Sie sich andernfalls ohne Anbieter.",
+      "pleaseCorrectTheHighlightedFields": "Bitte korrigieren Sie die markierten Felder, bevor Sie fortfahren.",
+      "pleaseAcknowledgeTheDevelopmentTest": "Bitte bestätigen Sie die Testbedingungen der Entwicklungsphase"
     },
     "verifyEmail": {
       "codeVerifiedActivatingYourAccount": "Code bestätigt – Ihr Konto wird aktiviert…",
@@ -728,7 +734,9 @@
       "tooManyRequestsPleaseWait": "Zu viele Anfragen. Bitte warten Sie, bevor Sie es erneut versuchen.",
       "checkThePasswordRequirementsAnd": "Prüfen Sie die Anforderungen an das Passwort und versuchen Sie es erneut.",
       "secureCredentials": "Sichere Zugangsdaten",
-      "protectedAccountAccess": "Geschützter Kontozugang"
+      "protectedAccountAccess": "Geschützter Kontozugang",
+      "thePasswordResetLinkIs": "Der Link zum Zurücksetzen fehlt oder ist ungültig. Öffnen Sie den vollständigen Link aus Ihrer neuesten E-Mail erneut. Beim Neuladen dieser Seite wird der Link verworfen; fordern Sie nur dann eine neue E-Mail an, wenn der ursprüngliche Link abgelaufen ist.",
+      "protectingYourMedicalInformationIs": "Der Schutz Ihrer Gesundheitsdaten hat für Qarevo Health höchste Priorität. Legen Sie ein starkes Passwort fest, um den Zugang sicher wiederherzustellen."
     },
     "doctorTwoFactor": {
       "back": "Zurück zur Anmeldung",
@@ -810,7 +818,12 @@
       "medicalGradeSecurity": "Sicherheit für Gesundheitsdaten",
       "terms": "Nutzungsbedingungen",
       "privacyPolicy": "Datenschutz",
-      "support": "Support"
+      "support": "Support",
+      "backToEmailVerification": "Zurück zur E-Mail-Bestätigung",
+      "enter6DigitCode": "6-stelligen Code eingeben",
+      "verificationEmailRequestedCheckYour": "Bestätigungs-E-Mail angefordert. Prüfen Sie Ihren Posteingang und den Spam-Ordner.",
+      "verifyYourIdentity": "Identität bestätigen",
+      "change": "Ändern"
     },
     "accountCreated": {
       "welcomeToYourCareJourney": "Willkommen bei Qarevo Health.",
@@ -840,7 +853,19 @@
       "secureVerification": "Sichere Bestätigung",
       "endToEndEncrypted": "Verschlüsselte Übertragung",
       "emailVerificationProtectedAccess": "E-Mail-Bestätigung · Geschützter Zugang",
-      "medicalGradePrivacy": "Schutz von Gesundheitsdaten"
+      "medicalGradePrivacy": "Schutz von Gesundheitsdaten",
+      "support": "Support",
+      "privacyPolicy": "Datenschutzerklärung",
+      "terms": "Nutzungsbedingungen",
+      "returnToHome": "Zur Startseite",
+      "explorePlatform": "Plattform entdecken",
+      "healthcareShouldFeelPersonalSimple": "Gesundheitsversorgung soll persönlich, einfach und erreichbar sein. Wir begleiten Sie gern beim nächsten Schritt.",
+      "nextSteps": "Nächste Schritte",
+      "accountCreatedSuccessfully": "Konto erfolgreich angelegt",
+      "youAreNowReadyTo": "Jetzt können Sie Ihre Versorgung an einem sicheren Ort organisieren: von der Suche nach geprüften Ärztinnen und Ärzten bis zu Sprechstunden und weiterer Betreuung.",
+      "yourAccountHasBeenSuccessfully": "Ihr Konto wurde erfolgreich angelegt.",
+      "welcomeToQarevoHealth": "Willkommen bei Qarevo Health!",
+      "everyNextStepIsDesigned": "Jeder nächste Schritt ist sicher, persönlich und einfach gestaltet, wenn Sie mit Qarevo Health beginnen."
     },
     "doctorPhone": {
       "theVerificationCodeYouEntered": "Der eingegebene Code ist falsch. Bitte prüfen Sie ihn und versuchen Sie es erneut.",
@@ -862,7 +887,14 @@
       "verificationCodeSentSuccessfully": "Code gesendet",
       "phoneNumber": "Telefonnummer",
       "verifying": "Wird geprüft…",
-      "verifyPhone": "Telefonnummer bestätigen"
+      "verifyPhone": "Telefonnummer bestätigen",
+      "contactSupport": "Support kontaktieren",
+      "resendVerificationCode": "Code erneut senden",
+      "enterThe6DigitCode": "Geben Sie den 6-stelligen Code ein, den Sie per SMS erhalten haben",
+      "verifyYourPhone": "Telefonnummer bestätigen",
+      "back": "Zurück",
+      "verifyYourPhoneNumberTo": "Bestätigen Sie Ihre Telefonnummer, um die Einrichtung Ihres Arztkontos abzuschließen",
+      "phoneVerification": "Telefonbestätigung"
     },
     "verifyLink": {
       "checkingYourLink": "Ihr Link wird geprüft…",
@@ -884,7 +916,10 @@
       "yourRegisteredEmailAddress": "Ihre registrierte E-Mail-Adresse",
       "requesting": "Wird angefordert…",
       "sendVerificationEmail": "Bestätigungs-E-Mail senden",
-      "signIn": "Anmelden"
+      "signIn": "Anmelden",
+      "requestANewVerificationEmail": "Neue Bestätigungs-E-Mail anfordern",
+      "returnToYourClinicianRegistration": "Kehren Sie zum Registrierungs-Tab zurück, um die übrigen Schritte abzuschließen.",
+      "signInAndCompleteYour": "Anmelden und Profil vervollständigen"
     },
     "adminInvitation": {
       "weCouldNotCheckThis": "Die Einladung konnte nicht geprüft werden. Bitte erneut versuchen.",
@@ -905,7 +940,8 @@
       "newPasswordRequired": "Neues Passwort (Pflichtfeld)",
       "confirmPasswordRequired": "Passwort bestätigen (Pflichtfeld)",
       "activating": "Wird aktiviert…",
-      "activateAdministratorAccount": "Administratorkonto aktivieren"
+      "activateAdministratorAccount": "Administratorkonto aktivieren",
+      "n8128CharactersWithUppercase": "8–128 Zeichen mit Groß- und Kleinbuchstaben, einer Zahl und einem Sonderzeichen."
     },
     "profileSetupIntro": {
       "builtAroundYourHealthStory": "Rund um Ihre Gesundheit aufgebaut.",
@@ -943,7 +979,13 @@
       "accountBasedAccess": "Zugang nur mit Konto",
       "aiAssistedHealthcare": "KI-gestützte Versorgung",
       "privateMedicalRecords": "Private Unterlagen",
-      "startProfileSetup": "Profileinrichtung starten"
+      "startProfileSetup": "Profileinrichtung starten",
+      "back": "Zurück",
+      "whyWeNeedThis": "Warum wir das brauchen",
+      "completingYourProfileAllowsUs": "Mit einem vollständigen Profil verstehen wir Ihren Bedarf besser, schlagen passende Ärztinnen und Ärzte vor und machen Sprechstunden persönlicher.",
+      "beforeWeConnectYouWith": "Bevor wir Sie mit geprüften Fachleuten verbinden, nehmen Sie sich bitte einen Moment für Ihre persönlichen Angaben.",
+      "welcomeToYourHealthJourney": "Willkommen bei Qarevo Health",
+      "yourProfileHelpsUsMatch": "Mit Ihrem Profil finden wir passende Ärztinnen und Ärzte und ermöglichen aussagekräftigere, sichere Sprechstunden."
     },
     "socialConnect": {
       "accountConnections": "Kontoverbindungen",
@@ -965,7 +1007,9 @@
     "account": "Patientenkonto",
     "logout": "Abmelden",
     "portal": "Patientenportal",
-    "navigation": "Patientennavigation"
+    "navigation": "Patientennavigation",
+    "patientAppearance": "Darstellung im Patientenportal",
+    "qarevoHealthPatientDashboard": "Qarevo Health Patientenübersicht"
   },
   "doctorDashboard": {
     "clinicalWorkflowEpisodes": "Klinische Behandlungsfälle",
@@ -978,7 +1022,10 @@
     "aiDraftsReady": "KI-Entwürfe bereit",
     "recentAppointments": "Letzte Termine",
     "recentConsultations": "Letzte Sprechstunden",
-    "todaysAppointments": "Termine heute"
+    "todaysAppointments": "Termine heute",
+    "unableToLoadDashboardData": "Die Übersichtsdaten können gerade nicht geladen werden.",
+    "aiReady": "KI BEREIT",
+    "noAiDraft": "KEIN KI-ENTWURF"
   },
   "adminDashboard": {
     "operationalStatus": "Betriebsstatus",
@@ -1865,7 +1912,8 @@
       "natBrazilian": "Brasilianisch",
       "natOther": "Andere",
       "langGerman": "Deutsch",
-      "langEnglish": "Englisch"
+      "langEnglish": "Englisch",
+      "letSBeginWithSome": "Beginnen wir mit einigen persönlichen Angaben, damit wir Ihre Versorgung auf Sie abstimmen können."
     },
     "coverage": {
       "coverageHandledCarefully": "Kostenübernahme, sorgfältig geklärt.",
@@ -2467,7 +2515,8 @@
     "cardDescription": "Von Ihnen hochgeladene Versichertenkarte",
     "cardProvider": "Krankenversicherung",
     "contactNameError": "Geben Sie den Namen des Kontakts mit 2–100 Zeichen ohne HTML ein.",
-    "contactRelationshipError": "Geben Sie die Beziehung zum Kontakt mit 2–100 Zeichen ohne HTML ein."
+    "contactRelationshipError": "Geben Sie die Beziehung zum Kontakt mit 2–100 Zeichen ohne HTML ein.",
+    "passkeyFallback": "Passkey"
   },
   "patientLabRequests": {
     "careSummary": "Behandlungsübersicht",
@@ -2783,7 +2832,8 @@
       "draftUnavailable": "Der Status des KI-Entwurfs ist vorübergehend nicht verfügbar. Termin und Anamnese bleiben zugänglich; öffnen Sie die Anamnese, um die Prüfung erneut zu starten.",
       "contextUnchecked": "Der klinische Kontext konnte nicht geprüft werden. Der Termin bleibt gespeichert; öffnen Sie die Anamnese, um es erneut zu versuchen.",
       "notSpecified": "Nicht angegeben",
-      "none": "Keine"
+      "none": "Keine",
+      "noIntakeInformationAvailableClick": "Keine Angaben aus der Aufnahme verfügbar. Klicken Sie auf „Aufnahme und KI-Entwurf ansehen“, um alle Details des Behandlungsfalls zu sehen."
     }
   },
   "doctorLabOrders": {
@@ -3047,7 +3097,8 @@
         "FRIDAY": "Freitag",
         "SATURDAY": "Samstag",
         "SUNDAY": "Sonntag"
-      }
+      },
+      "noConsultationServicesConfiguredYet": "Noch keine Sprechstundenleistungen eingerichtet. Klicken Sie auf „Leistung hinzufügen“, um eine anzulegen."
     }
   },
   "adminAccounts": {
@@ -3904,7 +3955,9 @@
     "addInsurance": "Versicherung in den Einstellungen hinzufügen ->",
     "closeNotice": "Hinweis schließen",
     "gotIt": "Verstanden",
-    "notAvailable": "Nicht verfügbar"
+    "notAvailable": "Nicht verfügbar",
+    "downloadPdf": "PDF herunterladen",
+    "addCard": "Karte hinzufügen"
   },
   "patientDeviceCheck": {
     "eyebrow": "Gerätecheck",
@@ -4072,7 +4125,8 @@
     "signOutAllBody": "Das betrifft auch Ihre aktuelle Sitzung. Speichern Sie offene Arbeit, bevor Sie fortfahren.",
     "required": "(Pflichtfeld)",
     "showField": "{field} anzeigen",
-    "hideField": "{field} ausblenden"
+    "hideField": "{field} ausblenden",
+    "theSecurityActionFailedPlease": "Die Sicherheitsaktion ist fehlgeschlagen. Bitte erneut versuchen."
   },
   "patientFeedback": {
     "eyebrow": "Nach der Sprechstunde",
@@ -4406,7 +4460,10 @@
     "approvePublish": "Freigeben und veröffentlichen",
     "createAmendment": "Ergänzung anlegen",
     "confirming": "Wird bestätigt…",
-    "confirmCompletion": "Abschluss der Sprechstunde bestätigen"
+    "confirmCompletion": "Abschluss der Sprechstunde bestätigen",
+    "n4500CharactersTheOriginal": "4–500 Zeichen. Der ursprünglich veröffentlichte Eintrag bleibt erhalten. Dieser Grund ist auch für die Patientin bzw. den Patienten sichtbar.",
+    "requiredSuffix": "(Pflichtfeld)",
+    "requiredToPublish": "(für die Veröffentlichung erforderlich)"
   },
   "doctorLabNotifications": {
     "retryMarkNamed": "Befundmitteilung {id} erneut als gelesen markieren",
@@ -4470,7 +4527,19 @@
     "noFields": "Für diese Episode wurden noch keine strukturierten Werte angelegt.",
     "field": "Feld",
     "loadingTimeline": "Verlauf wird geladen…",
-    "noTimeline": "Für diese Episode gibt es keine Verlaufseinträge."
+    "noTimeline": "Für diese Episode gibt es keine Verlaufseinträge.",
+    "cancel": "Abbrechen",
+    "rejectDraft": "Entwurf ablehnen",
+    "backToWorkspace": "Zurück zum Arbeitsbereich",
+    "pleaseExplainWhyYouAre": "Bitte begründen Sie, warum Sie diesen KI-Entwurf ablehnen…",
+    "aiDraftReady": "KI-ENTWURF BEREIT",
+    "noAiDraft": "KEIN KI-ENTWURF",
+    "sectionPatient": "Patient/in",
+    "sectionWorkflow": "Ablaufstatus",
+    "sectionIntake": "Angaben aus der Aufnahme",
+    "sectionDrafts": "KI-Entwürfe",
+    "sectionFields": "Feldwerte (CWS)",
+    "sectionTimeline": "Verlauf des Behandlungsfalls"
   },
   "workCertificates": {
     "maxDays": "Nach einer Videosprechstunde umfasst eine Bescheinigung höchstens {days} Tage.",
@@ -4586,7 +4655,17 @@
     "patient": "Patient/in",
     "file": "Datei",
     "noneSelected": "Keine Unterhaltung ausgewählt",
-    "noneSelectedText": "Unterhaltungen erscheinen hier, sobald Ihnen Patientinnen oder Patienten schreiben."
+    "noneSelectedText": "Unterhaltungen erscheinen hier, sobald Ihnen Patientinnen oder Patienten schreiben.",
+    "reply": "Antworten",
+    "download": "Herunterladen",
+    "next": "Weiter",
+    "prev": "Zurück",
+    "cancelReply": "Antwort abbrechen",
+    "searchPatientsOrMessages": "Patienten oder Nachrichten suchen…",
+    "addAttachment": "Anhang hinzufügen",
+    "typeYourReply": "Antwort schreiben…",
+    "sendReply": "Antwort senden",
+    "removeAttachment": "Anhang entfernen"
   },
   "doctorConsultation": {
     "loadFailed": "Details der Sprechstunde konnten nicht geladen werden",
@@ -4606,7 +4685,9 @@
     "ended": "Beendet um",
     "appointmentId": "Termin-ID",
     "none": "Keine",
-    "videoSessionId": "ID der Videositzung"
+    "videoSessionId": "ID der Videositzung",
+    "joinVideo": "Video beitreten",
+    "backToWorkspace": "Zurück zum Arbeitsbereich"
   },
   "doctorPatients": {
     "loadFailedTech": "Patientinnen und Patienten konnten nicht geladen werden",
@@ -4624,7 +4705,9 @@
     "unknownGender": "Geschlecht unbekannt",
     "unknown": "Unbekannt",
     "noVisits": "Noch keine Besuche",
-    "consultations": "Sprechstunden"
+    "consultations": "Sprechstunden",
+    "next": "Weiter",
+    "previous": "Zurück"
   },
   "patientDirectory": {
     "selectPatient": "Patient/in auswählen",
@@ -4684,7 +4767,9 @@
   "doctorOutcomes": {
     "title": "Behandlungsergebnisse",
     "intro": "Behandlungsergebnisse verfolgen und verwalten",
-    "heading": "Verwaltung der Behandlungsergebnisse"
+    "heading": "Verwaltung der Behandlungsergebnisse",
+    "forNowPleaseUseThe": "Nutzen Sie bis dahin den Arbeitsbereich, um den Verlauf der Sprechstunden zu verfolgen",
+    "thisFeatureIsComingSoon": "Diese Funktion folgt in Kürze. Dann können Sie Behandlungsergebnisse verfolgen, die Wirksamkeit messen und Berichte erstellen."
   },
   "doctorClinicalRecords": {
     "title": "Veröffentlichte Zusammenfassungen",
@@ -4982,7 +5067,10 @@
     "dateTime": "Datum und Uhrzeit",
     "notesOptional": "Notizen (optional)",
     "update": "Aktualisieren",
-    "add": "Hinzufügen"
+    "add": "Hinzufügen",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten"
   },
   "reviewModal": {
     "writeAReview": "Bewertung schreiben",
@@ -4994,7 +5082,11 @@
     "poor": "Schlecht",
     "shareYourExperienceWithThis": "Teilen Sie Ihre Erfahrung mit dieser Praxis…",
     "submitting": "Wird gesendet…",
-    "submitReview": "Bewertung senden"
+    "submitReview": "Bewertung senden",
+    "cancel": "Abbrechen",
+    "yourReview": "Ihr Text",
+    "yourRating": "Ihre Bewertung",
+    "writeAReview2": "Bewertung schreiben"
   },
   "patientMobileNav": {
     "patientAccount": "Patientenkonto",
@@ -5005,7 +5097,8 @@
     "openNavigationMenu": "Navigationsmenü öffnen",
     "navigationMenu": "Navigationsmenü",
     "patientSummary": "Patientenübersicht",
-    "patientNavigation": "Patientennavigation"
+    "patientNavigation": "Patientennavigation",
+    "logout": "Abmelden"
   },
   "practiceLocation": {
     "thePracticeHasNotPublished": "Die Praxis hat ihre Adresse noch nicht veröffentlicht. Für Videosprechstunden ist kein Besuch nötig.",
@@ -5573,5 +5666,271 @@
       "noMatch": "Keine Ereignisse für diese Datei-ID.",
       "eventLabel": "Ereignis zu einem Patientendokument"
     }
+  },
+  "authWelcome": {
+    "home": "Qarevo Health Startseite",
+    "heroLine1": "Ärztlich begleitet.",
+    "heroLine2": "Gut abgestimmt.",
+    "heroText": "Verifizierte Ärztinnen und Ärzte finden, Videosprechstunden buchen und die Behandlung an einem Ort koordinieren. Dies ist eine Entwicklungsvorschau mit synthetischen Testdaten.",
+    "badgeEmail": "E-Mail-Bestätigung",
+    "badgeClinician": "Ärztliche Prüfung",
+    "badgeSecurity": "Kontosicherheit",
+    "welcomeLine1": "Willkommen bei",
+    "intro": "Sicherer Zugang zu Ihrer Behandlung mit gut abgestimmter Versorgung.",
+    "getStarted": "Loslegen",
+    "physicianRegistration": "Registrierung für Ärztinnen und Ärzte",
+    "orContinue": "oder weiter mit",
+    "haveAccount": "Sie haben bereits ein Konto?",
+    "signIn": "Anmelden",
+    "or": "oder",
+    "physicianPortal": "Arztportal",
+    "footerNote": "E-Mail-Bestätigung · Geschützter Kontozugang"
+  },
+  "sessionPolicy": {
+    "forYourSecuritySessionsExpire": "Zu Ihrer Sicherheit enden Sitzungen nach Inaktivität oder nach der maximalen Dauer. Speichern Sie Ihre Arbeit, wenn ein Hinweis auf das Ablaufen erscheint."
+  },
+  "logoutModal": {
+    "yes": "Ja",
+    "no": "Nein",
+    "logOut": "Abmelden"
+  },
+  "footer": {
+    "thisPortalSAppearancePreferences": "Die Darstellungseinstellungen dieses Portals wurden zurückgesetzt. Ihre anderen Portale, Ihr Konto und Ihre Anmeldung bleiben unverändert.",
+    "appearanceResetForThisPage": "Darstellung für diese Seite zurückgesetzt. Der Browserspeicher konnte nicht aktualisiert werden.",
+    "qarevoHealthHome": "Qarevo Health Startseite",
+    "connectingPatientsAndIndependentPractices": "Verbindet Patientinnen und Patienten mit unabhängigen Praxen – digital und ärztlich begleitet.",
+    "developmentPreviewSyntheticTestData": "Entwicklungsvorschau · Nur synthetische Testdaten",
+    "qarevoHealthSocialProfiles": "Qarevo Health in sozialen Netzwerken",
+    "legalAndSupport": "Rechtliches und Support",
+    "cookiePreferences": "Cookie-Einstellungen",
+    "cookieStoragePreferences": "Cookie- und Speichereinstellungen",
+    "theseControlsManageThisPortal": "Diese Einstellungen steuern Design und Seitenleiste dieses Portals in diesem Browser. Andere Portale behalten ihre eigenen Einstellungen.",
+    "signInSecurityAndAccount": "Anmeldung, Sicherheit und kontobezogene Arbeitsdaten werden getrennt verwaltet. Das Zurücksetzen der Darstellung meldet Sie nicht ab und löscht Ihr Profil nicht.",
+    "readTheCurrentStatus": "Aktuellen Stand lesen",
+    "clearAppearancePreferences": "Darstellung zurücksetzen",
+    "closePreferences": "Einstellungen schließen",
+    "linkImpressum": "Impressum",
+    "linkPrivacy": "Datenschutz",
+    "linkTerms": "Nutzungsbedingungen",
+    "linkCookies": "Cookie-Hinweise",
+    "linkSupport": "Support",
+    "opensNewTab": "{label} (öffnet in neuem Tab)",
+    "copyright": "© {year} Qarevo Health. Alle Rechte vorbehalten.",
+    "noticeUnderReview": "Der vollständige Cookie- und Speicherhinweis wird noch geprüft."
+  },
+  "sessionGuard": {
+    "weCouldNotConfirmYour": "Ihre Sitzung konnte nicht bestätigt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "sessionVerification": "Sitzungsprüfung",
+    "secureAccess": "Sicherer Zugang",
+    "checkingYourSession": "Ihre Sitzung wird geprüft…",
+    "retryConnection": "Verbindung erneut versuchen",
+    "signOut": "Abmelden",
+    "yourSessionIsEndingSoon": "Ihre Sitzung endet bald",
+    "forYourSecurityThisSession": "Zu Ihrer Sicherheit hat diese Sitzung ihre maximale Dauer erreicht. Speichern Sie Ihre Arbeit und melden Sie sich erneut an.",
+    "toProtectYourHealthInformation": "Zum Schutz Ihrer Gesundheitsdaten melden wir Sie nach Inaktivität ab. Bleiben Sie angemeldet, um weiterzuarbeiten. Nicht gespeicherte Änderungen gehen beim Ende der Sitzung verloren.",
+    "returnToWorkAndSave": "Zurück zur Arbeit und speichern",
+    "confirming": "Wird bestätigt…",
+    "staySignedIn": "Angemeldet bleiben",
+    "signOutNow": "Jetzt abmelden",
+    "timeRemaining": "Verbleibende Zeit: {seconds} Sekunden",
+    "yourAccountChangedReloadThis": "Ihr Konto hat sich geändert. Laden Sie dieses Portal neu, um fortzufahren.",
+    "secureAccessCouldNotBe": "Der sichere Zugang konnte nicht bestätigt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "checkingYourPortalSession": "Ihre Portalsitzung wird geprüft…"
+  },
+  "unsavedChanges": {
+    "yourRecordIsBeingSaved": "Ihr Eintrag wird gespeichert",
+    "keepYourClinicalNotes": "Klinische Notizen behalten?",
+    "waitForThisOperationTo": "Warten Sie, bis der Vorgang abgeschlossen ist. Ihr klinischer Eintrag wird noch verarbeitet.",
+    "youHaveUnsavedChangesKeep": "Sie haben nicht gespeicherte Änderungen. Bearbeiten Sie weiter, um Ihren Entwurf zu speichern, oder verwerfen Sie die Änderungen und verlassen Sie die Seite. Bereits gespeicherte Versionen bleiben erhalten.",
+    "stayOnThisPage": "Auf dieser Seite bleiben",
+    "keepEditing": "Weiter bearbeiten",
+    "discardAndLeave": "Verwerfen und verlassen"
+  },
+  "supportReference": {
+    "clipboardUnavailable": "Zwischenablage nicht verfügbar",
+    "supportReferenceCopied": "Support-Referenz kopiert.",
+    "selectTheReferenceAndCopy": "Markieren Sie die Referenz und kopieren Sie sie mit der Tastatur oder dem Gerätemenü.",
+    "supportReference": "Support-Referenz",
+    "shareThisReferenceWithSupport": "Nennen Sie diese Referenz dem Support, falls das Problem weiter besteht.",
+    "copySupportReference": "Support-Referenz kopieren",
+    "copyReference": "Referenz kopieren"
+  },
+  "portalAccess": {
+    "otherPortals": "Andere Portale",
+    "otherPortalSignIn": "Anmeldung bei anderen Portalen",
+    "eachPortalVerifiesItsOwn": "Jedes Portal prüft eigene Berechtigungen und Sitzungen. Das Öffnen eines anderen Portals ändert Ihren aktuellen Zugang nicht.",
+    "patientPortalSignIn": "Anmeldung Patientenportal",
+    "doctorPortalSignIn": "Anmeldung Arztportal",
+    "practicePortalSignIn": "Anmeldung Praxisportal"
+  },
+  "portalSignIn": {
+    "otherSignInPortal": "Anderes Anmeldeportal",
+    "areYouAPhysician": "Sind Sie Ärztin oder Arzt?",
+    "lookingForPatientCare": "Sie suchen ärztliche Behandlung?",
+    "physicianSignIn": "Anmeldung für Ärztinnen und Ärzte",
+    "patientSignIn": "Anmeldung für Patientinnen und Patienten",
+    "wrongPortalProvider": "Dieses Konto ist für das Arztportal registriert.",
+    "wrongPortalPatient": "Dieses Konto ist für das Patientenportal registriert.",
+    "useDedicated": "Nutzen Sie dessen eigene Anmeldeseite, um sicher fortzufahren.",
+    "continueProvider": "Weiter zur Anmeldung für Ärztinnen und Ärzte",
+    "continuePatient": "Weiter zur Anmeldung für Patientinnen und Patienten",
+    "chooseYourSignInPortal": "Anmeldeportal wählen",
+    "clinicianSignIn": "Anmeldung für Ärztinnen und Ärzte",
+    "administratorSignIn": "Anmeldung für Administratoren"
+  },
+  "support": {
+    "supportTicketUnavailable": "Support-Ticket nicht verfügbar",
+    "supportTicketsAreNotConnected": "Support-Tickets sind in dieser Entwicklungsumgebung nicht angebunden. Für diese Referenz liegen keine Ticketdaten vor.",
+    "backToSupport": "Zurück zum Support",
+    "reference": "Referenz:",
+    "faq": {
+      "signIn": {
+        "question": "Ich kann mich nicht anmelden",
+        "answer": "Nutzen Sie „Passwort vergessen“ auf der Anmeldeseite Ihres Portals. Öffnen Sie die neueste E-Mail zur Wiederherstellung und wählen Sie ein neues Passwort. Ein erfolgreiches Zurücksetzen hebt die Sperre nach Fehlversuchen auf."
+      },
+      "recoveryLink": {
+        "question": "Mein Wiederherstellungslink fehlt oder ist ungültig",
+        "answer": "Öffnen Sie den vollständigen Link aus Ihrer neuesten E-Mail erneut. Eine weitere E-Mail ersetzt frühere Links. Beim Neuladen der Seite wird der Link verworfen."
+      },
+      "joinConsultation": {
+        "question": "Ich kann meiner Sprechstunde nicht beitreten",
+        "answer": "Öffnen Sie die geplante Sprechstunde über Ihre Übersicht. Prüfen Sie Ihre Verbindung sowie die Kamera- und Mikrofonfreigaben im Browser."
+      },
+      "changeProfile": {
+        "question": "Ich möchte mein Profil ändern",
+        "answer": "Öffnen Sie die Einstellungen in Ihrem Portal. Pflichtfelder und Hinweise erklären, was ausgefüllt werden muss."
+      }
+    },
+    "helpSupport": "Hilfe und Support",
+    "searchHelpArticles": "Hilfeartikel durchsuchen",
+    "searchByTopic": "Nach Thema suchen",
+    "helpArticles": "Hilfeartikel",
+    "noArticlesMatchYourSearch": "Keine Artikel passen zu Ihrer Suche. Versuchen Sie einen anderen Begriff.",
+    "contactSupport": "Support kontaktieren",
+    "liveChatAndSupportTickets": "Live-Chat und Support-Tickets sind in dieser Entwicklungsumgebung nicht angebunden. Hier können noch keine Anfragen gesendet werden.",
+    "supportChannelsAndResponseTimes": "Support-Kanäle und Antwortzeiten werden veröffentlicht, sobald sie eingerichtet sind."
+  },
+  "marketingNav": {
+    "section": {
+      "overview": "Plattform",
+      "clinical": "Klinische Intelligenz",
+      "security": "Sicherheit und Governance"
+    },
+    "accessPlatform": "Zur Plattform",
+    "signIn": "Anmelden",
+    "physicianPortal": "Arztportal",
+    "logout": "Abmelden",
+    "dashboard": "Übersicht",
+    "mainNavigation": "Hauptnavigation",
+    "qarevoHealthHome": "Qarevo Health Startseite",
+    "closeNavigationMenu": "Navigationsmenü schließen",
+    "openNavigationMenu": "Navigationsmenü öffnen",
+    "navigationMenu": "Navigationsmenü",
+    "mobileNavigation": "Mobile Navigation"
+  },
+  "landing": {
+    "readTheWhitepaper": "Whitepaper lesen",
+    "bookAConsultation": "Sprechstunde buchen",
+    "weAreBuildingAClearer": "Wir bauen einen klaren Weg von Ihrer ersten Frage bis zur ärztlich geführten Sprechstunde und Nachsorge. Entdecken Sie die Entwicklungsvorschau von Qarevo mit synthetischen Testdaten.",
+    "heroLine1": "Versorgung, die zu Ihrem Leben passt,",
+    "heroLine2": "ärztlich begleitet.",
+    "builtAroundTrust": "Auf Vertrauen gebaut",
+    "physician": {
+      "accountVerification": "Kontobestätigung",
+      "approvalRequired": "Freigabe erforderlich",
+      "aConnectedCareJourney": "Eine verbundene Versorgung",
+      "document": "Dokumentation",
+      "notes": "Notizen",
+      "review": "Prüfung",
+      "intake": "Aufnahme",
+      "illustrativeWorkflow": "Beispielhafter Ablauf",
+      "practiceWorkspace": "Praxis-Arbeitsbereich",
+      "physicianSignIn": "Anmeldung für Ärztinnen und Ärzte",
+      "registerAsPhysician": "Als Ärztin oder Arzt registrieren",
+      "explorePatientIntakeAssignedClinical": "Entdecken Sie Patientenaufnahme, zugewiesene klinische Arbeit und Koordination der Versorgung in unserer Entwicklungsvorschau für unabhängige Praxen.",
+      "forHealthcareProviders": "Für Ärztinnen und Ärzte",
+      "featureVerified": "Verifizierte Ärztinnen und Ärzte",
+      "featureVerifiedText": "Beruflicher Zugang erst nach Prüfung durch die Administration",
+      "featureVideo": "Videosprechstunden",
+      "featureVideoText": "Ablauf der Videosprechstunde in Entwicklung",
+      "featureDrafting": "Optionale Entwurfshilfe",
+      "featureDraftingText": "Einwilligungsbasierte Entwurfshilfe mit ärztlicher Prüfung",
+      "featureSecure": "Sichere Plattform",
+      "featureSecureText": "Kontobestätigung und kontrollierter klinischer Zugriff",
+      "joinLine1": "Werden Sie Teil des Netzwerks",
+      "joinLine2": "verifizierter Ärztinnen und Ärzte"
+    },
+    "reviewPatientIntake": "Patientenaufnahme prüfen",
+    "documentFollowUp": "Nachsorge dokumentieren",
+    "trust": {
+      "account": {
+        "label": "Ihr Konto",
+        "sub": "E-Mail-Bestätigung"
+      },
+      "choices": {
+        "label": "Ihre Entscheidungen",
+        "sub": "Ausdrückliche Einwilligungen"
+      },
+      "access": {
+        "label": "Klinischer Zugriff",
+        "sub": "Rollen- und Zuordnungsprüfung"
+      },
+      "preview": {
+        "label": "Entwicklungsvorschau",
+        "sub": "Nur synthetische Testdaten"
+      }
+    },
+    "journey": {
+      "eyebrow": "IHR WEG ZUR BEHANDLUNG",
+      "title": "Ein Ort zur Vorbereitung Ihrer Behandlung",
+      "step1": "Konto anlegen",
+      "step1Text": "Bestätigen Sie Ihre E-Mail-Adresse und speichern Sie Ihr Profil mit klar gekennzeichneten Pflichtfeldern.",
+      "step2": "Ärzteverzeichnis entdecken",
+      "step2Text": "Sehen Sie die geprüften Arztprofile in Ihrem Konto. Freie Termine zeigt die Buchung.",
+      "step3": "Sprechstunde vorbereiten",
+      "step3Text": "Schildern Sie Ihr Anliegen und entscheiden Sie ausdrücklich über optionale KI-Unterstützung.",
+      "register": "Als Patient/in registrieren",
+      "preview": "Entwicklungsvorschau. Durchführung und Bezahlung der Sprechstunden werden vor dem Einsatz mit Patienten geprüft."
+    },
+    "clinician": {
+      "eyebrow": "ÄRZTLICH GEFÜHRT",
+      "title": "Technik unterstützt die Ärztin und den Arzt",
+      "contextTitle": "Ihre Angaben im Zusammenhang",
+      "contextText": "Die Sprechstunde beginnt mit Ihrem eigenen Konto und Ihren gespeicherten Angaben. Beispielunterlagen werden nicht als Ihre Behandlung dargestellt.",
+      "aiTitle": "Optionale Unterstützung, ausdrückliche Wahl",
+      "aiText": "KI-Entwürfe bleiben optional und werden noch geprüft. Erzeugte Entwürfe erfordern eine ärztliche Prüfung und können keine Behandlung selbst freigeben."
+    }
+  },
+  "accountMenu": {
+    "viewProfile": "Profil ansehen",
+    "settingsAndSecurity": "Einstellungen und Sicherheit"
+  },
+  "profileAvatar": {
+    "doctor": "Ärztin/Arzt",
+    "admin": "Administrator",
+    "patient": "Patient/in"
+  },
+  "sidebarToggle": {
+    "show": "Seitenleiste einblenden",
+    "hide": "Seitenleiste ausblenden",
+    "showRight": "Rechte Seitenleiste einblenden",
+    "hideRight": "Rechte Seitenleiste ausblenden"
+  },
+  "legalPages": {
+    "impressumAwaitingApproval": "Impressum wartet auf Freigabe",
+    "thisDevelopmentPreviewIsNot": "Diese Entwicklungsvorschau ist nicht für die Behandlung echter Patientinnen und Patienten freigegeben. Firmen-, Vertretungs-, Register- und Kontaktangaben aus den vorliegenden Entwürfen müssen bestätigt und freigegeben werden, bevor das Impressum veröffentlicht wird.",
+    "privacyInformation": "Datenschutzhinweise",
+    "returnHome": "Zur Startseite",
+    "privacyPolicy": "Datenschutzerklärung",
+    "developmentEnvironmentSyntheticTestData": "Entwicklungsumgebung – nur synthetische Testdaten. Eine freigegebene Datenschutzerklärung ist noch nicht veröffentlicht. Die vorliegenden Entwürfe brauchen vollständige Firmen- und Leistungsangaben, einen Abgleich mit der Umsetzung und eine qualifizierte rechtliche Prüfung, bevor echte Patientinnen und Patienten sie nutzen. Bestätigungen in der Entwicklungsphase berechtigen nicht zur Behandlung.",
+    "returnToHome": "Zur Startseite",
+    "termsOfService": "Nutzungsbedingungen",
+    "developmentEnvironmentSyntheticTestData2": "Entwicklungsumgebung – nur synthetische Testdaten. Freigegebene Nutzungsbedingungen sind noch nicht veröffentlicht. Die vorliegenden Entwürfe brauchen vollständige Firmen- und Leistungsangaben, einen Abgleich mit der Umsetzung und eine qualifizierte rechtliche Prüfung, bevor echte Patientinnen und Patienten sie nutzen. Bestätigungen in der Entwicklungsphase berechtigen nicht zur Behandlung.",
+    "cookieInformationIsUnderReview": "Cookie-Hinweise werden geprüft",
+    "developmentEnvironmentSyntheticTestData3": "Entwicklungsumgebung – nur synthetische Testdaten. Der vorliegende Cookie-Text ist ein Entwurf. Speicherinventar, Anbieterangaben und nötige Einwilligungen müssen mit der Umsetzung abgeglichen werden, bevor eine freigegebene Fassung veröffentlicht wird. Darstellungseinstellungen werden derzeit in Ihrem Browser gespeichert.",
+    "ourTechnicalOverviewIsBeing": "Unsere technische Übersicht wird überarbeitet",
+    "theEarlierWhitepaperDescribedCapabilities": "Das frühere Whitepaper beschrieb Funktionen und Zertifizierungen, die für die aktuelle Plattform nicht belegt sind. Eine überarbeitete Übersicht wird nur getestete Funktionen und dokumentierte Nachweise enthalten. Diese Entwicklungsumgebung dient synthetischen Tests.",
+    "pageNotFound": "Seite nicht gefunden",
+    "thePageYouAreLooking": "Die gesuchte Seite existiert nicht."
   }
 }

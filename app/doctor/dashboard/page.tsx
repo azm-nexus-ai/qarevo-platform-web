@@ -208,7 +208,7 @@ function ClinicalEpisodeCard({ episodes, onNavigate }: { episodes: DoctorEpisode
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: "13px", fontWeight: 700, background: episode.ai_draft_ready ? 'var(--success-soft, var(--surface-hover))' : 'var(--brand-soft)', color: episode.ai_draft_ready ? T.green : T.link }}>
-                    {episode.ai_draft_ready ? 'AI READY' : episode.latest_ai_job_status?.toUpperCase() || 'NO AI DRAFT'}
+                    {episode.ai_draft_ready ? t('aiReady') : episode.latest_ai_job_status?.toUpperCase() || t('noAiDraft')}
                   </span>
                   <span style={{ color: T.slate2 }}>→</span>
                 </div>
@@ -256,7 +256,7 @@ export default function DoctorDashboard() {
           return
         }
         console.error('Failed to load doctor dashboard', err)
-        if (!cancelled) setError('Unable to load dashboard data right now.')
+        if (!cancelled) setError(t('unableToLoadDashboardData'))
       } finally {
         if (!cancelled) setLoading(false)
       }

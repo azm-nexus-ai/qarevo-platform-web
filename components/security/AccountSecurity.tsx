@@ -106,7 +106,7 @@ export default function AccountSecurity() {
         : await apiDelete<{ message: string; current_session_revoked: boolean }>(action.path)
       if (result.current_session_revoked) { finishRevocation(context); return }
       if (context.isCurrent()) { setNotice(result.message); await load(true) }
-    } catch (failure) { showError(getApiErrorDetail(failure) || 'The security action failed. Please retry.', context, true) }
+    } catch (failure) { showError(getApiErrorDetail(failure) || t('theSecurityActionFailedPlease'), context, true) }
     finally { busyRef.current = false; if (context.isCurrent()) setBusy(false) }
   }
   async function changePassword(event: React.FormEvent) {

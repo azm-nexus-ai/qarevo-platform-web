@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, type ReactNode } from 'react'
+import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { accountChanged, acknowledgePortalScope, readAccountScope } from '@/lib/account-storage'
 import { ApiError, getSessionStatus, storeBrowserSession } from '@/lib/api'
@@ -13,6 +14,7 @@ export function PortalSessionBoundary({children}:{children:ReactNode}) {
   return <PortalBoundary key={`${portal}:${protectedPortalPath(path)}`} portal={portal} path={path}>{children}</PortalBoundary>
 }
 function PortalBoundary({children,portal,path}:{children:ReactNode;portal:ReturnType<typeof currentPortal>;path:string}) {
+  const t = useTranslations('sessionGuard')
   const protectedPage=protectedPortalPath(path)
   const [entryPath] = useState(path)
   const [initialCheck,setInitialCheck]=useState<InitialSessionCheck>()
@@ -32,7 +34,7 @@ function PortalBoundary({children,portal,path}:{children:ReactNode;portal:Return
     void getSessionStatus().then(result=>{
       if(!alive)return
       const identity=result.browser_session
-      if(!identity || (before && before!==JSON.stringify([portal,identity.user_id,identity.session_id]))) throw new Error('Your account changed. Reload this portal to continue.')
+      if(!identity || (before && before!==JSON.stringify([portal,identity.user_id,identity.session_id]))) throw new Error(t('yourAccountChangedReloadThis'))
       storeBrowserSession(result,portal);
       const receivedAt=performance.now();setInitialCheck({status:result,receivedAt,requestDuration:receivedAt-started,scope:readAccountScope(portal)});setReady(true)
     }).catch(failure=>{
@@ -42,10 +44,10 @@ function PortalBoundary({children,portal,path}:{children:ReactNode;portal:Return
         if(readPortalIdentity(portal)) {window.localStorage.removeItem(`qarevo:${portal}:identity`);accountChanged(portal)}
         window.location.replace(`${signIn}?${new URLSearchParams({next:entryPath})}`);return
       }
-      setError('Secure access could not be confirmed. Check your connection and retry.')
+      setError(t('secureAccessCouldNotBe'))
     })
     return()=>{alive=false}
   },[portal,protectedPage,attempt,entryPath])
-  if(protectedPage&&!ready)return <main className='grid min-h-dvh place-items-center bg-surface-subtle px-6 text-ink'><section className='max-w-md rounded-2xl border border-theme bg-surface p-8'><h1 className='text-xl font-semibold'>Secure access</h1><p className='mt-3 text-sm' role={error?'alert':'status'}>{error||'Checking your portal session…'}</p>{error&&<button className='mt-5 rounded-xl border border-theme px-5 py-3' onClick={()=>{setError('');setAttempt(x=>x+1)}}>Retry connection</button>}</section></main>
+  if(protectedPage&&!ready)return <main className='grid min-h-dvh place-items-center bg-surface-subtle px-6 text-ink'><section className='max-w-md rounded-2xl border border-theme bg-surface p-8'><h1 className='text-xl font-semibold'>{t('secureAccess')}</h1><p className='mt-3 text-sm' role={error?'alert':'status'}>{error||t('checkingYourPortalSession')}</p>{error&&<button className='mt-5 rounded-xl border border-theme px-5 py-3' onClick={()=>{setError('');setAttempt(x=>x+1)}}>{t('retryConnection')}</button>}</section></main>
   return <BookingProvider portal={portal}><SessionGuard initialCheck={initialCheck}>{children}</SessionGuard></BookingProvider>
 }

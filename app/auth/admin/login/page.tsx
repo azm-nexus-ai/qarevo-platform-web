@@ -267,7 +267,7 @@ export default function AdminLoginPage() {
           >
             {loading ? t('signingIn') : t('submit')}
           </button>
-          <Link href='/auth/admin/forgot-password' style={{ color: T.link, textAlign: 'center', padding: '10px' }}>Forgot your password?</Link>
+          <Link href='/auth/admin/forgot-password' style={{ color: T.link, textAlign: 'center', padding: '10px' }}>{t('forgotYourPassword')}</Link>
         </form>
         )}
 

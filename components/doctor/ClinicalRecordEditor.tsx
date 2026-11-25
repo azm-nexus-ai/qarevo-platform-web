@@ -109,10 +109,10 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
     {notice && <p role='status' className='mb-5 rounded-xl border border-theme bg-surface-subtle p-4 text-ink'>{notice}</p>}
     {editing ? <form onSubmit={event => { event.preventDefault(); void save() }} noValidate>
       <fieldset disabled={Boolean(busy)} className='space-y-6'>
-        <div><label htmlFor='record-language' className='font-semibold text-ink'>{t('language')} <span className='text-sm font-normal text-muted'>(required)</span></label>
+        <div><label htmlFor='record-language' className='font-semibold text-ink'>{t('language')} <span className='text-sm font-normal text-muted'>{t('requiredSuffix')}</span></label>
           <select id='record-language' value={form.language} className={control} onChange={event => { setForm({ ...form, language: event.target.value as 'en' | 'de' }); setDirty(true); setReviewed(false) }}><option value='en'>English</option><option value='de'>Deutsch</option></select></div>
         {clinicalFields.map(field => <div key={field.key}>
-          <label htmlFor={`record-${field.key}`} className='font-semibold text-ink'>{field.label} <span className='text-sm font-normal text-muted'>(required to publish)</span></label>
+          <label htmlFor={`record-${field.key}`} className='font-semibold text-ink'>{field.label} <span className='text-sm font-normal text-muted'>{t('requiredToPublish')}</span></label>
           <p id={`record-${field.key}-hint`} className='mt-1 text-sm leading-6 text-muted'>{field.hint}</p>
           <textarea id={`record-${field.key}`} rows={field.key === 'summary' ? 4 : 3} maxLength={field.max} value={form[field.key]}
             aria-invalid={Boolean(errors[field.key])} aria-describedby={`record-${field.key}-hint${errors[field.key] ? ` record-${field.key}-error` : ''}`}
@@ -120,7 +120,7 @@ export default function ClinicalRecordEditor({ consultationId, consultationStatu
           {errors[field.key] && <p id={`record-${field.key}-error`} className='mt-2 text-sm font-semibold text-ink'>{errors[field.key]}</p>}
         </div>)}
         {state.published && <div><label htmlFor='record-amendment' className='font-semibold text-ink'>{t('amendmentReason')}</label>
-          <p className='mt-1 text-sm text-muted'>4–500 characters. The original published record will be retained. This reason is also visible to the patient.</p>
+          <p className='mt-1 text-sm text-muted'>{t('n4500CharactersTheOriginal')}</p>
           <textarea id='record-amendment' className={control} rows={2} minLength={4} maxLength={500} value={amendment} aria-invalid={Boolean(amendmentError)} aria-describedby={amendmentError ? 'record-amendment-error' : undefined}
             onChange={event => { setAmendment(event.target.value); setDirty(true); setReviewed(false); setAmendmentError('') }} />
           {amendmentError && <p id='record-amendment-error' className='mt-2 font-semibold text-ink'>{amendmentError}</p>}</div>}

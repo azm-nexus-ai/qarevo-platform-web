@@ -589,17 +589,17 @@ export default function VerifyEmailPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <TipRow
                 icon={ICONS.search}
-                title="Check your spam or junk folder"
+                title={t('checkYourSpamOrJunk')}
                 body="Verification emails can occasionally be filtered. Search for 'Qarevo Health' or 'noreply@qarevo.health' in all folders."
               />
               <TipRow
                 icon={ICONS.ema}
-                title="Is the email address correct?"
+                title={t('isTheEmailAddressCorrect')}
                 body={email ? `Your link was sent to ${m}. If this is wrong, click Change Email above and re-enter your address.` : t('returnToSignUpAnd')}
               />
               <TipRow
                 icon={ICONS.info}
-                title="Email not arrived after 5 minutes?"
+                title={t('emailNotArrivedAfter5')}
                 body="Contact our support team at support@qarevo.health. We respond within minutes during business hours."
               />
             </div>
@@ -785,7 +785,7 @@ export default function VerifyEmailPage() {
               </a>
             ))}
             <button onClick={() => setEmailModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: T.slate2, fontFamily: 'inherit', letterSpacing: '-0.01em', padding: '8px 12px', marginTop: '4px' }}>
-              Dismiss
+              {t('dismiss')}
             </button>
           </div>
         </div>

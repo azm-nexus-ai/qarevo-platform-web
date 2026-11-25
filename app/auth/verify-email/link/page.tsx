@@ -165,20 +165,20 @@ export default function VerifyEmailLinkPage() {
                         ...buttonStyle, display: 'block', textAlign: 'center',
                         textDecoration: 'none', boxSizing: 'border-box',
                     }}>
-                        Sign in and complete your profile
+                        {t('verifyLink.signInAndCompleteYour')}
                     </Link>
                 )}
 
                 {phase === 'verified' && result?.next_action === 'CONTINUE_CLINICIAN_ONBOARDING' && (
                     <p style={{ color: T.slate, lineHeight: 1.65 }}>
-                        Return to your clinician registration tab to complete the remaining onboarding checks.
+                        {t('verifyLink.returnToYourClinicianRegistration')}
                     </p>
                 )}
 
                 {phase !== 'verified' && phase !== 'loading' && phase !== 'resent' && (
                     <details style={{ marginTop: '24px', color: T.slate }}>
                         <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-                            Request a new verification email
+                            {t('verifyLink.requestANewVerificationEmail')}
                         </summary>
 
                         <form onSubmit={resend} style={{ marginTop: '16px' }}>

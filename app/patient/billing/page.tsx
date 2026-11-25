@@ -303,7 +303,7 @@ export default function PatientBillingPage() {
                 disabled
                 aria-describedby='billing-saved-methods-unavailable'
               >
-                Add Card
+                {t('addCard')}
               </PortalButton>
             </div>
             <p id='billing-saved-methods-unavailable' className='mb-4 text-sm leading-6' style={{ color: T.slate }}>{t('savingUnavailable')}</p>
@@ -347,7 +347,7 @@ export default function PatientBillingPage() {
                           tone='secondary'
                           onClick={() => invoice.pdf_url || invoice.receipt_url ? window.open(invoice.pdf_url || invoice.receipt_url || '', '_blank', 'noopener,noreferrer') : showNotice(t('pdfUnavailableTitle'), t('pdfUnavailableBody'))}
                         >
-                          Download PDF
+                          {t('downloadPdf')}
                         </PortalButton>
                       </div>
                     </div>

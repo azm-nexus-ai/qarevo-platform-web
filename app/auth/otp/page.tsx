@@ -370,6 +370,7 @@ function ErrorBanner({ kind, onDismiss }: { kind: ErrorKind; onDismiss: () => vo
 
 // ─── Destination chip ──────────────────────────────────────────────────────────
 function DestChip({ mode, destination, onSwitch }: { mode: VerifyMode; destination: string; onSwitch: () => void }) {
+  const t = useTranslations('auth')
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0', borderRadius: '100px', background: T.blueLight, border: `1px solid ${T.blueMid}`, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 13px' }}>
@@ -379,7 +380,7 @@ function DestChip({ mode, destination, onSwitch }: { mode: VerifyMode; destinati
         </span>
       </div>
       <button onClick={onSwitch} style={{ padding: '6px 11px 6px 6px', background: 'none', border: 'none', borderLeft: `1px solid ${T.blueMid}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'inherit', fontSize: "13px", fontWeight: 600, color: T.link, letterSpacing: '-0.01em' }}>
-        Change
+        {t('otp.change')}
         <Ico p={ICONS.arrowFwd} size={10} sw={2} color={T.blue} />
       </button>
     </div>
@@ -559,7 +560,7 @@ function OtpPageContent() {
         {/* Headline */}
         <div style={{ textAlign: 'center', marginBottom: '22px' }}>
           <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '23px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 10px' }}>
-            Verify Your Identity
+            {t('otp.verifyYourIdentity')}
           </h1>
           <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.7, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
             {mode === 'email'
@@ -581,7 +582,7 @@ function OtpPageContent() {
           <div style={{ padding: '10px 14px', borderRadius: '11px', background: 'rgba(235,248,245,0.9)', border: '1px solid rgba(9,173,112,0.25)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', animation: 'slideIn 0.28s ease both' }}>
             <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
             <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>
-              Verification email requested. Check your inbox and spam folder.
+              {t('otp.verificationEmailRequestedCheckYour')}
             </span>
           </div>
         )}
@@ -590,7 +591,7 @@ function OtpPageContent() {
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '-0.01em' }}>
-              Enter 6-digit code
+              {t('otp.enter6DigitCode')}
             </span>
             {mode !== 'email' ? t('otp.smsDeliveryUnavailable') : resending ? t('otp.requestingVerificationEmail') : !expired
               ? <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -649,7 +650,7 @@ function OtpPageContent() {
           transition: 'all 0.14s ease',
         }}>
           <Ico p={ICONS.arrowSm} size={13} sw={2} style={{ transform: 'rotate(180deg)' }} />
-          Back to Email Verification
+          {t('otp.backToEmailVerification')}
         </Link>
 
         {resendError && <p role='alert' className='field-error'>{resendError}</p>}

@@ -6,17 +6,21 @@ import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePortalHome } from '@/lib/portal-navigation'
 import { useRouter } from 'next/navigation'
 import { T, Glass } from '@/lib/tokens'
 import { NAV_LINKS, NAV_ANCHORS } from '@/constants/navigation'
+
+const SECTION_KEYS: Record<string, string> = { 'Platform Overview': 'overview', 'Clinical Intelligence': 'clinical', 'Security & Governance': 'security' }
 import HoverBtn from '@/components/buttons/HoverBtn'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { logoutCurrentUser, readSessionMarker } from '@/lib/api'
 
 export default function NavigationBar() {
+  const t = useTranslations('marketingNav')
   const [activeSection, setActiveSection] = useState<string>('Platform Overview')
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -158,7 +162,7 @@ export default function NavigationBar() {
     <>
       <nav
         role="navigation"
-        aria-label="Main navigation"
+        aria-label={t('mainNavigation')}
         style={{
           position: 'sticky',
           top: 0,
@@ -185,7 +189,7 @@ export default function NavigationBar() {
                 {/* Logo */}
                 <Link
                   href={home}
-                  aria-label="Qarevo Health home"
+                  aria-label={t('qarevoHealthHome')}
                   onClick={() => {
                     handleNavClick('Platform Overview')
                     if (mobileOpen) setMobileOpen(false)
@@ -224,7 +228,7 @@ export default function NavigationBar() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {label}
+                        {t(`section.${SECTION_KEYS[label]}`)}
                       </button>
                     )
                   })}
@@ -250,7 +254,7 @@ export default function NavigationBar() {
                           textDecoration: 'none',
                         }}
                       >
-                        Dashboard
+                        {t('dashboard')}
                       </Link>
                       <HoverBtn
                         onClick={() => setShowLogoutModal(true)}
@@ -270,7 +274,7 @@ export default function NavigationBar() {
                           transform: 'translateY(-1px)',
                         }}
                       >
-                        Logout
+                        {t('logout')}
                       </HoverBtn>
                     </>
                   ) : (
@@ -290,7 +294,7 @@ export default function NavigationBar() {
                           textDecoration: 'none',
                         }}
                       >
-                        Physician Portal
+                        {t('physicianPortal')}
                       </Link>
                       <Link
                         href="/auth/sign-in"
@@ -307,7 +311,7 @@ export default function NavigationBar() {
                           textDecoration: 'none',
                         }}
                       >
-                        Sign In
+                        {t('signIn')}
                       </Link>
                       <HoverBtn
                         onClick={() => router.push('/auth')}
@@ -329,7 +333,7 @@ export default function NavigationBar() {
                           boxShadow: '0 4px 14px rgba(52,140,234,0.3), 0 10px 28px rgba(52,140,234,0.2)',
                         }}
                       >
-                        Access Platform
+                        {t('accessPlatform')}
                       </HoverBtn>
                     </>
                   )}
@@ -342,7 +346,7 @@ export default function NavigationBar() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', justifyContent: 'space-between' }}>
                 <Link
                   href={home}
-                  aria-label="Qarevo Health home"
+                  aria-label={t('qarevoHealthHome')}
                   onClick={() => {
                     if (mobileOpen) setMobileOpen(false)
                   }}
@@ -355,7 +359,7 @@ export default function NavigationBar() {
                 {/* Mobile hamburger */}
                 <button
                   ref={hamburgerRef}
-                  aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                  aria-label={mobileOpen ? t('closeNavigationMenu') : t('openNavigationMenu')}
                   aria-expanded={mobileOpen}
                   aria-controls="mobile-drawer"
                   onClick={() => setMobileOpen(prev => !prev)}
@@ -437,7 +441,7 @@ export default function NavigationBar() {
         aria-modal={mobileOpen ? true : undefined}
         aria-hidden={!mobileOpen}
         inert={!mobileOpen}
-        aria-label="Navigation menu"
+        aria-label={t('navigationMenu')}
         onKeyDown={handleDrawerKeyDown}
         style={{
           position: 'fixed',
@@ -464,7 +468,7 @@ export default function NavigationBar() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
           <AuthenticatedLogo width={120} />
           <button
-            aria-label="Close navigation menu"
+            aria-label={t('closeNavigationMenu')}
             onClick={() => { setMobileOpen(false); hamburgerRef.current?.focus() }}
             style={{
               background: 'none',
@@ -486,7 +490,7 @@ export default function NavigationBar() {
 
         {/* Drawer nav items */}
         <div style={{ marginBottom: '14px' }}><LanguageSwitch /></div>
-        <nav aria-label="Mobile navigation" style={{ flex: 1 }}>
+        <nav aria-label={t('mobileNavigation')} style={{ flex: 1 }}>
           {NAV_LINKS.map((label) => {
             const isActive = activeSection === label
             return (
@@ -511,7 +515,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s, color 0.12s',
                 }}
               >
-                {label}
+                {t(`section.${SECTION_KEYS[label]}`)}
               </button>
             )
           })}
@@ -537,7 +541,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s',
                 }}
               >
-                Dashboard
+                {t('dashboard')}
               </Link>
               <button
                 type="button"
@@ -560,7 +564,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s',
                 }}
               >
-                Logout
+                {t('logout')}
               </button>
             </>
           ) : (
@@ -581,7 +585,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s',
                 }}
               >
-                Physician Portal
+                {t('physicianPortal')}
               </Link>
               <Link
                 href="/auth/sign-in"
@@ -599,7 +603,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s',
                 }}
               >
-                Sign In
+                {t('signIn')}
               </Link>
               <Link
                 href="/auth"
@@ -618,7 +622,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s, box-shadow 0.12s',
                 }}
               >
-                Access Platform
+                {t('accessPlatform')}
               </Link>
             </>
           )}

@@ -286,7 +286,7 @@ export default function AppointmentDetailPage() {
               </div>
             ) : (
               <div className="text-muted text-sm">
-                No intake information available. Click &ldquo;View Intake & AI Draft&rdquo; to see full episode details.
+                {t('extra.noIntakeInformationAvailableClick')}
               </div>
             )}
           </div>

@@ -1,10 +1,12 @@
 'use client'
+import { useTranslations } from 'next-intl'
 
 import { useRouter } from 'next/navigation'
 import { T, Glass } from '@/lib/tokens'
 import HoverBtn from '@/components/buttons/HoverBtn'
 
 export default function HeroSection() {
+  const t = useTranslations('landing')
   const router = useRouter()
 
   return (
@@ -22,8 +24,8 @@ export default function HeroSection() {
               margin: '0 auto 24px',
             }}
           >
-            Care that fits your life,{' '}
-            <span style={{ color: T.slate2, fontWeight: 700 }}>guided by clinicians.</span>
+            {t('heroLine1')}{' '}
+            <span style={{ color: T.slate2, fontWeight: 700 }}>{t('heroLine2')}</span>
           </h1>
 
           <p
@@ -37,7 +39,7 @@ export default function HeroSection() {
               letterSpacing: '-0.01em',
             }}
           >
-            We are building a clearer path from your first question to a clinician-led consultation and follow-up. Explore the Qarevo development preview with synthetic test data.
+            {t('weAreBuildingAClearer')}
           </p>
 
           <div className="hero-btns">
@@ -60,7 +62,7 @@ export default function HeroSection() {
                 boxShadow: '0 3px 10px rgba(32,181,223,0.35), 0 10px 36px rgba(32,181,223,0.22)',
               }}
             >
-              Book a Consultation
+              {t('bookAConsultation')}
             </HoverBtn>
             <HoverBtn
               onClick={() => router.push('/whitepaper')}
@@ -76,7 +78,7 @@ export default function HeroSection() {
               }}
               on={{ background: "var(--surface-glass)", border: "1px solid var(--border)" }}
             >
-              Read the Whitepaper
+              {t('readTheWhitepaper')}
             </HoverBtn>
           </div>
         </section>

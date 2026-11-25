@@ -93,7 +93,7 @@ export default function ConsultationDetailPage() {
           onClick={handleBack}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
         >
-          Back to Workspace
+          {t('backToWorkspace')}
         </button>
       </div>
     )
@@ -125,7 +125,7 @@ export default function ConsultationDetailPage() {
               onClick={handleJoinVideo}
               className="clinical-action clinical-action--primary"
             >
-              Join Video
+              {t('joinVideo')}
             </button>
           )}
           {consultation.episode_id && <button type="button" className="clinical-action clinical-action--ai" onClick={()=>router.push(`/doctor/episodes/${consultation.episode_id}`)}>{t('viewIntake')}</button>}

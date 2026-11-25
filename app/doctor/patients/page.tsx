@@ -241,7 +241,7 @@ export default function PatientsPage() {
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
                 style={{ padding: '8px 12px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate2, fontSize: "13px", fontWeight: 600, cursor: patientsData.has_previous && !loading ? 'pointer' : 'not-allowed', opacity: patientsData.has_previous && !loading ? 1 : 0.5 }}
               >
-                Previous
+                {t('previous')}
               </button>
               <button
                 type="button"
@@ -249,7 +249,7 @@ export default function PatientsPage() {
                 onClick={() => setPage((current) => current + 1)}
                 style={{ padding: '8px 12px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface-glass)", color: T.slate2, fontSize: "13px", fontWeight: 600, cursor: patientsData.has_next && !loading ? 'pointer' : 'not-allowed', opacity: patientsData.has_next && !loading ? 1 : 0.5 }}
               >
-                Next
+                {t('next')}
               </button>
             </div>
           </div>

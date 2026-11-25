@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, type ReactNode } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import styles from './PortalAccountMenu.module.css'
 
@@ -12,6 +13,7 @@ export default function PortalAccountMenu({ portal, name, description, avatar, p
   profileHref: string
   settingsHref: string
 }) {
+  const t = useTranslations('accountMenu')
   const details = useRef<HTMLDetailsElement>(null)
   const summary = useRef<HTMLElement>(null)
   const label = `${portal[0].toUpperCase()}${portal.slice(1)} account menu`
@@ -40,8 +42,8 @@ export default function PortalAccountMenu({ portal, name, description, avatar, p
     <div className={styles.panel}>
       <div className={styles.identity}>{avatar}<div><strong>{name}</strong>{description && <p>{description}</p>}</div></div>
       <nav aria-label={`${label} links`}>
-        <Link href={profileHref} onClick={close}>View profile</Link>
-        <Link href={settingsHref} onClick={close}>Settings and security</Link>
+        <Link href={profileHref} onClick={close}>{t('viewProfile')}</Link>
+        <Link href={settingsHref} onClick={close}>{t('settingsAndSecurity')}</Link>
       </nav>
     </div>
   </details>

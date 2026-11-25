@@ -53,7 +53,7 @@ function ReplyPreview({ message, onClear }: { message: PortalMessage; onClear: (
         <p style={{ margin: '0 0 2px', color: T.navy, fontSize: "13px", fontWeight: 800 }}>{message.senderId === 'doctor' ? t('replyingToYou') : t('replyingToPatient')}</p>
         <p style={{ margin: 0, color: T.slate, fontSize: "13px", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.text || message.attachmentName || t('message')}</p>
       </div>
-      <button type="button" aria-label="Cancel reply" onClick={onClear} style={{ width: '30px', height: '30px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", display: 'grid', placeItems: 'center', color: T.slate, cursor: 'pointer' }}>
+      <button type="button" aria-label={t('cancelReply')} onClick={onClear} style={{ width: '30px', height: '30px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", display: 'grid', placeItems: 'center', color: T.slate, cursor: 'pointer' }}>
         <Ico p={ICONS.x} size={15} sw={2} />
       </button>
     </div>
@@ -250,7 +250,7 @@ export default function DoctorMessagesPage() {
               <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: T.slate2, pointerEvents: 'none' }}>
                 <Ico p={ICONS.search} size={15} sw={1.8} />
               </span>
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search patients or messages..." style={{ width: '100%', height: '42px', borderRadius: '12px', border: "1px solid var(--border)", padding: '0 12px 0 38px', fontSize: '13.5px', color: T.navy, background: "var(--surface)", outline: 'none' }} />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('searchPatientsOrMessages')} style={{ width: '100%', height: '42px', borderRadius: '12px', border: "1px solid var(--border)", padding: '0 12px 0 38px', fontSize: '13.5px', color: T.navy, background: "var(--surface)", outline: 'none' }} />
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               {(['All', 'Unread'] as FilterType[]).map((item) => (
@@ -290,10 +290,10 @@ export default function DoctorMessagesPage() {
               <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 700 }}>Page {conversationMeta.page}</span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button type="button" disabled={!conversationMeta.hasPrevious || loading} onClick={() => setConversationPage((current) => Math.max(1, current - 1))} style={{ minHeight: '32px', padding: '0 10px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: conversationMeta.hasPrevious && !loading ? 'pointer' : 'not-allowed', opacity: conversationMeta.hasPrevious && !loading ? 1 : 0.48 }}>
-                  Prev
+                  {t('prev')}
                 </button>
                 <button type="button" disabled={!conversationMeta.hasNext || loading} onClick={() => setConversationPage((current) => current + 1)} style={{ minHeight: '32px', padding: '0 10px', borderRadius: '9px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: "13px", fontWeight: 700, cursor: conversationMeta.hasNext && !loading ? 'pointer' : 'not-allowed', opacity: conversationMeta.hasNext && !loading ? 1 : 0.48 }}>
-                  Next
+                  {t('next')}
                 </button>
               </div>
             </div>
@@ -335,7 +335,7 @@ export default function DoctorMessagesPage() {
                               </div>
                             </div>
                             <button type="button" onClick={() => handleDownloadAttachment(message)} style={{ minHeight: '32px', borderRadius: '10px', border: isDoctor ? '1px solid rgba(255,255,255,0.35)' : '1px solid rgba(32,181,223,0.18)', background: isDoctor ? 'rgba(255,255,255,0.16)' : "var(--surface)", color: isDoctor ? '#fff' : T.link, fontSize: "13px", fontWeight: 800, cursor: 'pointer' }}>
-                              Download
+                              {t('download')}
                             </button>
                           </div>
                         ) : message.text}
@@ -343,7 +343,7 @@ export default function DoctorMessagesPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: isDoctor ? 'flex-end' : 'flex-start', margin: '4px 4px 0' }}>
                         <span style={{ color: T.slate2, fontSize: "13px" }}>{message.timestamp}</span>
                         <button type="button" onClick={() => setReplyToMessage(message)} style={{ border: 'none', background: 'transparent', color: T.link, fontSize: "13px", fontWeight: 800, cursor: 'pointer', padding: '2px 4px' }}>
-                          Reply
+                          {t('reply')}
                         </button>
                       </div>
                     </div>
@@ -354,7 +354,7 @@ export default function DoctorMessagesPage() {
               <div style={{ padding: '16px', borderTop: "1px solid var(--border)", background: "var(--surface-glass)" }}>
                 {replyToMessage ? <ReplyPreview message={replyToMessage} onClear={() => setReplyToMessage(null)} /> : null}
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
-                  <button type="button" aria-label="Add attachment" onClick={() => fileInputRef.current?.click()} style={{ width: '50px', height: '50px', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                  <button type="button" aria-label={t('addAttachment')} onClick={() => fileInputRef.current?.click()} style={{ width: '50px', height: '50px', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
                     <Ico p={ICONS.paperclip} size={19} sw={1.8} />
                   </button>
                   <input
@@ -364,8 +364,8 @@ export default function DoctorMessagesPage() {
                     onChange={(event) => setSelectedAttachment(event.target.files?.[0] ?? null)}
                     style={{ display: 'none' }}
                   />
-                  <textarea value={reply} onChange={(event) => setReply(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void handleSend() } }} placeholder="Type your reply..." rows={2} style={{ flex: 1, minHeight: '50px', maxHeight: '130px', padding: '14px 16px', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '14px', outline: 'none', resize: 'none', fontFamily: 'inherit' }} />
-                  <HoverBtn onClick={handleSend} title="Send reply" base={{ width: '50px', height: '50px', borderRadius: '14px', border: 'none', background: (reply.trim() || selectedAttachment) && !sending ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", color: (reply.trim() || selectedAttachment) && !sending ? '#fff' : T.slate2, display: 'grid', placeItems: 'center', cursor: (reply.trim() || selectedAttachment) && !sending ? 'pointer' : 'not-allowed' }} on={(reply.trim() || selectedAttachment) && !sending ? { transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(52,140,234,0.35)' } : {}}>
+                  <textarea value={reply} onChange={(event) => setReply(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void handleSend() } }} placeholder={t('typeYourReply')} rows={2} style={{ flex: 1, minHeight: '50px', maxHeight: '130px', padding: '14px 16px', borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface)", color: T.navy, fontSize: '14px', outline: 'none', resize: 'none', fontFamily: 'inherit' }} />
+                  <HoverBtn onClick={handleSend} title={t('sendReply')} base={{ width: '50px', height: '50px', borderRadius: '14px', border: 'none', background: (reply.trim() || selectedAttachment) && !sending ? `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)` : "var(--surface-hover)", color: (reply.trim() || selectedAttachment) && !sending ? '#fff' : T.slate2, display: 'grid', placeItems: 'center', cursor: (reply.trim() || selectedAttachment) && !sending ? 'pointer' : 'not-allowed' }} on={(reply.trim() || selectedAttachment) && !sending ? { transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(52,140,234,0.35)' } : {}}>
                     <Ico p={ICONS.arrowFwd} size={18} sw={1.9} />
                   </HoverBtn>
                 </div>
@@ -373,7 +373,7 @@ export default function DoctorMessagesPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', padding: '9px 10px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.16)' }}>
                     <Ico p={ICONS.paperclip} size={15} sw={1.8} color={T.blue} />
                     <span style={{ flex: 1, minWidth: 0, color: T.navy, fontSize: "13px", fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedAttachment.name}</span>
-                    <button type="button" aria-label="Remove attachment" onClick={() => { setSelectedAttachment(null); if (fileInputRef.current) fileInputRef.current.value = '' }} style={{ width: '28px', height: '28px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+                    <button type="button" aria-label={t('removeAttachment')} onClick={() => { setSelectedAttachment(null); if (fileInputRef.current) fileInputRef.current.value = '' }} style={{ width: '28px', height: '28px', borderRadius: '8px', border: "1px solid var(--border)", background: "var(--surface)", color: T.slate, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
                       <Ico p={ICONS.x} size={14} sw={2} />
                     </button>
                   </div>

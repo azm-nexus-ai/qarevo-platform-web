@@ -352,7 +352,7 @@ export default function PatientMobileNavigation() {
             }}
           >
             <Ico p={ICONS.arrowSm} size={15} sw={1.8} color="#348CEA" />
-            Logout
+            {t('logout')}
           </button>
         </div>
       </div>

@@ -699,7 +699,7 @@ export default function ForgotPasswordPage() {
                     {t('checkYourEmail')}
                   </h1>
                   <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
-                    If an eligible account exists, we will attempt to send reset instructions. Check your inbox and spam folder. Use the newest email; requesting another link replaces earlier links. If you refreshed the reset page, reopen the full link from the email.
+                    {t('ifAnEligibleAccountExists')}
                   </p>
                   <p style={{ margin: 0, fontSize: "13px", color: T.slate2 }}>
                     {t('requestedFor')} <span style={{ fontWeight: 700, color: T.navy }}>{sentTo}</span>

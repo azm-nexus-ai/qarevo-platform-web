@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 export function profileInitials(name: string, kind: 'patient' | 'doctor' | 'admin' | 'practice' = 'patient') {
   const value = name.trim().replace(/^Dr\.?\s+/i, '')
@@ -28,9 +29,10 @@ export default function ProfileAvatar({ name, src, size = 42, kind = 'patient' }
   size?: number
   kind?: 'patient' | 'doctor' | 'admin' | 'practice'
 }) {
+  const t = useTranslations('profileAvatar')
   const [failedSource, setFailedSource] = useState<string | null>(null)
   const source = profileImageSource(src)
-  const label = name.trim() || (kind === 'doctor' ? 'Doctor' : kind === 'admin' ? 'Administrator' : 'Patient')
+  const label = name.trim() || (kind === 'doctor' ? t('doctor') : kind === 'admin' ? t('admin') : t('patient'))
   const initials = profileInitials(name, kind)
   return <span role='img' aria-label={`${label} profile image`} style={{ display: 'inline-grid', placeItems: 'center', width: size, height: size, flexShrink: 0, borderRadius: '50%', overflow: 'hidden', background: 'var(--surface-hover)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 700 }}>
     {source && failedSource !== source ? <img src={source} alt='' width={size} height={size} loading='lazy' decoding='async' referrerPolicy='no-referrer' onError={() => setFailedSource(source)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}

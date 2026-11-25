@@ -185,7 +185,7 @@ function LeftPanel() {
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('accountCreated.welcomeToYourCareJourney')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Every next step is designed to be secure, personal, and effortless as you begin your Qarevo Health experience.
+            {t('accountCreated.everyNextStepIsDesigned')}
           </p>
         </div>
       </div>
@@ -396,13 +396,13 @@ export default function AccountCreatedPage() {
                   margin: '0 0 9px',
                 }}
               >
-                Welcome to Qarevo Health!
+                {t('accountCreated.welcomeToQarevoHealth')}
               </h1>
               <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.68, margin: 0, letterSpacing: '-0.01em' }}>
-                Your account has been successfully created.
+                {t('accountCreated.yourAccountHasBeenSuccessfully')}
               </p>
               <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.68, margin: '8px 0 0', letterSpacing: '-0.01em' }}>
-                You are now ready to experience a smarter, more connected approach to healthcare, from finding trusted physicians to managing consultations and ongoing care, all in one secure platform.
+                {t('accountCreated.youAreNowReadyTo')}
               </p>
             </header>
 
@@ -420,13 +420,13 @@ export default function AccountCreatedPage() {
             >
               <Ico p={ICONS.check} size={10} sw={3} color={T.green} />
               <span style={{ fontSize: "13px", fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                Account Created Successfully
+                {t('accountCreated.accountCreatedSuccessfully')}
               </span>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
               <p style={{ fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
-                Next steps
+                {t('accountCreated.nextSteps')}
               </p>
               <StepTimeline />
             </div>
@@ -441,7 +441,7 @@ export default function AccountCreatedPage() {
               }}
             >
               <p style={{ fontSize: '13px', color: T.navy2, lineHeight: 1.62, margin: 0, letterSpacing: '-0.005em' }}>
-                Healthcare should feel personal, simple, and always within reach. We&apos;re excited to help you take the next step in your health journey.
+                {t('accountCreated.healthcareShouldFeelPersonalSimple')}
               </p>
             </div>
 
@@ -503,11 +503,11 @@ export default function AccountCreatedPage() {
                     transition: 'color 0.15s ease',
                   }}
                 >
-                  Explore Platform
+                  {t('accountCreated.explorePlatform')}
                 </Link>
                 <span style={{ color: T.border }}>•</span>
                 <Link href='/' style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                  Return to Home
+                  {t('accountCreated.returnToHome')}
                 </Link>
               </div>
             </div>
@@ -531,15 +531,15 @@ export default function AccountCreatedPage() {
 
           <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
             <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
-              Terms
+              {t('accountCreated.terms')}
             </Link>
             {' · '}
             <Link href='/privacy' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
-              Privacy Policy
+              {t('accountCreated.privacyPolicy')}
             </Link>
             {' · '}
             <Link href='/support' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
-              Support
+              {t('accountCreated.support')}
             </Link>
           </p>
         </div>

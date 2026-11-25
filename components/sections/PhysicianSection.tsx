@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 
 import { useRouter } from 'next/navigation'
 import { T, Glass } from '@/lib/tokens'
@@ -7,13 +8,14 @@ import Ico from '@/components/ui/Ico'
 import HoverBtn from '@/components/buttons/HoverBtn'
 
 export default function PhysicianSection() {
+  const t = useTranslations('landing')
   const router = useRouter()
 
   const features = [
-    { icon: ICONS.steth, title: 'Verified Physicians', desc: 'Professional access follows administrator review' },
-    { icon: ICONS.video, title: 'Virtual Consultations', desc: 'Video consultation workflow under development' },
-    { icon: ICONS.brain, title: 'Optional Drafting', desc: 'Consent-based draft assistance requiring clinician review' },
-    { icon: ICONS.shield, title: 'Secure Platform', desc: 'Account verification and controlled clinical access' },
+    { icon: ICONS.steth, title: t('physician.featureVerified'), desc: t('physician.featureVerifiedText') },
+    { icon: ICONS.video, title: t('physician.featureVideo'), desc: t('physician.featureVideoText') },
+    { icon: ICONS.brain, title: t('physician.featureDrafting'), desc: t('physician.featureDraftingText') },
+    { icon: ICONS.shield, title: t('physician.featureSecure'), desc: t('physician.featureSecureText') },
   ]
 
   return (
@@ -58,7 +60,7 @@ export default function PhysicianSection() {
                 }}
               />
               <span style={{ fontSize: "13px", fontWeight: 600, color: T.link, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                For Healthcare Providers
+                {t('physician.forHealthcareProviders')}
               </span>
             </div>
 
@@ -72,8 +74,8 @@ export default function PhysicianSection() {
                 margin: '0 0 20px',
               }}
             >
-              Join the network of{' '}
-              <span style={{ color: T.link, fontWeight: 700 }}>verified physicians</span>
+              {t('physician.joinLine1')}{' '}
+              <span style={{ color: T.link, fontWeight: 700 }}>{t('physician.joinLine2')}</span>
             </h2>
 
             <p
@@ -86,7 +88,7 @@ export default function PhysicianSection() {
                 maxWidth: '420px',
               }}
             >
-              Explore patient intake, assigned clinical work and care coordination in our development preview for independent practices.
+              {t('physician.explorePatientIntakeAssignedClinical')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '36px' }}>
@@ -140,7 +142,7 @@ export default function PhysicianSection() {
                   boxShadow: '0 3px 10px rgba(32,181,223,0.35), 0 10px 36px rgba(32,181,223,0.22)',
                 }}
               >
-                Register as Physician
+                {t('physician.registerAsPhysician')}
               </HoverBtn>
               <HoverBtn
                 onClick={() => router.push('/auth/doctor/login')}
@@ -156,7 +158,7 @@ export default function PhysicianSection() {
                 }}
                 on={{ background: "var(--surface-glass)", border: "1px solid var(--border)" }}
               >
-                Physician Sign In
+                {t('physician.physicianSignIn')}
               </HoverBtn>
             </div>
           </div>
@@ -210,10 +212,10 @@ export default function PhysicianSection() {
                 </div>
                 <div>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em', marginBottom: '2px' }}>
-                    Practice workspace
+                    {t('physician.practiceWorkspace')}
                   </div>
                   <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.005em' }}>
-                    Illustrative workflow
+                    {t('physician.illustrativeWorkflow')}
                   </div>
                 </div>
               </div>
@@ -222,18 +224,18 @@ export default function PhysicianSection() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                 <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(9,173,112,0.08)', border: '1px solid rgba(9,173,112,0.15)' }}>
                   <div style={{ fontSize: '24px', fontWeight: 800, color: T.green, letterSpacing: '-0.02em', marginBottom: '2px' }}>
-                    Intake
+                    {t('physician.intake')}
                   </div>
                   <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                    Review
+                    {t('physician.review')}
                   </div>
                 </div>
                 <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(32,181,223,0.08)', border: '1px solid rgba(32,181,223,0.15)' }}>
                   <div style={{ fontSize: '24px', fontWeight: 800, color: T.link, letterSpacing: '-0.02em', marginBottom: '2px' }}>
-                    Notes
+                    {t('physician.notes')}
                   </div>
                   <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                    Document
+                    {t('physician.document')}
                   </div>
                 </div>
               </div>
@@ -243,17 +245,17 @@ export default function PhysicianSection() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <Ico p={ICONS.activity} size={14} sw={1.6} color={T.blue} />
                   <span style={{ fontSize: "13px", fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                    A connected care journey
+                    {t('physician.aConnectedCareJourney')}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: "1px solid var(--border)" }}>
                     <span style={{ fontSize: "13px", color: T.slate }}>01</span>
-                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>Review patient intake</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>{t('reviewPatientIntake')}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
                     <span style={{ fontSize: "13px", color: T.slate }}>02</span>
-                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>Document follow-up</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.navy }}>{t('documentFollowUp')}</span>
                   </div>
                 </div>
               </div>
@@ -279,7 +281,7 @@ export default function PhysicianSection() {
             >
               <Ico p={ICONS.check} size={16} sw={2.5} color={T.green} />
               <span style={{ fontSize: "13px", fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                Approval required
+                {t('physician.approvalRequired')}
               </span>
             </div>
 
@@ -302,7 +304,7 @@ export default function PhysicianSection() {
             >
               <Ico p={ICONS.shield} size={16} sw={1.75} color={T.blue} />
               <span style={{ fontSize: "13px", fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-                Account verification
+                {t('physician.accountVerification')}
               </span>
             </div>
           </div>

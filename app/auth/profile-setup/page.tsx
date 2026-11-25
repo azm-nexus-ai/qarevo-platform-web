@@ -183,7 +183,7 @@ function LeftPanel() {
             <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('profileSetupIntro.builtAroundYourHealthStory')}</span>
           </h2>
           <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Your profile helps us match you with the right physicians and enable more meaningful, secure consultations.
+            {t('profileSetupIntro.yourProfileHelpsUsMatch')}
           </p>
         </div>
       </div>
@@ -350,13 +350,13 @@ export default function ProfileSetupPage() {
                   lineHeight: 1.2,
                 }}
               >
-                Welcome to Your Health Journey
+                {t('profileSetupIntro.welcomeToYourHealthJourney')}
               </h1>
               <p style={{ margin: '0 0 10px', fontSize: '14px', color: T.slate, lineHeight: 1.68, letterSpacing: '-0.01em' }}>
-                Before we connect you with trusted healthcare professionals, let&apos;s take a few moments to personalize your healthcare experience.
+                {t('profileSetupIntro.beforeWeConnectYouWith')}
               </p>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.68, letterSpacing: '-0.01em' }}>
-                Completing your profile allows us to better understand your needs, recommend suitable physicians, improve consultations, and provide a more personalized healthcare experience.
+                {t('profileSetupIntro.completingYourProfileAllowsUs')}
               </p>
             </header>
 
@@ -389,7 +389,7 @@ export default function ProfileSetupPage() {
 
             <div style={{ marginBottom: '16px' }}>
               <p style={{ margin: '0 0 10px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Why we need this
+                {t('profileSetupIntro.whyWeNeedThis')}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <TrustCard label={t('profileSetupIntro.betterDoctorRecommendations')} sub={t('profileSetupIntro.tailoredPhysicianSuggestionsForYour')} icon={ICONS.steth} accent={T.blue} />
@@ -473,7 +473,7 @@ export default function ProfileSetupPage() {
                   letterSpacing: '-0.01em',
                 }}
               >
-                Back
+                {t('profileSetupIntro.back')}
               </Link>
             </div>
           </section>

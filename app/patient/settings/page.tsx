@@ -1620,7 +1620,7 @@ function PasskeysDialog({
               <div key={item.id} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '14px' }}>
                 <div className='flex flex-wrap items-start justify-between gap-3'>
                   <div>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: T.navy }}>{item.device_name || 'Passkey'}</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: T.navy }}>{item.device_name || t('passkeyFallback')}</p>
                     <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
                       {t('addedAt', { time: item.created_at ? localDateTime(item.created_at, german) : t('recently') })}
                     </p>

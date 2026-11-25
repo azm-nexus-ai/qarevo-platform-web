@@ -169,7 +169,7 @@ export default function DoctorEpisodeDetailPage() {
           onClick={() => router.push('/doctor/workspace')}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
         >
-          Back to Workspace
+          {t('backToWorkspace')}
         </button>
       </div>
     )
@@ -202,12 +202,12 @@ export default function DoctorEpisodeDetailPage() {
             {episode.status.replaceAll('_', ' ').toUpperCase()}
           </span>
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${episode.ai_draft_ready ? 'bg-green-100 text-green-800' : 'bg-surface-subtle text-secondary'}`}>
-            {episode.ai_draft_ready ? 'AI DRAFT READY' : episode.latest_ai_job_status?.toUpperCase() || 'NO AI DRAFT'}
+            {episode.ai_draft_ready ? t('aiDraftReady') : episode.latest_ai_job_status?.toUpperCase() || t('noAiDraft')}
           </span>
         </div>
       </div>
 
-      <Section title="Patient">
+      <Section title={t('sectionPatient')}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium text-muted">{t('name')}</p>
@@ -228,7 +228,7 @@ export default function DoctorEpisodeDetailPage() {
         </div>
       </Section>
 
-      <Section title="Workflow Status">
+      <Section title={t('sectionWorkflow')}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm font-medium text-muted">{t('created')}</p>
@@ -247,7 +247,7 @@ export default function DoctorEpisodeDetailPage() {
         </div>
       </Section>
 
-      <Section title="Intake Response">
+      <Section title={t('sectionIntake')}>
         {Object.keys(intakeResponses).length === 0 ? (
           <p className="text-muted">{t('noIntake')}</p>
         ) : (
@@ -262,7 +262,7 @@ export default function DoctorEpisodeDetailPage() {
         )}
       </Section>
 
-      <Section title="AI Drafts">
+      <Section title={t('sectionDrafts')}>
         {!ai_available && <p className="mb-4 text-sm text-amber-700">{t('aiUnavailable')}</p>}
         {actionError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -306,7 +306,7 @@ export default function DoctorEpisodeDetailPage() {
                             disabled={actionLoading === draftId}
                             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                           >
-                            Reject Draft
+                            {t('rejectDraft')}
                           </button>
                         </div>
                       )}
@@ -320,7 +320,7 @@ export default function DoctorEpisodeDetailPage() {
                       <textarea
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
-                        placeholder="Please explain why you are rejecting this AI draft..."
+                        placeholder={t('pleaseExplainWhyYouAre')}
                         className="w-full p-2 border border-theme rounded-lg text-sm"
                         rows={3}
                       />
@@ -341,7 +341,7 @@ export default function DoctorEpisodeDetailPage() {
                           }}
                           className="px-4 py-2 bg-surface-subtle text-secondary rounded-lg hover:bg-gray-300 text-sm font-medium"
                         >
-                          Cancel
+                          {t('cancel')}
                         </button>
                       </div>
                     </div>
@@ -353,7 +353,7 @@ export default function DoctorEpisodeDetailPage() {
         )}
       </Section>
 
-      <Section title="CWS Field Values">
+      <Section title={t('sectionFields')}>
         {field_values.length === 0 ? (
           <p className="text-muted">{t('noFields')}</p>
         ) : (
@@ -373,7 +373,7 @@ export default function DoctorEpisodeDetailPage() {
         )}
       </Section>
 
-      <Section title="Episode Timeline">
+      <Section title={t('sectionTimeline')}>
         {timelineLoading ? (
           <p className="text-muted">{t('loadingTimeline')}</p>
         ) : !timeline || timeline.events.length === 0 ? (
