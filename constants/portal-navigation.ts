@@ -1,5 +1,5 @@
 import {
-  BadgeCheck, Bell, Building2, CalendarClock, CalendarDays, ClipboardList, Cog, FileText, FlaskConical, HeartPulse,
+  BadgeCheck, Bell, Building2, CalendarClock, CalendarDays, ClipboardList, Cog, FileText, FlaskConical, HeartPulse, KeyRound,
   LayoutDashboard, LifeBuoy, MessageSquare, Pill, Receipt, ScrollText, ShieldAlert, ShieldCheck, SlidersHorizontal,
   Stethoscope, UserCog, UserRound, Users, UsersRound, Video,
 } from 'lucide-react'
@@ -61,6 +61,7 @@ export const ADMIN_NAV_GROUPS: PortalNavGroup[] = [
   ] },
   { title: 'account', items: [
     { label: 'Settings', href: ADMIN_ROUTES.settings, icon: Cog },
+    { label: 'Security', href: ADMIN_ROUTES.security, icon: KeyRound },
   ] },
 ]
 

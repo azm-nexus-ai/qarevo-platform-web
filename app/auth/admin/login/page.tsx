@@ -61,6 +61,9 @@ export default function AdminLoginPage() {
   const [authError, setAuthError] = useState('')
   // 'code' when the API requires the emailed second factor (ADMIN_MFA_REQUIRED).
   const [step, setStep] = useState<'password' | 'code'>('password')
+  const [method, setMethod] = useState<'email' | 'totp'>('email')
+  // Enforced two-factor: an administrator without an authenticator goes straight to set-up.
+  const finish = (result?: { two_factor_setup_required?: boolean }) => router.push(result?.two_factor_setup_required ? '/admin/security?setup=required' : '/admin/dashboard')
   const cooldown = useLoginCooldown()
 
   const emailErr = touched.email && !EMAIL_RE.test(email.trim()) ? t('emailInvalid') : ''
@@ -80,8 +83,8 @@ export default function AdminLoginPage() {
     try {
       response = await loginAdmin({ email: email.trim(), password })
       if (!current()) return
-      if ((response as { mfa_pending?: boolean }).mfa_pending) { setPassword(''); setStep('code'); return }
-      router.push('/admin/dashboard')
+      if ((response as { mfa_pending?: boolean }).mfa_pending) { setPassword(''); setMethod((response as { mfa_method?: string }).mfa_method === 'totp' ? 'totp' : 'email'); setStep('code'); return }
+      finish(response)
     } catch (error) {
       if (!current()) return
       cooldown.record(error)
@@ -144,7 +147,7 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Form */}
-        {step === 'code' ? <AdminCodeStep onDone={() => router.push('/admin/dashboard')} onRestart={() => { setStep('password'); setAuthError('') }} /> : (
+        {step === 'code' ? <AdminCodeStep method={method} onDone={finish} onRestart={() => { setStep('password'); setAuthError('') }} /> : (
         <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {/* Email */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

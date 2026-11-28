@@ -419,6 +419,8 @@ export type AuthTokenResponse = {
 export type AdminLoginResponse = AuthTokenResponse & {
     role: string;
     admin_role: string;
+    /** Enforced two-factor: set up an authenticator before other admin work. */
+    two_factor_setup_required?: boolean;
 };
 
 export type PatientDoctor = {

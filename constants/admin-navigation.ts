@@ -20,6 +20,7 @@ export const ADMIN_ROUTES = {
   audit: '/admin/audit',
   clinicalSafety: '/admin/clinical-safety',
   settings: '/admin/settings',
+  security: '/admin/security',
   logout: '/auth/admin/login',
 } as const
 
