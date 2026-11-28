@@ -55,7 +55,7 @@ function getStatusColor(status: string) {
   }
 }
 
-function StatCard({ title, value, icon, color, href, onNavigate }: { title: string; value: number; icon: string | readonly string[]; color: string; href: string; onNavigate: (href: string) => void }) {
+function StatCard({ title, value, icon, color, href, onNavigate, note }: { title: string; value: number; icon: string | readonly string[]; color: string; href: string; onNavigate: (href: string) => void; note?: string }) {
   return (
     <button
       type="button"
@@ -75,6 +75,7 @@ function StatCard({ title, value, icon, color, href, onNavigate }: { title: stri
         <div>
           <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{title}</p>
           <p style={{ margin: '8px 0 0', fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy }}>{value}</p>
+          {note && <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.slate2 }}>{note}</p>}
         </div>
         <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'var(--brand-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
           <Ico p={icon} size={28} sw={1.8} color={color} />
@@ -292,7 +293,7 @@ export default function DoctorDashboard() {
       {/* Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: '16px' }}>
         <StatCard title={t('todaysAppointments')} value={dashboardData.stats.today_appointments} icon={ICONS.calendar} color={T.blue} href="/doctor/appointments" onNavigate={router.push} />
-        <StatCard title={t('pendingPatients')} value={dashboardData.stats.pending_patients} icon={ICONS.user} color={T.amber} href="/doctor/patients" onNavigate={router.push} />
+        <StatCard title={t('pendingPatients')} value={dashboardData.stats.pending_patients} note={dashboardData.stats.pending_patients ? t('openWaitingQueue') : t('nobodyWaiting')} icon={ICONS.user} color={T.amber} href="/doctor/workspace#consultations-title" onNavigate={router.push} />
         <StatCard title={t('assignedEpisodes')} value={dashboardData.stats.assigned_episodes} icon={ICONS.cpu} color={T.cyan} href="/doctor/workspace" onNavigate={router.push} />
         <StatCard title={t('aiDraftsReady')} value={dashboardData.stats.episodes_with_ai_ready} icon={ICONS.zap} color={T.green} href="/doctor/workspace" onNavigate={router.push} />
       </div>

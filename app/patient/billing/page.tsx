@@ -271,7 +271,8 @@ export default function PatientBillingPage() {
             <PortalBadge tone={insuranceInfo.tone}>{insuranceStatus}</PortalBadge>
             <p className='mt-3 text-sm leading-6' style={{ color: T.slate }}>{insurance.provider_name || t('noInsurerAdded')}</p>
             <p className='mt-2 mb-4 max-w-2xl text-sm leading-6' style={{ color: T.slate }}>{insuranceInfo.notice}</p>
-            <Link href='/patient/settings' className='inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold' style={{ color: T.link, border: '1px solid var(--border)', background: 'var(--surface-subtle)' }}>{t('reviewInsurance')}</Link>
+            <Link href='/patient/settings?return=/patient/billing#insurance' className='inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold' style={{ color: T.link, border: '1px solid var(--border)', background: 'var(--surface-subtle)' }}>{t('reviewInsurance')}</Link>
+            <p className='mt-4 mb-0 text-sm'><Link href={`/support?q=${encodeURIComponent(t('helpTopic'))}`} style={{ color: T.link, fontWeight: 700 }}>{t('billingHelp')}</Link></p>
           </PortalCard>
         </div>
       ) : (
@@ -420,7 +421,7 @@ export default function PatientBillingPage() {
               </div>
               {insurance.status === 'not_added' ? (
                 <div className='mt-4'>
-                  <Link href='/patient/settings' style={{ color: T.link, fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>{t('addInsurance')}</Link>
+                  <Link href='/patient/settings?return=/patient/billing#insurance' style={{ color: T.link, fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>{t('addInsurance')}</Link>
                 </div>
               ) : null}
             </PortalCard>

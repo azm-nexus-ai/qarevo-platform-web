@@ -431,6 +431,8 @@ export type PatientDoctor = {
     reviews: number;
     consultationFee: number;
     nextAvailable: string;
+    /** ISO start of the earliest bookable slot; null when none is free in the next 7 days. */
+    nextAvailableAt?: string | null;
     languages: string[];
     insurance: string[];
     gender: "female" | "male" | "other";

@@ -72,6 +72,9 @@ test('generic upload displays exact validation before sending and preserves cano
 test('a lost upload acknowledgment retains the exact intent and retry confirms one saved file', async ({ page, context }) => {
   const state = await prepare(context); state.uploadMode = 'lost-ack'; const dialog = await openUpload(page); await fillUpload(page)
   await dialog.getByRole('button', { name: 'Upload Record', exact: true }).click(); await expect(dialog.getByRole('alert')).toContainText('confirmation is temporarily unavailable'); await expect(dialog.getByRole('textbox', { name: 'Support reference', exact: true })).toHaveValue(REF)
+  // A failed upload keeps every entry and the chosen file on screen.
+  await expect(dialog.getByLabel('Document Name (Required)', { exact: true })).toHaveValue(PRIVATE); await expect(dialog.getByLabel('Record Type (Required)', { exact: true })).toHaveValue('Prescription')
+  await expect(dialog.getByLabel('Date of Record (Required)', { exact: true })).toHaveValue('2026-11-11'); await expect(dialog.getByLabel('Description (Optional)', { exact: true })).toHaveValue('Synthetic private description'); await expect(dialog).toContainText('synthetic.pdf')
   state.uploadMode = 'success'; await dialog.getByRole('button', { name: 'Retry upload', exact: true }).click(); await expect(dialog).toHaveCount(0)
   expect(state.uploads).toHaveLength(2); expect(state.uploads[1]).toEqual(state.uploads[0]); expect(state.saved.size).toBe(1); await expect(card(page)).toHaveCount(1); await assertNoPrivateStorage(page)
 })

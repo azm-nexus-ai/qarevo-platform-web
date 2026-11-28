@@ -301,7 +301,7 @@
       "showPassword": "Show password",
       "back": "Back",
       "title": "Sign in to Qarevo",
-      "subtitle": "Welcome back - your care ecosystem is ready.",
+      "subtitle": "Welcome back. Sign in to open your appointments and documents.",
       "emailLabel": "Email Address (Required)",
       "passwordLabel": "Password (Required)",
       "forgot": "Forgot password?",
@@ -437,7 +437,7 @@
       "termsStatus": "terms status",
       "required": "(Required)",
       "privacyStatus": "privacy status",
-      "storeMyOptionalTestMarketing": "Store my optional test marketing preference (Optional)",
+      "storeMyOptionalTestMarketing": "Marketing consent for the test account (optional)",
       "signIn": "Sign In",
       "emailAddress": "Email Address",
       "password": "Password",
@@ -1027,7 +1027,7 @@
     "openWorkspace": "Open Workspace →",
     "noAssignedClinicalWorkflowEpisodes": "No assigned clinical workflow episodes",
     "loadingDoctorDashboard": "Loading doctor dashboard...",
-    "pendingPatients": "Pending Patients",
+    "pendingPatients": "Waiting now",
     "assignedEpisodes": "Assigned Episodes",
     "aiDraftsReady": "AI Drafts Ready",
     "recentAppointments": "Recent Appointments",
@@ -1035,7 +1035,9 @@
     "todaysAppointments": "Today's Appointments",
     "unableToLoadDashboardData": "Unable to load dashboard data right now.",
     "aiReady": "AI READY",
-    "noAiDraft": "NO AI DRAFT"
+    "noAiDraft": "NO AI DRAFT",
+    "nobodyWaiting": "Nobody is waiting",
+    "openWaitingQueue": "Open the waiting queue"
   },
   "adminDashboard": {
     "operationalStatus": "Operational Status",
@@ -1658,7 +1660,66 @@
       "specGeneralPractice": "General Practice",
       "specPediatrics": "Pediatrics",
       "specPsychiatry": "Psychiatry",
-      "specOrthopedics": "Orthopedics"
+      "specOrthopedics": "Orthopedics",
+      "noSlotSoon": "No free slot in the next 7 days"
+    },
+    "searchArea": {
+      "category": "Area",
+      "findAppointments": {
+        "title": "Find free appointments",
+        "sub": "Choose a doctor and a time",
+        "keywords": "appointment book booking doctor physician search slot video consultation"
+      },
+      "appointments": {
+        "title": "Appointments",
+        "sub": "Upcoming and past",
+        "keywords": "appointment calendar upcoming past cancelled reschedule cancel"
+      },
+      "billing": {
+        "title": "Bills and payments",
+        "sub": "Costs, insurance and receipts",
+        "keywords": "bill bills invoice invoices payment payments pay cost costs price receipt insurance coverage"
+      },
+      "records": {
+        "title": "Health record",
+        "sub": "Upload and view documents",
+        "keywords": "record records document documents upload file findings report pdf"
+      },
+      "medication": {
+        "title": "Medication and care plan",
+        "sub": "Recorded by your practice",
+        "keywords": "medication medicine prescription prescriptions care plan refill"
+      },
+      "labOrders": {
+        "title": "Lab orders",
+        "sub": "Orders and results",
+        "keywords": "lab laboratory blood test tests results order"
+      },
+      "referrals": {
+        "title": "Referrals",
+        "sub": "Provided by your practice",
+        "keywords": "referral referrals specialist letter"
+      },
+      "messages": {
+        "title": "Messages",
+        "sub": "Write to your practice",
+        "keywords": "message messages chat inbox write contact"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "sub": "Updates about your care",
+        "keywords": "notification notifications updates news alerts"
+      },
+      "settings": {
+        "title": "Settings",
+        "sub": "Profile, insurance and security",
+        "keywords": "settings profile account password language insurance security passkey"
+      },
+      "help": {
+        "title": "Help",
+        "sub": "Answers and contact",
+        "keywords": "help support question faq contact problem"
+      }
     }
   },
   "onboarding": {
@@ -2157,7 +2218,9 @@
     "costPkv": "Private invoice from the practice under GOÄ. You see the expected amount before booking.",
     "costSelfPay": "Self-pay service. You see the price and who invoices you before booking.",
     "loadingName": "Loading…",
-    "pricingPending": "Pricing pending setup"
+    "pricingPending": "Pricing pending setup",
+    "noSlotSoon": "No free slot in the next 7 days",
+    "feeFrom": "from {price}"
   },
   "patientPhysician": {
     "loadingPhysicianProfile": "Loading physician profile",
@@ -2220,7 +2283,8 @@
     "loadReviews": "{count, plural, one {Load # review} other {Load # reviews}}",
     "reviewMeta": "{date} · Helpful {count}",
     "loadFaq": "{count, plural, one {Load # question} other {Load # questions}}",
-    "years": "{years, plural, one {# year} other {# years}}"
+    "years": "{years, plural, one {# year} other {# years}}",
+    "noSlotSoon": "No free slot in the next 7 days"
   },
   "patientMessages": {
     "cancelReply": "Cancel reply",
@@ -2526,7 +2590,9 @@
     "cardProvider": "Insurance provider",
     "contactNameError": "Enter the contact’s name using 2–100 characters without HTML.",
     "contactRelationshipError": "Enter the contact’s relationship using 2–100 characters without HTML.",
-    "passkeyFallback": "Passkey"
+    "passkeyFallback": "Passkey",
+    "saveFailed": "Your settings could not be saved. Please try again.",
+    "languageHint": "Also switches the portal language, like the DE/EN switch at the top."
   },
   "patientLabRequests": {
     "careSummary": "Care summary",
@@ -3109,7 +3175,9 @@
         "SUNDAY": "Sunday"
       },
       "noConsultationServicesConfiguredYet": "No consultation services configured yet. Click \"Add Service\" to create one."
-    }
+    },
+    "billingHelpTopic": "fee codes",
+    "billingHelp": "How billing works for doctors (opens in a new tab)"
   },
   "adminAccounts": {
     "whatHappensToTheData": "What happens to the data",
@@ -3522,8 +3590,8 @@
     "checking": "Checking secure sign-in options…",
     "checkFailed": "Sign-in providers could not be checked. Email and password remain available.",
     "startFailed": "Provider sign-in could not start. Please retry.",
-    "allUnavailable": "Google, Microsoft and Apple sign-in are not set up in this environment yet. Use email and password.",
-    "someUnavailable": "Not set up yet: {providers}.",
+    "allUnavailable": "Sign-in with Google, Microsoft or Apple is currently unavailable. Please sign in with email and password.",
+    "someUnavailable": "Currently unavailable: {providers}.",
     "enterPasswordFirst": "Enter your current password before connecting a provider.",
     "linkHint": "The provider is connected to this account. Its role, status and second factor still apply.",
     "signUpHint": "New to Qarevo? Continue with a provider and finish registering. Existing accounts connect a provider after signing in.",
@@ -3575,7 +3643,11 @@
       "episodesIntro": "Assigned episodes use a separate clinical lifecycle and are independent of the consultation filter.",
       "noEpisodes": "No assigned episodes found.",
       "draftReady": "AI draft ready",
-      "noDraft": "No AI draft"
+      "noDraft": "No AI draft",
+      "noneWithStatus": "No consultations with the status \"{status}\"",
+      "intakeSubmitted": "Intake submitted: {date}",
+      "draftInProgress": "AI draft in progress",
+      "refresh": "Refresh: {title}"
     }
   },
   "doctorBookability": {
@@ -3612,7 +3684,8 @@
       "pageWithTotal": "Page {page} · {total} {label}",
       "previous": "Previous {label}",
       "next": "Next {label}",
-      "actionUnconfirmed": "This change could not be confirmed. Refresh and review the saved record before retrying."
+      "actionUnconfirmed": "This change could not be confirmed. Refresh and review the saved record before retrying.",
+      "serverError": "Your practice details could not be loaded right now. Please try again in a moment; your saved data is not affected."
     },
     "security": {
       "title": "Practice security",
@@ -3917,7 +3990,7 @@
     "noInsurerRecorded": "No insurer recorded",
     "memberOnFile": "Member record on file",
     "title": "Billing & Payments",
-    "description": "Track balances, payment methods, invoices, insurance coverage, and upcoming healthcare charges from one dedicated billing workspace.",
+    "description": "See how your insurance is recorded and what an appointment may cost. Online payment and practice invoices will appear here once they are available.",
     "billingError": "Billing error",
     "retry": "Retry billing",
     "availabilityLabel": "Billing availability",
@@ -3968,7 +4041,9 @@
     "gotIt": "Got it",
     "notAvailable": "Not available",
     "downloadPdf": "Download PDF",
-    "addCard": "Add Card"
+    "addCard": "Add Card",
+    "helpTopic": "cost",
+    "billingHelp": "Help with costs and invoices"
   },
   "patientDeviceCheck": {
     "eyebrow": "Device readiness",
@@ -5702,7 +5777,8 @@
     "footerNote": "Email verification · Protected account access"
   },
   "sessionPolicy": {
-    "forYourSecuritySessionsExpire": "For your security, sessions expire after inactivity or the maximum session duration. Save your work when an expiry warning appears."
+    "forYourSecuritySessionsExpire": "For your security, sessions expire after inactivity or the maximum session duration. Save your work when an expiry warning appears.",
+    "withMinutes": "For your security, you are signed out after {minutes} minutes without activity and after {hours} hours at the latest. You are warned beforehand and can stay signed in."
   },
   "logoutModal": {
     "yes": "Yes",
@@ -5758,7 +5834,11 @@
     "youHaveUnsavedChangesKeep": "You have unsaved changes. Keep editing to save your draft, or discard these changes and leave. Previously saved versions will remain available.",
     "stayOnThisPage": "Stay on this page",
     "keepEditing": "Keep editing",
-    "discardAndLeave": "Discard and leave"
+    "discardAndLeave": "Discard and leave",
+    "profileTitle": "Keep your profile changes?",
+    "profileText": "You have unsaved changes to your profile or offers. Keep editing to save them, or discard them and leave. Your last saved profile stays as it is.",
+    "profileBusyTitle": "Your profile is being saved",
+    "profileBusyText": "Wait until saving has finished before leaving this page."
   },
   "supportReference": {
     "clipboardUnavailable": "Clipboard unavailable",
@@ -5813,6 +5893,26 @@
       "changeProfile": {
         "question": "I need to change my profile",
         "answer": "Open Settings in your portal. Required fields and validation messages explain what must be completed."
+      },
+      "patientBilling": {
+        "question": "What will my appointment cost, and where do I find invoices?",
+        "answer": "Your insurance is recorded under Settings. Before you book, the booking review shows the cost status: for statutory insurance whether the practice confirms it as a covered service, for private insurance that the practice invoices you under the GOÄ, and for self-payers the price. Payment is not taken in the portal yet. Practice invoices will appear under Billing once they are available.",
+        "keywords": "billing invoice payment cost price insurance Rechnung Abrechnung Kosten"
+      },
+      "doctorBilling": {
+        "question": "How does billing work for doctors?",
+        "answer": "Billing inside Qarevo is not live yet. The treating practice invoices its own services: statutory patients through your practice software, private patients under the GOÄ. Selecting fee codes at the case and handing them over to practice software are in preparation. No Qarevo usage fee is charged in this development preview.",
+        "keywords": "billing invoice fee codes GOÄ EBM payout Abrechnung Honorar"
+      },
+      "documentUpload": {
+        "question": "My document upload failed",
+        "answer": "Supported files are PDF, Word, PNG, JPG and WebP up to 3 MB. If an upload fails, everything you entered stays in the form. Choose Retry: the same attempt is reused, so the document is never saved twice. If the message says file storage is unavailable, your file was not saved; please try again later.",
+        "keywords": "upload document file PDF failed Hochladen Dokument Datei"
+      },
+      "sessionEnded": {
+        "question": "Why was I signed out?",
+        "answer": "For your security you are signed out after a period without activity and after a maximum session length. The sign-in page states the exact minutes for your portal. A warning appears beforehand so you can stay signed in; drafts you saved are kept.",
+        "keywords": "session timeout signed out logout inactivity Sitzung abgemeldet"
       }
     },
     "helpSupport": "Help & Support",

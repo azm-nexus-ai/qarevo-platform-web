@@ -75,7 +75,7 @@ for (const width of [320, 820, 1440]) {
     await expect(options.getByRole('button', { name: 'Continue with Apple', exact: true })).toBeDisabled()
     await expect(options.getByRole('button', { name: 'Continue with Microsoft', exact: true })).toBeDisabled()
     await expect(options.locator('svg')).toHaveCount(3)
-    await expect(options.getByRole('status')).toContainText('not set up in this environment')
+    await expect(options.getByRole('status')).toContainText('currently unavailable')
     await expect(options.getByRole('link', { name: 'Connect a provider after signing in', exact: true })).toHaveClass(/q-button/)
     await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).click()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)

@@ -362,7 +362,7 @@ export default function DoctorLoginPage() {
                 autoComplete="current-password"
               />
 
-              <SessionPolicyHint />
+              <SessionPolicyHint portal='provider' />
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Link href="/auth/doctor/forgot-password" style={{ fontSize: '13px', color: T.link, textDecoration: 'none', fontWeight: 500 }}>
                   {t('forgot')}

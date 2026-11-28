@@ -6,6 +6,7 @@ import AccountSecurity from '@/components/security/AccountSecurity'
 import { ProfileImageEditor } from '@/components/patient/ProfileImage'
 import { FieldFeedback } from '@/components/ui/ValidationFeedback'
 import { useTheme } from '@/components/ui/ThemeProvider'
+import { LOCALE_COOKIE } from '@/i18n/locale'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -93,7 +94,11 @@ export default function PatientSettingsPage() {
   const [toggles, setToggles] = useState<Record<ToggleKey, boolean>>(DEFAULT_TOGGLES)
   const [savedToggles, setSavedToggles] = useState<Record<ToggleKey, boolean>>(DEFAULT_TOGGLES)
   const [fontSize, setFontSize] = useState('Medium')
-  const [language, setLanguage] = useState('English')
+  // One language setting: the field shows the portal language (the header switch) and saving
+  // a different choice switches the portal, so the two can never disagree.
+  const portalLanguage = german ? 'German' : 'English'
+  const [languageChoice, setLanguage] = useState<string | null>(null)
+  const language = languageChoice ?? portalLanguage
   const [timeZone, setTimeZone] = useState('Europe/Berlin')
   const [savedDisplayPrefs, setSavedDisplayPrefs] = useState({
     fontSize: 'Medium',
@@ -219,7 +224,6 @@ export default function PatientSettingsPage() {
           timeZone: settingsData.time_zone || 'Europe/Berlin',
         }
         setFontSize(loadedDisplayPrefs.fontSize)
-        setLanguage(loadedDisplayPrefs.language)
         setTimeZone(loadedDisplayPrefs.timeZone)
         setSavedDisplayPrefs(loadedDisplayPrefs)
 
@@ -461,6 +465,11 @@ export default function PatientSettingsPage() {
       })
       setSaving(false)
       setSaveMessage(t('settingsSaved'))
+      setLanguage(null)
+      if (language !== portalLanguage) {
+        document.cookie = `${LOCALE_COOKIE}=${language === 'German' ? 'de' : 'en'}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
+        router.refresh()
+      }
     } catch (error) {
       if (isAuthError(error)) {
         setSaving(false)
@@ -469,14 +478,14 @@ export default function PatientSettingsPage() {
         return
       }
       setSaving(false)
-      showError(error, 'Failed to save settings. Please try again.')
+      showError(error, t('saveFailed'))
     }
   }
 
   function handleCancel() {
     setToggles(savedToggles)
     setFontSize(savedDisplayPrefs.fontSize)
-    setLanguage(savedDisplayPrefs.language)
+    setLanguage(null)
     setTimeZone(savedDisplayPrefs.timeZone)
     setSaveMessage(t('changesReverted'))
   }
@@ -950,6 +959,7 @@ export default function PatientSettingsPage() {
                 <ToggleRow label={t('highContrast')} enabled={toggles.highContrast} onToggle={() => toggleSetting('highContrast')} />
                 <SelectRow label={t('fontSize')} value={fontSize} options={['Small', 'Medium', 'Large']} onChange={updateFontSizePreference} optionLabel={option => t(`fontSize${option}`)} />
                 <SelectRow label={t('language')} value={language} options={['German', 'English']} onChange={setLanguage} optionLabel={option => t(`language${option}`)} />
+                <p className='m-0 text-xs leading-5 text-muted'>{t('languageHint')}</p>
                 <SelectRow label={t('timeZone')} value={timeZone} options={['Europe/Berlin', 'UTC', 'Europe/London']} onChange={setTimeZone} />
               </div>
             </PortalCard>

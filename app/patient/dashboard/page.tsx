@@ -1,5 +1,6 @@
 'use client'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { nextSlotText } from '@/lib/doctor-slot'
 import { readPortalIdentity } from '@/lib/portal-scope'
 import ProfileImage from '@/components/patient/ProfileImage'
 import PatientNotifications from '@/components/notifications/PatientNotifications'
@@ -173,6 +174,18 @@ const ACTION_KEYS: Record<string, [string, string]> = {
   '/patient/appointments': ['actionAppointments', 'actionAppointmentsSub'],
   '/patient/help': ['actionHelp', 'actionHelpSub'],
 }
+
+/** Portal areas the dashboard search can open directly, in addition to doctors, records and prescriptions. */
+const SEARCH_DESTINATIONS: { href: string; key: string }[] = [
+  { href: '/patient/find-doctor', key: 'findAppointments' }, { href: '/patient/appointments', key: 'appointments' },
+  { href: '/patient/billing', key: 'billing' }, { href: '/patient/medical-records', key: 'records' },
+  { href: '/patient/prescription-care-plan', key: 'medication' }, { href: '/patient/lab-requests', key: 'labOrders' },
+  { href: '/patient/referrals', key: 'referrals' }, { href: '/patient/messages', key: 'messages' },
+  { href: '/patient/notifications', key: 'notifications' }, { href: '/patient/settings', key: 'settings' },
+  { href: '/patient/help', key: 'help' },
+]
+/** Lower case without accents, so "Ärztin" matches "arztin" and "Rechnung" matches "rechnungen". */
+const searchable = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 const iconLookup = ICONS as Record<string, string | readonly string[]>
 const iconAliases: Record<string, string> = {
@@ -369,7 +382,7 @@ function topButtonBase(): CSSProperties {
 }
 
 export default function PatientDashboardPage() {
-  const t = useTranslations('patientDashboard')
+  const t = useTranslations('patientDashboard'), locale = useLocale()
   // Specialty values go to the doctor search unchanged; only their labels are translated.
   const specialtyLabel = (value: string) => t(`extra.spec${value.replace(/[^A-Za-z]/g, '')}`)
   const countLabel = (count: number, noun: 'plan' | 'result' | 'referral' | 'measurement' | 'event' | 'doctor') => t(`extra.count${noun[0].toUpperCase()}${noun.slice(1)}`, { count })
@@ -602,6 +615,13 @@ export default function PatientDashboardPage() {
     setSearchOpen(false)
     router.push(href)
   }
+
+  // Matching areas of the portal come first: "Rechnung" opens billing even when no doctor or record matches.
+  const pageHits = useMemo(() => {
+    const query = searchable(search.trim())
+    if (query.length < 2) return []
+    return SEARCH_DESTINATIONS.filter(({ key }) => searchable(`${t(`searchArea.${key}.title`)} ${t(`searchArea.${key}.keywords`)}`).includes(query))
+  }, [search, t])
 
   const categoryLabel = (category: PatientDashboardSearchResult['category']) => {
     if (category === 'doctors') return t('extra.resultDoctor')
@@ -1051,7 +1071,26 @@ export default function PatientDashboardPage() {
                           {searchError}
                         </div>
                       )}
-                      {!searching && !searchError && searchResults.length === 0 && (
+                      {pageHits.map(({ href, key }) => (
+                        <button
+                          key={`area-${key}`}
+                          type='button'
+                          role='option'
+                          aria-selected={false}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSearchResult(href)}
+                          style={{ width: '100%', border: 'none', borderRadius: '11px', background: 'transparent', padding: '10px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '10px', textAlign: 'left', cursor: 'pointer' }}
+                        >
+                          <span style={{ minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: "13px", fontWeight: 800, color: T.navy }}>{t(`searchArea.${key}.title`)}</span>
+                            <span style={{ display: 'block', marginTop: '2px', fontSize: "13px", color: T.slate2 }}>{t(`searchArea.${key}.sub`)}</span>
+                          </span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'center', minHeight: '22px', padding: '0 8px', borderRadius: '999px', background: 'rgba(32,181,223,0.12)', color: "var(--link)", fontSize: "13px", fontWeight: 700 }}>
+                            {t('searchArea.category')}
+                          </span>
+                        </button>
+                      ))}
+                      {!searching && !searchError && searchResults.length === 0 && pageHits.length === 0 && (
                         <div style={{ padding: '12px', fontSize: "13px", color: T.slate }}>
                           {t('noMatchingDoctorsRecordsOr')}
                         </div>
@@ -1573,7 +1612,7 @@ export default function PatientDashboardPage() {
                   <div key={doc.id} style={{ display: 'grid', gap: '8px' }}>
                     <DoctorCard name={doc.name} specialty={doc.specialty} verification={doc.verification} tags={doc.tags} imageUrl={doc.imageUrl} />
                     <div className='pd-doctor-footer'>
-                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : t('extra.noRatings')} · {t('extra.years', { years: doc.experienceYears })} · {doc.nextAvailable}</p>
+                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : t('extra.noRatings')} · {t('extra.years', { years: doc.experienceYears })} · {nextSlotText(doc, locale, t('extra.noSlotSoon'))}</p>
                       <div className='pd-doctor-actions'>
                         <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>{t('bookNow')}</Link>
                       </div>
@@ -1598,7 +1637,7 @@ export default function PatientDashboardPage() {
                   <div key={doc.name} style={{ display: 'grid', gap: '8px' }}>
                     <DoctorCard name={doc.name} specialty={doc.specialty} verification={doc.verification} tags={doc.tags} imageUrl={doc.imageUrl} />
                     <div className='pd-doctor-footer'>
-                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : t('extra.noRatings')} · {t('extra.years', { years: doc.experienceYears })} · {doc.nextAvailable}</p>
+                      <p className='pd-doctor-meta'>⭐ {doc.reviews > 0 ? doc.rating.toFixed(1) : t('extra.noRatings')} · {t('extra.years', { years: doc.experienceYears })} · {nextSlotText(doc, locale, t('extra.noSlotSoon'))}</p>
                       <div className='pd-doctor-actions'>
                         <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=view')} style={{ color: T.navy }}>{t('viewProfile')}</Link>
                         <Link className='pd-doctor-action-link' href={physicianPath(doc.id, doc.name, 'from=dashboard&intent=book')} style={{ color: "var(--link)" }}>{t('book')}</Link>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatEuro, lowestOfferPrice, nextSlotText } from '@/lib/doctor-slot'
 import { buildBookingQueryParams } from '@/lib/booking'
 
 import Link from 'next/link'
@@ -105,7 +106,7 @@ function buildBookingHref(
 
 
 function FindDoctorPageContent() {
-  const t = useTranslations('patientFindDoctor'), tVerification = useTranslations('doctorVerification')
+  const t = useTranslations('patientFindDoctor'), tVerification = useTranslations('doctorVerification'), locale = useLocale()
   const bookingParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -749,10 +750,11 @@ function FindDoctorPageContent() {
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('hospital')}</strong> {doctor.hospital}</p>
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('experience2')}</strong> {t('yearsCount', { count: doctor.experienceYears })}</p>
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('rating2')}</strong> {doctor.reviews > 0 ? t('ratingValue', { rating: doctor.rating.toFixed(1), count: doctor.reviews }) : t('noRatingsYet')}</p>
-                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('nextSlot')}</strong> {doctor.nextAvailable}</p>
+                        <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('nextSlot')}</strong> {nextSlotText(doctor, locale, t('noSlotSoon'))}</p>
                         <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('distance2')}</strong> {doctor.distanceKm != null ? `${doctor.distanceKm.toFixed(1)} km` : t('notAvailable')}</p>
-                        {doctor.services && doctor.services.length > 0 && (
-                          <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('fee')}</strong> {t('pricingPending')}</p>
+                        {/* Self-payers see the lowest published offer; insured patients see their cost status below. */}
+                        {coverage === 'SELF_PAY' && lowestOfferPrice(doctor) !== null && (
+                          <p style={{ margin: 0, fontSize: "13px", color: T.slate }}><strong style={{ color: T.navy }}>{t('fee')}</strong> {t('feeFrom', { price: formatEuro(lowestOfferPrice(doctor) as number, locale) })}</p>
                         )}
                       </div>
 

@@ -143,6 +143,8 @@ function routeAccess(path: string[], portal: Portal): 'public' | 'access' | 'mfa
   const namespace = path[2];
   const suffix = path.slice(3).join('/');
   if (namespace === 'practice' && suffix === 'capabilities') return 'public';
+  // Session limits in minutes for the sign-in pages: public, non-personal configuration.
+  if (namespace === 'session' && suffix === 'policy') return 'public';
   // Published legal texts (platform agreement, AVV, patient terms, privacy notice) are public reads.
   if (namespace === 'legal') {
     if (!/^documents(?:\/[A-Z_]{3,40})?$/.test(suffix)) throw new BoundaryError(404, 'The requested application service is unavailable.');

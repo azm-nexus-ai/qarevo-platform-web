@@ -8,6 +8,7 @@ export interface Physician {
   reviews: number
   consultationFee: number
   nextAvailable: string
+  nextAvailableAt?: string | null
   languages: string[]
   insurance: string[]
   gender: 'female' | 'male'

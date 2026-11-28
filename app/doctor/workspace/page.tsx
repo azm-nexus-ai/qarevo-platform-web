@@ -25,10 +25,11 @@ function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'PT'
 }
 function QueueSection({ id, title, description, loading, error, retry, children }: { id: string; title: string; description?: string; loading: boolean; error: string; retry: () => void; children: ReactNode }) {
+  const t = useTranslations('doctorWorkspace.extra')
   return <section aria-labelledby={id} aria-busy={loading} className='rounded-2xl border border-theme bg-surface p-5 sm:p-6'>
     <div className='mb-5 flex flex-wrap items-center justify-between gap-3'>
       <div><h2 id={id} className='portal-h2'>{title}</h2>{description && <p className='text-sm text-muted'>{description}</p>}</div>
-      <PortalButton disabled={loading} onClick={retry}>Refresh {title.toLowerCase()}</PortalButton>
+      <PortalButton disabled={loading} onClick={retry}>{t('refresh', { title })}</PortalButton>
     </div>
     {loading ? <p role='status' className='py-8 text-center text-muted'>Loading {title.toLowerCase()}…</p>
       : error ? <div role='alert' className='rounded-xl border border-theme bg-surface-subtle p-5 text-ink'><p>{error}</p><PortalButton onClick={retry}>Retry {title.toLowerCase()}</PortalButton></div>
@@ -108,7 +109,7 @@ export default function PhysicianWorkspace() {
     <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>{cards.map(([label, count]) => <div key={label} className='rounded-xl border border-theme bg-surface p-5'><p className='text-sm font-medium text-secondary'>{label}</p><p className='mt-2 text-3xl font-bold text-ink'>{count ?? '—'}</p></div>)}</div>
 
     <QueueSection id='consultations-title' title={t('extra.consultations')} loading={loading} error={error} retry={() => setConsultationReload(value => value + 1)}>
-      {!workspaceData?.consultations.length ? <div className='py-8 text-center'><h3 className='portal-h3'>{statusFilter ? `No ${selectedLabel?.toLowerCase() || 'matching'} consultations` : t('extra.none')}</h3><p className='text-muted'>{statusFilter ? t('extra.chooseAll') : t('extra.noneText')}</p></div>
+      {!workspaceData?.consultations.length ? <div className='py-8 text-center'><h3 className='portal-h3'>{statusFilter ? t('extra.noneWithStatus', { status: selectedLabel || statusFilter }) : t('extra.none')}</h3><p className='text-muted'>{statusFilter ? t('extra.chooseAll') : t('extra.noneText')}</p></div>
         : <div className='grid gap-3'>{workspaceData.consultations.map(consultation => <button key={consultation.consultation_id} type='button' onClick={() => router.push(`/doctor/workspace/${consultation.consultation_id}`)} className='flex w-full flex-col items-start justify-between gap-4 rounded-xl border border-theme bg-canvas p-4 text-left transition-colors hover:bg-surface-subtle sm:flex-row sm:items-center'>
           <span className='flex min-w-0 items-center gap-3'><span aria-hidden className='grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface-subtle font-semibold text-ink'>{initials(consultation.patient_name)}</span>
             <span className='min-w-0'><span className='block font-semibold text-ink'>{consultation.patient_name}</span><span className='block text-sm text-muted'>{formatDate(consultation.scheduled_time, t('extra.notScheduled'), dateLocale)}</span><QueueState state={consultation.queue_state} minutes={consultation.waiting_duration_minutes} /></span>
@@ -120,8 +121,8 @@ export default function PhysicianWorkspace() {
     <QueueSection id='clinical-episodes-title' title={t('extra.episodes')} description={t('extra.episodesIntro')} loading={episodesLoading} error={episodeError} retry={() => setEpisodeReload(value => value + 1)}>
       {!episodeData?.episodes.length ? <p className='py-8 text-center text-muted'>{t('extra.noEpisodes')}</p>
         : <div className='grid gap-3'>{episodeData.episodes.map(episode => <button key={episode.episode_id} type='button' onClick={() => router.push(`/doctor/episodes/${episode.episode_id}`)} className='flex w-full flex-col items-start justify-between gap-4 rounded-xl border border-theme bg-canvas p-4 text-left transition-colors hover:bg-surface-subtle sm:flex-row sm:items-center'>
-          <span className='flex min-w-0 items-center gap-3'><span aria-hidden className='grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface-subtle font-semibold text-ink'>{initials(episode.patient.name)}</span><span className='min-w-0'><span className='block font-semibold text-ink'>{episode.patient.name}</span><span className='block text-sm text-muted'>{episode.chief_complaint || episode.status.replaceAll('_', ' ')}</span>{episode.intake_submitted_at && <span className='mt-1 block text-xs text-secondary'>Intake submitted: {formatDate(episode.intake_submitted_at, t('extra.notScheduled'), dateLocale)}</span>}</span></span>
-          <span className='flex flex-wrap items-center gap-2'><PortalBadge tone={episode.ai_draft_ready ? 'success' : 'neutral'}>{episode.ai_draft_ready ? t('extra.draftReady') : episode.latest_ai_job_status?.replaceAll('_', ' ') || t('extra.noDraft')}</PortalBadge><ClinicalStatusBadge status={episode.status} domain='episode' /><span aria-hidden className='text-muted'>→</span></span>
+          <span className='flex min-w-0 items-center gap-3'><span aria-hidden className='grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface-subtle font-semibold text-ink'>{initials(episode.patient.name)}</span><span className='min-w-0'><span className='block font-semibold text-ink'>{episode.patient.name}</span><span className='block text-sm text-muted'>{episode.chief_complaint || episode.status.replaceAll('_', ' ')}</span>{episode.intake_submitted_at && <span className='mt-1 block text-xs text-secondary'>{t('extra.intakeSubmitted', { date: formatDate(episode.intake_submitted_at, t('extra.notScheduled'), dateLocale) })}</span>}</span></span>
+          <span className='flex flex-wrap items-center gap-2'><PortalBadge tone={episode.ai_draft_ready ? 'success' : 'neutral'}>{episode.ai_draft_ready ? t('extra.draftReady') : (episode.latest_ai_job_status ? t('extra.draftInProgress') : t('extra.noDraft'))}</PortalBadge><ClinicalStatusBadge status={episode.status} domain='episode' /><span aria-hidden className='text-muted'>→</span></span>
         </button>)}</div>}
       {episodeData && <Pagination data={episodeData} count={episodeData.episodes.length} name='episodes' onPage={setEpisodePage} />}
     </QueueSection>

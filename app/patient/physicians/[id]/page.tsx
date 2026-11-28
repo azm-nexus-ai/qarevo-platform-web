@@ -10,6 +10,7 @@ import { getPatientDoctor } from '@/lib/api'
 import type { PatientDoctor } from '@/lib/api'
 import { ICONS } from '@/constants/icons'
 import type { Physician, PhysicianProfileContent } from '@/constants/physicians'
+import { nextSlotText } from '@/lib/doctor-slot'
 import Ico from '@/components/ui/Ico'
 import DoctorAvatar from '@/components/cards/DoctorAvatar'
 import { doctorVerification } from '@/lib/doctor-verification'
@@ -84,6 +85,7 @@ function toPhysician(doctor: PatientDoctor): Physician {
     reviews: doctor.reviews,
     consultationFee: doctor.consultationFee,
     nextAvailable: doctor.nextAvailable,
+    nextAvailableAt: doctor.nextAvailableAt,
     languages: doctor.languages,
     insurance: doctor.insurance,
     gender: doctor.gender === 'male' ? 'male' : 'female',
@@ -536,7 +538,7 @@ function PhysicianProfilePageContent() {
 	                  </div>
 	                </>
 	              )}
-              {physician.nextAvailable && <p style={{ margin: '9px 0 0', fontSize: "13px", color: T.slate2 }}>{t('nextAppointment', { value: physician.nextAvailable })}</p>}
+              {physician.nextAvailable && <p style={{ margin: '9px 0 0', fontSize: "13px", color: T.slate2 }}>{t('nextAppointment', { value: nextSlotText(physician, german ? 'de' : 'en', t('noSlotSoon')) })}</p>}
             </article>
 
             <article style={{ background: "var(--surface-glass)", borderRadius: '18px', border: "1px solid var(--border)", boxShadow: Sh.card, padding: '16px' }}>

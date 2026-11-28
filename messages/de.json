@@ -301,7 +301,7 @@
       "showPassword": "Passwort anzeigen",
       "back": "Zurück",
       "title": "Bei Qarevo anmelden",
-      "subtitle": "Willkommen zurück – Ihre Versorgung ist bereit.",
+      "subtitle": "Willkommen zurück. Melden Sie sich an, um Ihre Termine und Unterlagen zu öffnen.",
       "emailLabel": "E-Mail-Adresse (erforderlich)",
       "passwordLabel": "Passwort (erforderlich)",
       "forgot": "Passwort vergessen?",
@@ -437,7 +437,7 @@
       "termsStatus": "Status Nutzungsbedingungen",
       "required": "(erforderlich)",
       "privacyStatus": "Status Datenschutz",
-      "storeMyOptionalTestMarketing": "Meine optionale Test-Einwilligung für Marketing speichern (optional)",
+      "storeMyOptionalTestMarketing": "Marketing-Einwilligung für das Testkonto (optional)",
       "signIn": "Anmelden",
       "emailAddress": "E-Mail-Adresse",
       "password": "Passwort",
@@ -1027,7 +1027,7 @@
     "openWorkspace": "Arbeitsbereich öffnen →",
     "noAssignedClinicalWorkflowEpisodes": "Keine zugewiesenen Behandlungsfälle",
     "loadingDoctorDashboard": "Übersicht wird geladen…",
-    "pendingPatients": "Wartende Patientinnen und Patienten",
+    "pendingPatients": "Wartet jetzt",
     "assignedEpisodes": "Zugewiesene Fälle",
     "aiDraftsReady": "KI-Entwürfe bereit",
     "recentAppointments": "Letzte Termine",
@@ -1035,7 +1035,9 @@
     "todaysAppointments": "Termine heute",
     "unableToLoadDashboardData": "Die Übersichtsdaten können gerade nicht geladen werden.",
     "aiReady": "KI BEREIT",
-    "noAiDraft": "KEIN KI-ENTWURF"
+    "noAiDraft": "KEIN KI-ENTWURF",
+    "nobodyWaiting": "Niemand wartet",
+    "openWaitingQueue": "Warteschlange öffnen"
   },
   "adminDashboard": {
     "operationalStatus": "Betriebsstatus",
@@ -1658,7 +1660,66 @@
       "specGeneralPractice": "Allgemeinmedizin",
       "specPediatrics": "Kinder- und Jugendmedizin",
       "specPsychiatry": "Psychiatrie",
-      "specOrthopedics": "Orthopädie"
+      "specOrthopedics": "Orthopädie",
+      "noSlotSoon": "Keine freien Termine in den nächsten 7 Tagen"
+    },
+    "searchArea": {
+      "category": "Bereich",
+      "findAppointments": {
+        "title": "Freie Termine suchen",
+        "sub": "Ärztin oder Arzt und Uhrzeit wählen",
+        "keywords": "termin termine buchen buchung arzt ärztin suche sprechstunde video"
+      },
+      "appointments": {
+        "title": "Termine",
+        "sub": "Anstehend und vergangen",
+        "keywords": "termin termine kalender anstehend vergangen abgesagt verschieben absagen"
+      },
+      "billing": {
+        "title": "Rechnungen und Zahlungen",
+        "sub": "Kosten, Versicherung und Belege",
+        "keywords": "rechnung rechnungen zahlung zahlungen bezahlen kosten preis beleg quittung versicherung kostenübernahme"
+      },
+      "records": {
+        "title": "Gesundheitsakte",
+        "sub": "Unterlagen hochladen und ansehen",
+        "keywords": "akte unterlagen dokument dokumente hochladen datei befund bericht pdf"
+      },
+      "medication": {
+        "title": "Medikamente und Behandlungsplan",
+        "sub": "Von Ihrer Praxis erfasst",
+        "keywords": "medikament medikamente rezept rezepte behandlungsplan arznei"
+      },
+      "labOrders": {
+        "title": "Laboraufträge",
+        "sub": "Aufträge und Befunde",
+        "keywords": "labor blut blutwerte test befund auftrag"
+      },
+      "referrals": {
+        "title": "Überweisungen",
+        "sub": "Von Ihrer Praxis bereitgestellt",
+        "keywords": "überweisung überweisungen facharzt fachärztin"
+      },
+      "messages": {
+        "title": "Nachrichten",
+        "sub": "Mit Ihrer Praxis schreiben",
+        "keywords": "nachricht nachrichten postfach schreiben kontakt"
+      },
+      "notifications": {
+        "title": "Benachrichtigungen",
+        "sub": "Neuigkeiten zu Ihrer Behandlung",
+        "keywords": "benachrichtigung benachrichtigungen mitteilung neuigkeiten"
+      },
+      "settings": {
+        "title": "Einstellungen",
+        "sub": "Profil, Versicherung und Sicherheit",
+        "keywords": "einstellungen profil konto passwort sprache versicherung sicherheit passkey"
+      },
+      "help": {
+        "title": "Hilfe",
+        "sub": "Antworten und Kontakt",
+        "keywords": "hilfe support frage fragen kontakt problem"
+      }
     }
   },
   "onboarding": {
@@ -2157,7 +2218,9 @@
     "costPkv": "Privatrechnung der Praxis nach GOÄ. Den voraussichtlichen Betrag sehen Sie vor der Buchung.",
     "costSelfPay": "Selbstzahlerleistung. Preis und Rechnungssteller sehen Sie vor der Buchung.",
     "loadingName": "Wird geladen …",
-    "pricingPending": "Preise werden noch eingerichtet"
+    "pricingPending": "Preise werden noch eingerichtet",
+    "noSlotSoon": "Keine freien Termine in den nächsten 7 Tagen",
+    "feeFrom": "ab {price}"
   },
   "patientPhysician": {
     "loadingPhysicianProfile": "Ärzteprofil wird geladen",
@@ -2220,7 +2283,8 @@
     "loadReviews": "{count, plural, one {# Bewertung laden} other {# Bewertungen laden}}",
     "reviewMeta": "{date} · Hilfreich {count}",
     "loadFaq": "{count, plural, one {# Frage laden} other {# Fragen laden}}",
-    "years": "{years, plural, one {# Jahr} other {# Jahre}}"
+    "years": "{years, plural, one {# Jahr} other {# Jahre}}",
+    "noSlotSoon": "Keine freien Termine in den nächsten 7 Tagen"
   },
   "patientMessages": {
     "cancelReply": "Antwort abbrechen",
@@ -2526,7 +2590,9 @@
     "cardProvider": "Krankenversicherung",
     "contactNameError": "Geben Sie den Namen des Kontakts mit 2–100 Zeichen ohne HTML ein.",
     "contactRelationshipError": "Geben Sie die Beziehung zum Kontakt mit 2–100 Zeichen ohne HTML ein.",
-    "passkeyFallback": "Passkey"
+    "passkeyFallback": "Passkey",
+    "saveFailed": "Ihre Einstellungen konnten nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    "languageHint": "Stellt auch die Portalsprache um, wie der Schalter DE/EN oben."
   },
   "patientLabRequests": {
     "careSummary": "Behandlungsübersicht",
@@ -3109,7 +3175,9 @@
         "SUNDAY": "Sonntag"
       },
       "noConsultationServicesConfiguredYet": "Noch keine Sprechstundenleistungen eingerichtet. Klicken Sie auf „Leistung hinzufügen“, um eine anzulegen."
-    }
+    },
+    "billingHelpTopic": "Honorar",
+    "billingHelp": "So funktioniert die Abrechnung für Ärztinnen und Ärzte (öffnet in neuem Tab)"
   },
   "adminAccounts": {
     "whatHappensToTheData": "Was mit den Daten geschieht",
@@ -3522,14 +3590,14 @@
     "checking": "Anmeldeoptionen werden geprüft …",
     "checkFailed": "Die Anmeldeanbieter konnten nicht geprüft werden. E-Mail und Passwort bleiben verfügbar.",
     "startFailed": "Die Anmeldung beim Anbieter konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
-    "allUnavailable": "Die Anmeldung mit Google, Microsoft oder Apple ist in dieser Umgebung noch nicht eingerichtet. Bitte verwenden Sie E-Mail und Passwort.",
-    "someUnavailable": "Noch nicht eingerichtet: {providers}.",
+    "allUnavailable": "Die Anmeldung mit Google, Microsoft oder Apple ist derzeit nicht verfügbar. Bitte melden Sie sich mit E-Mail und Passwort an.",
+    "someUnavailable": "Derzeit nicht verfügbar: {providers}.",
     "enterPasswordFirst": "Geben Sie zuerst Ihr aktuelles Passwort ein, um einen Anbieter zu verbinden.",
     "linkHint": "Der Anbieter wird mit diesem Konto verbunden. Rolle, Status und Zwei-Faktor-Anmeldung gelten weiterhin.",
     "signUpHint": "Neu bei Qarevo? Fahren Sie mit einem Anbieter fort und schließen Sie die Registrierung ab. Bestehende Konten verbinden den Anbieter nach der Anmeldung.",
     "connectRegion": "Anmeldeanbieter verbinden",
     "alternativeRegion": "Weitere Anmeldeoptionen",
-    "continueWith": "Weiter mit {provider}",
+    "continueWith": "Mit {provider} anmelden",
     "connectWith": "Mit {provider} verbinden",
     "opening": "Wird geöffnet …",
     "retry": "Erneut prüfen",
@@ -3575,7 +3643,11 @@
       "episodesIntro": "Zugewiesene Episoden haben einen eigenen klinischen Ablauf und hängen nicht vom Sprechstundenfilter ab.",
       "noEpisodes": "Keine zugewiesenen Episoden gefunden.",
       "draftReady": "KI-Entwurf bereit",
-      "noDraft": "Kein KI-Entwurf"
+      "noDraft": "Kein KI-Entwurf",
+      "noneWithStatus": "Keine Sprechstunden mit dem Status „{status}“",
+      "intakeSubmitted": "Anamnese übermittelt: {date}",
+      "draftInProgress": "KI-Entwurf in Arbeit",
+      "refresh": "Aktualisieren: {title}"
     }
   },
   "doctorBookability": {
@@ -3612,7 +3684,8 @@
       "pageWithTotal": "Seite {page} · {total} {label}",
       "previous": "Vorherige {label}",
       "next": "Nächste {label}",
-      "actionUnconfirmed": "Diese Änderung konnte nicht bestätigt werden. Aktualisieren Sie die Ansicht und prüfen Sie den gespeicherten Datensatz, bevor Sie es erneut versuchen."
+      "actionUnconfirmed": "Diese Änderung konnte nicht bestätigt werden. Aktualisieren Sie die Ansicht und prüfen Sie den gespeicherten Datensatz, bevor Sie es erneut versuchen.",
+      "serverError": "Ihre Praxisdaten konnten gerade nicht geladen werden. Bitte versuchen Sie es gleich erneut; Ihre gespeicherten Daten sind davon nicht betroffen."
     },
     "security": {
       "title": "Sicherheit im Praxisbereich",
@@ -3917,7 +3990,7 @@
     "noInsurerRecorded": "Keine Versicherung hinterlegt",
     "memberOnFile": "Versichertennummer hinterlegt",
     "title": "Abrechnung und Zahlungen",
-    "description": "Behalten Sie offene Beträge, Zahlungsmethoden, Rechnungen, Versicherungsanteile und anstehende Kosten an einem Ort im Blick.",
+    "description": "Hier sehen Sie, wie Ihre Versicherung erfasst ist und was ein Termin kosten kann. Onlinezahlung und Praxisrechnungen erscheinen hier, sobald sie verfügbar sind.",
     "billingError": "Fehler bei der Abrechnung",
     "retry": "Abrechnung erneut laden",
     "availabilityLabel": "Verfügbarkeit der Abrechnung",
@@ -3968,7 +4041,9 @@
     "gotIt": "Verstanden",
     "notAvailable": "Nicht verfügbar",
     "downloadPdf": "PDF herunterladen",
-    "addCard": "Karte hinzufügen"
+    "addCard": "Karte hinzufügen",
+    "helpTopic": "Kosten",
+    "billingHelp": "Hilfe zu Kosten und Rechnungen"
   },
   "patientDeviceCheck": {
     "eyebrow": "Gerätecheck",
@@ -5702,7 +5777,8 @@
     "footerNote": "E-Mail-Bestätigung · Geschützter Kontozugang"
   },
   "sessionPolicy": {
-    "forYourSecuritySessionsExpire": "Zu Ihrer Sicherheit enden Sitzungen nach Inaktivität oder nach der maximalen Dauer. Speichern Sie Ihre Arbeit, wenn ein Hinweis auf das Ablaufen erscheint."
+    "forYourSecuritySessionsExpire": "Zu Ihrer Sicherheit enden Sitzungen nach Inaktivität oder nach der maximalen Dauer. Speichern Sie Ihre Arbeit, wenn ein Hinweis auf das Ablaufen erscheint.",
+    "withMinutes": "Zu Ihrer Sicherheit werden Sie nach {minutes} Minuten ohne Aktivität und spätestens nach {hours} Stunden abgemeldet. Vorher erhalten Sie einen Hinweis und können angemeldet bleiben."
   },
   "logoutModal": {
     "yes": "Ja",
@@ -5758,7 +5834,11 @@
     "youHaveUnsavedChangesKeep": "Sie haben nicht gespeicherte Änderungen. Bearbeiten Sie weiter, um Ihren Entwurf zu speichern, oder verwerfen Sie die Änderungen und verlassen Sie die Seite. Bereits gespeicherte Versionen bleiben erhalten.",
     "stayOnThisPage": "Auf dieser Seite bleiben",
     "keepEditing": "Weiter bearbeiten",
-    "discardAndLeave": "Verwerfen und verlassen"
+    "discardAndLeave": "Verwerfen und verlassen",
+    "profileTitle": "Profiländerungen behalten?",
+    "profileText": "Sie haben ungespeicherte Änderungen an Ihrem Profil oder Ihren Angeboten. Bearbeiten Sie weiter, um sie zu speichern, oder verwerfen Sie sie und verlassen Sie die Seite. Ihr zuletzt gespeichertes Profil bleibt unverändert.",
+    "profileBusyTitle": "Ihr Profil wird gespeichert",
+    "profileBusyText": "Warten Sie, bis das Speichern abgeschlossen ist, bevor Sie diese Seite verlassen."
   },
   "supportReference": {
     "clipboardUnavailable": "Zwischenablage nicht verfügbar",
@@ -5813,6 +5893,26 @@
       "changeProfile": {
         "question": "Ich möchte mein Profil ändern",
         "answer": "Öffnen Sie die Einstellungen in Ihrem Portal. Pflichtfelder und Hinweise erklären, was ausgefüllt werden muss."
+      },
+      "patientBilling": {
+        "question": "Was kostet mein Termin und wo finde ich Rechnungen?",
+        "answer": "Ihre Versicherung ist unter „Einstellungen“ hinterlegt. Vor der Buchung zeigt die Buchungsübersicht den Kostenstatus: bei gesetzlicher Versicherung, ob die Praxis den Termin als Kassenleistung bestätigt, bei privater Versicherung, dass die Praxis nach GOÄ abrechnet, und für Selbstzahler den Preis. Im Portal wird noch keine Zahlung abgewickelt. Rechnungen der Praxis erscheinen unter „Abrechnung“, sobald sie verfügbar sind.",
+        "keywords": "Rechnung Abrechnung Kosten Preis Zahlung Versicherung billing invoice"
+      },
+      "doctorBilling": {
+        "question": "Wie funktioniert die Abrechnung für Ärztinnen und Ärzte?",
+        "answer": "Die Abrechnung in Qarevo ist noch nicht freigeschaltet. Die behandelnde Praxis rechnet ihre Leistungen selbst ab: gesetzlich Versicherte über Ihr Praxisverwaltungssystem, Privatversicherte nach GOÄ. Die Auswahl der Gebührenziffern am Fall und die Übergabe an das Praxisverwaltungssystem sind in Vorbereitung. In dieser Entwicklungsvorschau wird keine Qarevo-Nutzungsgebühr berechnet.",
+        "keywords": "Abrechnung Honorar Gebührenziffern GOÄ EBM Auszahlung billing"
+      },
+      "documentUpload": {
+        "question": "Das Hochladen meines Dokuments ist fehlgeschlagen",
+        "answer": "Unterstützt werden PDF, Word, PNG, JPG und WebP bis 3 MB. Schlägt das Hochladen fehl, bleiben alle Eingaben im Formular erhalten. Wählen Sie „Erneut versuchen“: Derselbe Vorgang wird wiederverwendet, sodass das Dokument nie doppelt gespeichert wird. Meldet die Seite, dass der Dateispeicher nicht verfügbar ist, wurde die Datei nicht gespeichert; bitte versuchen Sie es später erneut.",
+        "keywords": "Hochladen Dokument Datei PDF fehlgeschlagen upload"
+      },
+      "sessionEnded": {
+        "question": "Warum wurde ich abgemeldet?",
+        "answer": "Zu Ihrer Sicherheit werden Sie nach einer Zeit ohne Aktivität und nach einer maximalen Sitzungsdauer abgemeldet. Die Anmeldeseite nennt die genauen Minuten für Ihr Portal. Vorher erscheint ein Hinweis, damit Sie angemeldet bleiben können; gespeicherte Entwürfe bleiben erhalten.",
+        "keywords": "Sitzung abgemeldet Abmeldung Inaktivität Zeitüberschreitung session"
       }
     },
     "helpSupport": "Hilfe und Support",

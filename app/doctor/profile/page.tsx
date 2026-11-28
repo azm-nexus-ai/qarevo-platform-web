@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { T, Sh } from '@/lib/tokens'
 import ProfileAvatar from '@/components/branding/ProfileAvatar'
+import UnsavedChangesDialog from '@/components/ui/UnsavedChangesDialog'
+import { useNavigationGuard } from 'nextjs-nav-guard'
 import { readAccountScope } from '@/lib/account-storage'
 import {
   clearPortalSession,
@@ -275,6 +277,8 @@ export default function DoctorProfilePage() {
   const [editingService, setEditingService] = useState<ConsultationService | null>(null)
   const [showServiceForm, setShowServiceForm] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // Leaving with unsaved profile or offer text asks first; sign-out and session expiry still leave.
+  const navigation = useNavigationGuard({ enabled: ({ to }) => (hasUnsavedChanges || saving) && !to.startsWith('/auth/') })
 
   useEffect(() => {
     if (!readSessionMarker()) {
@@ -452,6 +456,7 @@ export default function DoctorProfilePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0, overflowWrap: 'anywhere' }}>
+      <UnsavedChangesDialog variant='profile' open={navigation.active} busy={saving} onKeepEditing={navigation.reject} onDiscard={navigation.accept} />
       <style>{`
         @keyframes slideIn {
           from { transform: translateY(100px); opacity: 0; }
@@ -813,6 +818,7 @@ export default function DoctorProfilePage() {
           <div>
             <h3 style={{ margin: 0, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', color: T.navy }}>{t('consultationServices')}</h3>
             <p style={{ margin: '6px 0 0', fontSize: '13px', color: T.slate2 }}>{t('manageIndividualPricingDurationAnd')}</p>
+            <p style={{ margin: '6px 0 0', fontSize: '13px' }}><a href={`/support?q=${encodeURIComponent(t('billingHelpTopic'))}`} target='_blank' rel='noopener noreferrer' style={{ color: 'var(--link)', fontWeight: 700 }}>{t('billingHelp')}</a></p>
           </div>
           <button
             type="button"

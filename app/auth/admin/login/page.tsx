@@ -244,7 +244,7 @@ export default function AdminLoginPage() {
             </div>
           )}
 
-          <SessionPolicyHint />
+          <SessionPolicyHint portal='admin' />
 
           {/* Submit button */}
           <button
