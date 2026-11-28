@@ -12,12 +12,13 @@ import { ThemeToggle } from '@/components/ui/ThemeProvider'
 import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ADMIN_ROUTES, isAdminNavActive } from '@/constants/admin-navigation'
 import { PAGE_BG } from '@/lib/tokens'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import Link from 'next/link'
 import {
+  apiGet,
   clearPortalSession,
   isAdmin,
   logoutCurrentUser,
@@ -53,6 +54,17 @@ export default function AdminLayout({
       window.clearTimeout(mountedTimer)
     }
   }, [router])
+
+  // Enforced two-factor: until an authenticator is set up, every admin page leads to set-up.
+  const pathname = usePathname()
+  useEffect(() => {
+    if (!mounted || pathname?.startsWith('/admin/security')) return
+    let current = true
+    apiGet<{ setup_required?: boolean }>('/api/v1/admin/security/two-factor')
+      .then(status => { if (current && status?.setup_required) router.replace('/admin/security?setup=required') })
+      .catch(() => undefined)
+    return () => { current = false }
+  }, [mounted, pathname, router])
 
   const handleLogoutClick = () => {
     if (loggingOut) return

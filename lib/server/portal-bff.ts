@@ -171,7 +171,7 @@ function routeAccess(path: string[], portal: Portal): 'public' | 'access' | 'mfa
     throw new BoundaryError(403, 'This identity operation is unavailable in the practice portal.');
   }
   // Administrator second factor: only the admin portal's own challenge cookie.
-  if (['admin/mfa/verify', 'admin/mfa/resend'].includes(suffix)) {
+  if (['admin/mfa/verify', 'admin/mfa/verify-app', 'admin/mfa/resend'].includes(suffix)) {
     if (portal !== 'admin') throw new BoundaryError(403, 'This verification belongs to the administrator portal.');
     return 'mfa';
   }
