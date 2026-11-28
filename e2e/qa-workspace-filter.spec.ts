@@ -45,7 +45,7 @@ test('all consultations includes historical ended and cancelled work; canonical 
   for(const option of options) {
     await page.getByLabel('Consultation status',{exact:true}).selectOption(option.value)
     await expect.poll(() => control.statuses.at(-1)).toBe(option.value)
-    if(option.value === 'STARTED') await expect(section.getByRole('heading',{name:'No in progress consultations',exact:true})).toBeVisible()
+    if(option.value === 'STARTED') await expect(section.getByRole('heading',{name:'No consultations with the status "In progress"',exact:true})).toBeVisible()
     else {
       await expect(section.getByText(`Synthetic ${option.value} patient`,{exact:true})).toBeVisible()
       await expect(section.getByRole('button').filter({hasText:/Synthetic .* patient/})).toHaveCount(1)

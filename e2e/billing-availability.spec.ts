@@ -55,7 +55,7 @@ test('loading and unconfigured billing never flash a zero balance or active insu
   await expect(page.getByText('Not verified', { exact: true })).toBeVisible()
   await expect(page.getByText('Active', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Pay Now|Add Card|Download Receipt/ })).toHaveCount(0)
-  await expect(page.getByRole('link', { name: 'Review insurance details' })).toHaveAttribute('href', '/patient/settings')
+  await expect(page.getByRole('link', { name: 'Review insurance details' })).toHaveAttribute('href', '/patient/settings?return=/patient/billing#insurance')
 })
 
 test('billing outage shows a retry and no empty financial account', async ({ page, context }) => {
