@@ -1,0 +1,17 @@
+.scene { --tilt-x: 0deg; --tilt-y: 0deg; position: relative; width: var(--size); height: calc(var(--size) * 1.05); max-width: 100%; margin: 0 auto; perspective: calc(var(--size) * 3.4); pointer-events: none; user-select: none; contain: layout paint; }
+.stage { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(calc(10deg + var(--tilt-x))) rotateY(calc(-22deg + var(--tilt-y))); }
+.float { position: absolute; inset: 0; transform-style: preserve-3d; animation: sway 9s ease-in-out infinite; }
+.mark { position: absolute; left: 22%; top: 14%; width: 56%; aspect-ratio: 533 / 580; transform-style: preserve-3d; }
+.layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; backface-visibility: hidden; }
+.tile { position: absolute; display: block; height: auto; }
+.ring { width: 34%; left: -2%; top: 2%; opacity: .85; transform: translateZ(-70px); animation: bob 7s ease-in-out infinite; }
+.plus { width: 22%; right: 0; top: 4%; opacity: .9; transform: translateZ(-40px) rotate(8deg); animation: bob 6s ease-in-out -2s infinite; }
+.stairs { width: 24%; left: 2%; bottom: 14%; transform: translateZ(46px); filter: drop-shadow(0 10px 14px rgba(4, 53, 77, .22)); animation: bob 8s ease-in-out -1s infinite; }
+.spark { width: 13%; right: 8%; bottom: 22%; transform: translateZ(70px); filter: drop-shadow(0 8px 10px rgba(4, 53, 77, .2)); animation: bob 5s ease-in-out -3s infinite; }
+.pulse { position: absolute; left: 6%; right: 6%; bottom: 3%; width: 88%; opacity: .6; transform: translateZ(-10px) rotateX(70deg); transform-origin: 50% 100%; }
+.shadow { position: absolute; left: 22%; right: 22%; bottom: 6%; height: 12%; border-radius: 50%; background: radial-gradient(closest-side, rgba(4, 53, 77, .26), transparent); transform: translateZ(-60px) rotateX(80deg); filter: blur(4px); }
+.scene[data-tone=dark] .shadow { background: radial-gradient(closest-side, rgba(0, 0, 0, .45), transparent); }
+.scene[data-paused=true] .float, .scene[data-paused=true] .tile { animation-play-state: paused; }
+@keyframes sway { 0%, 100% { transform: translateY(0) rotateY(-4deg); } 50% { transform: translateY(-8px) rotateY(5deg); } }
+@keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -7px; } }
+@media (prefers-reduced-motion: reduce) { .float, .tile { animation: none; } }

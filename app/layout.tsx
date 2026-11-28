@@ -1,39 +1,52 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import localFont from 'next/font/local'
 import './globals.css'
-import { BookingProvider } from '@/contexts/BookingContext'
+import Footer from '@/components/layout/Footer'
+import { THEME_BOOTSTRAP } from '@/lib/theme'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
+import { PortalSessionBoundary } from '@/components/ui/PortalSessionBoundary'
+import { NavigationGuards } from '@/components/ui/NavigationGuards'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale, getTranslations } from 'next-intl/server'
 
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+const publicSans = localFont({
+  src: '../public/fonts/PublicSans-Variable.ttf',
+  variable: '--font-public-sans',
+  weight: '100 900',
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  title: {
-    default: 'Qarevo Health',
-    template: '%s | Qarevo Health',
-  },
-  description: 'Discover verified physicians, orchestrate continuous care, and experience the highest standard of clinical intelligence and data governance.',
-  keywords: ['healthcare', 'telemedicine', 'physician', 'GDPR', 'HIPAA', 'clinical intelligence'],
-  icons: {
-    icon: '/brand/qarevo-mark.png',
-    shortcut: '/brand/qarevo-mark.png',
-    apple: '/brand/qarevo-mark.png',
-  },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pageTitles')
+  return {
+    title: {
+      default: 'Qarevo Health',
+      template: '%s | Qarevo Health',
+    },
+    description: t('description'),
+    keywords: ['healthcare', 'telemedicine', 'physician', 'clinical intelligence'],
+    // Official brand mark (LOGO3A) as a crisp vector favicon, with the PNG for older browsers and iOS.
+    icons: {
+      icon: [{ url: '/brand/logo/qarevo-mark-colour.svg', type: 'image/svg+xml' }, { url: '/brand/qarevo-mark.png', type: 'image/png' }],
+      shortcut: '/brand/qarevo-mark.png',
+      apple: '/brand/qarevo-mark.png',
+    },
+  }
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale()
   return (
-    <html lang="en" className={inter.variable}>
+    <html suppressHydrationWarning lang={locale} className={publicSans.variable}>
+      <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body>
-        <BookingProvider>{children}</BookingProvider>
+        <NextIntlClientProvider><NavigationGuards><ThemeProvider><PortalSessionBoundary>{children}<Footer /></PortalSessionBoundary></ThemeProvider></NavigationGuards></NextIntlClientProvider>
       </body>
     </html>
   )

@@ -23,12 +23,12 @@ export default function TrustCard({ label, sub, icon, accent }: TrustCardData) {
         padding: '16px 14px 15px',
         borderRadius: '14px',
         cursor: 'default',
-        background: hovered ? `rgba(${r},${g},${b},0.07)` : 'rgba(255,255,255,0.75)',
+        background: hovered ? `rgba(${r},${g},${b},0.07)` : "var(--surface-glass)",
         backdropFilter: 'blur(16px) saturate(160%)',
         WebkitBackdropFilter: 'blur(16px) saturate(160%)',
         border: hovered
           ? `1px solid rgba(${r},${g},${b},0.24)`
-          : '1px solid rgba(255,255,255,0.8)',
+          : "1px solid var(--border)",
         boxShadow: hovered
           ? `inset 0 1px 0 rgba(255,255,255,0.85), 0 4px 20px rgba(${r},${g},${b},0.12)`
           : `inset 0 1px 0 rgba(255,255,255,0.95), ${Sh.inner}`,
@@ -56,7 +56,7 @@ export default function TrustCard({ label, sub, icon, accent }: TrustCardData) {
       <div>
         <div
           style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
             fontSize: '13px',
             fontWeight: 700,
             color: T.navy,
@@ -67,7 +67,7 @@ export default function TrustCard({ label, sub, icon, accent }: TrustCardData) {
         >
           {label}
         </div>
-        <div style={{ fontSize: '11px', color: T.slate2, lineHeight: 1.3 }}>{sub}</div>
+        <div style={{ fontSize: "13px", color: T.slate2, lineHeight: 1.3 }}>{sub}</div>
       </div>
     </div>
   )

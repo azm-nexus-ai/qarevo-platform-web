@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
@@ -16,7 +17,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 function JourneyIllustration() {
@@ -106,6 +107,7 @@ function JourneyIllustration() {
 }
 
 function LeftPanel() {
+  const t = useTranslations('auth')
   return (
     <div
       style={{
@@ -170,7 +172,7 @@ function LeftPanel() {
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontSize: '24px',
               fontWeight: 800,
               color: '#fff',
@@ -180,19 +182,19 @@ function LeftPanel() {
             }}
           >
             A healthier future starts now.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Welcome to your care journey.</span>
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('accountCreated.welcomeToYourCareJourney')}</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.52)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Every next step is designed to be secure, personal, and effortless as you begin your Qarevo Health experience.
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+            {t('accountCreated.everyNextStepIsDesigned')}
           </p>
         </div>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'Secure Foundation', sub: 'Encrypted identity and health records' },
-          { icon: ICONS.brain, label: 'Smart Care Intelligence', sub: 'AI-assisted recommendations tailored to you' },
-          { icon: ICONS.steth, label: 'Trusted Clinical Network', sub: 'Access verified physicians across specialties' },
+          { icon: ICONS.lock, label: t('accountCreated.secureFoundation'), sub: t('accountCreated.encryptedIdentityAndHealthRecords') },
+          { icon: ICONS.brain, label: t('accountCreated.smartCareIntelligence'), sub: t('accountCreated.aiAssistedRecommendationsTailoredTo') },
+          { icon: ICONS.steth, label: t('accountCreated.trustedClinicalNetwork'), sub: t('accountCreated.accessVerifiedPhysiciansAcrossSpecialties') },
         ].map(({ icon, label, sub }) => (
           <div
             key={label}
@@ -222,7 +224,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -232,14 +234,15 @@ function LeftPanel() {
 }
 
 function StepTimeline() {
+  const t = useTranslations('auth')
   const steps = useMemo(
     () => [
-      { icon: ICONS.user, title: 'Complete Your Profile', sub: 'Set your personal and care preferences' },
-      { icon: ICONS.activity, title: 'Tell Us About Your Health', sub: 'Share key details for tailored support' },
-      { icon: ICONS.steth, title: 'Discover Physicians', sub: 'Find verified specialists you can trust' },
-      { icon: ICONS.calendar, title: 'Book Your First Consultation', sub: 'Schedule care that fits your routine' },
+      { icon: ICONS.user, title: t('accountCreated.completeYourProfile'), sub: t('accountCreated.setYourPersonalAndCare') },
+      { icon: ICONS.activity, title: t('accountCreated.tellUsAboutYourHealth'), sub: t('accountCreated.shareKeyDetailsForTailored') },
+      { icon: ICONS.steth, title: t('accountCreated.discoverPhysicians'), sub: t('accountCreated.findVerifiedSpecialistsYouCan') },
+      { icon: ICONS.calendar, title: t('accountCreated.bookYourFirstConsultation'), sub: t('accountCreated.scheduleCareThatFitsYour') },
     ],
-    [],
+    [t],
   )
 
   return (
@@ -259,8 +262,8 @@ function StepTimeline() {
               gap: '12px',
               padding: '12px 13px',
               borderRadius: '12px',
-              background: 'rgba(4,53,77,0.024)',
-              border: '1px solid rgba(4,53,77,0.06)',
+              background: "var(--surface-hover)",
+              border: "1px solid var(--border)",
             }}
           >
             <div
@@ -281,7 +284,7 @@ function StepTimeline() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em', marginBottom: '2px' }}>{step.title}</div>
-              <div style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.005em' }}>{step.sub}</div>
+              <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.005em' }}>{step.sub}</div>
             </div>
             <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
           </div>
@@ -298,6 +301,7 @@ function StepTimeline() {
 }
 
 export default function AccountCreatedPage() {
+  const t = useTranslations('auth')
   const [exploreHover, setExploreHover] = useState(false)
   const router = useRouter()
 
@@ -347,16 +351,16 @@ export default function AccountCreatedPage() {
       </div>
 
       <div className='created-wrap' style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '44px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '500px' }}>
+        <div style={{ width: '100%', maxWidth: '500px', minWidth: 0 }}>
           <section
             className='created-card'
             aria-live='polite'
             style={{
-              background: 'rgba(255,255,255,0.9)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(34px) saturate(200%)',
               WebkitBackdropFilter: 'blur(34px) saturate(200%)',
               borderRadius: '24px',
-              border: '1px solid rgba(255,255,255,0.92)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)',
               padding: '38px 38px 30px',
               animation: 'fadeUp 0.38s ease both',
@@ -368,7 +372,7 @@ export default function AccountCreatedPage() {
                   width: '54px',
                   height: '54px',
                   borderRadius: '16px',
-                  background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                  background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                   boxShadow: '0 4px 16px rgba(32,181,223,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
                   display: 'flex',
                   alignItems: 'center',
@@ -383,7 +387,7 @@ export default function AccountCreatedPage() {
             <header style={{ textAlign: 'center', marginBottom: '16px' }}>
               <h1
                 style={{
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                   fontSize: '25px',
                   fontWeight: 800,
                   color: T.navy,
@@ -392,13 +396,13 @@ export default function AccountCreatedPage() {
                   margin: '0 0 9px',
                 }}
               >
-                Welcome to Qarevo Health!
+                {t('accountCreated.welcomeToQarevoHealth')}
               </h1>
               <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.68, margin: 0, letterSpacing: '-0.01em' }}>
-                Your account has been successfully created.
+                {t('accountCreated.yourAccountHasBeenSuccessfully')}
               </p>
               <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.68, margin: '8px 0 0', letterSpacing: '-0.01em' }}>
-                You are now ready to experience a smarter, more connected approach to healthcare, from finding trusted physicians to managing consultations and ongoing care, all in one secure platform.
+                {t('accountCreated.youAreNowReadyTo')}
               </p>
             </header>
 
@@ -415,14 +419,14 @@ export default function AccountCreatedPage() {
               }}
             >
               <Ico p={ICONS.check} size={10} sw={3} color={T.green} />
-              <span style={{ fontSize: '11.5px', fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                Account Created Successfully
+              <span style={{ fontSize: "13px", fontWeight: 700, color: T.teal, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                {t('accountCreated.accountCreatedSuccessfully')}
               </span>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <p style={{ fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
-                Next steps
+              <p style={{ fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
+                {t('accountCreated.nextSteps')}
               </p>
               <StepTimeline />
             </div>
@@ -431,22 +435,22 @@ export default function AccountCreatedPage() {
               style={{
                 padding: '14px 14px 12px',
                 borderRadius: '12px',
-                background: 'rgba(4,53,77,0.025)',
+                background: "var(--surface-hover)",
                 border: `1px solid ${T.borderFaint}`,
                 marginBottom: '16px',
               }}
             >
               <p style={{ fontSize: '13px', color: T.navy2, lineHeight: 1.62, margin: 0, letterSpacing: '-0.005em' }}>
-                Healthcare should feel personal, simple, and always within reach. We&apos;re excited to help you take the next step in your health journey.
+                {t('accountCreated.healthcareShouldFeelPersonalSimple')}
               </p>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <TrustCard label='Secure & Encrypted' sub='End-to-end protected' icon={ICONS.lock} accent={T.blue} />
-                <TrustCard label='AI-Assisted Healthcare' sub='Smart clinical guidance' icon={ICONS.brain} accent={T.purple} />
-                <TrustCard label='Verified Physicians' sub='Trusted specialists only' icon={ICONS.steth} accent={T.teal} />
-                <TrustCard label='Personalized Care' sub='Tailored to your needs' icon={ICONS.activity} accent={T.cyan} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '8px' }}>
+                <TrustCard label={t('accountCreated.secureEncrypted')} sub={t('accountCreated.endToEndProtected')} icon={ICONS.lock} accent={T.blue} />
+                <TrustCard label={t('accountCreated.aiAssistedHealthcare')} sub={t('accountCreated.smartClinicalGuidance')} icon={ICONS.brain} accent={T.purple} />
+                <TrustCard label={t('accountCreated.verifiedPhysicians')} sub={t('accountCreated.trustedSpecialistsOnly')} icon={ICONS.steth} accent={T.teal} />
+                <TrustCard label={t('accountCreated.personalizedCare')} sub={t('accountCreated.tailoredToYourNeeds')} icon={ICONS.activity} accent={T.cyan} />
               </div>
             </div>
 
@@ -457,7 +461,7 @@ export default function AccountCreatedPage() {
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                  background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',
@@ -481,7 +485,7 @@ export default function AccountCreatedPage() {
                   router.push('/auth/profile-setup/personal-information')
                 }}
               >
-                <span>Continue Setup</span>
+                <span>{t('accountCreated.continueSetup')}</span>
                 <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
               </HoverBtn>
 
@@ -491,7 +495,7 @@ export default function AccountCreatedPage() {
                   onMouseEnter={() => setExploreHover(true)}
                   onMouseLeave={() => setExploreHover(false)}
                   style={{
-                    color: exploreHover ? T.blue : T.slate2,
+                    color: exploreHover ? T.link : T.slate2,
                     fontSize: '13px',
                     fontWeight: 600,
                     textDecoration: 'none',
@@ -499,43 +503,43 @@ export default function AccountCreatedPage() {
                     transition: 'color 0.15s ease',
                   }}
                 >
-                  Explore Platform
+                  {t('accountCreated.explorePlatform')}
                 </Link>
                 <span style={{ color: T.border }}>•</span>
                 <Link href='/' style={{ color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                  Return to Home
+                  {t('accountCreated.returnToHome')}
                 </Link>
               </div>
             </div>
 
-            <div style={{ marginTop: '20px', paddingTop: '18px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+            <div style={{ marginTop: '20px', paddingTop: '18px', borderTop: "1px solid var(--border)" }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
                 {[
-                  { icon: ICONS.shield, label: 'Secure verification' },
-                  { icon: ICONS.lock, label: 'End-to-end encrypted' },
-                  { icon: ICONS.activity, label: 'HIPAA · GDPR compliant' },
-                  { icon: ICONS.brain, label: 'Medical-grade privacy' },
+                  { icon: ICONS.shield, label: t('accountCreated.secureVerification') },
+                  { icon: ICONS.lock, label: t('accountCreated.endToEndEncrypted') },
+                  { icon: ICONS.activity, label: t('accountCreated.emailVerificationProtectedAccess') },
+                  { icon: ICONS.brain, label: t('accountCreated.medicalGradePrivacy') },
                 ].map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
-                    <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          <p style={{ textAlign: 'center', fontSize: '12px', color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-            <Link href='/terms' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
-              Terms
+          <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
+            <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
+              {t('accountCreated.terms')}
             </Link>
             {' · '}
-            <Link href='/privacy' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
-              Privacy Policy
+            <Link href='/privacy' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
+              {t('accountCreated.privacyPolicy')}
             </Link>
             {' · '}
-            <Link href='/support' style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>
-              Support
+            <Link href='/support' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
+              {t('accountCreated.support')}
             </Link>
           </p>
         </div>

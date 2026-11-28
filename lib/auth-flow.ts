@@ -1,3 +1,5 @@
+import { createAccountDraftStorage } from './account-storage'
+
 export const AUTH_FLOW_STORAGE_KEY = 'qarevo.auth.flow.v1'
 
 export type OnboardingStage =
@@ -26,28 +28,11 @@ const DEFAULT_AUTH_FLOW_STATE: AuthFlowState = {
   updatedAt: '',
 }
 
-export async function signupRequest(email: string, password: string) {
-  const res = await fetch(`${process.env.API_BASE_URL}/api/v1/patient/signup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      email, password,
-    consents: {
-    terms_privacy: true,
-    telehealth: true,
-    marketing: false
-  }
-    }),
-  })
-  if (!res.ok) throw new Error('Login failed')
-  return res.json()
-}
-
 export function readAuthFlowState(): AuthFlowState | null {
   if (typeof window === 'undefined') return null
 
   try {
-    const raw = window.localStorage.getItem(AUTH_FLOW_STORAGE_KEY)
+    const raw = createAccountDraftStorage().getItem(AUTH_FLOW_STORAGE_KEY)
     if (!raw) return null
 
     const parsed = JSON.parse(raw) as Partial<AuthFlowState>
@@ -66,9 +51,9 @@ function writeAuthFlowState(next: AuthFlowState) {
   if (typeof window === 'undefined') return
 
   try {
-    window.localStorage.setItem(AUTH_FLOW_STORAGE_KEY, JSON.stringify(next))
+    createAccountDraftStorage().setItem(AUTH_FLOW_STORAGE_KEY, JSON.stringify(next))
   } catch {
-    // Ignore storage failures in prototype mode.
+    // Navigation can continue when draft storage is unavailable.
   }
 }
 

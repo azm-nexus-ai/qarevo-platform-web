@@ -1,29 +1,34 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+import { getApiErrorDetail } from '@/lib/api'
+import '@/components/doctor/doctor-clinical.css'
+
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import {
-  clearAuthTokens,
+  clearPortalSession,
   getDoctorAppointment,
   isAuthError,
-  readAccessToken,
+  readSessionMarker,
   updateDoctorAppointmentStatus,
   type DoctorAppointmentDetail,
 } from '@/lib/api'
 
 export default function AppointmentDetailPage() {
+  const t = useTranslations('doctorAppointment');
   const router = useRouter()
   const params = useParams()
   const appointmentId = params.appointmentId as string
-  
+
   const [appointmentData, setAppointmentData] = useState<DoctorAppointmentDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => {
-    if (!readAccessToken()) {
-      clearAuthTokens()
+    if (!readSessionMarker()) {
+      clearPortalSession()
       router.replace('/auth/doctor/login')
       return
     }
@@ -36,11 +41,11 @@ export default function AppointmentDetailPage() {
         if (!cancelled) setAppointmentData(data)
       } catch (err) {
         if (isAuthError(err)) {
-          clearAuthTokens()
-          router.replace('/auth/sign-in')
+          clearPortalSession()
+          router.replace('/auth/doctor/login')
           return
         }
-        setError(err instanceof Error ? err.message : 'Failed to fetch appointment details')
+        setError(getApiErrorDetail(err) || t('extra.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -51,7 +56,7 @@ export default function AppointmentDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [appointmentId, router])
+  }, [appointmentId, router, t])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -71,11 +76,11 @@ export default function AppointmentDetailPage() {
       setError(null)
     } catch (err) {
       if (isAuthError(err)) {
-        clearAuthTokens()
-        router.replace('/auth/sign-in')
+        clearPortalSession()
+        router.replace('/auth/doctor/login')
         return
       }
-      setError(err instanceof Error ? err.message : 'Failed to update status')
+      setError(getApiErrorDetail(err) || t('extra.statusFailed'))
     } finally {
       setUpdatingStatus(false)
     }
@@ -100,7 +105,7 @@ export default function AppointmentDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading appointment details...</div>
+        <div className="text-muted">{t('loadingAppointmentDetails')}</div>
       </div>
     )
   }
@@ -113,7 +118,7 @@ export default function AppointmentDetailPage() {
           onClick={handleBack}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
         >
-          Back to Appointments
+          {t('backToAppointments')}
         </button>
       </div>
     )
@@ -128,39 +133,41 @@ export default function AppointmentDetailPage() {
         <div className="flex items-center space-x-4 flex-1 min-w-0">
           <button
             onClick={handleBack}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+            className="p-2 hover:bg-surface-subtle rounded-lg transition-colors flex-shrink-0"
           >
-            ← Back
+            {t('back')}
           </button>
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 truncate">Appointment Details</h1>
-            <p className="text-gray-500 mt-1 text-sm truncate">ID: {appointmentData.appointment_id}</p>
+            <h1 className="text-2xl font-bold text-ink truncate">{t('appointmentDetails')}</h1>
+            <p className="text-muted mt-1 text-sm truncate">ID: {appointmentData.appointment_id}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3 flex-shrink-0">
           {appointmentData.consultation_id && (
             <button
               onClick={handleGoToConsultation}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="clinical-action clinical-action--primary"
             >
-              Go to Consultation
+              {t('goToConsultation')}
             </button>
           )}
           {appointmentData.episode_id && (
             <button
               onClick={handleGoToEpisode}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              className="clinical-action clinical-action--ai"
             >
-              View Intake & AI Draft
+              {appointmentData.ai_draft_ready ? t('extra.viewDraft') : t('extra.viewIntake')}
             </button>
           )}
         </div>
       </div>
 
+      {appointmentData.ai_available === false && <p className="clinical-info" role="status">{t('extra.draftUnavailable')}</p>}
+      {appointmentData.clinical_context_available === false && <p className="clinical-info" role="status">{t('extra.contextUnchecked')}</p>}
       {/* Patient Information */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
+      <div className="bg-surface rounded-lg shadow-sm border border-theme">
+        <div className="p-6 border-b border-theme">
+          <h3 className="text-lg font-semibold text-ink">{t('patientInformation')}</h3>
         </div>
         <div className="p-6">
           <div className="flex items-start space-x-4 flex-col sm:flex-row">
@@ -170,20 +177,20 @@ export default function AppointmentDetailPage() {
               </span>
             </div>
             <div className="flex-1">
-              <h4 className="text-xl font-semibold text-gray-900 truncate">{appointmentData.patient_name}</h4>
+              <h4 className="text-xl font-semibold text-ink truncate">{appointmentData.patient_name}</h4>
               <div className="mt-2 space-y-1">
                 {appointmentData.patient_email && (
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Email:</span> {appointmentData.patient_email}
+                  <p className="text-sm text-secondary">
+                    <span className="font-medium">{t('email')}</span> {appointmentData.patient_email}
                   </p>
                 )}
                 {appointmentData.patient_phone && (
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Phone:</span> {appointmentData.patient_phone}
+                  <p className="text-sm text-secondary">
+                    <span className="font-medium">{t('phone')}</span> {appointmentData.patient_phone}
                   </p>
                 )}
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Patient ID:</span> {appointmentData.patient_id}
+                <p className="text-sm text-secondary">
+                  <span className="font-medium">{t('patientId')}</span> {appointmentData.patient_id}
                 </p>
               </div>
             </div>
@@ -192,51 +199,51 @@ export default function AppointmentDetailPage() {
       </div>
 
       {/* Appointment Details */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Appointment Details</h3>
+      <div className="bg-surface rounded-lg shadow-sm border border-theme">
+        <div className="p-6 border-b border-theme">
+          <h3 className="text-lg font-semibold text-ink">{t('appointmentDetails')}</h3>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <p className="text-sm font-medium text-gray-600">Status</p>
-              <p className="mt-1 text-gray-900">{appointmentData.status.replace('_', ' ').toUpperCase()}</p>
+              <p className="text-sm font-medium text-secondary">{t('status')}</p>
+              <p className="mt-1 text-ink">{appointmentData.status.replace('_', ' ').toUpperCase()}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Consultation Modality</p>
-              <p className="mt-1 text-gray-900">{appointmentData.consultation_modality || 'Not specified'}</p>
+              <p className="text-sm font-medium text-secondary">{t('consultationModality')}</p>
+              <p className="mt-1 text-ink">{appointmentData.consultation_modality || t('extra.notSpecified')}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Start Time</p>
-              <p className="mt-1 text-gray-900">{formatDate(appointmentData.start_at)}</p>
+              <p className="text-sm font-medium text-secondary">{t('startTime')}</p>
+              <p className="mt-1 text-ink">{formatDate(appointmentData.start_at)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">End Time</p>
-              <p className="mt-1 text-gray-900">{formatDate(appointmentData.end_at)}</p>
+              <p className="text-sm font-medium text-secondary">{t('endTime')}</p>
+              <p className="mt-1 text-ink">{formatDate(appointmentData.end_at)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Consultation ID</p>
-              <p className="mt-1 text-gray-900">{appointmentData.consultation_id || 'None'}</p>
+              <p className="text-sm font-medium text-secondary">{t('consultationId')}</p>
+              <p className="mt-1 text-ink">{appointmentData.consultation_id || t('extra.none')}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Consultation Status</p>
-              <p className="mt-1 text-gray-900">{appointmentData.consultation_status || 'None'}</p>
+              <p className="text-sm font-medium text-secondary">{t('consultationStatus')}</p>
+              <p className="mt-1 text-ink">{appointmentData.consultation_status || t('extra.none')}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Created At</p>
-              <p className="mt-1 text-gray-900">{formatDate(appointmentData.created_at)}</p>
+              <p className="text-sm font-medium text-secondary">{t('createdAt')}</p>
+              <p className="mt-1 text-ink">{formatDate(appointmentData.created_at)}</p>
             </div>
             {appointmentData.cancelled_at && (
               <div>
-                <p className="text-sm font-medium text-gray-600">Cancelled At</p>
-                <p className="mt-1 text-gray-900">{formatDate(appointmentData.cancelled_at)}</p>
+                <p className="text-sm font-medium text-secondary">{t('cancelledAt')}</p>
+                <p className="mt-1 text-ink">{formatDate(appointmentData.cancelled_at)}</p>
               </div>
             )}
           </div>
           {appointmentData.status.toLowerCase() === 'cancelled' && appointmentData.cancellation_reason && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <p className="text-sm font-medium text-gray-600">Cancellation Reason</p>
-              <p className="mt-1 text-gray-900">{appointmentData.cancellation_reason}</p>
+            <div className="mt-6 pt-6 border-t border-theme">
+              <p className="text-sm font-medium text-secondary">{t('cancellationReason')}</p>
+              <p className="mt-1 text-ink">{appointmentData.cancellation_reason}</p>
             </div>
           )}
         </div>
@@ -244,13 +251,13 @@ export default function AppointmentDetailPage() {
 
       {/* Patient Intake Information */}
       {appointmentData.episode_id && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+        <div className="bg-surface rounded-lg shadow-sm border border-theme">
+          <div className="p-6 border-b border-theme">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Patient Intake Information</h3>
+              <h3 className="text-lg font-semibold text-ink">{t('patientIntakeInformation')}</h3>
               {appointmentData.ai_draft_ready && (
                 <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                  AI Draft Ready
+                  {t('aiDraftReady')}
                 </span>
               )}
             </div>
@@ -259,27 +266,27 @@ export default function AppointmentDetailPage() {
             {appointmentData.chief_complaint ? (
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Chief Complaint</p>
-                  <p className="mt-1 text-gray-900">{appointmentData.chief_complaint}</p>
+                  <p className="text-sm font-medium text-secondary">{t('chiefComplaint')}</p>
+                  <p className="mt-1 text-ink">{appointmentData.chief_complaint}</p>
                 </div>
                 {appointmentData.intake_submitted_at && (
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Intake Submitted</p>
-                    <p className="mt-1 text-gray-900">{formatDate(appointmentData.intake_submitted_at)}</p>
+                    <p className="text-sm font-medium text-secondary">{t('intakeSubmitted')}</p>
+                    <p className="mt-1 text-ink">{formatDate(appointmentData.intake_submitted_at)}</p>
                   </div>
                 )}
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-4 border-t border-theme">
                   <button
                     onClick={handleGoToEpisode}
-                    className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+                    className="clinical-action clinical-action--ai"
                   >
-                    View Full Intake & AI Draft →
+                    {t('viewFullIntakeAiDraft')}
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="text-gray-500 text-sm">
-                No intake information available. Click &ldquo;View Intake & AI Draft&rdquo; to see full episode details.
+              <div className="text-muted text-sm">
+                {t('extra.noIntakeInformationAvailableClick')}
               </div>
             )}
           </div>
@@ -287,9 +294,9 @@ export default function AppointmentDetailPage() {
       )}
 
       {/* Status Update */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Update Status</h3>
+      <div className="bg-surface rounded-lg shadow-sm border border-theme">
+        <div className="p-6 border-b border-theme">
+          <h3 className="text-lg font-semibold text-ink">{t('updateStatus')}</h3>
         </div>
         <div className="p-6">
           <div className="flex items-center space-x-4 flex-col sm:flex-row w-full">
@@ -297,15 +304,15 @@ export default function AppointmentDetailPage() {
               value={appointmentData.status}
               onChange={(e) => handleStatusUpdate(e.target.value)}
               disabled={updatingStatus}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 w-full sm:w-auto"
+              className="px-4 py-2 border border-theme rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 w-full sm:w-auto"
             >
-              <option value="booked">Booked</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="no_show">No Show</option>
+              <option value="booked">{t('booked')}</option>
+              <option value="completed">{t('completed')}</option>
+              <option value="cancelled">{t('cancelled')}</option>
+              <option value="no_show">{t('noShow')}</option>
             </select>
             {updatingStatus && (
-              <span className="text-sm text-gray-500">Updating...</span>
+              <span className="text-sm text-muted">{t('updating')}</span>
             )}
           </div>
         </div>

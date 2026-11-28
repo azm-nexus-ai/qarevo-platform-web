@@ -1,0 +1,24 @@
+.consultation-room{padding:clamp(16px,3vw,28px);border-radius:var(--radius-xl,24px);border:1px solid var(--border);background:var(--surface);color:var(--text);min-width:0}
+.consultation-room-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.consultation-room h1{font-family:var(--font-body);font-size:clamp(22px,3vw,28px);line-height:1.2;letter-spacing:-.035em;font-weight:750;margin:0}
+.consultation-eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;color:var(--text-secondary)}
+.consultation-room-subtitle{font-size:14px;line-height:1.65;color:var(--text-secondary);margin:10px 0 0}
+.consultation-connection-status{display:inline-flex;align-items:center;min-height:36px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface-subtle);color:var(--text-secondary);font-size:13px;font-weight:650;white-space:nowrap}
+.consultation-connection-status[data-connected=true]{background:var(--success-soft,var(--surface-hover));color:var(--success,var(--text))}
+.consultation-context{display:flex;flex-wrap:wrap;gap:20px 36px;border-block:1px solid var(--border);padding:16px 0;margin-top:20px}
+.consultation-context>div{display:grid;gap:5px;min-width:0}.consultation-context span{font-size:12px;font-weight:650;color:var(--text-secondary)}.consultation-context strong{font-size:14px;font-weight:650;overflow-wrap:anywhere}
+.consultation-live-status{font-size:14px;line-height:1.65;color:var(--text-secondary);margin:16px 0}
+.consultation-video-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0;min-width:0}
+.consultation-media-tile{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-lg,16px);background:var(--video-stage-bg,var(--surface-subtle));color:var(--video-stage-text,var(--text));aspect-ratio:16/10;margin:0;min-width:0}
+.consultation-media-tile video{width:100%;height:100%;object-fit:contain}
+.consultation-media-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;height:100%;padding:20px 16px 58px;text-align:center}
+.consultation-media-placeholder>span{display:grid;place-items:center;width:52px;height:52px;border:1px solid var(--border);border-radius:50%;font-size:20px;font-weight:650;background:var(--surface);color:var(--text)}
+.consultation-media-placeholder p{margin:0;font-size:13px;color:var(--text-secondary)}
+.consultation-media-tile figcaption{position:absolute;bottom:0;left:0;right:0;display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-top:1px solid var(--border);font-size:13px;color:var(--text)}
+.consultation-media-tile figcaption strong{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.consultation-media-tile figcaption span{font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.consultation-prejoin{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}.consultation-prejoin label{display:inline-flex;gap:10px;align-items:center;min-height:44px;font-size:14px}.consultation-prejoin input{width:18px;height:18px;accent-color:var(--link)}
+.consultation-controls,.consultation-room-footer{display:flex;flex-wrap:wrap;gap:10px;padding-top:18px;border-top:1px solid var(--border)}.consultation-room-footer{margin-top:24px}
+.consultation-error{display:grid;justify-items:start;gap:12px;border:1px solid var(--danger-border,var(--border));padding:14px 16px;background:var(--danger-soft);color:var(--danger);font-size:14px;line-height:1.6;border-radius:var(--radius-md,12px)}
+.consultation-end-dialog{max-width:min(480px,calc(100vw - 32px));padding:24px;border-radius:var(--radius-lg,16px);border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:var(--shadow-card)}.consultation-end-dialog::backdrop{background:var(--overlay)}.consultation-end-dialog h2{font-size:20px;line-height:1.3;margin:0 0 12px;font-weight:750}.consultation-end-dialog p{font-size:14px;line-height:1.7;margin:0 0 20px;color:var(--text-secondary)}
+@media(max-width:700px){.consultation-video-grid{grid-template-columns:1fr}.consultation-controls>.clinical-action,.consultation-room-footer>.clinical-action{flex:1 1 160px}.consultation-context{gap:16px}.consultation-context>div{flex:1 1 140px}.consultation-connection-status{min-height:32px}}
+@media(prefers-reduced-motion:reduce){.consultation-room *{transition:none!important}}

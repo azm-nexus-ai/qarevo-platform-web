@@ -1,13 +1,16 @@
 'use client'
+import BrandLogo from '@/components/branding/BrandLogo'
+import StepProgress from '@/components/auth/StepProgress'
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
-import { verifyOtp, storeAuthTokens } from '@/lib/api'
+import { getApiErrorDetail, resendVerificationEmail, verifyOtp } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const RESEND_SECS   = 60
@@ -173,36 +176,8 @@ function SecurityIllustration({ state }: { state: 'idle' | 'success' | 'error' }
 
 // ─── Progress bar ──────────────────────────────────────────────────────────────
 function StepBar({ step }: { step: 0 | 1 | 2 }) {
-  const steps = ['Account Created', 'Verify Identity', 'All Set']
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', marginBottom: '32px' }}>
-      {steps.map((label, i) => {
-        const done = i < step, active = i === step
-        return (
-          <div key={label} style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-              <div style={{
-                width: '28px', height: '28px', borderRadius: '50%',
-                background: done ? T.green : active ? T.blue : 'rgba(4,53,77,0.05)',
-                border: `2px solid ${done ? T.green : active ? T.blue : 'rgba(4,53,77,0.1)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                boxShadow: active ? '0 0 0 4px rgba(32,181,223,0.1)' : done ? '0 0 0 3px rgba(9,173,112,0.1)' : 'none',
-                transition: 'all 0.35s ease',
-              }}>
-                {done
-                  ? <Ico p={ICONS.check} size={11} sw={3} color="#fff" />
-                  : <span style={{ fontSize: '11px', fontWeight: 700, color: active ? '#fff' : T.slate2 }}>{i + 1}</span>}
-              </div>
-              <span style={{ fontSize: '10.5px', fontWeight: done || active ? 600 : 400, color: done ? T.green : active ? T.blue : T.slate2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>{label}</span>
-            </div>
-            {i < steps.length - 1 && (
-              <div style={{ width: '48px', height: '2px', margin: '13px 5px 0', borderRadius: '2px', background: done ? T.green : 'rgba(4,53,77,0.07)', transition: 'background 0.4s ease', flexShrink: 0 }} />
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
+  const t = useTranslations('auth'), common = useTranslations('common')
+  return <StepProgress steps={[t('otp.accountCreated'), t('otp.verifyIdentity'), t('otp.allSet')]} current={step} label={common('progress')} />
 }
 
 // ─── OTP cells ─────────────────────────────────────────────────────────────────
@@ -216,6 +191,7 @@ interface OtpProps {
 }
 
 function OtpCells({ value, onChange, onComplete, error, success, disabled }: OtpProps) {
+  const t = useTranslations('auth')
   const inputs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => { inputs.current[0]?.focus() }, [])
@@ -267,20 +243,21 @@ function OtpCells({ value, onChange, onComplete, error, success, disabled }: Otp
     const filled   = value[i] !== ''
     const isActive = !disabled && (filled || value.findIndex(d => d === '') === i)
     return {
-      width: '54px', height: '62px',
-      textAlign: 'center', fontSize: '24px', fontWeight: 800,
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      // Six cells must fit a 320px phone inside the card: scale with the viewport.
+      width: 'clamp(36px, 11vw, 54px)', height: 'clamp(48px, 14vw, 62px)', minWidth: 0,
+      textAlign: 'center', fontSize: 'clamp(20px, 6vw, 24px)', fontWeight: 800,
+      fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
       color: error ? T.red : success ? T.green : T.navy,
       borderRadius: '14px',
       border: `2px solid ${
         error   ? 'rgba(220,38,38,0.45)'  :
         success ? 'rgba(9,173,112,0.5)'   :
         filled  ? 'rgba(32,181,223,0.45)'  :
-        isActive ? 'rgba(32,181,223,0.28)' : 'rgba(4,53,77,0.1)'
+        isActive ? 'rgba(32,181,223,0.28)' : "var(--border)"
       }`,
       background: error   ? 'rgba(254,242,242,0.9)' :
                   success ? 'rgba(240,253,248,0.9)'  :
-                  filled  ? 'rgba(234,241,255,0.9)'  : 'rgba(255,255,255,0.75)',
+                  filled  ? 'rgba(234,241,255,0.9)'  : "var(--surface-glass)",
       outline: 'none',
       boxShadow: isActive && !error && !success
         ? '0 0 0 4px rgba(32,181,223,0.08), inset 0 1px 0 rgba(255,255,255,0.8)'
@@ -294,7 +271,7 @@ function OtpCells({ value, onChange, onComplete, error, success, disabled }: Otp
   }
 
   return (
-    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }} onPaste={handlePaste}>
+    <div style={{ display: 'flex', gap: 'clamp(4px, 1.8vw, 8px)', justifyContent: 'center' }} onPaste={handlePaste}>
       {value.map((v, i) => (
         <input
           key={i}
@@ -307,7 +284,7 @@ function OtpCells({ value, onChange, onComplete, error, success, disabled }: Otp
           onChange={e => handleChange(i, e.target.value)}
           onKeyDown={e => handleKeyDown(i, e)}
           style={cellStyle(i)}
-          aria-label={`Digit ${i + 1} of 6`}
+          aria-label={t('otp.digitLabel', { number: i + 1 })}
         />
       ))}
     </div>
@@ -316,26 +293,27 @@ function OtpCells({ value, onChange, onComplete, error, success, disabled }: Otp
 
 // ─── Error banner ──────────────────────────────────────────────────────────────
 function ErrorBanner({ kind, onDismiss }: { kind: ErrorKind; onDismiss: () => void }) {
+  const t = useTranslations('auth')
   if (!kind) return null
   const map: Record<NonNullable<ErrorKind>, { icon: string | readonly string[]; title: string; body: string; color: string; bg: string; bdr: string }> = {
     invalid: {
-      icon: ICONS.info, title: 'Incorrect code',
-      body: 'The code you entered does not match. Please check your email and try again.',
+      icon: ICONS.info, title: t('otp.incorrectCode'),
+      body: t('otp.theCodeYouEnteredDoes'),
       color: T.red, bg: 'rgba(254,242,242,0.9)', bdr: 'rgba(220,38,38,0.22)',
     },
     expired: {
-      icon: ICONS.info, title: 'Code expired',
-      body: 'Your verification code has expired. Request a new one using the Resend button below.',
+      icon: ICONS.info, title: t('otp.codeExpired'),
+      body: t('otp.yourVerificationCodeHasExpired'),
       color: T.amber, bg: 'rgba(255,251,235,0.9)', bdr: 'rgba(217,119,6,0.22)',
     },
     network: {
-      icon: ICONS.activity, title: 'Connection error',
-      body: 'We could not reach our servers. Please check your connection and try again.',
+      icon: ICONS.activity, title: t('otp.connectionError'),
+      body: t('otp.weCouldNotReachOur'),
       color: T.slate, bg: 'rgba(248,250,252,0.95)', bdr: 'rgba(4,53,77,0.12)',
     },
     toomany: {
-      icon: ICONS.shield, title: 'Too many attempts',
-      body: 'For your security, this code has been invalidated. Please request a new code.',
+      icon: ICONS.shield, title: t('otp.tooManyAttempts'),
+      body: t('otp.forYourSecurityThisCode'),
       color: T.red, bg: 'rgba(254,242,242,0.9)', bdr: 'rgba(220,38,38,0.22)',
     },
   }
@@ -353,7 +331,7 @@ function ErrorBanner({ kind, onDismiss }: { kind: ErrorKind; onDismiss: () => vo
       </div>
       <div style={{ flex: 1 }}>
         <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 700, color: e.color, letterSpacing: '-0.01em' }}>{e.title}</p>
-        <p style={{ margin: 0, fontSize: '12.5px', color: T.slate, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{e.body}</p>
+        <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.55, letterSpacing: '-0.005em' }}>{e.body}</p>
       </div>
       <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.slate2, padding: '2px', flexShrink: 0, display: 'flex' }}>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
@@ -365,17 +343,18 @@ function ErrorBanner({ kind, onDismiss }: { kind: ErrorKind; onDismiss: () => vo
 }
 
 // ─── Destination chip ──────────────────────────────────────────────────────────
-function DestChip({ mode, onSwitch }: { mode: VerifyMode; onSwitch: () => void }) {
+function DestChip({ mode, destination, onSwitch }: { mode: VerifyMode; destination: string; onSwitch: () => void }) {
+  const t = useTranslations('auth')
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0', borderRadius: '100px', background: T.blueLight, border: `1px solid ${T.blueMid}`, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 13px' }}>
         <Ico p={mode === 'email' ? ICONS.ema : ICONS.activity} size={11} sw={1.75} color={T.blue} />
-        <span style={{ fontSize: '13px', fontWeight: 700, color: T.blue, letterSpacing: '-0.01em', fontFamily: 'monospace' }}>
-          {mode === 'email' ? 'em•••@gmail.com' : '+44 ••• ••• 4821'}
+        <span style={{ fontSize: '13px', fontWeight: 700, color: T.link, letterSpacing: '-0.01em', fontFamily: 'monospace' }}>
+          {destination}
         </span>
       </div>
-      <button onClick={onSwitch} style={{ padding: '6px 11px 6px 6px', background: 'none', border: 'none', borderLeft: `1px solid ${T.blueMid}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'inherit', fontSize: '11.5px', fontWeight: 600, color: T.blue, letterSpacing: '-0.01em' }}>
-        Change
+      <button onClick={onSwitch} style={{ padding: '6px 11px 6px 6px', background: 'none', border: 'none', borderLeft: `1px solid ${T.blueMid}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'inherit', fontSize: "13px", fontWeight: 600, color: T.link, letterSpacing: '-0.01em' }}>
+        {t('otp.change')}
         <Ico p={ICONS.arrowFwd} size={10} sw={2} color={T.blue} />
       </button>
     </div>
@@ -406,7 +385,9 @@ function TimerRing({ secs, total }: { secs: number; total: number }) {
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 function OtpPageContent() {
+  const t = useTranslations('auth')
   const router = useRouter()
+  const captureAction = usePortalAction()
   const searchParams = useSearchParams()
   const { secs, expired, restart } = useCountdown(RESEND_SECS)
   const [digits,    setDigits]    = useState(['', '', '', '', '', ''])
@@ -415,6 +396,9 @@ function OtpPageContent() {
   const [attempts,  setAttempts]  = useState(0)
   const [loading,   setLoading]   = useState(false)
   const [resendOk,  setResendOk]  = useState(false)
+  const [resending, setResending] = useState(false)
+  const resendInFlight = useRef(false)
+  const [resendError, setResendError] = useState('')
 
   // Get email/phone from URL params (set by previous registration/login flow)
   const email = searchParams.get('email')
@@ -429,60 +413,61 @@ function OtpPageContent() {
     if (tooMany) { setErrorKind('toomany'); return }
     setLoading(true)
     setErrorKind(null)
-    
+    const action = captureAction()
+
     try {
       // Build request based on mode and available params
       const requestBody: { code: string; email?: string; country_code?: string; phone?: string } = { code }
-      
+
       if (mode === 'email' && email) {
         requestBody.email = email
       } else if (mode === 'phone' && countryCode && phone) {
         requestBody.country_code = countryCode
         requestBody.phone = phone
       } else {
-        throw new Error('Missing required email or phone parameters')
+        throw new Error(t('otp.missingRequiredEmailOrPhone'))
       }
-      
+
       const response = await verifyOtp(requestBody)
-      
-      // Store auth tokens if returned
-      if (response.access_token && response.refresh_token) {
-        storeAuthTokens({
-          access_token: response.access_token,
-          refresh_token: response.refresh_token,
-          token_type: response.token_type,
-          expires_in: response.expires_in,
-          user_id: response.user_id,
-          role: 'PATIENT'
-        })
-      }
-      
+      if (!action.isCurrent({ completedSession: response.browser_session })) return
+
       // Redirect to account-created or dashboard based on verification status
       if (response.email_verified || response.phone_verified) {
         router.push('/auth/account-created')
       } else {
         setErrorKind('invalid')
       }
-    } catch (error) {
+    } catch {
+      if (!action.isCurrent()) return
       setLoading(false)
       setErrorKind('invalid')
       setDigits(['', '', '', '', '', ''])
     }
-  }, [tooMany, mode, router, email, countryCode, phone])
+  }, [tooMany, mode, router, email, countryCode, phone, captureAction, t])
 
   const handleVerify = () => {
     if (!filled || loading || tooMany) return
     handleComplete(digits.join(''))
   }
 
-  const handleResend = () => {
-    if (!expired || loading) return
-    setAttempts(0)
-    setErrorKind(null)
-    setDigits(['', '', '', '', '', ''])
-    setResendOk(true)
-    restart(RESEND_SECS)
-    setTimeout(() => setResendOk(false), 4000)
+  const handleResend = async () => {
+    if (!expired || loading || resendInFlight.current || mode !== 'email') return
+    if (!email) { setResendError(t('otp.returnToEmailVerificationAnd')); return }
+    const action = captureAction()
+    resendInFlight.current = true
+    setResending(true); setResendOk(false); setResendError('')
+    try {
+      await resendVerificationEmail({email})
+      if (!action.isCurrent()) return
+      setAttempts(0); setErrorKind(null); setDigits(['', '', '', '', '', ''])
+      setResendOk(true); restart(RESEND_SECS)
+      action.after(4000, () => setResendOk(false))
+    } catch (error) {
+      if (action.isCurrent()) setResendError(getApiErrorDetail(error) || t('otp.verificationEmailCouldNotBe'))
+    } finally {
+      resendInFlight.current = false
+      if (action.isCurrent()) setResending(false)
+    }
   }
 
   const switchMode = () => {
@@ -512,27 +497,19 @@ function OtpPageContent() {
 
       {/* Logo */}
       <div style={{ marginBottom: '28px', animation: 'fadeUp 0.4s ease both' }}>
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label='Qarevo Health home'>
-          <Image
-            src='/brand/Untitled design - 2026-08-03T165058.603.png'
-            alt='Qarevo Health'
-            width={160}
-            height={34}
-            priority
-            unoptimized
-            style={{ width: '160px', height: 'auto' }}
-          />
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('otp.qarevoHealthHome')}>
+          <BrandLogo tone='white' width={160} />
         </Link>
       </div>
 
       {/* Card */}
       <div style={{
         width: '100%', maxWidth: '480px',
-        background: 'rgba(255,255,255,0.9)',
+        background: "var(--surface-glass)",
         backdropFilter: 'blur(36px) saturate(200%)',
         WebkitBackdropFilter: 'blur(36px) saturate(200%)',
         borderRadius: '28px',
-        border: '1px solid rgba(255,255,255,0.94)',
+        border: "1px solid var(--border)",
         boxShadow: 'inset 0 1px 0 #fff, 0 2px 8px rgba(4,53,77,0.04), 0 16px 48px rgba(4,53,77,0.1), 0 56px 96px rgba(4,53,77,0.06)',
         padding: '44px 44px 40px',
         marginBottom: '16px',
@@ -548,15 +525,15 @@ function OtpPageContent() {
 
         {/* Headline */}
         <div style={{ textAlign: 'center', marginBottom: '22px' }}>
-          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '23px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 10px' }}>
-            Verify Your Identity
+          <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '23px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 10px' }}>
+            {t('otp.verifyYourIdentity')}
           </h1>
           <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.7, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
             {mode === 'email'
-              ? "We've sent a 6-digit security code to your email."
-              : "We've sent a 6-digit security code to your phone."}
+              ? "Enter the six-digit code from your verification email."
+              : "SMS delivery is not configured. Switch to email verification to continue."}
           </p>
-          <DestChip mode={mode} onSwitch={switchMode} />
+          <DestChip mode={mode} destination={mode === 'email' ? email?.replace(/(.{2}).+(@.+)/, '$1•••$2') || t('otp.emailAddressUnavailable') : t('otp.smsNotConfigured')} onSwitch={switchMode} />
         </div>
 
         {/* Error banner */}
@@ -571,7 +548,7 @@ function OtpPageContent() {
           <div style={{ padding: '10px 14px', borderRadius: '11px', background: 'rgba(235,248,245,0.9)', border: '1px solid rgba(9,173,112,0.25)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', animation: 'slideIn 0.28s ease both' }}>
             <Ico p={ICONS.check} size={12} sw={2.5} color={T.green} />
             <span style={{ fontSize: '13px', fontWeight: 600, color: T.teal, letterSpacing: '-0.01em' }}>
-              New code sent. Check your {mode === 'email' ? 'inbox' : 'messages'}.
+              {t('otp.verificationEmailRequestedCheckYour')}
             </span>
           </div>
         )}
@@ -579,15 +556,15 @@ function OtpPageContent() {
         {/* OTP + timer row */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: T.slate2, letterSpacing: '-0.01em' }}>
-              Enter 6-digit code
+            <span style={{ fontSize: "13px", fontWeight: 600, color: T.slate2, letterSpacing: '-0.01em' }}>
+              {t('otp.enter6DigitCode')}
             </span>
-            {!expired
+            {mode !== 'email' ? t('otp.smsDeliveryUnavailable') : resending ? t('otp.requestingVerificationEmail') : !expired
               ? <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.01em' }}>Expires in</span>
+                  <span style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.01em' }}>{t('otp.expiresIn')}</span>
                   <TimerRing secs={secs} total={RESEND_SECS} />
                 </div>
-              : <span style={{ fontSize: '12px', fontWeight: 600, color: T.red, letterSpacing: '-0.01em' }}>Code expired</span>}
+              : <span style={{ fontSize: "13px", fontWeight: 600, color: T.red, letterSpacing: '-0.01em' }}>{t('otp.codeExpired')}</span>}
           </div>
           <OtpCells
             value={digits}
@@ -598,7 +575,7 @@ function OtpPageContent() {
             disabled={loading || tooMany}
           />
           {attempts > 0 && !tooMany && (
-            <p style={{ textAlign: 'center', fontSize: '12px', color: T.amber, marginTop: '8px', letterSpacing: '-0.005em', fontWeight: 500 }}>
+            <p style={{ textAlign: 'center', fontSize: "13px", color: T.amber, marginTop: '8px', letterSpacing: '-0.005em', fontWeight: 500 }}>
               {MAX_ATTEMPTS - attempts} attempt{MAX_ATTEMPTS - attempts !== 1 ? 's' : ''} remaining
             </p>
           )}
@@ -612,8 +589,8 @@ function OtpPageContent() {
           style={{
             width: '100%', padding: '14px 20px', borderRadius: '13px', border: 'none',
             background: !filled || tooMany
-              ? 'rgba(4,53,77,0.06)'
-              : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+              ? "var(--surface-hover)"
+              : `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
             color: !filled || tooMany ? T.slate2 : '#fff',
             fontFamily: 'inherit', fontSize: '15px', fontWeight: 700,
             letterSpacing: '-0.02em',
@@ -625,8 +602,8 @@ function OtpPageContent() {
           }}
         >
           {loading
-            ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Verifying…</>
-            : <>Verify Code <Ico p={ICONS.arrowFwd} size={14} sw={2.2} /></>}
+            ? <><span style={{ width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />{t('otp.verifying')}</>
+            : <>{t('otp.verifyCode')} <Ico p={ICONS.arrowFwd} size={14} sw={2.2} /></>}
         </button>
 
         {/* Back */}
@@ -639,30 +616,33 @@ function OtpPageContent() {
           transition: 'all 0.14s ease',
         }}>
           <Ico p={ICONS.arrowSm} size={13} sw={2} style={{ transform: 'rotate(180deg)' }} />
-          Back to Email Verification
+          {t('otp.backToEmailVerification')}
         </Link>
 
+        {resendError && <p role='alert' className='field-error'>{resendError}</p>}
+        {mode !== 'email' && <p role='status' className='field-error'>{t('otp.smsVerificationDeliveryIsUnavailable')}</p>}
         {/* Resend row */}
-        <div style={{ marginTop: '22px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+        <div style={{ marginTop: '22px', paddingTop: '20px', borderTop: "1px solid var(--border)", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
           <p style={{ margin: 0, fontSize: '13px', color: T.slate2, letterSpacing: '-0.01em' }}>
             {"Didn't receive the code?"}
           </p>
           <button
             className="ghost"
-            onClick={handleResend}
-            disabled={!expired || loading}
+            onClick={() => void handleResend()}
+            disabled={!expired || loading || resending || mode !== 'email'}
+            aria-busy={resending}
             style={{
               background: 'transparent', border: 'none', cursor: expired && !loading ? 'pointer' : 'not-allowed',
               fontFamily: 'inherit', fontSize: '13.5px', fontWeight: 700,
-              color: expired && !loading ? T.blue : T.slate2,
+              color: expired && !loading ? T.link : T.slate2,
               letterSpacing: '-0.01em', padding: '6px 14px', borderRadius: '8px',
               display: 'flex', alignItems: 'center', gap: '6px',
               transition: 'all 0.14s ease',
             }}
           >
-            {!expired
+            {mode !== 'email' ? t('otp.smsDeliveryUnavailable') : resending ? t('otp.requestingVerificationEmail') : !expired
               ? <><span style={{ width: '12px', height: '12px', border: `1.5px solid ${T.slate2}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.9s linear infinite', display: 'inline-block' }} />Resend in {secs}s</>
-              : <><Ico p={ICONS.arrowFwd} size={13} sw={2} />Resend Code</>}
+              : <><Ico p={ICONS.arrowFwd} size={13} sw={2} />{t('otp.resendCode')}</>}
           </button>
         </div>
       </div>
@@ -670,25 +650,25 @@ function OtpPageContent() {
       {/* Trust strip */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '10px 18px', animation: 'fadeUp 0.5s 0.1s ease both' }}>
         {[
-          { icon: ICONS.shield,   label: 'Identity-verified access'    },
-          { icon: ICONS.lock,     label: 'End-to-end encrypted'        },
-          { icon: ICONS.activity, label: 'HIPAA · GDPR compliant'      },
-          { icon: ICONS.brain,    label: 'Medical-grade security'      },
+          { icon: ICONS.shield,   label: t('otp.identityVerifiedAccess')    },
+          { icon: ICONS.lock,     label: t('otp.endToEndEncrypted')        },
+          { icon: ICONS.activity, label: t('otp.emailVerificationProtectedAccess')      },
+          { icon: ICONS.brain,    label: t('otp.medicalGradeSecurity')      },
         ].map(({ icon, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <Ico p={icon} size={11} sw={1.75} color={T.slate2} />
-            <span style={{ fontSize: '11.5px', fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
+            <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, letterSpacing: '-0.005em' }}>{label}</span>
           </div>
         ))}
       </div>
 
       {/* Footer */}
-      <p style={{ textAlign: 'center', fontSize: '12px', color: T.slate2, marginTop: '18px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-        <Link href="/terms"   style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Terms</Link>
+      <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '18px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
+        <Link href="/terms"   style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('otp.terms')}</Link>
         {' · '}
-        <Link href="/privacy" style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Privacy Policy</Link>
+        <Link href="/privacy" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('otp.privacyPolicy')}</Link>
         {' · '}
-        <Link href="/support" style={{ color: T.blue, fontWeight: 500, textDecoration: 'none' }}>Support</Link>
+        <Link href="/support" style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{t('otp.support')}</Link>
       </p>
     </div>
   )

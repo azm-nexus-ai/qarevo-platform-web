@@ -9,7 +9,7 @@ export default function AIItem({ icon, title, titleColor, body, action, href, di
   const actionContent = (
     <>
       {action}
-      <Ico p="M5 12h14M12 5l7 7-7 7" size={12} sw={2} style={{ color: T.blue }} />
+      <Ico p="M5 12h14M12 5l7 7-7 7" size={12} sw={2} style={{ color: T.link }} />
     </>
   )
 
@@ -46,7 +46,7 @@ export default function AIItem({ icon, title, titleColor, body, action, href, di
               : { background: T.blueLight, border: `1px solid ${T.blueMid}`, boxShadow: Sh.inner }),
           }}
         >
-          <Ico p={icon} size={16} sw={1.5} style={{ color: T.blue }} />
+          <Ico p={icon} size={16} sw={1.5} style={{ color: T.link }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
@@ -79,9 +79,9 @@ export default function AIItem({ icon, title, titleColor, body, action, href, di
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px',
-                fontSize: '12.5px',
+                fontSize: "13px",
                 fontWeight: 500,
-                color: T.blue,
+                color: T.link,
                 letterSpacing: '-0.01em',
               }}
             >
@@ -99,9 +99,9 @@ export default function AIItem({ icon, title, titleColor, body, action, href, di
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px',
-                fontSize: '12.5px',
+                fontSize: "13px",
                 fontWeight: 500,
-                color: T.blue,
+                color: T.link,
                 letterSpacing: '-0.01em',
               }}
             >

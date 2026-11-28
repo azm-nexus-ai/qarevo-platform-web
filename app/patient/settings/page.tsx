@@ -1,4 +1,12 @@
 'use client'
+import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
+import AccountSecurity from '@/components/security/AccountSecurity'
+
+import { ProfileImageEditor } from '@/components/patient/ProfileImage'
+import { FieldFeedback } from '@/components/ui/ValidationFeedback'
+import { useTheme } from '@/components/ui/ThemeProvider'
+import { LOCALE_COOKIE } from '@/i18n/locale'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -7,7 +15,9 @@ import { PortalBadge, PortalButton, PortalCard, PortalSkeleton } from '@/compone
 import Ico from '@/components/ui/Ico'
 import { ICONS } from '@/constants/icons'
 import { T } from '@/lib/tokens'
-import { clearAuthTokens, createEmergencyContact, createInsurance, deactivatePatientAccount, deleteEmergencyContact, deletePatientPasskey, downloadPatientDataExport, getApiErrorDetail, getPatientActiveDevices, getPatientHealthInfo, getPatientLoginHistory, getPatientPasskeyStatus, getPatientPasskeys, getPatientSettings, isAuthError, readAccessToken, registerPatientPasskey, revokeOtherPatientActiveDevices, revokePatientActiveDevice, updateEmergencyContact, updateInsurance, updatePatientHealthInfo, updatePatientSettings, updateProfile, uploadMedicalRecord, type PatientActiveDevice, type PatientHealthInfoUpdate, type PatientLoginHistoryItem, type PatientPasskeyCredential, type PatientPasskeyStatus, type EmergencyContact, type Insurance, type EmergencyContactCreate } from '@/lib/api'
+import { useInsurancePresentation } from '@/lib/use-insurance-presentation'
+import { medicalUploadError } from '@/lib/clinical-upload'
+import { clearPortalSession, createEmergencyContact, createInsurance, deactivatePatientAccount, deleteEmergencyContact, deletePatientPasskey, downloadPatientDataExport, getApiErrorDetail, getPatientActiveDevices, getPatientHealthInfo, getPatientLoginHistory, getPatientPasskeyStatus, getPatientPasskeys, getPatientSettings, isAuthError, readSessionMarker, registerPatientPasskey, revokeOtherPatientActiveDevices, revokePatientActiveDevice, updateEmergencyContact, updateInsurance, updatePatientSettings, updateProfile, uploadMedicalRecord, type PatientActiveDevice, type PatientLoginHistoryItem, type PatientPasskeyCredential, type PatientPasskeyStatus, type EmergencyContact, type Insurance, type EmergencyContactCreate } from '@/lib/api'
 
 type ToggleKey =
   | 'emailNotifications'
@@ -45,18 +55,33 @@ const DEFAULT_TOGGLES: Record<ToggleKey, boolean> = {
   highContrast: false,
 }
 
+/** Security rows; `id` drives behaviour and names the secItem* messages. */
 const SECURITY_ITEMS = [
-  { title: 'Change Password', body: 'Use password reset from the sign-in screen until in-app password change is added.', badge: 'Available', tone: 'info' as const },
-  { title: 'Two-Factor Authentication', body: 'Email verification is required during secure sign-in.', badge: 'Enabled', tone: 'success' as const },
-  { title: 'Active Devices', body: 'Review current browser sessions and sign out devices you no longer use.', badge: 'Available', tone: 'info' as const },
-  { title: 'Login History', body: 'Recent sign-in events are available from the audit log.', badge: 'Available', tone: 'info' as const },
-  { title: 'Face ID / Biometrics', body: 'Set up passkeys so this browser can sign in with your device security.', badge: 'Available', tone: 'info' as const },
+  { id: 'EmailVerification', badge: 'badgeRequired', tone: 'success' as const },
+  { id: 'ActiveDevices', badge: 'badgeAvailable', tone: 'info' as const },
+  { id: 'LoginHistory', badge: 'badgeAvailable', tone: 'info' as const },
+  { id: 'Passkeys', badge: 'badgeAvailable', tone: 'info' as const },
 ]
 
 export default function PatientSettingsPage() {
+  const t = useTranslations('patientSettings'), german = useLocale().startsWith('de'), presentInsurance = useInsurancePresentation()
+  const longDate = (value: string) => localDate(value, german)
+  const genderLabel = (value: string) => ({ Male: t('male'), Female: t('female'), Other: t('other') } as Record<string, string>)[value] ?? value
+  const [contactErrors, setContactErrors] = useState<Record<string, string>>({})
+  const { theme, setTheme } = useTheme()
   const router = useRouter()
+  // Same-portal return path only (e.g. back to costs or the doctor search).
+  const [returnTo, setReturnTo] = useState('')
+  useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get('return') ?? ''
+    if (!/^\/patient\/[A-Za-z0-9/_-]*(\?[A-Za-z0-9=&_%-]*)?$/.test(value)) return
+    const timer = window.setTimeout(() => setReturnTo(value), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
   const insuranceCardInputRef = useRef<HTMLInputElement | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
   const [accountData, setAccountData] = useState({
@@ -69,12 +94,16 @@ export default function PatientSettingsPage() {
   const [toggles, setToggles] = useState<Record<ToggleKey, boolean>>(DEFAULT_TOGGLES)
   const [savedToggles, setSavedToggles] = useState<Record<ToggleKey, boolean>>(DEFAULT_TOGGLES)
   const [fontSize, setFontSize] = useState('Medium')
-  const [language, setLanguage] = useState('English')
-  const [timeZone, setTimeZone] = useState('Africa/Lagos (GMT+1)')
+  // One language setting: the field shows the portal language (the header switch) and saving
+  // a different choice switches the portal, so the two can never disagree.
+  const portalLanguage = german ? 'German' : 'English'
+  const [languageChoice, setLanguage] = useState<string | null>(null)
+  const language = languageChoice ?? portalLanguage
+  const [timeZone, setTimeZone] = useState('Europe/Berlin')
   const [savedDisplayPrefs, setSavedDisplayPrefs] = useState({
     fontSize: 'Medium',
     language: 'English',
-    timeZone: 'Africa/Lagos (GMT+1)',
+    timeZone: 'Europe/Berlin',
   })
   const [contacts, setContacts] = useState<EmergencyContact[]>([])
   const [insurance, setInsurance] = useState<Insurance | null>(null)
@@ -121,6 +150,7 @@ export default function PatientSettingsPage() {
     phone: '',
   })
   const [uploadingInsuranceCard, setUploadingInsuranceCard] = useState(false)
+  const [insuranceCardError, setInsuranceCardError] = useState<string | null>(null)
   const [sessionStatus, setSessionStatus] = useState<'checking' | 'active' | 'signed-out'>('checking')
   const [insuranceEdit, setInsuranceEdit] = useState({
     insurance_provider_name: '',
@@ -132,9 +162,11 @@ export default function PatientSettingsPage() {
   })
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 500)
+    let cancelled = false
+    setLoading(true)
+    setLoadError('')
 
-    const hasAccessToken = Boolean(readAccessToken())
+    const hasAccessToken = Boolean(readSessionMarker())
     const sessionTimer = window.setTimeout(() => {
       setSessionStatus(hasAccessToken ? 'active' : 'signed-out')
     }, 0)
@@ -142,11 +174,11 @@ export default function PatientSettingsPage() {
     if (!hasAccessToken) {
       router.replace('/auth/sign-in')
       return () => {
-        window.clearTimeout(timer)
+        cancelled = true
         window.clearTimeout(sessionTimer)
       }
     }
-    
+
     // Load account data and health info from API
     const loadData = async () => {
       try {
@@ -154,25 +186,23 @@ export default function PatientSettingsPage() {
           getPatientSettings(),
           getPatientHealthInfo(),
         ])
-        
+
+        if (cancelled) return
         const fullName = [settingsData.first_name, settingsData.last_name].filter(Boolean).join(' ')
-        const formattedDate = settingsData.date_of_birth 
-          ? new Date(settingsData.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-          : ''
-        
+
         setAccountData({
-          fullName: fullName || 'Not set',
+          fullName,
           email: settingsData.email || '',
-          phone: settingsData.phone || 'Not set',
-          dateOfBirth: formattedDate || 'Not set',
-          gender: settingsData.gender || 'Not set',
+          phone: settingsData.phone || '',
+          dateOfBirth: settingsData.date_of_birth || '',
+          gender: settingsData.gender || '',
         })
-        
+
         setContacts(settingsData.emergency_contacts || [])
         setInsurance(settingsData.insurance || null)
         getPatientPasskeyStatus()
-          .then(setPasskeyStatus)
-          .catch(() => setPasskeyStatus(null))
+          .then(value => { if (!cancelled) setPasskeyStatus(value) })
+          .catch(() => { if (!cancelled) setPasskeyStatus(null) })
         const loadedToggles = {
           emailNotifications: settingsData.email_notifications ?? DEFAULT_TOGGLES.emailNotifications,
           smsNotifications: settingsData.sms_notifications ?? DEFAULT_TOGGLES.smsNotifications,
@@ -191,13 +221,12 @@ export default function PatientSettingsPage() {
         const loadedDisplayPrefs = {
           fontSize: settingsData.font_size || 'Medium',
           language: settingsData.language || 'English',
-          timeZone: settingsData.time_zone || 'Africa/Lagos (GMT+1)',
+          timeZone: settingsData.time_zone || 'Europe/Berlin',
         }
         setFontSize(loadedDisplayPrefs.fontSize)
-        setLanguage(loadedDisplayPrefs.language)
         setTimeZone(loadedDisplayPrefs.timeZone)
         setSavedDisplayPrefs(loadedDisplayPrefs)
-        
+
         setHealthInfo({
           bloodPressure: healthData.blood_pressure || '',
           weight: healthData.weight || '',
@@ -208,38 +237,49 @@ export default function PatientSettingsPage() {
         })
       } catch (error) {
         if (isAuthError(error)) {
-          clearAuthTokens()
+          clearPortalSession()
           router.replace('/auth/sign-in')
           return
         }
-        console.error('Failed to load settings data:', error)
+        if (!cancelled) setLoadError(t('loadFailed'))
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }
     loadData()
-    
+
     return () => {
-      window.clearTimeout(timer)
+      cancelled = true
       window.clearTimeout(sessionTimer)
     }
-  }, [router])
+  }, [router, loadAttempt, t])
 
   const settingsAppearance = useMemo(() => ({
-    darkMode: toggles.darkMode,
+    darkMode: theme === 'dark',
     highContrast: toggles.highContrast,
     fontSize,
-  }), [fontSize, toggles.darkMode, toggles.highContrast])
+  }), [fontSize, theme, toggles.highContrast])
 
   const broadcastAppearance = useCallback((appearance: typeof settingsAppearance) => {
     window.dispatchEvent(new CustomEvent('qarevo:patient-appearance-changed', { detail: appearance }))
   }, [])
 
+  // Links such as "Review insurance details" open this section directly, with its
+  // heading in view and focused, instead of the top of a long settings page.
   useEffect(() => {
-    if (loading) return
+    if (loading || loadError || window.location.hash !== '#insurance') return
+    const heading = document.getElementById('insurance-heading')
+    document.getElementById('insurance')?.scrollIntoView({ block: 'start' })
+    heading?.focus({ preventScroll: true })
+  }, [loading, loadError])
+
+  useEffect(() => {
+    if (loading || loadError) return
     const timer = window.setTimeout(() => {
       broadcastAppearance(settingsAppearance)
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [broadcastAppearance, loading, settingsAppearance])
+  }, [broadcastAppearance, loading, loadError, settingsAppearance])
 
   function toggleSetting(key: ToggleKey) {
     setToggles((current) => ({ ...current, [key]: !current[key] }))
@@ -253,7 +293,7 @@ export default function PatientSettingsPage() {
 
   function showError(error: unknown, fallback: string) {
     if (isAuthError(error)) {
-      clearAuthTokens()
+      clearPortalSession()
       router.replace('/auth/sign-in')
       return
     }
@@ -264,28 +304,40 @@ export default function PatientSettingsPage() {
     try {
       await deleteEmergencyContact(contactId)
       setContacts(contacts.filter(c => c.id !== contactId))
-      setSaveMessage('Emergency contact deleted.')
+      setSaveMessage(t('contactDeleted'))
     } catch (error) {
-      showError(error, 'Failed to delete emergency contact.')
+      showError(error, t('contactDeleteFailed'))
     }
   }
 
+  function validateContact(value: { name: string; relationship: string; phone: string }) {
+    const errors: Record<string, string> = {}
+    for (const key of ['name', 'relationship'] as const) {
+      if (value[key].trim().length < 2 || value[key].trim().length > 100 || !/\p{L}/u.test(value[key]) || /[<>]/.test(value[key])) errors[key] = t(key === 'name' ? 'contactNameError' : 'contactRelationshipError')
+    }
+    if (!/^\+[1-9][0-9]{6,14}$/.test(value.phone.replace(/[\s().-]/g, ''))) errors.phone = t('contactPhoneError')
+    setContactErrors(errors)
+    return !Object.keys(errors).length
+  }
+
   async function handleAddContact() {
+    if (!validateContact(newContact)) return
     setContactSaving(true)
     try {
       const created = await createEmergencyContact(newContact)
       setContacts([...contacts, created])
       setNewContact({ name: '', relationship: '', phone: '' })
       setShowAddContactForm(false)
-      setSaveMessage('Emergency contact added.')
+      setSaveMessage(t('contactAdded'))
     } catch (error) {
-      showError(error, 'Failed to add emergency contact.')
+      showError(error, t('contactAddFailed'))
     } finally {
       setContactSaving(false)
     }
   }
 
   function openContactEdit(contact: EmergencyContact) {
+    setContactErrors({})
     setEditingContactId(contact.id)
     setContactEdit({
       name: contact.name,
@@ -295,15 +347,15 @@ export default function PatientSettingsPage() {
   }
 
   async function handleContactEditSave() {
-    if (!editingContactId) return
+    if (!editingContactId || !validateContact(contactEdit)) return
     setContactSaving(true)
     try {
       const updated = await updateEmergencyContact(editingContactId, contactEdit)
       setContacts((current) => current.map((contact) => contact.id === updated.id ? updated : contact))
       setEditingContactId(null)
-      setSaveMessage('Emergency contact updated.')
+      setSaveMessage(t('contactUpdated'))
     } catch (error) {
-      showError(error, 'Failed to update emergency contact.')
+      showError(error, t('contactUpdateFailed'))
     } finally {
       setContactSaving(false)
     }
@@ -313,22 +365,19 @@ export default function PatientSettingsPage() {
     try {
       const updated = await updateProfile(profileEdit)
       const fullName = [updated.first_name, updated.last_name].filter(Boolean).join(' ')
-      const formattedDate = updated.date_of_birth 
-        ? new Date(updated.date_of_birth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-        : ''
-      
+
       setAccountData({
-        fullName: fullName || 'Not set',
+        fullName,
         email: updated.email || '',
-        phone: updated.phone || 'Not set',
-        dateOfBirth: formattedDate || 'Not set',
-        gender: updated.gender || 'Not set',
+        phone: updated.phone || '',
+        dateOfBirth: updated.date_of_birth || '',
+        gender: updated.gender || '',
       })
       setShowProfileEdit(false)
-      setSaveMessage('Profile updated successfully')
+      setSaveMessage(t('profileUpdated'))
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
-      showError(error, 'Failed to update profile.')
+      showError(error, t('profileUpdateFailed'))
     }
   }
 
@@ -336,9 +385,9 @@ export default function PatientSettingsPage() {
     setProfileEdit({
       first_name: accountData.fullName.split(' ')[0] || '',
       last_name: accountData.fullName.split(' ').slice(1).join(' ') || '',
-      date_of_birth: accountData.dateOfBirth !== 'Not set' ? new Date(accountData.dateOfBirth).toISOString().split('T')[0] : '',
-      gender: accountData.gender !== 'Not set' ? accountData.gender : '',
-      phone: accountData.phone !== 'Not set' ? accountData.phone : '',
+      date_of_birth: accountData.dateOfBirth.slice(0, 10),
+      gender: accountData.gender,
+      phone: accountData.phone,
     })
     setShowProfileEdit(true)
   }
@@ -353,10 +402,10 @@ export default function PatientSettingsPage() {
         setInsurance(created)
       }
       setShowInsuranceEdit(false)
-      setSaveMessage('Insurance information saved successfully')
+      setSaveMessage(t('insuranceSaved'))
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
-      showError(error, 'Failed to save insurance information.')
+      showError(error, t('insuranceSaveFailed'))
     }
   }
 
@@ -375,21 +424,13 @@ export default function PatientSettingsPage() {
   }
 
   async function handleSave() {
+    if (loading || loadError) return
     setSaving(true)
     setSaveMessage('')
-    
+
     try {
-      // Save health info to backend
-      const healthUpdate: PatientHealthInfoUpdate = {
-        blood_pressure: healthInfo.bloodPressure || undefined,
-        weight: healthInfo.weight || undefined,
-        height: healthInfo.height || undefined,
-        blood_type: healthInfo.bloodType || undefined,
-        allergies: healthInfo.allergies || undefined,
-        medical_conditions: healthInfo.conditions || undefined,
-      }
-      const [updatedSettings] = await Promise.all([
-        updatePatientSettings({
+      // Saving preferences must not overwrite medical history loaded earlier.
+      const updatedSettings = await updatePatientSettings({
           email_notifications: toggles.emailNotifications,
           sms_notifications: toggles.smsNotifications,
           push_notifications: toggles.pushNotifications,
@@ -397,16 +438,12 @@ export default function PatientSettingsPage() {
           medication_reminders: toggles.medicationReminders,
           lab_result_alerts: toggles.labResultAlerts,
           marketing_emails: toggles.marketingEmails,
-          data_sharing: toggles.dataSharing,
-          physician_access: toggles.physicianAccess,
-          dark_mode: toggles.darkMode,
+          dark_mode: theme === 'dark',
           high_contrast: toggles.highContrast,
           font_size: fontSize,
           language,
           time_zone: timeZone,
-        }),
-        updatePatientHealthInfo(healthUpdate),
-      ])
+        })
 
       setSavedToggles({
         emailNotifications: updatedSettings.email_notifications,
@@ -427,25 +464,30 @@ export default function PatientSettingsPage() {
         timeZone: updatedSettings.time_zone,
       })
       setSaving(false)
-      setSaveMessage('Settings saved successfully.')
+      setSaveMessage(t('settingsSaved'))
+      setLanguage(null)
+      if (language !== portalLanguage) {
+        document.cookie = `${LOCALE_COOKIE}=${language === 'German' ? 'de' : 'en'}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
+        router.refresh()
+      }
     } catch (error) {
       if (isAuthError(error)) {
         setSaving(false)
-        clearAuthTokens()
+        clearPortalSession()
         router.replace('/auth/sign-in')
         return
       }
       setSaving(false)
-      showError(error, 'Failed to save settings. Please try again.')
+      showError(error, t('saveFailed'))
     }
   }
 
   function handleCancel() {
     setToggles(savedToggles)
     setFontSize(savedDisplayPrefs.fontSize)
-    setLanguage(savedDisplayPrefs.language)
+    setLanguage(null)
     setTimeZone(savedDisplayPrefs.timeZone)
-    setSaveMessage('Changes reverted to the last saved version.')
+    setSaveMessage(t('changesReverted'))
   }
 
   async function handleDataExport() {
@@ -460,9 +502,9 @@ export default function PatientSettingsPage() {
       anchor.click()
       anchor.remove()
       window.URL.revokeObjectURL(url)
-      setSaveMessage('Your data export is ready.')
+      setSaveMessage(t('exportReady'))
     } catch (error) {
-      showError(error, 'Failed to download your data export.')
+      showError(error, t('exportFailed'))
     }
   }
 
@@ -473,7 +515,7 @@ export default function PatientSettingsPage() {
       const history = await getPatientLoginHistory()
       setLoginHistory(history.items || [])
     } catch (error) {
-      showError(error, 'Failed to load login history.')
+      showError(error, t('historyFailed'))
     } finally {
       setLoginHistoryLoading(false)
     }
@@ -485,7 +527,7 @@ export default function PatientSettingsPage() {
       const devices = await getPatientActiveDevices()
       setActiveDevices(devices.items || [])
     } catch (error) {
-      showError(error, 'Failed to load active devices.')
+      showError(error, t('devicesFailed'))
     } finally {
       setActiveDevicesLoading(false)
     }
@@ -500,14 +542,14 @@ export default function PatientSettingsPage() {
     try {
       await revokePatientActiveDevice(deviceId)
       if (isCurrent) {
-        clearAuthTokens()
+        clearPortalSession()
         router.replace('/auth/sign-in')
         return
       }
-      setSaveMessage('Device signed out.')
+      setSaveMessage(t('deviceSignedOut'))
       await loadActiveDevices()
     } catch (error) {
-      showError(error, 'Failed to sign out device.')
+      showError(error, t('deviceSignOutFailed'))
     }
   }
 
@@ -517,7 +559,7 @@ export default function PatientSettingsPage() {
       setSaveMessage(result.message)
       await loadActiveDevices()
     } catch (error) {
-      showError(error, 'Failed to sign out other devices.')
+      showError(error, t('othersSignOutFailed'))
     }
   }
 
@@ -531,7 +573,7 @@ export default function PatientSettingsPage() {
       setPasskeys(items)
       setPasskeyStatus(status)
     } catch (error) {
-      showError(error, 'Failed to load passkeys.')
+      showError(error, t('passkeysFailed'))
     } finally {
       setPasskeysLoading(false)
     }
@@ -540,7 +582,7 @@ export default function PatientSettingsPage() {
   async function handlePasskeyClick() {
     const browserSupportsPasskeys = typeof window !== 'undefined' && !!window.PublicKeyCredential
     if (!browserSupportsPasskeys) {
-      setSaveMessage('This browser does not support passkeys.')
+      setSaveMessage(t('passkeysUnsupported'))
       return
     }
     setShowPasskeys(true)
@@ -551,13 +593,13 @@ export default function PatientSettingsPage() {
     setRegisteringPasskey(true)
     try {
       const platform = typeof navigator !== 'undefined' ? navigator.platform : ''
-      const credential = await registerPatientPasskey(platform ? `${platform} passkey` : 'This device passkey')
+      const credential = await registerPatientPasskey(platform ? t('platformPasskey', { platform }) : t('devicePasskey'))
       setPasskeys((items) => [credential, ...items.filter((item) => item.id !== credential.id)])
       const status = await getPatientPasskeyStatus()
       setPasskeyStatus(status)
-      setSaveMessage('Passkey added. You can now sign in with this device.')
+      setSaveMessage(t('passkeyAdded'))
     } catch (error) {
-      showError(error, 'Failed to add passkey.')
+      showError(error, t('passkeyAddFailed'))
     } finally {
       setRegisteringPasskey(false)
     }
@@ -566,38 +608,44 @@ export default function PatientSettingsPage() {
   async function handleDeletePasskey(credentialId: string) {
     try {
       await deletePatientPasskey(credentialId)
-      setSaveMessage('Passkey removed.')
+      setSaveMessage(t('passkeyRemoved'))
       await loadPasskeys()
     } catch (error) {
-      showError(error, 'Failed to remove passkey.')
+      showError(error, t('passkeyRemoveFailed'))
     }
   }
 
   async function handleDeactivateAccount() {
     try {
       await deactivatePatientAccount()
-      clearAuthTokens()
+      clearPortalSession()
       router.replace('/auth/sign-in')
     } catch (error) {
-      showError(error, 'Failed to deactivate account.')
+      showError(error, t('deactivateFailed'))
     }
   }
 
   async function handleInsuranceCardSelected(file: File | null) {
     if (!file) return
+    const validationError = medicalUploadError(file.size)
+    setInsuranceCardError(validationError)
+    if (validationError) {
+      if (insuranceCardInputRef.current) insuranceCardInputRef.current.value = ''
+      return
+    }
     setUploadingInsuranceCard(true)
     try {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('record_type', 'Insurance')
-      formData.append('title', 'Insurance Card')
-      formData.append('description', 'Patient-uploaded insurance card')
-      formData.append('provider_name', insurance?.insurance_provider_name || 'Insurance provider')
+      formData.append('title', t('cardTitle'))
+      formData.append('description', t('cardDescription'))
+      formData.append('provider_name', insurance?.insurance_provider_name || t('cardProvider'))
       formData.append('record_date', new Date().toISOString())
       await uploadMedicalRecord(formData)
-      setSaveMessage('Insurance card uploaded to your medical records.')
+      setSaveMessage(t('cardUploaded'))
     } catch (error) {
-      showError(error, 'Failed to upload insurance card.')
+      showError(error, t('cardUploadFailed'))
     } finally {
       setUploadingInsuranceCard(false)
       if (insuranceCardInputRef.current) insuranceCardInputRef.current.value = ''
@@ -606,8 +654,8 @@ export default function PatientSettingsPage() {
 
   const headerActions = (
     <>
-      <PortalButton tone='secondary' onClick={handleCancel}>Cancel</PortalButton>
-      <PortalButton tone='primary' onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</PortalButton>
+      <PortalButton tone='secondary' onClick={handleCancel}>{t('cancel')}</PortalButton>
+      <PortalButton tone='primary' onClick={handleSave} disabled={saving}>{saving ? t('saving') : t('saveChanges')}</PortalButton>
     </>
   )
 
@@ -620,21 +668,22 @@ export default function PatientSettingsPage() {
     toggles.labResultAlerts,
     toggles.marketingEmails,
   ].filter(Boolean).length
+  const insuranceInfo = presentInsurance(insurance)
 
   const rightRail = (
     <div className='grid gap-3'>
       <PortalCard>
-        <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Profile Health</p>
-        <h2 style={{ margin: '0 0 10px', fontSize: '20px', fontWeight: 800, color: T.navy }}>Your preferences are current</h2>
+        <p style={{ margin: '0 0 6px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('profileHealth')}</p>
+        <h2 className='portal-h2'>{t('yourPreferencesAreCurrent')}</h2>
         <div className='grid gap-2'>
           {[
-            ['Security status', sessionStatus === 'checking' ? 'Checking' : sessionStatus === 'active' ? 'Active session' : 'Signed out'],
-            ['Notification setup', `${enabledNotificationCount} of 7 enabled`],
-            ['Insurance coverage', insurance ? 'On file' : 'Not added'],
+            [t('summarySecurity'), sessionStatus === 'checking' ? t('summaryChecking') : sessionStatus === 'active' ? t('summaryActive') : t('summarySignedOut')],
+            [t('summaryNotifications'), t('enabledCount', { count: enabledNotificationCount, total: 7 })],
+            [t('summaryInsurance'), loading ? t('loading') : loadError ? t('summaryUnavailable') : insuranceInfo.hasDetails ? t('summaryRecorded') : t('summaryNotAdded')],
           ].map(([label, value]) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(4,53,77,0.03)', border: '1px solid rgba(4,53,77,0.06)' }}>
-              <span style={{ fontSize: '12px', color: T.slate2 }}>{label}</span>
-              <span style={{ fontSize: '12px', color: T.navy, fontWeight: 700 }}>{value}</span>
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
+              <span style={{ fontSize: "13px", color: T.slate2 }}>{label}</span>
+              <span style={{ fontSize: "13px", color: T.navy, fontWeight: 700 }}>{value}</span>
             </div>
           ))}
         </div>
@@ -646,82 +695,42 @@ export default function PatientSettingsPage() {
             <Ico p={ICONS.lock} size={15} sw={1.7} color={T.blue} />
           </div>
           <div>
-            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>Trusted access</p>
-            <p style={{ margin: '2px 0 0', fontSize: '12px', color: T.slate }}>Review sign-ins and privacy controls regularly.</p>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{t('trustedAccess')}</p>
+            <p style={{ margin: '2px 0 0', fontSize: "13px", color: T.slate }}>{t('reviewSignInsAndPrivacy')}</p>
           </div>
         </div>
-        <PortalButton tone='secondary' fullWidth onClick={handleOpenLoginHistory}>Review Login History</PortalButton>
+        <PortalButton tone='secondary' fullWidth onClick={handleOpenLoginHistory}>{t('reviewLoginHistory')}</PortalButton>
       </PortalCard>
     </div>
   )
 
   return (
     <PatientPortalShell
-      title='Settings'
-      description='Manage account details, privacy, notifications, accessibility, insurance information, and the preferences that shape your care experience.'
-      headerActions={headerActions}
-      rightRail={rightRail}
+      title={t('settings')}
+      description={t('manageAccountDetailsPrivacyNotifications')}
+      headerActions={!loading && !loadError ? headerActions : undefined}
+      rightRail={!loading && !loadError ? rightRail : undefined}
       appearance={settingsAppearance}
     >
       <style>{`
-        .settings-stack { display: grid; gap: 16px; }
-        .settings-card { position: relative; overflow: hidden; }
+        .settings-stack { display: grid; gap: var(--space-6); }
+        .settings-card { --portal-card-padding: clamp(20px, 3vw, 28px); position: relative; min-width: 0; }
         .settings-two-up { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .settings-info-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .settings-profile-grid { display: grid; gap: 16px; grid-template-columns: 96px minmax(0, 1fr); }
+        .settings-profile-grid { display: grid; gap: 16px; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); }
         .settings-wide { grid-column: 1 / -1; }
         .settings-field-value { overflow-wrap: anywhere; word-break: break-word; }
-        .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 16px; border: 1px solid rgba(4,53,77,0.08); background: rgba(247,250,252,0.9); padding: 12px; }
+        .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface-subtle); padding: 12px; }
         .settings-row-control { flex: 0 0 auto; }
-        .pps-theme-dark .settings-card {
-          background: rgba(11, 32, 48, 0.96) !important;
-          border-color: rgba(125, 211, 252, 0.2) !important;
-          box-shadow: 0 18px 48px rgba(0,0,0,0.26) !important;
-        }
-        .pps-theme-dark .settings-card h2,
-        .pps-theme-dark .settings-card p,
-        .pps-theme-dark .settings-card span,
-        .pps-theme-dark .settings-card strong,
-        .pps-theme-dark .settings-card label {
-          color: #E6F6FF !important;
-        }
-        .pps-theme-dark .settings-card [style*="color: rgb(114, 139, 154)"],
-        .pps-theme-dark .settings-card [style*="color: rgb(78, 111, 130)"] {
-          color: #B8D6E7 !important;
-        }
-        .pps-theme-dark .settings-row,
-        .pps-theme-dark .settings-info-grid > div,
-        .pps-theme-dark .settings-profile-grid [style*="background: rgba(247,250,252"] {
-          background: rgba(15, 47, 70, 0.9) !important;
-          border-color: rgba(125, 211, 252, 0.18) !important;
-        }
-        .pps-theme-dark .settings-row[aria-pressed="true"] {
-          background: rgba(32,181,223,0.14) !important;
-          border-color: rgba(32,181,223,0.4) !important;
-        }
-        .pps-theme-dark .settings-card input,
-        .pps-theme-dark .settings-card select {
-          background: rgba(7, 23, 35, 0.96) !important;
-          border-color: rgba(125, 211, 252, 0.24) !important;
-          color: #E6F6FF !important;
-        }
-        .pps-theme-dark .settings-card button:not([style*="linear-gradient"]) {
-          background: rgba(15, 47, 70, 0.96) !important;
-          border-color: rgba(125, 211, 252, 0.24) !important;
-          color: #E6F6FF !important;
-        }
-        .pps-theme-dark .settings-card button[style*="linear-gradient"] {
-          color: #fff !important;
-        }
         @media (max-width: 900px) {
           .settings-two-up { grid-template-columns: 1fr; }
           .settings-profile-grid { grid-template-columns: 1fr; }
           .settings-profile-avatar { justify-content: flex-start !important; }
         }
         @media (max-width: 640px) {
-          .settings-stack { gap: 12px; }
+          .settings-stack { gap: var(--space-4); }
           .settings-info-grid { grid-template-columns: 1fr; }
-          .settings-card-title { font-size: 18px !important; line-height: 1.25 !important; }
+
           .settings-row { align-items: stretch; flex-direction: column; }
           .settings-row-control,
           .settings-row-control button,
@@ -735,6 +744,8 @@ export default function PatientSettingsPage() {
           <PortalSkeleton height={220} />
           <PortalSkeleton height={180} />
         </div>
+      ) : loadError ? (
+        <PortalCard><h2>{t('weCouldnTLoadYour')}</h2><p role='alert'>{loadError}</p><PortalButton onClick={() => setLoadAttempt(value => value + 1)}>{t('tryAgain')}</PortalButton></PortalCard>
       ) : (
         <div className='settings-stack'>
           {saveMessage ? <PortalBadge tone='success'>{saveMessage}</PortalBadge> : null}
@@ -742,102 +753,98 @@ export default function PatientSettingsPage() {
           <PortalCard className='settings-card'>
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Account Information</p>
-                <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Profile and contact identity</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('accountInformation')}</p>
+                <h2 className='portal-h2 settings-card-title'>{t('profileAndContactIdentity')}</h2>
               </div>
               <PortalButton tone='secondary' onClick={() => { if (!showProfileEdit) openProfileEdit(); else setShowProfileEdit(false) }}>
-                {showProfileEdit ? 'Cancel' : 'Edit'}
+                {showProfileEdit ? t('cancel') : t('edit')}
               </PortalButton>
             </div>
             <div className='settings-profile-grid'>
-              <div className='settings-profile-avatar flex items-center justify-center md:justify-start'>
-                <div style={{ width: '88px', height: '88px', borderRadius: '24px', background: 'linear-gradient(135deg, rgba(32,181,223,0.18), rgba(52,140,234,0.22))', border: '1px solid rgba(4,53,77,0.1)', display: 'grid', placeItems: 'center', color: T.navy, fontSize: '26px', fontWeight: 800 }}>
-                  {accountData.fullName.charAt(0).toUpperCase()}
-                </div>
-              </div>
+              <div className='settings-profile-avatar'><ProfileImageEditor name={accountData.fullName}/></div>
               <div className='settings-info-grid'>
                 {showProfileEdit ? (
                   <>
-                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>First Name</label>
+                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('firstName')}</label>
                       <input
                         type='text'
                         value={profileEdit.first_name}
                         onChange={(e) => setProfileEdit({ ...profileEdit, first_name: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
-                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Last Name</label>
+                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('lastName')}</label>
                       <input
                         type='text'
                         value={profileEdit.last_name}
                         onChange={(e) => setProfileEdit({ ...profileEdit, last_name: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</label>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('phoneNumber')}</label>
                       <input
                         type='text'
                         value={profileEdit.phone}
                         onChange={(e) => setProfileEdit({ ...profileEdit, phone: e.target.value })}
-                        placeholder='+234 XXX XXX XXXX'
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        placeholder='+49 151 23456789'
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</label>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('dateOfBirth')}</label>
                       <input
                         type='date'
                         value={profileEdit.date_of_birth}
                         onChange={(e) => setProfileEdit({ ...profileEdit, date_of_birth: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</label>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('gender')}</label>
                       <select
                         value={profileEdit.gender}
                         onChange={(e) => setProfileEdit({ ...profileEdit, gender: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: "1px solid var(--border)", fontSize: '14px' }}
                       >
-                        <option value=''>Select</option>
-                        <option value='MALE'>Male</option>
-                        <option value='FEMALE'>Female</option>
-                        <option value='OTHER'>Other</option>
+                        <option value=''>{t('select')}</option>
+                        <option value='MALE'>{t('male')}</option>
+                        <option value='FEMALE'>{t('female')}</option>
+                        <option value='OTHER'>{t('other')}</option>
                       </select>
                     </div>
-                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</label>
+                    <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('email')}</label>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.email}</p>
                     </div>
                     <div className='settings-wide flex gap-2'>
-                      <PortalButton tone='primary' onClick={handleProfileSave}>Save Changes</PortalButton>
-                      <PortalButton tone='secondary' onClick={() => setShowProfileEdit(false)}>Cancel</PortalButton>
+                      <PortalButton tone='primary' onClick={handleProfileSave}>{t('saveChanges')}</PortalButton>
+                      <PortalButton tone='secondary' onClick={() => setShowProfileEdit(false)}>{t('cancel')}</PortalButton>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Full Name</p>
-                      <p className='settings-field-value' style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.fullName}</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('fullName')}</p>
+                      <p className='settings-field-value' style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.fullName || t('notSet')}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('email')}</p>
                       <p className='settings-field-value' style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.email}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone Number</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.phone}</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('phoneNumber')}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.phone || t('notSet')}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date of Birth</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.dateOfBirth}</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('dateOfBirth')}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.dateOfBirth ? longDate(accountData.dateOfBirth) : t('notSet')}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gender</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.gender}</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('gender')}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{accountData.gender ? genderLabel(accountData.gender) : t('notSet')}</p>
                     </div>
                   </>
                 )}
@@ -848,59 +855,59 @@ export default function PatientSettingsPage() {
           <PortalCard className='settings-card'>
             <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Health Information</p>
-              <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Vital signs and medical details</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('healthInformation')}</p>
+              <h2 className='portal-h2 settings-card-title'>{t('vitalSignsAndMedicalDetails')}</h2>
               </div>
             </div>
             <div className='settings-info-grid'>
-              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Pressure</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodPressure ? `${healthInfo.bloodPressure} mmHg` : 'Not set'}</p>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('bloodPressure')}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodPressure ? `${healthInfo.bloodPressure} mmHg` : t('notSet')}</p>
               </div>
-              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Weight</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.weight ? `${healthInfo.weight} kg` : 'Not set'}</p>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('weight')}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.weight ? `${healthInfo.weight} kg` : t('notSet')}</p>
               </div>
-              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Height</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.height ? `${healthInfo.height} cm` : 'Not set'}</p>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('height')}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.height ? `${healthInfo.height} cm` : t('notSet')}</p>
               </div>
-              <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Blood Type</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodType || 'Not set'}</p>
+              <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('bloodType')}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.bloodType || t('notSet')}</p>
               </div>
-              <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Allergies</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || 'None'}</p>
+              <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('allergies')}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.allergies || t('notRecorded')}</p>
               </div>
-              <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Medical Conditions</p>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || 'None'}</p>
+              <div className='settings-wide' style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('medicalConditions')}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{healthInfo.conditions || t('notRecorded')}</p>
               </div>
             </div>
           </PortalCard>
 
           <PortalCard className='settings-card'>
             <div className='mb-4'>
-              <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Security</p>
-              <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Secure access controls</h2>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('security')}</p>
+              <AccountSecurity/>
             </div>
             <div className='grid gap-3'>
               {SECURITY_ITEMS.map((item) => (
-                <div key={item.title} style={{ padding: '14px', borderRadius: '16px', background: 'rgba(247,250,252,0.9)', border: '1px solid rgba(4,53,77,0.08)' }}>
+                <div key={item.id} style={{ padding: '14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
                   <div className='flex flex-wrap items-start justify-between gap-2 mb-2'>
                     <div>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{item.title}</p>
-                      <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: T.slate, lineHeight: 1.55 }}>{item.body}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{t(`secItem${item.id}`)}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.55 }}>{t(`secItem${item.id}Body`)}</p>
                     </div>
-                    <PortalBadge tone={item.tone}>{item.badge}</PortalBadge>
+                    <PortalBadge tone={item.tone}>{t(item.badge)}</PortalBadge>
                   </div>
-                  {item.title === 'Active Devices' ? (
-                    <PortalButton tone='secondary' onClick={handleOpenActiveDevices}>Manage devices</PortalButton>
+                  {item.id === 'ActiveDevices' ? (
+                    <PortalButton tone='secondary' onClick={handleOpenActiveDevices}>{t('manageDevices')}</PortalButton>
                   ) : null}
-                  {item.title === 'Face ID / Biometrics' ? (
+                  {item.id === 'Passkeys' ? (
                     <PortalButton tone='secondary' onClick={handlePasskeyClick}>
-                      {passkeyStatus?.enabled ? 'Manage passkeys' : 'Set up passkey'}
+                      {passkeyStatus?.enabled ? t('managePasskeys') : t('setUpPasskey')}
                     </PortalButton>
                   ) : null}
                 </div>
@@ -910,20 +917,20 @@ export default function PatientSettingsPage() {
 
           <PortalCard className='settings-card'>
             <div className='mb-4'>
-              <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Notification Preferences</p>
-              <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Care communication and reminders</h2>
+              <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('notificationPreferences')}</p>
+              <h2 className='portal-h2 settings-card-title'>{t('careCommunicationAndReminders')}</h2>
             </div>
             <div className='grid gap-3'>
               {[
-                ['Email Notifications', 'emailNotifications'],
-                ['SMS Notifications', 'smsNotifications'],
-                ['Push Notifications', 'pushNotifications'],
-                ['Appointment Reminders', 'appointmentReminders'],
-                ['Medication Reminders', 'medicationReminders'],
-                ['Lab Result Alerts', 'labResultAlerts'],
-                ['Marketing Emails', 'marketingEmails'],
+                ['notifEmail', 'emailNotifications'],
+                ['notifSms', 'smsNotifications'],
+                ['notifPush', 'pushNotifications'],
+                ['notifAppointments', 'appointmentReminders'],
+                ['notifMedication', 'medicationReminders'],
+                ['notifLab', 'labResultAlerts'],
+                ['notifMarketing', 'marketingEmails'],
               ].map(([label, key]) => (
-                <ToggleRow key={key} label={label} enabled={toggles[key as ToggleKey]} onToggle={() => toggleSetting(key as ToggleKey)} />
+                <ToggleRow key={key} label={t(label)} enabled={toggles[key as ToggleKey]} onToggle={() => toggleSetting(key as ToggleKey)} />
               ))}
             </div>
           </PortalCard>
@@ -931,29 +938,29 @@ export default function PatientSettingsPage() {
           <div className='settings-two-up'>
             <PortalCard className='settings-card'>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Privacy</p>
-                <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Control your health data</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('privacy')}</p>
+                <h2 className='portal-h2 settings-card-title'>{t('controlYourHealthData')}</h2>
               </div>
               <div className='grid gap-3'>
-                <ToggleRow label='Data Sharing' enabled={toggles.dataSharing} onToggle={() => toggleSetting('dataSharing')} description='Allow anonymized usage insights to improve care workflows.' />
-                <ToggleRow label='Physician Access' enabled={toggles.physicianAccess} onToggle={() => toggleSetting('physicianAccess')} description='Keep authorized care teams connected to your profile and records.' />
-                <PreferenceActionRow label='Download My Data' buttonLabel='Open' onClick={handleDataExport} />
-                <PreferenceActionRow label='Delete Account' buttonLabel='Manage' tone='danger' onClick={() => setShowDeleteAccountConfirm(true)} />
-                <PreferenceActionRow label='Privacy Policy' buttonLabel='Open' onClick={() => router.push('/privacy')} />
+                <p style={{ color: T.slate, lineHeight: 1.6 }}>{t('privacyChoicesAndConsentWithdrawal')}</p>
+                <PreferenceActionRow label={t('downloadMyData')} buttonLabel={t('open')} onClick={handleDataExport} />
+                <PreferenceActionRow label={t('deleteAccount')} buttonLabel={t('manage')} tone='danger' onClick={() => setShowDeleteAccountConfirm(true)} />
+                <PreferenceActionRow label={t('privacyPolicy')} buttonLabel={t('open')} onClick={() => router.push('/privacy')} />
               </div>
             </PortalCard>
 
             <PortalCard className='settings-card'>
               <div className='mb-4'>
-                <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Accessibility</p>
-                <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Personalize readability and comfort</h2>
+                <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('accessibility')}</p>
+                <h2 className='portal-h2 settings-card-title'>{t('personalizeReadabilityAndComfort')}</h2>
               </div>
               <div className='grid gap-3'>
-                <ToggleRow label='Dark Mode' enabled={toggles.darkMode} onToggle={() => toggleSetting('darkMode')} description='Save this as your preferred display mode.' />
-                <ToggleRow label='High Contrast' enabled={toggles.highContrast} onToggle={() => toggleSetting('highContrast')} />
-                <SelectRow label='Font Size' value={fontSize} options={['Small', 'Medium', 'Large']} onChange={updateFontSizePreference} />
-                <SelectRow label='Language' value={language} options={['English', 'French', 'Arabic']} onChange={setLanguage} />
-                <SelectRow label='Time Zone' value={timeZone} options={['Africa/Lagos (GMT+1)', 'UTC', 'Europe/London (GMT)']} onChange={setTimeZone} />
+                <ToggleRow label={t('darkMode')} enabled={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} description={t('savedAutomaticallyInThisBrowser')} />
+                <ToggleRow label={t('highContrast')} enabled={toggles.highContrast} onToggle={() => toggleSetting('highContrast')} />
+                <SelectRow label={t('fontSize')} value={fontSize} options={['Small', 'Medium', 'Large']} onChange={updateFontSizePreference} optionLabel={option => t(`fontSize${option}`)} />
+                <SelectRow label={t('language')} value={language} options={['German', 'English']} onChange={setLanguage} optionLabel={option => t(`language${option}`)} />
+                <p className='m-0 text-xs leading-5 text-muted'>{t('languageHint')}</p>
+                <SelectRow label={t('timeZone')} value={timeZone} options={['Europe/Berlin', 'UTC', 'Europe/London']} onChange={setTimeZone} />
               </div>
             </PortalCard>
           </div>
@@ -962,107 +969,119 @@ export default function PatientSettingsPage() {
             <PortalCard className='settings-card'>
               <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Emergency Contacts</p>
-                  <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>People to contact quickly</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('emergencyContacts')}</p>
+                  <h2 className='portal-h2 settings-card-title'>{t('peopleToContactQuickly')}</h2>
                 </div>
                 <PortalButton tone='primary' onClick={() => setShowAddContactForm(!showAddContactForm)}>
-                  {showAddContactForm ? 'Cancel' : 'Add Contact'}
+                  {showAddContactForm ? t('cancel') : t('addContact')}
                 </PortalButton>
               </div>
-              
+
               {showAddContactForm && (
-                <div style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.95)', padding: '16px', marginBottom: '16px' }}>
+                <div style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', marginBottom: '16px' }}>
                   <div className='grid gap-3'>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Name</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('name')}</label>
                       <input
                         type='text'
-                        value={newContact.name}
-                        onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-                        placeholder='Contact name'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        id='newContact-name' aria-label={t('contactNameRequired')} required aria-invalid={!!contactErrors.name} aria-describedby={contactErrors.name ? 'newContact-name-error' : undefined}
+                            value={newContact.name}
+                        onChange={(e) => { setNewContact({ ...newContact, name: e.target.value }); setContactErrors(previous => ({ ...previous, name: '' })) }}
+                        placeholder={t('contactName')}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
+                          <FieldFeedback name='newContact-name' error={contactErrors.name} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Relationship</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('relationship')}</label>
                       <input
                         type='text'
-                        value={newContact.relationship}
-                        onChange={(e) => setNewContact({ ...newContact, relationship: e.target.value })}
-                        placeholder='e.g., Spouse, Parent, Sibling'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        id='newContact-relationship' aria-label={t('relationshipRequired')} required aria-invalid={!!contactErrors.relationship} aria-describedby={contactErrors.relationship ? 'newContact-relationship-error' : undefined}
+                            value={newContact.relationship}
+                        onChange={(e) => { setNewContact({ ...newContact, relationship: e.target.value }); setContactErrors(previous => ({ ...previous, relationship: '' })) }}
+                        placeholder={t('eGSpouseParentSibling')}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
+                          <FieldFeedback name='newContact-relationship' error={contactErrors.relationship} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Phone Number</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('phoneNumber')}</label>
                       <input
                         type='text'
-                        value={newContact.phone}
-                        onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-                        placeholder='+234 XXX XXX XXXX'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        id='newContact-phone' aria-label={t('phoneNumberRequired')} required aria-invalid={!!contactErrors.phone} aria-describedby={contactErrors.phone ? 'newContact-phone-error' : undefined}
+                            value={newContact.phone}
+                        onChange={(e) => { setNewContact({ ...newContact, phone: e.target.value }); setContactErrors(previous => ({ ...previous, phone: '' })) }}
+                        placeholder='+49 151 23456789'
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
+                          <FieldFeedback name='newContact-phone' error={contactErrors.phone} hint={t('phoneHint')} />
                     </div>
                     <div className='flex gap-2'>
-                      <PortalButton tone='primary' onClick={handleAddContact} disabled={contactSaving || !newContact.name || !newContact.relationship || !newContact.phone}>
-                        {contactSaving ? 'Saving…' : 'Add Contact'}
+                      <PortalButton tone='primary' onClick={handleAddContact} disabled={contactSaving}>
+                        {contactSaving ? t('saving') : t('addContact')}
                       </PortalButton>
                       <PortalButton tone='secondary' onClick={() => setShowAddContactForm(false)}>
-                        Cancel
+                        {t('cancel')}
                       </PortalButton>
                     </div>
                   </div>
                 </div>
               )}
-              
+
               <div className='grid gap-3'>
                 {contacts.length === 0 ? (
-                  <div style={{ borderRadius: '18px', border: '1px dashed rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.82)', padding: '20px', textAlign: 'center' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: T.navy }}>No emergency contacts saved</p>
-                    <p style={{ margin: 0, fontSize: '12.5px', color: T.slate, lineHeight: 1.6 }}>Add a trusted contact for faster response during urgent situations.</p>
+                  <div style={{ borderRadius: '18px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '20px', textAlign: 'center' }}>
+                    <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: T.navy }}>{t('noEmergencyContactsSaved')}</p>
+                    <p style={{ margin: 0, fontSize: "13px", color: T.slate, lineHeight: 1.6 }}>{t('addATrustedContactFor')}</p>
                   </div>
                 ) : (
                   contacts.map((contact) => (
-                    <div key={contact.id} className='rounded-2xl border p-4' style={{ borderColor: 'rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)' }}>
+                    <div key={contact.id} className='rounded-2xl border p-4' style={{ borderColor: "var(--border)", background: "var(--surface-subtle)" }}>
                       {editingContactId === contact.id ? (
                         <div className='grid gap-3'>
                           <input
                             type='text'
+                            id='contactEdit-name' aria-label={t('contactNameRequired')} required aria-invalid={!!contactErrors.name} aria-describedby={contactErrors.name ? 'contactEdit-name-error' : undefined}
                             value={contactEdit.name}
-                            onChange={(e) => setContactEdit({ ...contactEdit, name: e.target.value })}
-                            placeholder='Contact name'
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                            onChange={(e) => { setContactEdit({ ...contactEdit, name: e.target.value }); setContactErrors(previous => ({ ...previous, name: '' })) }}
+                            placeholder={t('contactName')}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
+                          <FieldFeedback name='contactEdit-name' error={contactErrors.name} />
                           <input
                             type='text'
+                            id='contactEdit-relationship' aria-label={t('relationshipRequired')} required aria-invalid={!!contactErrors.relationship} aria-describedby={contactErrors.relationship ? 'contactEdit-relationship-error' : undefined}
                             value={contactEdit.relationship}
-                            onChange={(e) => setContactEdit({ ...contactEdit, relationship: e.target.value })}
-                            placeholder='Relationship'
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                            onChange={(e) => { setContactEdit({ ...contactEdit, relationship: e.target.value }); setContactErrors(previous => ({ ...previous, relationship: '' })) }}
+                            placeholder={t('relationship')}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
+                          <FieldFeedback name='contactEdit-relationship' error={contactErrors.relationship} />
                           <input
                             type='text'
+                            id='contactEdit-phone' aria-label={t('phoneNumberRequired')} required aria-invalid={!!contactErrors.phone} aria-describedby={contactErrors.phone ? 'contactEdit-phone-error' : undefined}
                             value={contactEdit.phone}
-                            onChange={(e) => setContactEdit({ ...contactEdit, phone: e.target.value })}
-                            placeholder='Phone number'
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                            onChange={(e) => { setContactEdit({ ...contactEdit, phone: e.target.value }); setContactErrors(previous => ({ ...previous, phone: '' })) }}
+                            placeholder={t('phoneNumber2')}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                           />
+                          <FieldFeedback name='contactEdit-phone' error={contactErrors.phone} hint={t('phoneHint')} />
                           <div className='flex flex-wrap gap-2'>
-                            <PortalButton tone='primary' onClick={handleContactEditSave} disabled={contactSaving || !contactEdit.name || !contactEdit.relationship || !contactEdit.phone}>
-                              {contactSaving ? 'Saving…' : 'Save'}
+                            <PortalButton tone='primary' onClick={handleContactEditSave} disabled={contactSaving}>
+                              {contactSaving ? t('saving') : t('save')}
                             </PortalButton>
-                            <PortalButton tone='secondary' onClick={() => setEditingContactId(null)}>Cancel</PortalButton>
+                            <PortalButton tone='secondary' onClick={() => setEditingContactId(null)}>{t('cancel')}</PortalButton>
                           </div>
                         </div>
                       ) : (
                         <div className='flex flex-wrap items-start justify-between gap-3'>
                           <div>
                             <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{contact.name}</p>
-                            <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: T.slate }}>{contact.relationship} • {contact.phone}</p>
+                            <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate }}>{contact.relationship} • {contact.phone}</p>
                           </div>
                           <div className='flex gap-2'>
-                            <PortalButton tone='secondary' onClick={() => openContactEdit(contact)}>Edit</PortalButton>
-                            <PortalButton tone='danger' onClick={() => handleDeleteContact(contact.id)}>Delete</PortalButton>
+                            <PortalButton tone='secondary' onClick={() => openContactEdit(contact)}>{t('edit')}</PortalButton>
+                            <PortalButton tone='danger' onClick={() => handleDeleteContact(contact.id)}>{t('delete')}</PortalButton>
                           </div>
                         </div>
                       )}
@@ -1072,127 +1091,133 @@ export default function PatientSettingsPage() {
               </div>
             </PortalCard>
 
-            <PortalCard className='settings-card'>
+            <PortalCard className='settings-card' id='insurance' style={{ scrollMarginTop: '96px' }}>
               <div className='flex flex-wrap items-start justify-between gap-3 mb-4'>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Insurance Information</p>
-                  <h2 className='settings-card-title' style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: T.navy }}>Coverage and card upload</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('insuranceInformation')}</p>
+                  <h2 className='portal-h2 settings-card-title' id='insurance-heading' tabIndex={-1}>{t('coverageAndCardUpload')}</h2>
                 </div>
                 <div className='flex gap-2'>
-                  {insurance && <PortalBadge tone='success'>Coverage Active</PortalBadge>}
+                  <PortalBadge tone={insuranceInfo.tone}>{insuranceInfo.label}</PortalBadge>
                   <PortalButton tone='secondary' onClick={() => { if (!showInsuranceEdit) openInsuranceEdit(); else setShowInsuranceEdit(false) }}>
-                    {showInsuranceEdit ? 'Cancel' : insurance ? 'Edit' : 'Add Insurance'}
+                    {showInsuranceEdit ? t('cancel') : insurance ? t('edit') : t('addInsurance')}
                   </PortalButton>
                 </div>
               </div>
-              
+
+              <p className='mb-4 text-sm leading-6 text-muted'>{insuranceInfo.notice}</p>
+              {returnTo && (
+                <p className='mb-4 text-sm'>
+                  <Link href={returnTo} style={{ color: 'var(--link)', fontWeight: 700 }}>{t('backToPreviousStep')}</Link>
+                </p>
+              )}
               {showInsuranceEdit && (
-                <div style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.12)', background: 'rgba(247,250,252,0.95)', padding: '16px', marginBottom: '16px' }}>
+                <div style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '16px', marginBottom: '16px' }}>
                   <div className='settings-info-grid'>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Insurance Type</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('insuranceType')}</label>
                       <select
                         value={insuranceEdit.insurance_type}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_type: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       >
-                        <option value='SELF_PAY'>Self Pay (Private)</option>
-                        <option value='GKV'>Statutory (GKV)</option>
-                        <option value='PKV'>Private (PKV)</option>
+                        <option value='SELF_PAY'>{t('selfPayPrivate')}</option>
+                        <option value='GKV'>{t('statutoryGkv')}</option>
+                        <option value='PKV'>{t('privatePkv')}</option>
                       </select>
                     </div>
                     <div className='settings-wide'>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Insurance Provider</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('insuranceProvider')}</label>
                       <input
                         type='text'
                         value={insuranceEdit.insurance_provider_name}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_provider_name: e.target.value })}
-                        placeholder='e.g., Axa Mansard, HMO'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        placeholder={t('eGAxaMansardHmo')}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Policy Number</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('policyNumber')}</label>
                       <input
                         type='text'
                         value={insuranceEdit.insurance_number}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insurance_number: e.target.value })}
-                        placeholder='e.g., QH-8892-4481'
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        placeholder={t('eGQh88924481')}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Coverage Status</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('membershipCategoryPatientReported')}</label>
                       <select
                         value={insuranceEdit.insured_status}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, insured_status: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       >
-                        <option value=''>Select</option>
-                        <option value='SELF_INSURED'>Self Insured</option>
-                        <option value='FAMILY_MEMBER'>Family Member</option>
-                        <option value='STUDENT'>Student</option>
-                        <option value='PENSIONER'>Pensioner</option>
-                        <option value='OTHER'>Other</option>
+                        <option value=''>{t('select')}</option>
+                        <option value='SELF_INSURED'>{t('selfInsured')}</option>
+                        <option value='FAMILY_MEMBER'>{t('familyMember')}</option>
+                        <option value='STUDENT'>{t('student')}</option>
+                        <option value='PENSIONER'>{t('pensioner')}</option>
+                        <option value='OTHER'>{t('other')}</option>
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Valid From</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('reportedCardValidityFrom')}</label>
                       <input
                         type='date'
                         value={insuranceEdit.validity_start}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, validity_start: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: 600, color: T.slate }}>Valid Until</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: "13px", fontWeight: 600, color: T.slate }}>{t('reportedCardValidityUntil')}</label>
                       <input
                         type='date'
                         value={insuranceEdit.validity_end}
                         onChange={(e) => setInsuranceEdit({ ...insuranceEdit, validity_end: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(4,53,77,0.12)', fontSize: '14px' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: "1px solid var(--border)", fontSize: '14px' }}
                       />
                     </div>
                     <div className='settings-wide flex gap-2'>
-                      <PortalButton tone='primary' onClick={handleInsuranceSave}>Save Insurance</PortalButton>
-                      <PortalButton tone='secondary' onClick={() => setShowInsuranceEdit(false)}>Cancel</PortalButton>
+                      <PortalButton tone='primary' onClick={handleInsuranceSave}>{t('saveInsurance')}</PortalButton>
+                      <PortalButton tone='secondary' onClick={() => setShowInsuranceEdit(false)}>{t('cancel')}</PortalButton>
                     </div>
                   </div>
                 </div>
               )}
-              
+
               <div className='settings-info-grid'>
                 {insurance ? (
                   <>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Type</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_type || 'Self Pay'}</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('insuranceType')}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insuranceInfo.fundingLabel}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insurance Provider</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_provider_name || 'Not set'}</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('insuranceProvider')}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_provider_name || t('notSet')}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Policy Number</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_number || 'Not set'}</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('policyNumber')}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insurance_number || t('notSet')}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coverage Status</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insurance.insured_status || 'Not set'}</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('membershipCategoryPatientReported')}</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>{insuranceInfo.membershipLabel}</p>
                     </div>
-                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '11px', color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Valid Until</p>
+                    <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)" }}>
+                      <p style={{ margin: '0 0 4px', fontSize: "13px", color: T.slate2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('reportedCardValidityUntil')}</p>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: T.navy }}>
-                        {insurance.validity_end 
-                          ? new Date(insurance.validity_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-                          : 'Not set'}
+                        {insurance.validity_end
+                          ? longDate(insurance.validity_end)
+                          : t('notSet')}
                       </p>
                     </div>
                   </>
                 ) : (
-                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(247,250,252,0.92)', border: '1px solid rgba(4,53,77,0.08)', gridColumn: '1 / -1' }}>
-                    <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>No insurance information on file</p>
+                  <div style={{ padding: '12px 14px', borderRadius: '16px', background: "var(--surface-subtle)", border: "1px solid var(--border)", gridColumn: '1 / -1' }}>
+                    <p style={{ margin: 0, fontSize: '14px', color: T.slate2 }}>{t('noInsuranceInformationOnFile')}</p>
                   </div>
                 )}
               </div>
@@ -1200,13 +1225,18 @@ export default function PatientSettingsPage() {
                 <input
                   ref={insuranceCardInputRef}
                   type='file'
+                  aria-label={t('uploadInsuranceCard')}
+                  aria-describedby='insurance-card-upload-help insurance-card-upload-error'
+                  aria-invalid={Boolean(insuranceCardError)}
                   accept='.pdf,.png,.jpg,.jpeg,.webp'
                   onChange={(event) => handleInsuranceCardSelected(event.target.files?.[0] || null)}
                   style={{ display: 'none' }}
                 />
                 <PortalButton tone='secondary' onClick={() => insuranceCardInputRef.current?.click()} disabled={uploadingInsuranceCard}>
-                  {uploadingInsuranceCard ? 'Uploading…' : 'Upload Insurance Card'}
+                  {uploadingInsuranceCard ? t('uploading') : t('uploadCard')}
                 </PortalButton>
+                <p id='insurance-card-upload-help' className='mt-2 text-sm text-muted'>{t('maximum3MbPerFile')}</p>
+                <p id='insurance-card-upload-error' role={insuranceCardError ? 'alert' : undefined} className='mt-2 text-sm text-ink'>{insuranceCardError}</p>
               </div>
             </PortalCard>
           </div>
@@ -1214,9 +1244,9 @@ export default function PatientSettingsPage() {
       )}
       {showDeleteAccountConfirm ? (
         <ConfirmDialog
-          title='Deactivate account'
-          body='This will sign you out and deactivate your account. Clinical records are preserved for compliance and care continuity.'
-          confirmLabel='Deactivate'
+          title={t('deactivateAccount')}
+          body={t('deactivateBody')}
+          confirmLabel={t('deactivate')}
           onCancel={() => setShowDeleteAccountConfirm(false)}
           onConfirm={handleDeactivateAccount}
         />
@@ -1263,6 +1293,7 @@ function PreferenceActionRow({ label, buttonLabel, tone = 'secondary', onClick }
 }
 
 function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { title: string; body: string; confirmLabel: string; onCancel: () => void; onConfirm: () => void }) {
+  const t = useTranslations('patientSettings')
   return (
     <div
       role='presentation'
@@ -1274,7 +1305,7 @@ function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { tit
         display: 'grid',
         placeItems: 'center',
         padding: '20px',
-        background: 'rgba(4, 53, 77, 0.34)',
+        background: "var(--surface-hover)",
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
@@ -1287,16 +1318,16 @@ function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { tit
         style={{
           width: 'min(100%, 420px)',
           borderRadius: '18px',
-          border: '1px solid rgba(255,255,255,0.9)',
-          background: '#fff',
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
           boxShadow: '0 24px 70px rgba(4,53,77,0.24)',
           padding: '20px',
         }}
       >
-        <h2 id='confirm-dialog-title' style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800, color: T.navy }}>{title}</h2>
+        <h2 id='confirm-dialog-title' className='portal-h2'>{title}</h2>
         <p style={{ margin: '0 0 18px', color: T.slate, fontSize: '13px', lineHeight: 1.6 }}>{body}</p>
         <div className='flex flex-wrap justify-end gap-2'>
-          <PortalButton tone='secondary' onClick={onCancel}>Cancel</PortalButton>
+          <PortalButton tone='secondary' onClick={onCancel}>{t('cancel')}</PortalButton>
           <PortalButton tone='danger' onClick={onConfirm}>{confirmLabel}</PortalButton>
         </div>
       </div>
@@ -1305,6 +1336,7 @@ function ConfirmDialog({ title, body, confirmLabel, onCancel, onConfirm }: { tit
 }
 
 function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHistoryItem[]; loading: boolean; onClose: () => void }) {
+  const t = useTranslations('patientSettings'), german = useLocale().startsWith('de')
   return (
     <div
       role='presentation'
@@ -1316,7 +1348,7 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
         display: 'grid',
         placeItems: 'center',
         padding: '20px',
-        background: 'rgba(4, 53, 77, 0.34)',
+        background: "var(--surface-hover)",
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
@@ -1331,27 +1363,27 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
           maxHeight: 'min(680px, calc(100vh - 40px))',
           overflow: 'auto',
           borderRadius: '18px',
-          border: '1px solid rgba(255,255,255,0.9)',
-          background: '#fff',
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
           boxShadow: '0 24px 70px rgba(4,53,77,0.24)',
           padding: '20px',
         }}
       >
         <div className='mb-4 flex items-start justify-between gap-3'>
           <div>
-            <h2 id='login-history-title' style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800, color: T.navy }}>Login history</h2>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Recent security events from your account audit log.</p>
+            <h2 id='login-history-title' className='portal-h2'>{t('loginHistory')}</h2>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('recentSecurityEventsFromYour')}</p>
           </div>
           <button
             type='button'
-            aria-label='Close login history'
+            aria-label={t('closeLoginHistory')}
             onClick={onClose}
             style={{
               width: '38px',
               height: '38px',
               borderRadius: '12px',
-              border: '1px solid rgba(4,53,77,0.1)',
-              background: 'rgba(247,250,252,0.92)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-subtle)",
               color: T.navy,
               display: 'grid',
               placeItems: 'center',
@@ -1366,22 +1398,22 @@ function LoginHistoryDialog({ items, loading, onClose }: { items: PatientLoginHi
         {loading ? (
           <PortalSkeleton height={120} />
         ) : items.length === 0 ? (
-          <div style={{ borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.9)', padding: '18px', textAlign: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>No login history yet</p>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Your future sign-in audit events will appear here.</p>
+          <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '18px', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>{t('noLoginHistoryYet')}</p>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('yourFutureSignInAudit')}</p>
           </div>
         ) : (
           <div className='grid gap-2'>
             {items.map((item) => (
-              <div key={item.id} style={{ borderRadius: '14px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)', padding: '12px' }}>
+              <div key={item.id} style={{ borderRadius: '14px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '12px' }}>
                 <div className='flex flex-wrap items-center justify-between gap-2'>
-                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: T.navy }}>{formatAuditEvent(item.event_type)}</p>
-                  <PortalBadge tone={item.success ? 'success' : 'danger'}>{item.success ? 'Successful' : 'Failed'}</PortalBadge>
+                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: T.navy }}>{({ LOGIN_SUCCESS: t('eventLoginSuccess'), LOGIN_FAILURE: t('eventLoginFailure'), LOGOUT: t('eventLogout'), TOKEN_REFRESHED: t('eventTokenRefreshed') } as Record<string, string>)[item.event_type] ?? formatAuditEvent(item.event_type)}</p>
+                  <PortalBadge tone={item.success ? 'success' : 'danger'}>{item.success ? t('successful') : t('failed')}</PortalBadge>
                 </div>
-                <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.slate }}>
-                  {new Date(item.created_at).toLocaleString()} {item.ip_address ? `• ${item.ip_address}` : ''}
+                <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
+                  {localDateTime(item.created_at, german)} {item.ip_address ? `• ${item.ip_address}` : ''}
                 </p>
-                {item.failure_reason ? <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.red }}>{item.failure_reason}</p> : null}
+                {item.failure_reason ? <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.red }}>{item.failure_reason}</p> : null}
               </div>
             ))}
           </div>
@@ -1404,6 +1436,7 @@ function ActiveDevicesDialog({
   onRevoke: (deviceId: string, isCurrent: boolean) => void
   onRevokeOthers: () => void
 }) {
+  const t = useTranslations('patientSettings'), german = useLocale().startsWith('de')
   return (
     <div
       role='presentation'
@@ -1415,7 +1448,7 @@ function ActiveDevicesDialog({
         display: 'grid',
         placeItems: 'center',
         padding: '20px',
-        background: 'rgba(4, 53, 77, 0.34)',
+        background: "var(--surface-hover)",
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
@@ -1430,27 +1463,27 @@ function ActiveDevicesDialog({
           maxHeight: 'min(720px, calc(100vh - 40px))',
           overflow: 'auto',
           borderRadius: '18px',
-          border: '1px solid rgba(255,255,255,0.9)',
-          background: '#fff',
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
           boxShadow: '0 24px 70px rgba(4,53,77,0.24)',
           padding: '20px',
         }}
       >
         <div className='mb-4 flex items-start justify-between gap-3'>
           <div>
-            <h2 id='active-devices-title' style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800, color: T.navy }}>Active devices</h2>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>These are browser sessions that can currently refresh access to your account.</p>
+            <h2 id='active-devices-title' className='portal-h2'>{t('activeDevices')}</h2>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('theseAreBrowserSessionsThat')}</p>
           </div>
           <button
             type='button'
-            aria-label='Close active devices'
+            aria-label={t('closeActiveDevices')}
             onClick={onClose}
             style={{
               width: '38px',
               height: '38px',
               borderRadius: '12px',
-              border: '1px solid rgba(4,53,77,0.1)',
-              background: 'rgba(247,250,252,0.92)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-subtle)",
               color: T.navy,
               display: 'grid',
               placeItems: 'center',
@@ -1465,34 +1498,34 @@ function ActiveDevicesDialog({
         {loading ? (
           <PortalSkeleton height={150} />
         ) : items.length === 0 ? (
-          <div style={{ borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.9)', padding: '18px', textAlign: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>No active devices found</p>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Your current browser may need to sign in again.</p>
+          <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '18px', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>{t('noActiveDevicesFound')}</p>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('yourCurrentBrowserMayNeed')}</p>
           </div>
         ) : (
           <div className='grid gap-3'>
             <div className='flex flex-wrap justify-end gap-2'>
               <PortalButton tone='secondary' onClick={onRevokeOthers} disabled={items.filter((item) => !item.is_current).length === 0}>
-                Sign out other devices
+                {t('signOutOtherDevices')}
               </PortalButton>
             </div>
             {items.map((item) => (
-              <div key={item.id} style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.08)', background: item.is_current ? 'rgba(32,181,223,0.06)' : 'rgba(247,250,252,0.9)', padding: '14px' }}>
+              <div key={item.id} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: item.is_current ? 'rgba(32,181,223,0.06)' : "var(--surface-subtle)", padding: '14px' }}>
                 <div className='flex flex-wrap items-start justify-between gap-3'>
                   <div>
                     <div className='flex flex-wrap items-center gap-2'>
                       <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: T.navy }}>{item.device_name}</p>
-                      {item.is_current ? <PortalBadge tone='success'>Current</PortalBadge> : null}
+                      {item.is_current ? <PortalBadge tone='success'>{t('current')}</PortalBadge> : null}
                     </div>
-                    <p style={{ margin: '6px 0 0', fontSize: '12.5px', color: T.slate }}>
-                      {[item.browser_name, item.operating_system, item.ip_address].filter(Boolean).join(' • ') || 'Device details unavailable'}
+                    <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
+                      {[item.browser_name, item.operating_system, item.ip_address].filter(Boolean).join(' • ') || t('deviceUnknown')}
                     </p>
-                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.slate2 }}>
-                      Last active {item.last_seen_at ? new Date(item.last_seen_at).toLocaleString() : 'recently'}
+                    <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>
+                      {t('lastActive', { time: item.last_seen_at ? localDateTime(item.last_seen_at, german) : t('recently') })}
                     </p>
                   </div>
                   <PortalButton tone={item.is_current ? 'danger' : 'secondary'} onClick={() => onRevoke(item.id, item.is_current)}>
-                    {item.is_current ? 'Sign out now' : 'Sign out'}
+                    {item.is_current ? t('signOutNow') : t('signOut')}
                   </PortalButton>
                 </div>
               </div>
@@ -1519,6 +1552,7 @@ function PasskeysDialog({
   onRegister: () => void
   onDelete: (credentialId: string) => void
 }) {
+  const t = useTranslations('patientSettings'), german = useLocale().startsWith('de')
   return (
     <div
       role='presentation'
@@ -1530,7 +1564,7 @@ function PasskeysDialog({
         display: 'grid',
         placeItems: 'center',
         padding: '20px',
-        background: 'rgba(4, 53, 77, 0.34)',
+        background: "var(--surface-hover)",
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
@@ -1545,27 +1579,27 @@ function PasskeysDialog({
           maxHeight: 'min(720px, calc(100vh - 40px))',
           overflow: 'auto',
           borderRadius: '18px',
-          border: '1px solid rgba(255,255,255,0.9)',
-          background: '#fff',
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
           boxShadow: '0 24px 70px rgba(4,53,77,0.24)',
           padding: '20px',
         }}
       >
         <div className='mb-4 flex items-start justify-between gap-3'>
           <div>
-            <h2 id='passkeys-title' style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800, color: T.navy }}>Passkeys</h2>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Use your device security, such as Face ID, Touch ID, or a screen lock, to sign in without a password.</p>
+            <h2 id='passkeys-title' className='portal-h2'>{t('passkeys')}</h2>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('useYourDeviceSecuritySuch')}</p>
           </div>
           <button
             type='button'
-            aria-label='Close passkeys'
+            aria-label={t('closePasskeys')}
             onClick={onClose}
             style={{
               width: '38px',
               height: '38px',
               borderRadius: '12px',
-              border: '1px solid rgba(4,53,77,0.1)',
-              background: 'rgba(247,250,252,0.92)',
+              border: "1px solid var(--border)",
+              background: "var(--surface-subtle)",
               color: T.navy,
               display: 'grid',
               placeItems: 'center',
@@ -1579,33 +1613,33 @@ function PasskeysDialog({
 
         <div className='mb-4 flex flex-wrap justify-end gap-2'>
           <PortalButton tone='primary' onClick={onRegister} disabled={registering}>
-            {registering ? 'Adding…' : 'Add passkey'}
+            {registering ? t('adding') : t('addPasskey')}
           </PortalButton>
         </div>
 
         {loading ? (
           <PortalSkeleton height={130} />
         ) : items.length === 0 ? (
-          <div style={{ borderRadius: '16px', border: '1px dashed rgba(4,53,77,0.14)', background: 'rgba(247,250,252,0.9)', padding: '18px', textAlign: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>No passkeys added</p>
-            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>Add this device as a passkey to enable faster sign-in.</p>
+          <div style={{ borderRadius: '16px', border: "1px dashed var(--border)", background: "var(--surface-subtle)", padding: '18px', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 4px', fontWeight: 800, color: T.navy }}>{t('noPasskeysAdded')}</p>
+            <p style={{ margin: 0, color: T.slate, fontSize: '13px', lineHeight: 1.5 }}>{t('addThisDeviceAsA')}</p>
           </div>
         ) : (
           <div className='grid gap-3'>
             {items.map((item) => (
-              <div key={item.id} style={{ borderRadius: '16px', border: '1px solid rgba(4,53,77,0.08)', background: 'rgba(247,250,252,0.9)', padding: '14px' }}>
+              <div key={item.id} style={{ borderRadius: '16px', border: "1px solid var(--border)", background: "var(--surface-subtle)", padding: '14px' }}>
                 <div className='flex flex-wrap items-start justify-between gap-3'>
                   <div>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: T.navy }}>{item.device_name || 'Passkey'}</p>
-                    <p style={{ margin: '6px 0 0', fontSize: '12.5px', color: T.slate }}>
-                      Added {item.created_at ? new Date(item.created_at).toLocaleString() : 'recently'}
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: T.navy }}>{item.device_name || t('passkeyFallback')}</p>
+                    <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate }}>
+                      {t('addedAt', { time: item.created_at ? localDateTime(item.created_at, german) : t('recently') })}
                     </p>
-                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.slate2 }}>
-                      Last used {item.last_used_at ? new Date(item.last_used_at).toLocaleString() : 'not yet'}
+                    <p style={{ margin: '6px 0 0', fontSize: "13px", color: T.slate2 }}>
+                      {t('lastUsed', { time: item.last_used_at ? localDateTime(item.last_used_at, german) : t('notYet') })}
                     </p>
                   </div>
                   <PortalButton tone='danger' onClick={() => onDelete(item.id)}>
-                    Remove
+                    {t('remove')}
                   </PortalButton>
                 </div>
               </div>
@@ -1617,6 +1651,13 @@ function PasskeysDialog({
   )
 }
 
+/** English keeps its existing formats; German uses de-DE. */
+function localDate(value: string, german: boolean) {
+  return new Date(value).toLocaleDateString(german ? 'de-DE' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+function localDateTime(value: string, german: boolean) {
+  return new Date(value).toLocaleString(german ? 'de-DE' : undefined)
+}
 function formatAuditEvent(eventType: string) {
   return eventType.toLowerCase().split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
 }
@@ -1629,30 +1670,30 @@ function ToggleRow({ label, enabled, onToggle, description }: { label: string; e
       aria-pressed={enabled}
       className='settings-row text-left transition hover:-translate-y-px focus:outline-none focus:ring-2'
       style={{
-        borderColor: enabled ? 'rgba(32,181,223,0.2)' : 'rgba(4,53,77,0.08)',
-        background: enabled ? 'rgba(32,181,223,0.06)' : 'rgba(247,250,252,0.9)',
+        borderColor: enabled ? 'rgba(32,181,223,0.2)' : "var(--border)",
+        background: enabled ? 'rgba(32,181,223,0.06)' : "var(--surface-subtle)",
         boxShadow: enabled ? '0 8px 20px rgba(32,181,223,0.08)' : 'none',
         width: '100%',
       }}
     >
       <div>
         <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy }}>{label}</p>
-        {description ? <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate, lineHeight: 1.5 }}>{description}</p> : null}
+        {description ? <p style={{ margin: '4px 0 0', fontSize: "13px", color: T.slate, lineHeight: 1.5 }}>{description}</p> : null}
       </div>
-      <span className='settings-row-control' style={{ width: '44px', height: '24px', borderRadius: '999px', background: enabled ? T.blue : 'rgba(4,53,77,0.12)', padding: '2px', display: 'inline-flex', justifyContent: enabled ? 'flex-end' : 'flex-start', transition: 'all 0.18s ease' }}>
-        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#fff', boxShadow: '0 2px 6px rgba(4,53,77,0.16)' }} />
+      <span className='settings-row-control' style={{ width: '44px', height: '24px', borderRadius: '999px', background: enabled ? T.blue : "var(--surface-hover)", padding: '2px', display: 'inline-flex', justifyContent: enabled ? 'flex-end' : 'flex-start', transition: 'all 0.18s ease' }}>
+        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: "var(--surface)", boxShadow: '0 2px 6px rgba(4,53,77,0.16)' }} />
       </span>
     </button>
   )
 }
 
-function SelectRow({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (next: string) => void }) {
+function SelectRow({ label, value, options, onChange, optionLabel = option => option }: { label: string; value: string; options: string[]; onChange: (next: string) => void; optionLabel?: (option: string) => string }) {
   return (
     <label className='settings-row'>
       <span style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className='settings-row-control rounded-xl border px-3 py-2 text-sm' style={{ borderColor: 'rgba(4,53,77,0.12)', color: T.navy, background: '#fff' }}>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className='settings-row-control rounded-xl border px-3 py-2 text-sm' style={{ borderColor: "var(--border)", color: T.navy, background: "var(--surface)" }}>
         {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
+          <option key={option} value={option}>{optionLabel(option)}</option>
         ))}
       </select>
     </label>

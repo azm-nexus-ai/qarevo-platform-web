@@ -1,7 +1,6 @@
 'use client'
-
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { FormEvent, RefObject } from 'react'
+import { useTranslations } from 'next-intl'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PAGE_BG, T } from '@/lib/tokens'
@@ -9,167 +8,60 @@ import { setOnboardingStage } from '@/lib/auth-flow'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ProfileSetupLogo, ProfileSetupMark } from '@/components/branding/ProfileSetupBrandAssets'
-import { ApiError, createInsurance, getApiErrorDetail, updateInsurance } from '@/lib/api'
-
-const LEFT_BG = [
-  'radial-gradient(ellipse 80% 60% at 18% 12%,  rgba(32,181,223,0.32) 0%, transparent 52%)',
-  'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
-  'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
-  'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
-].join(', ')
-
-const STORAGE_KEY = 'qarevo.onboarding.insurance-privacy-consent.v1'
-const BACK_ROUTE = '/auth/profile-setup/medical-history-allergies'
-const NEXT_ROUTE = '/auth/profile-setup/profile-completed'
-const MAX_UPLOAD_SIZE = 10 * 1024 * 1024
-const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'application/pdf']
-
-type InsuranceStatus = 'yes' | 'no' | ''
-type ConsentKey = 'terms' | 'privacy' | 'health' | 'telemedicine' | 'marketing'
-
-type UploadedFileMeta = {
-  name: string
-  size: number
-  type: string
-}
-
-type InsuranceForm = {
-  insuranceStatus: InsuranceStatus
-  provider: string
-  policyNumber: string
-  memberId: string
-  groupNumber: string
-  insuranceFront: UploadedFileMeta | null
-  insuranceBack: UploadedFileMeta | null
-  consents: Record<ConsentKey, boolean>
-}
-
-type InsuranceErrors = Partial<Record<'insuranceStatus' | 'provider' | 'policyNumber' | 'memberId' | 'insuranceFront' | 'insuranceBack' | 'consents', string>>
-
-const INITIAL_FORM: InsuranceForm = {
-  insuranceStatus: '',
-  provider: '',
-  policyNumber: '',
-  memberId: '',
-  groupNumber: '',
-  insuranceFront: null,
-  insuranceBack: null,
-  consents: {
-    terms: false,
-    privacy: false,
-    health: false,
-    telemedicine: false,
-    marketing: false,
-  },
-}
-
-const CONSENT_COPY: Array<{
-  key: ConsentKey
-  label: string
-  required: boolean
-  learnMore: string
-  details: string
-}> = [
-  {
-    key: 'terms',
-    label: 'I agree to the Terms & Conditions.',
-    required: true,
-    learnMore: 'Learn More',
-    details: 'These terms explain how Qarevo Health works, how the service is delivered, and the responsibilities that help keep care secure and reliable.',
-  },
-  {
-    key: 'privacy',
-    label: 'I acknowledge the Privacy Policy.',
-    required: true,
-    learnMore: 'Learn More',
-    details: 'Our privacy policy explains how your personal and health information is collected, stored, and protected within the platform.',
-  },
-  {
-    key: 'health',
-    label: 'I consent to the secure processing of my health information for the purpose of delivering healthcare services.',
-    required: true,
-    learnMore: 'Learn More',
-    details: 'Your information is processed only to support care delivery, physician review, documentation, and related healthcare operations.',
-  },
-  {
-    key: 'telemedicine',
-    label: 'I understand that telemedicine consultations may have limitations compared to in-person medical examinations.',
-    required: true,
-    learnMore: 'Learn More',
-    details: 'Virtual consultations are convenient, but some assessments may still require an in-person visit, tests, or follow-up care.',
-  },
-  {
-    key: 'marketing',
-    label: 'I would like to receive healthcare reminders, wellness updates, and product announcements.',
-    required: false,
-    learnMore: 'Learn More',
-    details: 'This optional preference helps us send reminders, updates, and product information. You can change this later in your settings.',
-  },
+import { ValidationSummary, focusValidation } from '@/components/ui/ValidationFeedback'
+import { ApiError, getApiErrorDetail } from '@/lib/api'
+import { createAccountDraftStorage } from '@/lib/account-storage'
+import { hydrateAccountDraft } from '@/lib/hydrate-account-draft'
+import { getOnboarding, saveCoverageInformation, onboardingPath, type CoverageInformation, type OnboardingStatus } from '@/lib/patient-onboarding'
+const LEFT_BG = `radial-gradient(ellipse at top left, rgba(32,181,223,.3), transparent 60%), ${T.brandNavy}`
+const STORAGE_KEY = 'qarevo.onboarding.insurance-privacy-consent.v2'
+type FundingType = CoverageInformation['insurance_type']
+type CoverageForm = Omit<CoverageInformation, 'insurance_type'> & { insurance_type: FundingType | '' }
+const INITIAL_FORM: CoverageForm = { insurance_type: '', provider: '', insurance_number: '', consents: { terms: false, privacy: false, health: false, telemedicine: false, marketing: false } }
+/** Labels, acknowledgements and step names below are message keys in onboarding.coverage. */
+const FUNDING_OPTIONS: { value: FundingType; label: string; body: string }[] = [
+  { value: 'GKV', label: 'fundingGkv', body: 'fundingGkvBody' },
+  { value: 'PKV', label: 'fundingPkv', body: 'fundingPkvBody' },
+  { value: 'SELF_PAY', label: 'fundingSelfPay', body: 'fundingSelfPayBody' },
 ]
-
-function formatBytes(value: number) {
-  if (value < 1024) return `${value} B`
-  const kilobytes = value / 1024
-  if (kilobytes < 1024) return `${kilobytes.toFixed(1)} KB`
-  return `${(kilobytes / 1024).toFixed(1)} MB`
+const TEST_ACKNOWLEDGEMENTS = [
+  ['terms', 'ackTerms'],
+  ['privacy', 'ackPrivacy'],
+  ['health', 'ackHealth'],
+  ['telemedicine', 'ackTelemedicine'],
+] as const
+const STEP_LABELS: Record<NonNullable<OnboardingStatus['next_step']>, string> = {
+  personal: 'stepPersonal', contact: 'stepContact', health: 'stepHealth', coverage: 'stepCoverage',
 }
 
-function validateFile(file: File | null | undefined) {
-  if (!file) return 'Please upload a file.'
-  if (!ACCEPTED_TYPES.includes(file.type)) return 'Upload a PNG, JPEG, or PDF file.'
-  if (file.size > MAX_UPLOAD_SIZE) return 'File size must be 10MB or less.'
-  return ''
-}
-
-function parseStoredForm(raw: string | null): InsuranceForm | null {
-  if (!raw) return null
-  try {
-    const parsed = JSON.parse(raw) as Partial<InsuranceForm>
-    return {
-      ...INITIAL_FORM,
-      ...parsed,
-      consents: { ...INITIAL_FORM.consents, ...(parsed.consents || {}) },
-    }
-  } catch {
-    return null
+/** Only the fields the API accepts, so a stale draft or saved record can never add unknown keys. */
+function toForm(data: Partial<CoverageForm>): CoverageForm {
+  const type = FUNDING_OPTIONS.some(option => option.value === data.insurance_type) ? data.insurance_type as FundingType : ''
+  const consents = data.consents || INITIAL_FORM.consents
+  return {
+    insurance_type: type,
+    provider: typeof data.provider === 'string' ? data.provider : '',
+    insurance_number: typeof data.insurance_number === 'string' ? data.insurance_number : '',
+    consents: {
+      terms: consents.terms === true, privacy: consents.privacy === true, health: consents.health === true,
+      telemedicine: consents.telemedicine === true, marketing: consents.marketing === true,
+    },
   }
 }
 
-function validateFileMeta(file: UploadedFileMeta | null) {
-  if (!file) return 'Upload required.'
-  if (!ACCEPTED_TYPES.includes(file.type)) return 'Upload a PNG, JPEG, or PDF file.'
-  if (file.size > MAX_UPLOAD_SIZE) return 'File size must be 10MB or less.'
-  return ''
+function validate(form: CoverageForm, text: (key: string) => string) {
+  const errors: Record<string, string> = {}
+  if (!form.insurance_type) errors.insurance_type = text('errFunding')
+  if (form.insurance_type && form.insurance_type !== 'SELF_PAY') {
+    if (form.provider.trim().length < 2) errors.provider = text('errInsurer')
+    if (form.insurance_type === 'GKV' && !/^[A-Z][0-9]{9}$/.test(form.insurance_number.trim())) errors.insurance_number = text('errKvnr')
+    if (form.insurance_type === 'PKV' && !/^[A-Za-z0-9][A-Za-z0-9 /.-]{2,49}$/.test(form.insurance_number.trim())) errors.insurance_number = text('errPolicy')
+  }
+  if (TEST_ACKNOWLEDGEMENTS.some(([key]) => !form.consents[key])) errors.consents = text('errAcknowledgements')
+  return errors
 }
-
-function validateForm(form: InsuranceForm): InsuranceErrors {
-  const nextErrors: InsuranceErrors = {}
-
-  if (!form.insuranceStatus) {
-    nextErrors.insuranceStatus = 'Please choose whether you currently have health insurance.'
-  }
-
-  if (form.insuranceStatus === 'yes') {
-    if (!form.provider.trim()) nextErrors.provider = 'Insurance provider is required.'
-    if (!form.policyNumber.trim()) nextErrors.policyNumber = 'Policy number is required.'
-    if (!form.memberId.trim()) nextErrors.memberId = 'Member ID is required.'
-
-    const frontError = validateFileMeta(form.insuranceFront)
-    const backError = validateFileMeta(form.insuranceBack)
-    if (frontError) nextErrors.insuranceFront = frontError
-    if (backError) nextErrors.insuranceBack = backError
-  }
-
-  const requiredConsents = ['terms', 'privacy', 'health', 'telemedicine'] as const
-  if (requiredConsents.some((key) => !form.consents[key])) {
-    nextErrors.consents = 'Please review and accept the required consent items.'
-  }
-
-  return nextErrors
-}
-
 function LeftPanel() {
+  const t = useTranslations('onboarding.coverage')
   return (
     <div
       style={{
@@ -224,21 +116,21 @@ function LeftPanel() {
         </div>
 
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
-            Coverage, handled carefully.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Privacy stays in focus.</span>
+          <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
+            {t('coverageHandledCarefully')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('privacyStaysInFocus')}</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            We only ask for the information needed to verify coverage, protect your records, and deliver safe digital healthcare.
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+            {t('recordYourIntendedFundingRoute')}
           </p>
         </div>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.lock, label: 'Secure Storage', sub: 'Information is encrypted and protected' },
-          { icon: ICONS.shield, label: 'Trusted Access', sub: 'Only authorized care teams can review it' },
-          { icon: ICONS.check, label: 'Coverage Flexibility', sub: 'Add insurance now or later from your profile' },
+          { icon: ICONS.lock, label: t('panelSaved'), sub: t('panelSavedSub') },
+          { icon: ICONS.shield, label: t('panelAccess'), sub: t('panelAccessSub') },
+          { icon: ICONS.check, label: t('panelFunding'), sub: t('panelFundingSub') },
         ].map(({ icon, label, sub }) => (
           <div key={label} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', padding: '13px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
@@ -246,7 +138,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -255,510 +147,253 @@ function LeftPanel() {
   )
 }
 
-function TextField({ label, value, onChange, placeholder, error, optional }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; optional?: boolean }) {
+function SectionHeader({ title, body }: { title: string; body: string }) {
+  return <div className='cv-section-head'><h2>{title}</h2><p>{body}</p></div>
+}
+
+function TextField({ label, value, onChange, placeholder, error, hint }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; hint?: string }) {
+  const t = useTranslations('onboarding.coverage')
   const id = useId()
-  const [focused, setFocused] = useState(false)
-
-  const border = error ? 'rgba(220,38,38,0.55)' : focused ? 'rgba(32,181,223,0.45)' : 'rgba(4,53,77,0.1)'
-  const background = error ? '#FFF5F5' : focused ? '#fff' : 'rgba(255,255,255,0.78)'
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-        {label} {optional ? <span style={{ color: T.slate2, fontWeight: 500 }}>(Optional)</span> : null}
-      </label>
-      <input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          padding: '11px 12px',
-          borderRadius: '11px',
-          border: `1.5px solid ${border}`,
-          background,
-          color: T.navy,
-          fontSize: '14px',
-          fontFamily: 'inherit',
-          outline: 'none',
-          transition: 'all 0.15s ease',
-        }}
-      />
-      {error ? <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.45 }}>{error}</p> : null}
-    </div>
-  )
-}
-
-function ToggleChip({ label, active, onClick, tone = 'default' }: { label: string; active: boolean; onClick: () => void; tone?: 'default' | 'warning' }) {
-  const [hovered, setHovered] = useState(false)
-  const activeBg = tone === 'warning' ? 'rgba(217,119,6,0.12)' : 'rgba(32,181,223,0.1)'
-  const activeBorder = tone === 'warning' ? 'rgba(217,119,6,0.28)' : 'rgba(32,181,223,0.24)'
-  const activeColor = tone === 'warning' ? T.amber : T.blue
-
-  return (
-    <button
-      type='button'
-      aria-pressed={active}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        minHeight: '38px',
-        padding: '8px 12px',
-        borderRadius: '999px',
-        border: `1px solid ${active ? activeBorder : hovered ? 'rgba(4,53,77,0.13)' : 'rgba(4,53,77,0.08)'}`,
-        background: active ? activeBg : hovered ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.78)',
-        color: active ? activeColor : T.slate,
-        fontSize: '12.5px',
-        fontWeight: 700,
-        letterSpacing: '-0.01em',
-        cursor: 'pointer',
-        transition: 'all 0.16s ease',
-        boxShadow: active ? '0 2px 10px rgba(32,181,223,0.1)' : 'inset 0 1px 0 rgba(255,255,255,0.88)',
-      }}
-    >
-      {label}
-    </button>
-  )
-}
-
-function CheckboxCard({
-  checked,
-  onChange,
-  title,
-  required,
-  learnMore,
-  details,
-}: {
-  checked: boolean
-  onChange: () => void
-  title: string
-  required?: boolean
-  learnMore: string
-  details: string
-}) {
-  const [expanded, setExpanded] = useState(false)
-
-  return (
-    <div
-      style={{
-        padding: '16px',
-        borderRadius: '16px',
-        background: checked ? 'rgba(234,241,255,0.68)' : 'rgba(255,255,255,0.78)',
-        border: `1px solid ${checked ? 'rgba(32,181,223,0.18)' : 'rgba(4,53,77,0.06)'}`,
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)',
-      }}
-    >
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-        <button
-          type='button'
-          role='checkbox'
-          aria-checked={checked}
-          onClick={onChange}
-          style={{
-            width: '22px',
-            height: '22px',
-            borderRadius: '7px',
-            border: `1.5px solid ${checked ? T.blue : 'rgba(4,53,77,0.18)'}`,
-            background: checked ? T.blue : '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            marginTop: '2px',
-            cursor: 'pointer',
-            outline: 'none',
-            boxShadow: checked ? '0 1px 4px rgba(32,181,223,0.25)' : 'none',
-          }}
-        >
-          {checked ? <Ico p={ICONS.check} size={11} sw={3} color='#fff' /> : null}
-        </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <div>
-              <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: T.navy, lineHeight: 1.45, letterSpacing: '-0.01em' }}>{title}</p>
-              {required ? (
-                <span style={{ display: 'inline-flex', marginTop: '6px', padding: '3px 8px', borderRadius: '999px', background: 'rgba(32,181,223,0.08)', color: T.blue, fontSize: '11px', fontWeight: 700 }}>
-                  Required
-                </span>
-              ) : (
-                <span style={{ display: 'inline-flex', marginTop: '6px', padding: '3px 8px', borderRadius: '999px', background: 'rgba(9,173,112,0.08)', color: T.green, fontSize: '11px', fontWeight: 700 }}>
-                  Optional
-                </span>
-              )}
-            </div>
-            <button
-              type='button'
-              onClick={() => setExpanded((value) => !value)}
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: T.blue, fontSize: '12px', fontWeight: 700, letterSpacing: '-0.01em' }}
-            >
-              {expanded ? 'Hide' : learnMore}
-            </button>
-          </div>
-          {expanded ? (
-            <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)' }}>
-              <p style={{ margin: 0, fontSize: '12.5px', color: T.slate, lineHeight: 1.6, letterSpacing: '-0.005em' }}>{details}</p>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function FileUploadCard({
-  label,
-  file,
-  onFile,
-  error,
-  inputRef,
-}: {
-  label: string
-  file: UploadedFileMeta | null
-  onFile: (file: File | null) => void
-  error?: string
-  inputRef: RefObject<HTMLInputElement | null>
-}) {
-  return (
-    <div style={{ padding: '16px', borderRadius: '16px', background: 'rgba(255,255,255,0.8)', border: `1px solid ${error ? 'rgba(220,38,38,0.18)' : 'rgba(4,53,77,0.06)'}`, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '10px', flexWrap: 'wrap' }}>
-        <div>
-          <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{label}</p>
-          <p style={{ margin: '4px 0 0', fontSize: '12px', color: T.slate2, lineHeight: 1.5 }}>PNG, JPEG, or PDF. Maximum 10MB.</p>
-        </div>
-        <button
-          type='button'
-          onClick={() => inputRef.current?.click()}
-          style={{ minHeight: '36px', padding: '8px 12px', borderRadius: '999px', border: '1px solid rgba(32,181,223,0.18)', background: 'rgba(234,241,255,0.78)', color: T.blue, fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
-        >
-          Upload
-        </button>
-      </div>
-      <input ref={inputRef} type='file' accept='.png,.jpg,.jpeg,.pdf' style={{ display: 'none' }} onChange={(event) => onFile(event.target.files?.[0] || null)} />
-      <div
-        style={{
-          minHeight: '92px',
-          borderRadius: '14px',
-          border: `1px dashed ${error ? 'rgba(220,38,38,0.28)' : 'rgba(32,181,223,0.16)'}`,
-          background: error ? 'rgba(255,245,245,0.9)' : 'rgba(234,241,255,0.48)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '14px',
-          textAlign: 'center',
-        }}
-      >
-        {file ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.greenLight, border: '1px solid rgba(9,173,112,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Ico p={ICONS.check} size={13} sw={2.4} color={T.green} />
-            </div>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy }}>{file.name}</div>
-              <div style={{ fontSize: '12px', color: T.slate2 }}>{formatBytes(file.size)} • {file.type.toUpperCase()}</div>
-            </div>
-            <button type='button' onClick={() => onFile(null)} style={{ background: 'none', border: 'none', color: T.red, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-              Remove
-            </button>
-          </div>
-        ) : (
-          <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2, lineHeight: 1.55 }}>
-            Upload a clear photo or PDF of the card front or back.
-          </p>
-        )}
-      </div>
-      {error ? <p style={{ margin: '10px 0 0', fontSize: '12px', color: T.red, lineHeight: 1.45 }}>{error}</p> : null}
-    </div>
-  )
-}
-
-function SecurityPill({ icon, title }: { icon: string | readonly string[]; title: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 0', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
-      <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Ico p={icon} size={13} sw={1.8} color={T.blue} />
-      </div>
-      <span style={{ fontSize: '12.5px', fontWeight: 600, color: T.slate, lineHeight: 1.45 }}>{title}</span>
+    <div className='cv-field'>
+      <label htmlFor={id}>{label} <span className='cv-required'>{t('required')}</span></label>
+      <input id={id} required aria-invalid={!!error} autoComplete='off' value={value} placeholder={placeholder}
+        aria-describedby={[hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined}
+        onChange={event => onChange(event.target.value)} />
+      {hint && <p id={`${id}-hint`} className='field-hint'>{hint}</p>}
+      {error && <p id={`${id}-error`} role='alert' className='field-error'>{error}</p>}
     </div>
   )
 }
 
 export default function InsurancePrivacyConsentPage() {
+  const t = useTranslations('onboarding.coverage')
   const router = useRouter()
-  const insuranceFrontRef = useRef<HTMLInputElement | null>(null)
-  const insuranceBackRef = useRef<HTMLInputElement | null>(null)
-  const [form, setForm] = useState<InsuranceForm>(INITIAL_FORM)
-  const [savedTick, setSavedTick] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('Progress autosaves as you type')
+  const formRef = useRef<HTMLFormElement>(null)
+  const [draftStorage] = useState(createAccountDraftStorage)
+  const [form, setForm] = useState<CoverageForm>(INITIAL_FORM)
+  const [status, setStatus] = useState<OnboardingStatus | null>(null)
+  const [ready, setReady] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [loadError, setLoadError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [continueHover, setContinueHover] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState('')
-  const [errors, setErrors] = useState<InsuranceErrors>({})
+  const [conflict, setConflict] = useState(false)
+  const [savedNotice, setSavedNotice] = useState('')
+  const [saveMessage, setSaveMessage] = useState(t('draftAutosaves'))
+  const [submitted, setSubmitted] = useState(false)
+  const errors = validate(form, key => t(key))
+  const shown = submitted ? errors : {}
+  // A completed profile already holds every mandatory acknowledgement, so leaving without changes bypasses nothing.
+  const returning = !!status?.complete
+  const earlierStep = status?.next_step && status.next_step !== 'coverage' ? status.next_step : null
 
   useEffect(() => {
-    try {
-      const stored = parseStoredForm(window.localStorage.getItem(STORAGE_KEY))
-      if (stored) queueMicrotask(() => setForm(stored))
-    } catch {
-      // Ignore prototype storage issues.
-    }
-  }, [])
+    setReady(false); setLoadError('')
+    let live = true
+    const request = getOnboarding()
+    request.then(value => { if (live) setStatus(value) }).catch(() => { /* reported by the hydration below */ })
+    const stop = hydrateAccountDraft<CoverageForm>(draftStorage, STORAGE_KEY, async () => (await request).coverage || {},
+      data => setForm(toForm(data)),
+      error => setLoadError(getApiErrorDetail(error) || t('loadFailed')),
+      () => setReady(true))
+    return () => { live = false; stop() }
+  }, [draftStorage, reloadKey, t])
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
-        setSavedTick(true)
-        setSaveMessage('Progress Saved')
-        window.setTimeout(() => {
-          setSavedTick(false)
-          setSaveMessage('Progress autosaves as you type')
-        }, 1400)
-      } catch {
-        setSaveMessage('Could not autosave right now')
-      }
-    }, 320)
-
-    return () => window.clearTimeout(timer)
-  }, [form])
-
-  useEffect(() => {
-    if (submitted) queueMicrotask(() => setErrors(validateForm(form)))
-  }, [form, submitted])
-
-  const validationErrors = useMemo(() => validateForm(form), [form])
-  const canContinue = Object.keys(validationErrors).length === 0 && !submitting
-
-  const updateField = <K extends keyof InsuranceForm>(key: K, value: InsuranceForm[K]) => {
-    setForm((previous) => ({ ...previous, [key]: value }))
-  }
-
-  const setConsent = (key: ConsentKey, value: boolean) => {
-    setForm((previous) => ({
-      ...previous,
-      consents: {
-        ...previous.consents,
-        [key]: value,
-      },
-    }))
-  }
-
-  const onFileSelect = (key: 'insuranceFront' | 'insuranceBack', file: File | null) => {
-    if (!file) {
-      updateField(key, null)
-      setErrors((previous) => ({ ...previous, [key]: '' }))
-      return
+    if (!ready) return
+    setSaveMessage(t('draftSaving'))
+    const persist = () => {
+      try { draftStorage.setItem(STORAGE_KEY, JSON.stringify(form)); setSaveMessage(t('draftSaved')) }
+      catch { setSaveMessage(t('autosaveFailed')) }
     }
+    const timer = window.setTimeout(persist, 320)
+    // Refresh/navigation must not discard the last keystrokes before the debounce.
+    window.addEventListener('pagehide', persist)
+    return () => { window.clearTimeout(timer); window.removeEventListener('pagehide', persist) }
+  }, [form, draftStorage, ready, t])
 
-    const nextError = validateFile(file)
-    if (nextError) {
-      setErrors((previous) => ({ ...previous, [key]: nextError }))
-      return
-    }
-
-    updateField(key, { name: file.name, size: file.size, type: file.type })
-    setErrors((previous) => ({ ...previous, [key]: '' }))
+  const update = <K extends keyof CoverageForm>(key: K, value: CoverageForm[K]) => { setSavedNotice(''); setForm(previous => ({ ...previous, [key]: value })) }
+  const reloadSaved = () => {
+    try { draftStorage.removeItem(STORAGE_KEY) } catch { /* the server copy is reloaded either way */ }
+    setSubmitted(false); setSubmitError(''); setConflict(false); setSavedNotice('')
+    setReloadKey(n => n + 1)
   }
 
-  const handleSubmit = async (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
-    setSubmitted(true)
-    setSubmitError('')
-    const nextErrors = validateForm(form)
-    setErrors(nextErrors)
-    if (Object.keys(nextErrors).length > 0) return
-
-    setSubmitting(true)
+    setSubmitted(true); setSavedNotice('')
+    if (Object.keys(errors).length) { if (formRef.current) focusValidation(formRef.current); return }
+    setSubmitError(''); setConflict(false); setSubmitting(true)
     try {
-      if (form.insuranceStatus === 'yes') {
-        const payload = {
-          insurance_provider_name: form.provider.trim(),
-          insurance_number: form.policyNumber.trim(),
-          insured_status: form.memberId.trim(),
-        }
-        try {
-          await createInsurance(payload)
-        } catch (error) {
-          if (error instanceof ApiError && error.status === 400) {
-            await updateInsurance(payload)
-          } else {
-            throw error
-          }
-        }
-      }
-      setSubmitting(false)
+      const saved = await saveCoverageInformation({ ...form, insurance_type: form.insurance_type as FundingType })
+      setStatus(saved)
+      try { draftStorage.removeItem(STORAGE_KEY) } catch { /* nothing left to clear */ }
+      if (!saved.complete) { setSubmitError(t('savedEarlierStep')); return }
+      if (returning) { setSubmitted(false); setSavedNotice(t('upToDateNotice')); return }
       setOnboardingStage('profile-completed')
-      router.push(NEXT_ROUTE)
+      router.push('/auth/profile-setup/profile-completed')
     } catch (error) {
-      setSubmitError(getApiErrorDetail(error) || 'We could not save your insurance information. Please try again.')
-      setSubmitting(false)
-    }
+      const isConflict = error instanceof ApiError && error.status === 409
+      setConflict(isConflict)
+      setSubmitError(isConflict
+        ? t('conflict')
+        : getApiErrorDetail(error) || t('saveFailed'))
+    } finally { setSubmitting(false) }
   }
 
-  return (
-    <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`
-        * { box-sizing: border-box; }
-        input::placeholder, textarea::placeholder { color: rgba(4,53,77,0.3); }
-        select option { background: #fff; color: #04354D; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes floatRing { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-        @keyframes floatNode { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-        @media (max-width: 900px) {
-          .ipc-left { display: none !important; }
-          .ipc-wrap { padding: 24px 16px !important; }
-          .ipc-card { padding: 28px 22px 24px !important; border-radius: 20px !important; }
-          .ipc-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
-
-      <div className='ipc-left'>
-        <LeftPanel />
-      </div>
-
-      <div className='ipc-wrap' style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '44px 24px 64px', overflowY: 'auto' }}>
-        <div style={{ width: '100%', maxWidth: '860px' }}>
-          <Link href={BACK_ROUTE} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
-            <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back
-          </Link>
-
-          <form className='ipc-card' onSubmit={handleSubmit} noValidate style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(34px) saturate(200%)', WebkitBackdropFilter: 'blur(34px) saturate(200%)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.92)', boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)', padding: '36px 32px', animation: 'fadeUp 0.3s ease' }}>
-            <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 5 of 6</p>
-              </div>
-              <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>84% Complete</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Less than 1 Minute</p>
-              </div>
+  const pill = !ready ? t('loading') : savedNotice ? t('savedToAccount') : saveMessage
+  return <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
+    <style>{`
+      .cv-left { display: block; }
+      .cv-wrap { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 44px 24px; min-height: 100vh; }
+      .cv-card { background: var(--surface-glass); backdrop-filter: blur(34px) saturate(200%); -webkit-backdrop-filter: blur(34px) saturate(200%); border: 1px solid var(--border); border-radius: 24px; box-shadow: 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1); padding: 36px 32px; animation: cvFade .3s ease; }
+      @keyframes cvFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+      .cv-card fieldset.cv-root { border: 0; padding: 0; margin: 0; min-width: 0; }
+      .cv-progress { padding: 12px 14px; border-radius: 12px; background: var(--surface-hover); border: 1px solid var(--border); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+      .cv-progress p { margin: 0; font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
+      .cv-progress p.cv-eyebrow { margin: 0 0 3px; color: var(--text-muted); letter-spacing: .06em; text-transform: uppercase; }
+      .cv-card h1 { margin: 0 0 8px; font-family: var(--font-inter), Inter, system-ui, sans-serif; font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -.035em; line-height: 1.2; }
+      .cv-lede { margin: 0 0 14px; font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+      .cv-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 100px; background: var(--surface-hover); border: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 14px; }
+      .cv-pill.saved { background: var(--success-soft, var(--surface-hover)); color: var(--success, var(--text)); }
+      .cv-note { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-subtle); margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: var(--text); }
+      .cv-note.warn { border-color: var(--warning, var(--border)); }
+      .cv-note.danger { border-color: var(--danger); background: var(--danger-soft); }
+      .cv-note p { margin: 0 0 8px; } .cv-note p:last-child { margin: 0; }
+      .cv-note a, .cv-link { color: var(--link); font-weight: 700; }
+      .cv-inline-button { min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+      .cv-section { margin: 22px 0 0; }
+      .cv-section-head h2 { margin: 0 0 4px; font-family: var(--font-inter), Inter, system-ui, sans-serif; font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -.025em; }
+      .cv-section-head p { margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+      .cv-options { border: 0; padding: 0; margin: 0; min-width: 0; }
+      .cv-options legend { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; padding: 0; }
+      .cv-option-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+      .cv-option { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 14px 44px; min-height: 92px; border: 1.5px solid var(--border); border-radius: 14px; background: var(--surface); cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+      .cv-option input { position: absolute; left: 14px; top: 16px; width: 18px; height: 18px; margin: 0; accent-color: var(--action-primary); }
+      .cv-option strong { font-size: 14px; color: var(--text); letter-spacing: -.01em; }
+      .cv-option span { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+      .cv-option.chosen { border-color: var(--action-primary); box-shadow: 0 0 0 1px var(--action-primary); }
+      .cv-options[aria-invalid="true"] .cv-option { border-color: var(--danger); }
+      .cv-option:has(input:focus-visible) { outline: 3px solid var(--action-primary); outline-offset: 2px; }
+      .cv-notice { margin: 12px 0 0; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+      .cv-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+      .cv-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+      .cv-field label { font-size: 13px; font-weight: 600; color: var(--text); }
+      .cv-required { font-weight: 500; color: var(--text-muted); }
+      .cv-field input { width: 100%; min-height: 46px; padding: 11px 12px; border-radius: 11px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; }
+      .cv-field input:focus-visible { outline: none; border-color: var(--link); box-shadow: 0 0 0 3px var(--focus-ring, rgba(52,140,234,.25)); }
+      .cv-field input[aria-invalid="true"] { border-color: var(--danger); background: var(--danger-soft); }
+      .cv-acks { padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-subtle); }
+      .cv-acks > p { margin: 0 0 6px; font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+      .cv-check { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-subtle, var(--border)); color: var(--text); font-size: 14px; line-height: 1.55; cursor: pointer; }
+      .cv-check:first-of-type { border-top: 0; }
+      .cv-check input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--action-primary); }
+      .cv-check .field-error { display: block; margin-top: 4px; }
+      .cv-optional { margin-top: 14px; }
+      .cv-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
+      .cv-actions .cv-secondary-links { display: flex; gap: 16px; flex-wrap: wrap; }
+      .cv-submit { min-height: 50px; padding: 0 28px; border: 0; border-radius: 12px; background: var(--action-primary); color: var(--surface); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+      .cv-submit:disabled { opacity: .6; cursor: progress; }
+      .cv-card :focus-visible { outline: 3px solid var(--action-primary); outline-offset: 2px; }
+      @media (max-width: 1000px) { .cv-left { display: none; } }
+      @media (max-width: 720px) {
+        .cv-wrap { padding: 20px 16px; align-items: flex-start; }
+        .cv-card { padding: 24px 18px; border-radius: 20px; }
+        .cv-option-grid, .cv-fields { grid-template-columns: 1fr; }
+        .cv-option { min-height: 0; }
+        .cv-actions { flex-direction: column-reverse; align-items: stretch; }
+        .cv-submit { width: 100%; }
+      }
+    `}</style>
+    <div className='cv-left'><LeftPanel /></div>
+    <div className='cv-wrap'>
+      <div style={{ width: '100%', maxWidth: 760 }}>
+        <form ref={formRef} className='cv-card' onSubmit={submit} noValidate aria-busy={submitting || !ready}>
+          <fieldset className='cv-root' disabled={!ready || submitting}>
+            <div className='cv-progress'>
+              <div><p className='cv-eyebrow'>{t('profileSetup')}</p><p>{returning ? t('profileComplete') : t('step5Of6')}</p></div>
+              <div><p className='cv-eyebrow'>{returning ? t('upToDate') : t('percentComplete')}</p><p>{returning ? t('reviewAnyTime') : t('approximately1Minute')}</p></div>
             </div>
-
-            <header style={{ marginBottom: '16px' }}>
-              <h1 style={{ margin: '0 0 8px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2 }}>Coverage & Privacy</h1>
-              <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>Help us understand your healthcare coverage while reviewing the important information that keeps your medical data secure.</p>
+            <header>
+              <h1>{t('coveragePrivacy')}</h1>
+              <p className='cv-lede'>{t('tellUsHowYouIntend')}</p>
             </header>
-
-            <div style={{ marginBottom: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 11px', borderRadius: '100px', background: savedTick ? T.greenLight : 'rgba(4,53,77,0.03)', border: `1px solid ${savedTick ? 'rgba(9,173,112,0.25)' : 'rgba(4,53,77,0.08)'}` }}>
-              <Ico p={savedTick ? ICONS.check : ICONS.activity} size={11} sw={2} color={savedTick ? T.green : T.slate2} />
-              <span style={{ fontSize: '11.5px', fontWeight: 600, color: savedTick ? T.teal : T.slate2, letterSpacing: '-0.005em' }}>{saveMessage}</span>
+            <div role='status' className={`cv-pill${savedNotice ? ' saved' : ''}`}>
+              <Ico p={savedNotice ? ICONS.check : ICONS.activity} size={11} sw={2} color='currentColor' />{pill}
             </div>
 
-            {submitError ? (
-              <div role='alert' style={{ padding: '11px 13px', borderRadius: '12px', background: 'rgba(254,242,242,0.88)', border: '1px solid rgba(220,38,38,0.22)', color: T.red, fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
-                {submitError}
-              </div>
-            ) : null}
+            {loadError && <div role='alert' className='cv-note danger'>
+              <p>{loadError}</p>
+              <button type='button' className='cv-inline-button' onClick={() => setReloadKey(n => n + 1)}>{t('tryAgain')}</button>
+            </div>}
+            {returning && !savedNotice && <div className='cv-note'>
+              <p><strong>{t('yourProfileIsComplete')}</strong> {t('updateYourCoverageOrAcknowledgements')}</p>
+              <p><Link href='/patient/dashboard'>{t('continueToYourDashboard')}</Link> {t('withoutChanges')}</p>
+            </div>}
+            {savedNotice && <div role='status' className='cv-note'><p><strong>{savedNotice}</strong></p><p><Link href='/patient/dashboard'>{t('continueToYourDashboard')}</Link></p></div>}
+            {earlierStep && <div role='note' className='cv-note warn'>
+              <p>{t('earlierStepMissing', { step: t(STEP_LABELS[earlierStep]) })}</p>
+              <p><Link href={onboardingPath(earlierStep)}>{t('continueWith', { step: t(STEP_LABELS[earlierStep]) })}</Link></p>
+            </div>}
 
-            <section style={{ marginBottom: '18px' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <h2 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>Insurance Information</h2>
-                <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6, letterSpacing: '-0.01em' }}>Do you currently have health insurance?</p>
-              </div>
+            <ValidationSummary errors={shown} />
+            {submitError && <div role='alert' className='cv-note danger'>
+              <p>{submitError}</p>
+              {conflict && <button type='button' className='cv-inline-button' onClick={reloadSaved}>{t('reloadSavedDetails')}</button>}
+            </div>}
 
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <ToggleChip label='Yes' active={form.insuranceStatus === 'yes'} onClick={() => updateField('insuranceStatus', 'yes')} />
-                <ToggleChip label='No' active={form.insuranceStatus === 'no'} onClick={() => updateField('insuranceStatus', 'no')} tone='warning' />
-              </div>
-
-              {submitted && errors.insuranceStatus ? <p style={{ margin: '0 0 12px', fontSize: '12px', color: T.red }}>{errors.insuranceStatus}</p> : null}
-
-              {form.insuranceStatus === 'yes' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div className='ipc-grid' style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                    <TextField label='Insurance Provider' value={form.provider} onChange={(value) => updateField('provider', value)} placeholder='Provider name' error={submitted && errors.provider ? errors.provider : undefined} />
-                    <TextField label='Policy Number' value={form.policyNumber} onChange={(value) => updateField('policyNumber', value)} placeholder='Policy number' error={submitted && errors.policyNumber ? errors.policyNumber : undefined} />
-                    <TextField label='Member ID' value={form.memberId} onChange={(value) => updateField('memberId', value)} placeholder='Member ID' error={submitted && errors.memberId ? errors.memberId : undefined} />
-                    <TextField label='Group Number' value={form.groupNumber} onChange={(value) => updateField('groupNumber', value)} placeholder='Group number' optional />
-                  </div>
-
-                  <div className='ipc-grid' style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                    <FileUploadCard label='Upload Insurance Card - Front' file={form.insuranceFront} onFile={(file) => onFileSelect('insuranceFront', file)} error={submitted && errors.insuranceFront ? errors.insuranceFront : undefined} inputRef={insuranceFrontRef} />
-                    <FileUploadCard label='Upload Insurance Card - Back' file={form.insuranceBack} onFile={(file) => onFileSelect('insuranceBack', file)} error={submitted && errors.insuranceBack ? errors.insuranceBack : undefined} inputRef={insuranceBackRef} />
-                  </div>
+            <section className='cv-section' aria-labelledby='cv-funding-title'>
+              <SectionHeader title={t('funding')} body={t('fundingIntro')} />
+              <fieldset className='cv-options' aria-invalid={!!shown.insurance_type || undefined} aria-describedby={shown.insurance_type ? 'coverage-type-error' : undefined}>
+                <legend id='cv-funding-title'>{t('fundingTypeRequired')}</legend>
+                <div className='cv-option-grid'>
+                  {FUNDING_OPTIONS.map(option => <label key={option.value} className={`cv-option${form.insurance_type === option.value ? ' chosen' : ''}`}>
+                    <input type='radio' name='funding-type' value={option.value} checked={form.insurance_type === option.value} onChange={() => update('insurance_type', option.value)} />
+                    <strong>{t(option.label)}</strong><span>{t(option.body)}</span>
+                  </label>)}
                 </div>
-              ) : null}
-
-              {form.insuranceStatus === 'no' ? (
-                <div style={{ padding: '16px', borderRadius: '16px', background: 'rgba(234,241,255,0.55)', border: '1px solid rgba(32,181,223,0.12)' }}>
-                  <p style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 700, color: T.navy }}>That’s perfectly okay.</p>
-                  <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.65, letterSpacing: '-0.01em' }}>You can still access Qarevo Health services without insurance, and you may add your insurance details later from your profile settings.</p>
-                </div>
-              ) : null}
+                {shown.insurance_type && <p id='coverage-type-error' className='field-error' role='alert'>{shown.insurance_type}</p>}
+              </fieldset>
+              {form.insurance_type && <p className='cv-notice'>{form.insurance_type === 'SELF_PAY' ? t('selfPayNotice') : t('insuranceNotice')}</p>}
+              {form.insurance_type && form.insurance_type !== 'SELF_PAY' && <div className='cv-fields'>
+                <TextField label={t('insuranceProvider')} value={form.provider} onChange={value => update('provider', value)} placeholder={t('insurerName')} hint={t('insurerHint')} error={shown.provider} />
+                <TextField label={form.insurance_type === 'GKV' ? t('kvnrLabel') : t('policyLabel')} value={form.insurance_number} onChange={value => update('insurance_number', value)}
+                  hint={form.insurance_type === 'GKV' ? t('kvnrHint') : t('policyHint')}
+                  placeholder={form.insurance_type === 'GKV' ? t('kvnrPlaceholder') : t('policyPlaceholder')} error={shown.insurance_number} />
+              </div>}
             </section>
 
-            <section style={{ marginBottom: '18px', paddingTop: '4px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <h2 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>Privacy & Consent</h2>
-                <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6, letterSpacing: '-0.01em' }}>Please review and confirm the items below before completing your profile.</p>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {CONSENT_COPY.map((consent) => (
-                  <CheckboxCard
-                    key={consent.key}
-                    checked={form.consents[consent.key]}
-                    onChange={() => setConsent(consent.key, !form.consents[consent.key])}
-                    title={consent.label}
-                    required={consent.required}
-                    learnMore={consent.learnMore}
-                    details={consent.details}
-                  />
-                ))}
-              </div>
-
-              {submitted && errors.consents ? <p style={{ margin: '10px 0 0', fontSize: '12px', color: T.red }}>{errors.consents}</p> : null}
+            <section className='cv-section' aria-labelledby='cv-acks-title'>
+              <SectionHeader title={t('acknowledgements')} body={t('acknowledgementsIntro')} />
+              <fieldset className='cv-acks' style={{ margin: 0, minWidth: 0 }}>
+                <legend id='cv-acks-title' style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', padding: '0 4px' }}>{t('developmentTestAcknowledgements')}</legend>
+                <p>{t('theLegalDocumentsAreDrafts')}</p>
+                {TEST_ACKNOWLEDGEMENTS.map(([key, label]) => {
+                  const missing = submitted && !form.consents[key]
+                  return <label key={key} className='cv-check'>
+                    <input type='checkbox' required aria-invalid={missing} aria-describedby={missing ? `ack-${key}-error` : undefined} checked={form.consents[key]}
+                      onChange={event => update('consents', { ...form.consents, [key]: event.target.checked })} />
+                    <span>{t(label)} <strong>{t('required')}</strong>{missing && <span id={`ack-${key}-error`} role='alert' className='field-error'>{t('confirmThisAcknowledgementToContinue')}</span>}</span>
+                  </label>
+                })}
+              </fieldset>
+              <label className='cv-check cv-optional'>
+                <input type='checkbox' checked={form.consents.marketing} onChange={event => update('consents', { ...form.consents, marketing: event.target.checked })} />
+                <span>{t('testTheOptionalMarketingPreference')}</span>
+              </label>
             </section>
 
-            <section style={{ marginBottom: '18px', paddingTop: '4px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <h2 style={{ margin: '0 0 4px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '17px', fontWeight: 800, color: T.navy, letterSpacing: '-0.025em' }}>Security Reassurance</h2>
-                <p style={{ margin: 0, fontSize: '13px', color: T.slate, lineHeight: 1.6, letterSpacing: '-0.01em' }}>Your information is protected with security practices designed for healthcare data.</p>
+            <div className='cv-actions'>
+              <div className='cv-secondary-links'>
+                <Link className='cv-link' href='/auth/profile-setup/medical-history-allergies'>{t('back')}</Link>
+                {ready && !loadError && <button type='button' className='cv-link' style={{ background: 'none', border: 0, padding: 0, font: 'inherit', cursor: 'pointer', minHeight: 44 }} onClick={reloadSaved}>{t('discardChanges')}</button>}
               </div>
-
-              <div style={{ padding: '16px', borderRadius: '16px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(4,53,77,0.06)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)' }}>
-                <SecurityPill icon={ICONS.lock} title='End-to-End Encryption' />
-                <SecurityPill icon={ICONS.shield} title='HIPAA-Oriented Security Practices' />
-                <SecurityPill icon={ICONS.info} title='Secure Cloud Infrastructure' />
-                <SecurityPill icon={ICONS.user} title='Only authorized healthcare professionals can access your medical records' />
-              </div>
-            </section>
-
-            <div style={{ marginBottom: '16px', padding: '12px 13px', borderRadius: '12px', background: 'rgba(4,53,77,0.024)', border: '1px solid rgba(4,53,77,0.06)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.blueLight, border: `1px solid ${T.blueMid}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Ico p={ICONS.info} size={13} sw={1.75} color={T.blue} />
-              </div>
-              <div>
-                <p style={{ margin: '0 0 3px', fontSize: '12.5px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Your Privacy Matters</p>
-                <p style={{ margin: 0, fontSize: '12.5px', color: T.slate2, lineHeight: 1.55, letterSpacing: '-0.005em' }}>Your medical information is encrypted, securely stored, and only shared with healthcare professionals involved in your care. Qarevo Health is committed to protecting your privacy and maintaining the highest standards of healthcare security.</p>
-              </div>
+              <button type='submit' className='cv-submit' disabled={submitting || !ready}>{submitting ? t('saving') : returning ? t('saveChanges') : t('completeProfile')}</button>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button
-                type='submit'
-                disabled={!canContinue}
-                onMouseEnter={() => setContinueHover(true)}
-                onMouseLeave={() => setContinueHover(false)}
-                style={{ width: '100%', minHeight: '48px', padding: '14px 20px', borderRadius: '13px', border: 'none', background: canContinue ? continueHover ? 'linear-gradient(135deg,#348CEA 0%,#0F47B8 100%)' : `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)` : 'rgba(32,181,223,0.5)', color: '#fff', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em', cursor: canContinue ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: canContinue ? '0 3px 10px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.14)' : 'none', transition: 'all 0.15s ease', transform: canContinue && continueHover ? 'translateY(-1px)' : 'none', opacity: submitting ? 0.92 : 1 }}
-              >
-                <span>{submitting ? 'Completing profile...' : 'Complete Profile'}</span>
-                <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
-              </button>
-
-              <Link href={BACK_ROUTE} style={{ textAlign: 'center', color: T.slate2, fontSize: '13px', fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-                Back
-              </Link>
-            </div>
-          </form>
-        </div>
+          </fieldset>
+        </form>
       </div>
-    </main>
-  )
+    </div>
+  </main>
 }

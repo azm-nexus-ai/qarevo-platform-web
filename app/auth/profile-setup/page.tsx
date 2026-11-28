@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
@@ -16,7 +17,7 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 function JourneyVisual() {
@@ -104,6 +105,7 @@ function JourneyVisual() {
 }
 
 function LeftPanel() {
+  const t = useTranslations('auth')
   return (
     <div
       style={{
@@ -168,7 +170,7 @@ function LeftPanel() {
         <div style={{ marginTop: '30px', textAlign: 'center' }}>
           <h2
             style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
               fontSize: '24px',
               fontWeight: 800,
               color: '#fff',
@@ -178,19 +180,19 @@ function LeftPanel() {
             }}
           >
             Personalized care begins here.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Built around your health story.</span>
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('profileSetupIntro.builtAroundYourHealthStory')}</span>
           </h2>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            Your profile helps us match you with the right physicians and enable more meaningful, secure consultations.
+          <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+            {t('profileSetupIntro.yourProfileHelpsUsMatch')}
           </p>
         </div>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0' }}>
         {[
-          { icon: ICONS.user, label: 'Patient-Centered Onboarding', sub: 'Designed to reduce friction and uncertainty' },
-          { icon: ICONS.brain, label: 'AI-Assisted Personalization', sub: 'Smarter recommendations from day one' },
-          { icon: ICONS.shield, label: 'Private by Design', sub: 'Healthcare-grade data protection and trust' },
+          { icon: ICONS.user, label: t('profileSetupIntro.patientCenteredOnboarding'), sub: t('profileSetupIntro.designedToReduceFrictionAnd') },
+          { icon: ICONS.brain, label: t('profileSetupIntro.aiAssistedPersonalization'), sub: t('profileSetupIntro.smarterRecommendationsFromDayOne') },
+          { icon: ICONS.shield, label: t('profileSetupIntro.privateByDesign'), sub: t('profileSetupIntro.healthcareGradeDataProtectionAnd') },
         ].map(({ icon, label, sub }) => (
           <div
             key={label}
@@ -220,7 +222,7 @@ function LeftPanel() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '-0.015em', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{sub}</div>
+              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>{sub}</div>
             </div>
           </div>
         ))}
@@ -230,16 +232,17 @@ function LeftPanel() {
 }
 
 function SetupTimeline() {
+  const t = useTranslations('auth')
   const steps = useMemo(
     () => [
-      { title: 'Personal Information', sub: 'Basic identity details to create your patient profile' },
-      { title: 'Contact Information', sub: 'Preferred channels for care updates and reminders' },
-      { title: 'Medical History', sub: 'Health background to support safer consultations' },
-      { title: 'Allergies & Medications', sub: 'Critical safety information for physicians' },
-      { title: 'Insurance & Consent', sub: 'Coverage details and consent preferences' },
-      { title: 'Profile Complete', sub: 'Unlock your personalized healthcare experience' },
+      { title: t('profileSetupIntro.personalInformation'), sub: t('profileSetupIntro.basicIdentityDetailsToCreate') },
+      { title: t('profileSetupIntro.contactInformation'), sub: t('profileSetupIntro.preferredChannelsForCareUpdates') },
+      { title: t('profileSetupIntro.medicalHistory'), sub: t('profileSetupIntro.healthBackgroundToSupportSafer') },
+      { title: t('profileSetupIntro.allergiesMedications'), sub: t('profileSetupIntro.criticalSafetyInformationForPhysicians') },
+      { title: t('profileSetupIntro.insuranceConsent'), sub: t('profileSetupIntro.coverageDetailsAndConsentPreferences') },
+      { title: t('profileSetupIntro.profileComplete'), sub: t('profileSetupIntro.unlockYourPersonalizedHealthcareExperience') },
     ],
-    [],
+    [t],
   )
 
   return (
@@ -253,8 +256,8 @@ function SetupTimeline() {
               gap: '11px',
               padding: '11px 12px',
               borderRadius: '12px',
-              background: 'rgba(4,53,77,0.024)',
-              border: '1px solid rgba(4,53,77,0.06)',
+              background: "var(--surface-hover)",
+              border: "1px solid var(--border)",
             }}
           >
             <div
@@ -274,7 +277,7 @@ function SetupTimeline() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.015em', marginBottom: '2px' }}>{step.title}</div>
-              <div style={{ fontSize: '12px', color: T.slate2, letterSpacing: '-0.005em' }}>{step.sub}</div>
+              <div style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.005em' }}>{step.sub}</div>
             </div>
           </div>
           {i < steps.length - 1 ? (
@@ -289,6 +292,7 @@ function SetupTimeline() {
 }
 
 export default function ProfileSetupPage() {
+  const t = useTranslations('auth')
   const router = useRouter()
 
   return (
@@ -319,16 +323,16 @@ export default function ProfileSetupPage() {
       </div>
 
       <div className='onboard-wrap' style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '46px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '520px' }}>
+        <div style={{ width: '100%', maxWidth: '520px', minWidth: 0 }}>
           <section
             className='onboard-card'
             aria-live='polite'
             style={{
-              background: 'rgba(255,255,255,0.9)',
+              background: "var(--surface-glass)",
               backdropFilter: 'blur(34px) saturate(200%)',
               WebkitBackdropFilter: 'blur(34px) saturate(200%)',
               borderRadius: '24px',
-              border: '1px solid rgba(255,255,255,0.92)',
+              border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)',
               padding: '38px 38px 30px',
               animation: 'fadeUp 0.35s ease',
@@ -338,7 +342,7 @@ export default function ProfileSetupPage() {
               <h1
                 style={{
                   margin: '0 0 8px',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                   fontSize: '25px',
                   fontWeight: 800,
                   color: T.navy,
@@ -346,13 +350,13 @@ export default function ProfileSetupPage() {
                   lineHeight: 1.2,
                 }}
               >
-                Welcome to Your Health Journey
+                {t('profileSetupIntro.welcomeToYourHealthJourney')}
               </h1>
               <p style={{ margin: '0 0 10px', fontSize: '14px', color: T.slate, lineHeight: 1.68, letterSpacing: '-0.01em' }}>
-                Before we connect you with trusted healthcare professionals, let&apos;s take a few moments to personalize your healthcare experience.
+                {t('profileSetupIntro.beforeWeConnectYouWith')}
               </p>
               <p style={{ margin: 0, fontSize: '14px', color: T.slate, lineHeight: 1.68, letterSpacing: '-0.01em' }}>
-                Completing your profile allows us to better understand your needs, recommend suitable physicians, improve consultations, and provide a more personalized healthcare experience.
+                {t('profileSetupIntro.completingYourProfileAllowsUs')}
               </p>
             </header>
 
@@ -361,8 +365,8 @@ export default function ProfileSetupPage() {
                 marginBottom: '14px',
                 padding: '12px 14px',
                 borderRadius: '12px',
-                background: 'rgba(4,53,77,0.024)',
-                border: '1px solid rgba(4,53,77,0.06)',
+                background: "var(--surface-hover)",
+                border: "1px solid var(--border)",
                 display: 'flex',
                 justifyContent: 'space-between',
                 gap: '12px',
@@ -370,12 +374,12 @@ export default function ProfileSetupPage() {
               }}
             >
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Profile Setup</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>Step 1 of 6</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('profileSetupIntro.profileSetup')}</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('profileSetupIntro.step1Of6')}</p>
               </div>
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Estimated Completion</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>3-5 Minutes</p>
+                <p style={{ margin: '0 0 3px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('profileSetupIntro.estimatedCompletion')}</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: T.navy, letterSpacing: '-0.01em' }}>{t('profileSetupIntro.n35Minutes')}</p>
               </div>
             </div>
 
@@ -384,25 +388,25 @@ export default function ProfileSetupPage() {
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <p style={{ margin: '0 0 10px', fontSize: '11px', fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Why we need this
+              <p style={{ margin: '0 0 10px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                {t('profileSetupIntro.whyWeNeedThis')}
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <TrustCard label='Better Doctor Recommendations' sub='Tailored physician suggestions for your needs.' icon={ICONS.steth} accent={T.blue} />
-                <TrustCard label='Personalized Care' sub='More effective consultations with better context.' icon={ICONS.activity} accent={T.teal} />
-                <TrustCard label='Secure Medical Records' sub='Enterprise-grade encryption and protection.' icon={ICONS.lock} accent={T.cyan} />
-                <TrustCard label='AI-Powered Healthcare' sub='Intelligent health insights and guidance.' icon={ICONS.brain} accent={T.purple} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '8px' }}>
+                <TrustCard label={t('profileSetupIntro.betterDoctorRecommendations')} sub={t('profileSetupIntro.tailoredPhysicianSuggestionsForYour')} icon={ICONS.steth} accent={T.blue} />
+                <TrustCard label={t('profileSetupIntro.personalizedCare')} sub={t('profileSetupIntro.moreEffectiveConsultationsWithBetter')} icon={ICONS.activity} accent={T.teal} />
+                <TrustCard label={t('profileSetupIntro.secureMedicalRecords')} sub={t('profileSetupIntro.enterpriseGradeEncryptionAndProtection')} icon={ICONS.lock} accent={T.cyan} />
+                <TrustCard label={t('profileSetupIntro.aiPoweredHealthcare')} sub={t('profileSetupIntro.intelligentHealthInsightsAndGuidance')} icon={ICONS.brain} accent={T.purple} />
               </div>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 {[
-                  { icon: ICONS.lock, label: 'Secure & Encrypted' },
-                  { icon: ICONS.steth, label: 'Verified Healthcare Professionals' },
-                  { icon: ICONS.shield, label: 'HIPAA-Oriented Security' },
-                  { icon: ICONS.brain, label: 'AI-Assisted Healthcare' },
-                  { icon: ICONS.activity, label: 'Private Medical Records' },
+                  { icon: ICONS.lock, label: t('profileSetupIntro.secureEncrypted') },
+                  { icon: ICONS.steth, label: t('profileSetupIntro.verifiedHealthcareProfessionals') },
+                  { icon: ICONS.shield, label: t('profileSetupIntro.accountBasedAccess') },
+                  { icon: ICONS.brain, label: t('profileSetupIntro.aiAssistedHealthcare') },
+                  { icon: ICONS.activity, label: t('profileSetupIntro.privateMedicalRecords') },
                 ].map(({ icon, label }) => (
                   <span
                     key={label}
@@ -410,12 +414,15 @@ export default function ProfileSetupPage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '5px',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      overflowWrap: 'anywhere',
                       padding: '6px 11px',
                       borderRadius: '100px',
-                      background: 'rgba(4,53,77,0.03)',
-                      border: '1px solid rgba(4,53,77,0.08)',
+                      background: "var(--surface-hover)",
+                      border: "1px solid var(--border)",
                       color: T.slate2,
-                      fontSize: '11.5px',
+                      fontSize: "13px",
                       fontWeight: 600,
                       letterSpacing: '-0.005em',
                     }}
@@ -439,7 +446,7 @@ export default function ProfileSetupPage() {
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`,
+                  background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`,
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',
@@ -454,7 +461,7 @@ export default function ProfileSetupPage() {
                 }}
                 on={{ transform: 'translateY(-1px)', boxShadow: '0 8px 18px rgba(32,181,223,0.3), inset 0 1px 0 rgba(255,255,255,0.14)' }}
               >
-                <span>Start Profile Setup</span>
+                <span>{t('profileSetupIntro.startProfileSetup')}</span>
                 <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
               </HoverBtn>
 
@@ -469,7 +476,7 @@ export default function ProfileSetupPage() {
                   letterSpacing: '-0.01em',
                 }}
               >
-                Back
+                {t('profileSetupIntro.back')}
               </Link>
             </div>
           </section>

@@ -1,20 +1,24 @@
 'use client'
 
+import BrandLogo from '@/components/branding/BrandLogo'
 import { useState, useEffect, useId, Suspense } from 'react'
+import { useTranslations } from 'next-intl'
+
+type Translate = ReturnType<typeof useTranslations>
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
 import Ico from '@/components/ui/Ico'
 import { ApiError, apiPost, getApiErrorDetail } from '@/lib/api'
+import { usePortalAction } from '@/lib/portal-action'
 
 // Page background
 const PAGE_BG = [
   'radial-gradient(ellipse 65% 55% at 12% 8%,   rgba(32,181,223,0.08) 0%, transparent 55%)',
   'radial-gradient(ellipse 55% 50% at 90% 18%,  rgba(32,181,223,0.06) 0%, transparent 52%)',
   'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(52,140,234,0.06) 0%, transparent 58%)',
-  '#EDF2FA',
+  'var(--canvas)',
 ].join(', ')
 
 // Left panel background
@@ -23,44 +27,44 @@ const LEFT_BG = [
   'radial-gradient(ellipse 60% 55% at 88% 18%,  rgba(32,181,223,0.22) 0%, transparent 50%)',
   'radial-gradient(ellipse 70% 65% at 50% 98%,  rgba(52,140,234,0.24) 0%, transparent 56%)',
   'radial-gradient(ellipse 50% 45% at 90% 80%,  rgba(165,224,218,0.16) 0%, transparent 50%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
-function getFriendlyDoctorPhoneVerificationError(error: unknown) {
+function getFriendlyDoctorPhoneVerificationError(error: unknown, t: Translate) {
   const detail = getApiErrorDetail(error)?.toLowerCase() ?? ''
 
   if (detail.includes('invalid verification code')) {
-    return 'The verification code you entered is incorrect. Please check the code and try again.'
+    return t('doctorPhone.theVerificationCodeYouEntered')
   }
   if (detail.includes('expired')) {
-    return 'The verification code has expired. Please request a new code.'
+    return t('doctorPhone.theVerificationCodeHasExpired')
   }
   if (detail.includes('already used')) {
-    return 'This verification code has already been used. Please request a new code.'
+    return t('doctorPhone.thisVerificationCodeHasAlready')
   }
   if (detail.includes('replaced')) {
-    return 'This code has been replaced. Please request a new code.'
+    return t('doctorPhone.thisCodeHasBeenReplaced')
   }
   if (detail.includes('no verification code found')) {
-    return 'No verification code found. Please request a new code.'
+    return t('doctorPhone.noVerificationCodeFoundPlease')
   }
   if (detail.includes('user not found')) {
-    return 'User not found. Please register again.'
+    return t('doctorPhone.userNotFoundPleaseRegister')
   }
   if (detail.includes('already verified')) {
-    return 'This phone has already been verified. Please sign in.'
+    return t('doctorPhone.thisPhoneHasAlreadyBeen')
   }
   if (detail.includes('verify your email')) {
-    return 'Please verify your email before verifying your phone number.'
+    return t('doctorPhone.pleaseVerifyYourEmailBefore')
   }
   if (detail.includes('phone')) {
-    return 'Please check the phone number and country code.'
+    return t('doctorPhone.pleaseCheckThePhoneNumber')
   }
   if (error instanceof ApiError && error.status === 422) {
-    return 'Please check the phone verification details and try again.'
+    return t('doctorPhone.pleaseCheckThePhoneVerification')
   }
 
-  return 'We could not verify your phone right now. Please try again.'
+  return t('doctorPhone.weCouldNotVerifyYour')
 }
 
 // Field component
@@ -111,7 +115,7 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
       </label>
       <div style={{ position: 'relative' }}>
         {icon && (
-          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.blue : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
+          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: focused ? T.link : T.slate2, display: 'flex', transition: 'color 0.15s', pointerEvents: 'none' }}>
             <Ico p={icon} size={14} sw={1.75} />
           </span>
         )}
@@ -145,13 +149,14 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, succ
           </span>
         )}
       </div>
-      {error && <p style={{ margin: 0, fontSize: '12px', color: T.red, lineHeight: 1.4 }}>{error}</p>}
+      {error && <p style={{ margin: 0, fontSize: "13px", color: T.red, lineHeight: 1.4 }}>{error}</p>}
     </div>
   )
 }
 
 // Left panel component
 function LeftPanel() {
+  const t = useTranslations('auth')
   return (
     <div style={{
       width: '380px',
@@ -171,32 +176,24 @@ function LeftPanel() {
       <div aria-hidden style={{ position: 'absolute', bottom: '-80px', right: '-60px', width: '340px', height: '340px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(52,140,234,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label='Qarevo Health home'>
-          <Image
-            src='/brand/Untitled design - 2026-08-03T165058.603.png'
-            alt='Qarevo Health'
-            width={160}
-            height={34}
-            priority
-            unoptimized
-            style={{ width: '160px', height: 'auto' }}
-          />
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('doctorPhone.qarevoHealthHome')}>
+          <BrandLogo tone='white' width={160} />
         </Link>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-        <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
-          Phone Verification
+        <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 12px' }}>
+          {t('doctorPhone.phoneVerification')}
         </h2>
-        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-          Verify your phone number to complete your physician account setup
+        <p style={{ fontSize: '14px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+          {t('doctorPhone.verifyYourPhoneNumberTo')}
         </p>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['Secure', 'Encrypted', 'HIPAA'].map(b => (
-            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.48)', letterSpacing: '0.04em' }}>{b}</span>
+          {[t('doctorPhone.emailVerification'), t('doctorPhone.accountSecurity'), t('doctorPhone.clinicianReview')].map(b => (
+            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
           ))}
         </div>
       </div>
@@ -206,75 +203,84 @@ function LeftPanel() {
 
 // Main page
 function DoctorVerifyPhonePageContent() {
+  const t = useTranslations('auth')
   const router = useRouter()
+  const captureAction = usePortalAction()
   const searchParams = useSearchParams()
   const country_code = searchParams.get('country_code') || '234'
   const phone = searchParams.get('phone') || ''
-  
+
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const [success, setSuccess] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
 
-  const codeErr = !code ? 'Verification code is required' : ''
+  const codeErr = !code ? t('doctorPhone.verificationCodeIsRequired') : ''
 
   // Automatically send phone verification OTP when page loads
   useEffect(() => {
+    const action = captureAction()
     const sendPhoneOtp = async () => {
       if (phone && country_code && !otpSent) {
         try {
           await apiPost('/api/v1/auth/doctor/resend-phone-verification', { country_code, phone })
-          setOtpSent(true)
+          if (action.isCurrent()) setOtpSent(true)
         } catch (error) {
           console.error('Failed to send phone verification OTP:', error)
         }
       }
     }
     sendPhoneOtp()
-  }, [country_code, phone, otpSent])
+  }, [country_code, phone, otpSent, captureAction])
 
   const handleVerify = async () => {
     if (!code) {
-      setAuthError('Verification code is required')
+      setAuthError(t('doctorPhone.verificationCodeIsRequired'))
       return
     }
 
     setLoading(true)
     setAuthError('')
+    const action = captureAction()
 
     try {
       await apiPost('/api/v1/auth/doctor/verify-phone-code', { country_code, phone, code })
+      if (!action.isCurrent()) return
       setSuccess(true)
       // Keep loading state true during redirect to prevent button clicks
-      setTimeout(() => {
+      action.after(1500, () => {
         router.push('/auth/doctor/login')
-      }, 1500)
+      })
       return // Don't set loading to false yet
     } catch (error) {
-      setAuthError(getFriendlyDoctorPhoneVerificationError(error))
+      if (!action.isCurrent()) return
+      setAuthError(getFriendlyDoctorPhoneVerificationError(error, t))
     } finally {
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
   const handleResend = async () => {
+    const action = captureAction()
     setLoading(true)
     setAuthError('')
     try {
       await apiPost('/api/v1/auth/doctor/resend-phone-verification', { country_code, phone })
+      if (!action.isCurrent()) return
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      action.after(3000, () => setSuccess(false))
     } catch (error) {
-      setAuthError(getFriendlyDoctorPhoneVerificationError(error))
+      if (!action.isCurrent()) return
+      setAuthError(getFriendlyDoctorPhoneVerificationError(error, t))
     } finally {
-      setLoading(false)
+      if (action.isCurrent()) setLoading(false)
     }
   }
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex' }}>
-      <style>{`* { box-sizing: border-box; } input::placeholder { color: rgba(4,53,77,0.3); } @media (max-width: 860px) { .doctor-verify-phone-left { display: none !important; } }`}</style>
+      <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } @media (max-width: 860px) { .doctor-verify-phone-left { display: none !important; } }`}</style>
 
       {/* Left panel */}
       <div className="doctor-verify-phone-left">
@@ -282,45 +288,45 @@ function DoctorVerifyPhonePageContent() {
       </div>
 
       {/* Right panel - verification form */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '460px' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 6vw, 48px) clamp(12px, 4vw, 24px)', minHeight: '100vh' }}>
+        <div style={{ width: '100%', maxWidth: '460px', minWidth: 0 }}>
           {/* Back link */}
           <button
             onClick={() => router.back()}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
-            Back
+            {t('doctorPhone.back')}
           </button>
 
           {/* Form card */}
           <div style={{
-            background: 'rgba(255,255,255,0.88)',
+            background: "var(--surface-glass)",
             backdropFilter: 'blur(28px) saturate(200%)',
             WebkitBackdropFilter: 'blur(28px) saturate(200%)',
             borderRadius: '22px',
-            border: '1px solid rgba(255,255,255,0.9)',
+            border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
-            padding: '40px 40px 36px',
+            padding: 'clamp(22px, 6vw, 40px) clamp(18px, 5.5vw, 40px) clamp(22px, 5vw, 36px)',
           }}>
             {/* Header */}
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
-                <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
-                  Verify Your Phone
+                <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.2, margin: '0 0 7px' }}>
+                  {t('doctorPhone.verifyYourPhone')}
                 </h1>
                 <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.6, margin: 0, letterSpacing: '-0.01em' }}>
-                  Enter the 6-digit code sent to your phone
+                  {t('doctorPhone.enterThe6DigitCode')}
                 </p>
               </div>
-              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, #348CEA 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '13px', background: `linear-gradient(135deg, ${T.blue} 0%, var(--primary-end) 100%)`, boxShadow: '0 3px 12px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Ico p={ICONS.phone} size={20} sw={1.25} color="#fff" />
               </div>
             </div>
 
             {/* Error banner */}
             {authError && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: '#FFF5F5', border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--danger-soft)", border: '1px solid rgba(220,38,38,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.info} size={16} sw={1.75} color={T.red} />
                 <span style={{ fontSize: '13px', color: '#991B1B', lineHeight: 1.4 }}>{authError}</span>
               </div>
@@ -328,23 +334,23 @@ function DoctorVerifyPhonePageContent() {
 
             {/* Success banner */}
             {success && (
-              <div style={{ padding: '12px 16px', borderRadius: '11px', background: '#F0FDF8', border: '1px solid rgba(9,173,112,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ padding: '12px 16px', borderRadius: '11px', background: "var(--success-soft)", border: '1px solid rgba(9,173,112,0.25)', display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <Ico p={ICONS.check} size={16} sw={2.5} color={T.green} />
-                <span style={{ fontSize: '13px', color: '#166534', lineHeight: 1.4 }}>Verification code sent successfully</span>
+                <span style={{ fontSize: '13px', color: '#166534', lineHeight: 1.4 }}>{t('doctorPhone.verificationCodeSentSuccessfully')}</span>
               </div>
             )}
 
             {/* Phone display */}
             <div style={{ padding: '12px 16px', borderRadius: '11px', background: 'rgba(32,181,223,0.06)', border: '1px solid rgba(32,181,223,0.12)', marginBottom: '20px' }}>
-              <p style={{ margin: 0, fontSize: '12px', color: T.slate2, fontWeight: 600, marginBottom: '4px' }}>Phone number</p>
+              <p style={{ margin: 0, fontSize: "13px", color: T.slate2, fontWeight: 600, marginBottom: '4px' }}>{t('doctorPhone.phoneNumber')}</p>
               <p style={{ margin: 0, fontSize: '14px', color: T.navy, fontWeight: 600 }}>+{country_code} {phone || '8116454074'}</p>
             </div>
 
             {/* Form */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Field
-                label="Verification Code"
-                placeholder="Enter 6-digit code"
+                label={t('doctorPhone.verificationCode')}
+                placeholder={t('doctorPhone.enter6DigitCode')}
                 type="text"
                 value={code}
                 onChange={setCode}
@@ -363,7 +369,7 @@ function DoctorVerifyPhonePageContent() {
                   padding: '14px 20px',
                   borderRadius: '13px',
                   border: 'none',
-                  background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,#348CEA 100%)`,
+                  background: loading ? 'rgba(32,181,223,0.4)' : `linear-gradient(135deg,${T.blue} 0%,var(--primary-end) 100%)`,
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontSize: '15px',
@@ -378,7 +384,7 @@ function DoctorVerifyPhonePageContent() {
                   boxShadow: loading ? 'none' : '0 3px 10px rgba(32,181,223,0.32), 0 1px 3px rgba(32,181,223,0.2)',
                 }}
               >
-                {loading ? 'Verifying...' : 'Verify Phone'}
+                {loading ? t('doctorPhone.verifying') : t('doctorPhone.verifyPhone')}
                 {!loading && <Ico p={ICONS.check} size={15} sw={2.2} />}
               </button>
 
@@ -392,22 +398,22 @@ function DoctorVerifyPhonePageContent() {
                   border: 'none',
                   padding: 0,
                   fontSize: '13px',
-                  color: T.blue,
+                  color: T.link,
                   fontWeight: 600,
                   cursor: loading ? 'not-allowed' : 'pointer',
                   textDecoration: 'none',
                   textAlign: 'center',
                 }}
               >
-                Resend Verification Code
+                {t('doctorPhone.resendVerificationCode')}
               </button>
             </div>
 
             {/* Help link */}
             <p style={{ textAlign: 'center', fontSize: '13px', color: T.slate2, margin: '20px 0 0', letterSpacing: '-0.01em' }}>
               Didn&apos;t receive the code?{' '}
-              <Link href="/support" style={{ color: T.blue, fontWeight: 600, textDecoration: 'none' }}>
-                Contact Support
+              <Link href="/support" style={{ color: T.link, fontWeight: 600, textDecoration: 'none' }}>
+                {t('doctorPhone.contactSupport')}
               </Link>
             </p>
           </div>

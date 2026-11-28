@@ -1,16 +1,26 @@
 'use client'
 
+import { currentPortal, isPortalEvent } from '@/lib/portal-scope'
+import { ACCOUNT_CHANGED } from '@/lib/account-storage'
+import { ThemeToggle } from '@/components/ui/ThemeProvider'
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch'
+
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { usePortalHome } from '@/lib/portal-navigation'
 import { useRouter } from 'next/navigation'
 import { T, Glass } from '@/lib/tokens'
 import { NAV_LINKS, NAV_ANCHORS } from '@/constants/navigation'
+
+const SECTION_KEYS: Record<string, string> = { 'Platform Overview': 'overview', 'Clinical Intelligence': 'clinical', 'Security & Governance': 'security' }
 import HoverBtn from '@/components/buttons/HoverBtn'
 import AuthenticatedLogo from '@/components/branding/AuthenticatedLogo'
 import LogoutModal from '@/components/ui/LogoutModal'
-import { readAccessToken } from '@/lib/api'
+import { logoutCurrentUser, readSessionMarker } from '@/lib/api'
 
 export default function NavigationBar() {
+  const t = useTranslations('marketingNav')
   const [activeSection, setActiveSection] = useState<string>('Platform Overview')
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -19,32 +29,31 @@ export default function NavigationBar() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const router = useRouter()
+  const home = usePortalHome()
   const drawerRef = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const checkAuth = () => {
-      const token = readAccessToken()
-      console.log('[NavigationBar] Access token check:', token ? 'exists' : 'null')
-      setIsAuthenticated(!!token)
+      try { setIsAuthenticated(!!readSessionMarker()) } catch {setIsAuthenticated(false)}
     }
 
     checkAuth()
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'qarevo_access_token' || e.key === 'qarevo_refresh_token') {
-        console.log('[NavigationBar] Storage changed, rechecking auth')
+      if (isPortalEvent(e)) {
         checkAuth()
       }
     }
 
     window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    window.addEventListener(ACCOUNT_CHANGED,checkAuth)
+    return () => {window.removeEventListener('storage', handleStorageChange);window.removeEventListener(ACCOUNT_CHANGED,checkAuth)}
   }, [])
 
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth <= 768
+      const mobile = window.innerWidth <= 1180
       setIsMobile(mobile)
     }
 
@@ -53,17 +62,16 @@ export default function NavigationBar() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('qarevo_access_token')
-    localStorage.removeItem('qarevo_refresh_token')
-    localStorage.removeItem('qarevo_token_type')
-    localStorage.removeItem('qarevo_expires_in')
-    localStorage.removeItem('qarevo_user_id')
-    localStorage.removeItem('qarevo_provider_id')
-    localStorage.removeItem('qarevo_role')
-    setIsAuthenticated(false)
-    setShowLogoutModal(false)
-    router.push('/auth/sign-in')
+  const handleLogout = async () => {
+    const portal = currentPortal()
+    const destination = portal === 'patient' ? '/auth/sign-in' : `/auth/${portal}/login`
+    try { await logoutCurrentUser() }
+    catch { console.warn('Server logout could not be confirmed.') }
+    finally {
+      setIsAuthenticated(false)
+      setShowLogoutModal(false)
+      router.replace(destination)
+    }
   }
 
   // Sticky shrink + glassmorphism intensify on scroll
@@ -147,14 +155,14 @@ export default function NavigationBar() {
 
   const navHeight = scrolled ? '52px' : '60px'
   const navBg = scrolled
-    ? { ...Glass.nav, background: 'rgba(247,250,252,0.92)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94), 0 1px 0 rgba(4,53,77,0.10), 0 8px 30px rgba(4,53,77,0.10)' }
+    ? { ...Glass.nav, background: "var(--surface-subtle)", boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.94), 0 1px 0 rgba(4,53,77,0.10), 0 8px 30px rgba(4,53,77,0.10)' }
     : Glass.nav
 
   return (
     <>
       <nav
         role="navigation"
-        aria-label="Main navigation"
+        aria-label={t('mainNavigation')}
         style={{
           position: 'sticky',
           top: 0,
@@ -165,9 +173,9 @@ export default function NavigationBar() {
       >
         <div
           style={{
-            maxWidth: '1080px',
+            maxWidth: '1320px',
             margin: '0 auto',
-            padding: '0 24px',
+            padding: '0 16px',
             height: navHeight,
             display: 'flex',
             alignItems: 'center',
@@ -180,8 +188,8 @@ export default function NavigationBar() {
               <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                 {/* Logo */}
                 <Link
-                  href="/"
-                  aria-label="Qarevo Health home"
+                  href={home}
+                  aria-label={t('qarevoHealthHome')}
                   onClick={() => {
                     handleNavClick('Platform Overview')
                     if (mobileOpen) setMobileOpen(false)
@@ -214,24 +222,25 @@ export default function NavigationBar() {
                           borderRadius: '8px',
                           fontSize: '13.5px',
                           fontWeight: isActive ? 600 : 400,
-                          color: isActive ? T.blue : hoverNav === label ? '#348CEA' : T.slate,
+                          color: isActive ? T.link : hoverNav === label ? "var(--link)" : T.slate,
                           letterSpacing: '-0.01em',
                           transition: 'color 0.12s, background 0.12s',
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {label}
+                        {t(`section.${SECTION_KEYS[label]}`)}
                       </button>
                     )
                   })}
                 </div>
 
+                <div className='appearance-controls' style={{ margin: '0 12px' }}><ThemeToggle /><LanguageSwitch /></div>
                 {/* Desktop auth buttons */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginLeft: 'auto' }}>
                   {isAuthenticated ? (
                     <>
                       <Link
-                        href="/patient/dashboard"
+                        href={home}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -245,13 +254,13 @@ export default function NavigationBar() {
                           textDecoration: 'none',
                         }}
                       >
-                        Dashboard
+                        {t('dashboard')}
                       </Link>
                       <HoverBtn
                         onClick={() => setShowLogoutModal(true)}
                         base={{
                           background: 'none',
-                          border: '1px solid rgba(4,53,77,0.12)',
+                          border: "1px solid var(--border)",
                           cursor: 'pointer',
                           padding: '8px 18px',
                           borderRadius: '9px',
@@ -261,11 +270,11 @@ export default function NavigationBar() {
                           letterSpacing: '-0.01em',
                         }}
                         on={{
-                          background: 'rgba(4,53,77,0.04)',
+                          background: "var(--surface-hover)",
                           transform: 'translateY(-1px)',
                         }}
                       >
-                        Logout
+                        {t('logout')}
                       </HoverBtn>
                     </>
                   ) : (
@@ -285,7 +294,7 @@ export default function NavigationBar() {
                           textDecoration: 'none',
                         }}
                       >
-                        Physician Portal
+                        {t('physicianPortal')}
                       </Link>
                       <Link
                         href="/auth/sign-in"
@@ -302,7 +311,7 @@ export default function NavigationBar() {
                           textDecoration: 'none',
                         }}
                       >
-                        Sign In
+                        {t('signIn')}
                       </Link>
                       <HoverBtn
                         onClick={() => router.push('/auth')}
@@ -324,7 +333,7 @@ export default function NavigationBar() {
                           boxShadow: '0 4px 14px rgba(52,140,234,0.3), 0 10px 28px rgba(52,140,234,0.2)',
                         }}
                       >
-                        Access Platform
+                        {t('accessPlatform')}
                       </HoverBtn>
                     </>
                   )}
@@ -336,8 +345,8 @@ export default function NavigationBar() {
               {/* Mobile layout */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', justifyContent: 'space-between' }}>
                 <Link
-                  href="/"
-                  aria-label="Qarevo Health home"
+                  href={home}
+                  aria-label={t('qarevoHealthHome')}
                   onClick={() => {
                     if (mobileOpen) setMobileOpen(false)
                   }}
@@ -346,16 +355,18 @@ export default function NavigationBar() {
                   <AuthenticatedLogo priority width={100} />
                 </Link>
 
+                <span style={{ marginLeft: 'auto', display: 'inline-flex', flexShrink: 0 }}><ThemeToggle compact /></span>
                 {/* Mobile hamburger */}
                 <button
                   ref={hamburgerRef}
-                  aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                  aria-label={mobileOpen ? t('closeNavigationMenu') : t('openNavigationMenu')}
                   aria-expanded={mobileOpen}
                   aria-controls="mobile-drawer"
                   onClick={() => setMobileOpen(prev => !prev)}
                   style={{
+                    flexShrink: 0,
                     background: 'none',
-                    border: '1px solid rgba(4,53,77,0.12)',
+                    border: "1px solid var(--border)",
                     borderRadius: '8px',
                     cursor: 'pointer',
                     padding: '8px 10px',
@@ -414,7 +425,7 @@ export default function NavigationBar() {
           position: 'fixed',
           inset: 0,
           zIndex: 48,
-          background: 'rgba(4,53,77,0.18)',
+          background: "var(--surface-hover)",
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
           opacity: mobileOpen ? 1 : 0,
@@ -428,8 +439,10 @@ export default function NavigationBar() {
         id="mobile-drawer"
         ref={drawerRef}
         role="dialog"
-        aria-modal="true"
-        aria-label="Navigation menu"
+        aria-modal={mobileOpen ? true : undefined}
+        aria-hidden={!mobileOpen}
+        inert={!mobileOpen}
+        aria-label={t('navigationMenu')}
         onKeyDown={handleDrawerKeyDown}
         style={{
           position: 'fixed',
@@ -439,10 +452,10 @@ export default function NavigationBar() {
           width: '280px',
           maxWidth: '85vw',
           zIndex: 49,
-          background: 'rgba(247,250,252,0.97)',
+          background: "var(--surface-subtle)",
           backdropFilter: 'blur(24px) saturate(180%)',
           WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-          borderLeft: '1px solid rgba(255,255,255,0.76)',
+          borderLeft: "1px solid var(--border)",
           boxShadow: '-8px 0 40px rgba(4,53,77,0.15)',
           transform: mobileOpen ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -456,11 +469,11 @@ export default function NavigationBar() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
           <AuthenticatedLogo width={120} />
           <button
-            aria-label="Close navigation menu"
+            aria-label={t('closeNavigationMenu')}
             onClick={() => { setMobileOpen(false); hamburgerRef.current?.focus() }}
             style={{
               background: 'none',
-              border: '1px solid rgba(4,53,77,0.12)',
+              border: "1px solid var(--border)",
               borderRadius: '8px',
               cursor: 'pointer',
               padding: '6px 8px',
@@ -477,7 +490,8 @@ export default function NavigationBar() {
         </div>
 
         {/* Drawer nav items */}
-        <nav aria-label="Mobile navigation" style={{ flex: 1 }}>
+        <div style={{ marginBottom: '14px' }}><LanguageSwitch /></div>
+        <nav aria-label={t('mobileNavigation')} style={{ flex: 1 }}>
           {NAV_LINKS.map((label) => {
             const isActive = activeSection === label
             return (
@@ -496,31 +510,31 @@ export default function NavigationBar() {
                   borderRadius: '10px',
                   fontSize: '15px',
                   fontWeight: isActive ? 600 : 400,
-                  color: isActive ? T.blue : T.slate,
+                  color: isActive ? T.link : T.slate,
                   letterSpacing: '-0.01em',
                   marginBottom: '4px',
                   transition: 'background 0.12s, color 0.12s',
                 }}
               >
-                {label}
+                {t(`section.${SECTION_KEYS[label]}`)}
               </button>
             )
           })}
         </nav>
 
         {/* Drawer auth buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(4,53,77,0.08)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '24px', paddingTop: '24px', borderTop: "1px solid var(--border)" }}>
           {isAuthenticated ? (
             <>
               <Link
-                href="/patient/dashboard"
+                href={home}
                 onClick={() => setMobileOpen(false)}
                 style={{
                   display: 'block',
                   textAlign: 'center',
                   padding: '12px 20px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(4,53,77,0.12)',
+                  border: "1px solid var(--border)",
                   fontSize: '14px',
                   fontWeight: 500,
                   color: T.slate,
@@ -528,7 +542,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s',
                 }}
               >
-                Dashboard
+                {t('dashboard')}
               </Link>
               <button
                 type="button"
@@ -542,7 +556,7 @@ export default function NavigationBar() {
                   textAlign: 'center',
                   padding: '12px 20px',
                   borderRadius: '10px',
-                  background: 'rgba(4,53,77,0.04)',
+                  background: "var(--surface-hover)",
                   fontSize: '14px',
                   fontWeight: 600,
                   color: T.slate,
@@ -551,7 +565,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s',
                 }}
               >
-                Logout
+                {t('logout')}
               </button>
             </>
           ) : (
@@ -564,7 +578,7 @@ export default function NavigationBar() {
                   textAlign: 'center',
                   padding: '12px 20px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(4,53,77,0.12)',
+                  border: "1px solid var(--border)",
                   fontSize: '14px',
                   fontWeight: 500,
                   color: T.slate,
@@ -572,7 +586,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s',
                 }}
               >
-                Physician Portal
+                {t('physicianPortal')}
               </Link>
               <Link
                 href="/auth/sign-in"
@@ -582,7 +596,7 @@ export default function NavigationBar() {
                   textAlign: 'center',
                   padding: '12px 20px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(4,53,77,0.12)',
+                  border: "1px solid var(--border)",
                   fontSize: '14px',
                   fontWeight: 500,
                   color: T.slate,
@@ -590,7 +604,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s',
                 }}
               >
-                Sign In
+                {t('signIn')}
               </Link>
               <Link
                 href="/auth"
@@ -609,7 +623,7 @@ export default function NavigationBar() {
                   transition: 'background 0.12s, box-shadow 0.12s',
                 }}
               >
-                Access Platform
+                {t('accessPlatform')}
               </Link>
             </>
           )}

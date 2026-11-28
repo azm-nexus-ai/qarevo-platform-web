@@ -1,7 +1,9 @@
 'use client'
 
+import BrandLogo from '@/components/branding/BrandLogo'
+import { useTranslations } from 'next-intl'
+
 import { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -15,50 +17,10 @@ const PANEL_BG = [
   'radial-gradient(ellipse 70% 65% at 55% 100%, rgba(52,140,234,0.26) 0%, transparent 58%)',
   'radial-gradient(ellipse 50% 45% at 92% 82%,  rgba(165,224,218,0.18)  0%, transparent 50%)',
   'radial-gradient(ellipse 90% 80% at 5%  90%,  rgba(32,181,223,0.14)  0%, transparent 55%)',
-  T.navy,
+  T.brandNavy,
 ].join(', ')
 
 // ─── Floating glass stat card ──────────────────────────────────────────────────
-
-function FloatCard({
-  top, left, right, bottom,
-  icon, iconColor, iconBg,
-  label, value, sub, subColor,
-  style: extraStyle,
-}: {
-  top?: string; left?: string; right?: string; bottom?: string
-  icon: string | readonly string[]
-  iconColor: string; iconBg: string
-  label: string; value: string; sub: string; subColor: string
-  style?: React.CSSProperties
-}) {
-  return (
-    <div style={{
-      position: 'absolute',
-      top, left, right, bottom,
-      padding: '14px 18px',
-      borderRadius: '16px',
-      background: 'rgba(255,255,255,0.07)',
-      backdropFilter: 'blur(20px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-      border: '1px solid rgba(255,255,255,0.13)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.18)',
-      minWidth: '148px',
-      ...extraStyle,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '8px' }}>
-        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Ico p={icon} size={14} sw={1.75} color={iconColor} />
-        </div>
-        <span style={{ fontSize: '10.5px', fontWeight: 600, color: 'rgba(255,255,255,0.48)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</span>
-      </div>
-      <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '20px', fontWeight: 800, color: '#fff', lineHeight: 1, marginBottom: '4px', letterSpacing: '-0.03em' }}>{value}</div>
-      <div style={{ fontSize: '11.5px', fontWeight: 600, color: subColor }}>{sub}</div>
-    </div>
-  )
-}
-
-// ─── Abstract healthcare visualization ────────────────────────────────────────
 
 function HealthVisual() {
   return (
@@ -115,6 +77,7 @@ function HealthVisual() {
 // ─── Left panel ────────────────────────────────────────────────────────────────
 
 function LeftPanel() {
+  const t = useTranslations('authWelcome')
   return (
     <div style={{
       background: PANEL_BG,
@@ -131,41 +94,28 @@ function LeftPanel() {
       <div aria-hidden style={{ position: 'absolute', bottom: '-100px', right: '-80px', width: '460px', height: '460px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(52,140,234,0.16) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label='Qarevo Health home'>
-          <Image
-            src='/brand/Untitled design - 2026-08-03T165058.603.png'
-            alt='Qarevo Health'
-            width={160}
-            height={34}
-            priority
-            unoptimized
-            style={{ width: '160px', height: 'auto' }}
-          />
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('home')}>
+          <BrandLogo tone='white' width={160} />
         </Link>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px' }}>
         <HealthVisual />
         <div style={{ textAlign: 'center', maxWidth: '360px' }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(22px, 2.4vw, 30px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.15, margin: '0 0 12px' }}>
-            Clinical intelligence.<br />
-            <span style={{ color: 'rgba(147,197,253,0.9)' }}>Beautifully coordinated.</span>
+          <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: 'clamp(22px, 2.4vw, 30px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.15, margin: '0 0 12px' }}>
+            {t('heroLine1')}<br />
+            <span style={{ color: 'rgba(147,197,253,0.9)' }}>{t('heroLine2')}</span>
           </h2>
-          <p style={{ fontSize: '14.5px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
-            180,000 patients across Europe trust Qarevo for verified physicians, AI-powered diagnostics, and seamless care coordination.
+          <p style={{ fontSize: '14.5px', color: "rgba(255,255,255,0.78)", lineHeight: 1.72, margin: 0, letterSpacing: '-0.01em' }}>
+            {t('heroText')}
           </p>
         </div>
       </div>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ position: 'relative', height: '108px', marginBottom: '24px' }}>
-          <FloatCard top="0" left="0" icon={ICONS.user} iconColor="rgba(52,140,234,0.9)" iconBg="rgba(52,140,234,0.22)" label="Active Patients" value="180K+" sub="↑ 12% this month" subColor="rgba(110,231,183,0.85)" />
-          <FloatCard top="0" right="0" icon={ICONS.steth} iconColor="rgba(165,224,218,0.9)" iconBg="rgba(9,173,112,0.22)" label="Physicians" value="4,200+" sub="Verified & active" subColor="rgba(147,197,253,0.8)" />
-          <FloatCard bottom="0" style={{ left: '50%', transform: 'translateX(-50%)' }} icon={ICONS.shield} iconColor="rgba(52,140,234,0.9)" iconBg="rgba(32,181,223,0.22)" label="Satisfaction" value="98%" sub="Patient-rated" subColor="rgba(251,191,36,0.85)" />
-        </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['HIPAA', 'GDPR', 'ISO 27001', 'SOC 2 Type II'].map(b => (
-            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.48)', letterSpacing: '0.04em' }}>{b}</span>
+          {[t('badgeEmail'), t('badgeClinician'), t('badgeSecurity')].map(b => (
+            <span key={b} style={{ padding: '4px 12px', borderRadius: '100px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.78)", letterSpacing: '0.04em' }}>{b}</span>
           ))}
         </div>
       </div>
@@ -176,12 +126,13 @@ function LeftPanel() {
 // ─── Right panel ───────────────────────────────────────────────────────────────
 
 function RightPanel() {
+  const t = useTranslations('authWelcome')
   const [primaryHov, setPrimaryHov] = useState(false)
   const [secondaryHov, setSecondaryHov] = useState(false)
 
   return (
     <div style={{
-      flex: 1, background: '#EDF2FA',
+      flex: 1, background: "var(--canvas)",
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '40px 32px', minHeight: '100vh', position: 'relative',
     }}>
@@ -190,20 +141,20 @@ function RightPanel() {
       <div style={{
         position: 'relative', zIndex: 1,
         width: '100%', maxWidth: '420px',
-        background: 'rgba(255,255,255,0.88)',
+        background: "var(--surface-glass)",
         backdropFilter: 'blur(32px) saturate(200%)',
         WebkitBackdropFilter: 'blur(32px) saturate(200%)',
         borderRadius: '24px',
-        border: '1px solid rgba(255,255,255,0.9)',
+        border: "1px solid var(--border)",
         boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 20px 60px rgba(4,53,77,0.1), 0 60px 120px rgba(4,53,77,0.07)',
         padding: '44px 40px 40px',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '26px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
-            Welcome to<br />Qarevo Health
+          <h1 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '26px', fontWeight: 800, color: T.navy, letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
+            {t('welcomeLine1')}<br />Qarevo Health
           </h1>
           <p style={{ fontSize: '14.5px', color: T.slate, lineHeight: 1.68, margin: '0 auto', letterSpacing: '-0.01em', maxWidth: '300px' }}>
-            Securely access your healthcare journey powered by intelligent care coordination.
+            {t('intro')}
           </p>
         </div>
 
@@ -214,7 +165,7 @@ function RightPanel() {
             onMouseLeave={() => setPrimaryHov(false)}
             style={{
               width: '100%', padding: '14px 20px', borderRadius: '13px', border: 'none',
-              background: primaryHov ? 'linear-gradient(135deg,#348CEA 0%,#0F47B8 100%)' : `linear-gradient(135deg,${T.blue} 0%,#348CEA 100%)`,
+              background: primaryHov ? 'linear-gradient(135deg,var(--primary-end) 0%,#0F47B8 100%)' : `linear-gradient(135deg,${T.blue} 0%,var(--primary-end) 100%)`,
               color: '#fff', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700,
               letterSpacing: '-0.02em', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -223,7 +174,7 @@ function RightPanel() {
               transform: primaryHov ? 'translateY(-1px)' : 'none',
             }}
           >
-            Get Started
+            {t('getStarted')}
             <Ico p={ICONS.arrowFwd} size={15} sw={2.2} />
           </Link>
 
@@ -233,8 +184,8 @@ function RightPanel() {
             onMouseLeave={() => setSecondaryHov(false)}
             style={{
               width: '100%', padding: '13px 20px', borderRadius: '13px',
-              border: `1.5px solid ${secondaryHov ? 'rgba(4,53,77,0.14)' : T.border}`,
-              background: secondaryHov ? 'rgba(4,53,77,0.04)' : 'rgba(4,53,77,0.02)',
+              border: `1.5px solid ${secondaryHov ? "var(--border)" : T.border}`,
+              background: secondaryHov ? "var(--surface-hover)" : "var(--surface-hover)",
               color: T.navy, fontFamily: 'inherit', fontSize: '15px', fontWeight: 600,
               letterSpacing: '-0.02em', cursor: 'pointer', transition: 'all 0.15s ease',
               boxShadow: secondaryHov ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.6)',
@@ -244,26 +195,26 @@ function RightPanel() {
               justifyContent: 'center',
             }}
           >
-            Physician Registration
+            {t('physicianRegistration')}
           </Link>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(4,53,77,0.08)' }} />
-          <span style={{ fontSize: '12px', fontWeight: 500, color: T.slate2, whiteSpace: 'nowrap' }}>or continue with</span>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(4,53,77,0.08)' }} />
+          <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
+          <span style={{ fontSize: "13px", fontWeight: 500, color: T.slate2, whiteSpace: 'nowrap' }}>{t('orContinue')}</span>
+          <div style={{ flex: 1, height: '1px', background: "var(--surface-hover)" }} />
         </div>
 
         <p style={{ textAlign: 'center', fontSize: '13.5px', color: T.slate2, margin: 0, letterSpacing: '-0.01em' }}>
-          Already have an account?{' '}
-          <Link href="/auth/sign-in" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>Sign In</Link>
-          {' '}or{' '}
-          <Link href="/auth/doctor/login" style={{ color: T.blue, fontWeight: 700, textDecoration: 'none' }}>Physician Portal</Link>
+          {t('haveAccount')}{' '}
+          <Link href="/auth/sign-in" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>{t('signIn')}</Link>
+          {' '}{t('or')}{' '}
+          <Link href="/auth/doctor/login" style={{ color: T.link, fontWeight: 700, textDecoration: 'none' }}>{t('physicianPortal')}</Link>
         </p>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(4,53,77,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '20px', paddingTop: '20px', borderTop: "1px solid var(--border)" }}>
           <Ico p={ICONS.shield} size={12} sw={1.75} color={T.slate2} />
-          <span style={{ fontSize: '11.5px', color: T.slate2, letterSpacing: '-0.01em' }}>HIPAA & GDPR compliant · AES-256 encrypted</span>
+          <span style={{ fontSize: "13px", color: T.slate2, letterSpacing: '-0.01em' }}>{t('footerNote')}</span>
         </div>
       </div>
     </div>
