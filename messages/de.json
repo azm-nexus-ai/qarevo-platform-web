@@ -10,7 +10,8 @@
       "switchToDark": "Zum dunklen Design wechseln"
     },
     "signingOut": "Abmeldung läuft…",
-    "validationSummary": "Bitte prüfen Sie Folgendes, bevor Sie fortfahren:"
+    "validationSummary": "Bitte prüfen Sie Folgendes, bevor Sie fortfahren:",
+    "progress": "Fortschritt"
   },
   "nav": {
     "patient": {
@@ -512,7 +513,14 @@
       "secureRecovery": "Sichere Wiederherstellung",
       "singleUseLink": "Einmal-Link",
       "accountRecovery": "Kontowiederherstellung",
-      "ifAnEligibleAccountExists": "Wenn ein passendes Konto existiert, senden wir Hinweise zum Zurücksetzen. Prüfen Sie Ihren Posteingang und den Spam-Ordner. Verwenden Sie die neueste E-Mail; ein neuer Link ersetzt frühere Links. Wenn Sie die Seite zum Zurücksetzen neu geladen haben, öffnen Sie den vollständigen Link aus der E-Mail erneut."
+      "ifAnEligibleAccountExists": "Wenn ein passendes Konto existiert, senden wir Hinweise zum Zurücksetzen. Prüfen Sie Ihren Posteingang und den Spam-Ordner. Verwenden Sie die neueste E-Mail; ein neuer Link ersetzt frühere Links. Wenn Sie die Seite zum Zurücksetzen neu geladen haben, öffnen Sie den vollständigen Link aus der E-Mail erneut.",
+      "recoveryTitle": {
+        "patient": "Passwort vergessen?",
+        "doctor": "Zugang für Ärztinnen und Ärzte wiederherstellen",
+        "admin": "Administratorzugang wiederherstellen",
+        "practice": "Praxiszugang wiederherstellen"
+      },
+      "legalLinks": "Zum Stand unserer <terms>Nutzungsbedingungen</terms> und der <privacy>Datenschutzerklärung</privacy>"
     },
     "doctorRegister": {
       "optional": "Optional",
@@ -632,7 +640,8 @@
       "socialCancel": "Ohne {provider} registrieren",
       "errSocial": "Die Registrierung über den Anbieter ist nicht möglich: Die E-Mail-Adresse muss die vom Anbieter bestätigte sein, das Anbieterkonto darf noch nicht verbunden sein, und die Sitzung gilt 30 Minuten. Registrieren Sie sich andernfalls ohne Anbieter.",
       "pleaseCorrectTheHighlightedFields": "Bitte korrigieren Sie die markierten Felder, bevor Sie fortfahren.",
-      "pleaseAcknowledgeTheDevelopmentTest": "Bitte bestätigen Sie die Testbedingungen der Entwicklungsphase"
+      "pleaseAcknowledgeTheDevelopmentTest": "Bitte bestätigen Sie die Testbedingungen der Entwicklungsphase",
+      "requiredSuffix": "(Pflichtfeld)"
     },
     "verifyEmail": {
       "codeVerifiedActivatingYourAccount": "Code bestätigt – Ihr Konto wird aktiviert…",
@@ -682,7 +691,8 @@
       "secureVerification": "Sichere Bestätigung",
       "endToEndEncrypted": "Verschlüsselte Übertragung",
       "emailVerificationProtectedAccess": "E-Mail-Bestätigung · Geschützter Zugang",
-      "medicalGradePrivacy": "Schutz von Gesundheitsdaten"
+      "medicalGradePrivacy": "Schutz von Gesundheitsdaten",
+      "digitLabel": "Ziffer {number} von 6 des Bestätigungscodes"
     },
     "resetPassword": {
       "securityFirst": "Sicherheit zuerst.",
@@ -741,7 +751,14 @@
       "secureCredentials": "Sichere Zugangsdaten",
       "protectedAccountAccess": "Geschützter Kontozugang",
       "thePasswordResetLinkIs": "Der Link zum Zurücksetzen fehlt oder ist ungültig. Öffnen Sie den vollständigen Link aus Ihrer neuesten E-Mail erneut. Beim Neuladen dieser Seite wird der Link verworfen; fordern Sie nur dann eine neue E-Mail an, wenn der ursprüngliche Link abgelaufen ist.",
-      "protectingYourMedicalInformationIs": "Der Schutz Ihrer Gesundheitsdaten hat für Qarevo Health höchste Priorität. Legen Sie ein starkes Passwort fest, um den Zugang sicher wiederherzustellen."
+      "protectingYourMedicalInformationIs": "Der Schutz Ihrer Gesundheitsdaten hat für Qarevo Health höchste Priorität. Legen Sie ein starkes Passwort fest, um den Zugang sicher wiederherzustellen.",
+      "resetTitle": {
+        "patient": "Passwort zurücksetzen",
+        "doctor": "Passwort für Ärztinnen und Ärzte zurücksetzen",
+        "admin": "Administratorpasswort zurücksetzen",
+        "practice": "Kontopasswort zurücksetzen"
+      },
+      "legalLinks": "Zum Stand unserer <terms>Nutzungsbedingungen</terms> und der <privacy>Datenschutzerklärung</privacy>"
     },
     "doctorTwoFactor": {
       "back": "Zurück zur Anmeldung",
@@ -830,7 +847,8 @@
       "enter6DigitCode": "6-stelligen Code eingeben",
       "verificationEmailRequestedCheckYour": "Bestätigungs-E-Mail angefordert. Prüfen Sie Ihren Posteingang und den Spam-Ordner.",
       "verifyYourIdentity": "Identität bestätigen",
-      "change": "Ändern"
+      "change": "Ändern",
+      "digitLabel": "Ziffer {number} von 6"
     },
     "accountCreated": {
       "welcomeToYourCareJourney": "Willkommen bei Qarevo Health.",
@@ -2356,7 +2374,23 @@
     "yourSavedAppointmentCareTeam": "Ihr gespeicherter Termin, Ihr Behandlungsteam und die Vorbereitung.",
     "loadingAppointment": "Termin wird geladen…",
     "yourAppointmentCouldNotBe": "Ihr Termin konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
-    "assignedClinician": "Zugeordnete Ärztin / zugeordneter Arzt"
+    "assignedClinician": "Zugeordnete Ärztin / zugeordneter Arzt",
+    "calendarTitle": "Video-Sprechstunde: {doctor}",
+    "calendarDescription": "Termin bei Qarevo Health. Vorbereitung und Videoraum finden Sie im Patientenportal: {url}",
+    "startsIn": "beginnt {relative}",
+    "addToCalendar": "Zum Kalender hinzufügen",
+    "steps": {
+      "device": "Kamera und Mikrofon prüfen",
+      "deviceText": "Dauert etwa eine Minute. Nutzen Sie das Gerät, mit dem Sie teilnehmen.",
+      "documents": "Unterlagen für Ihre Ärztin oder Ihren Arzt teilen",
+      "documentsText": "Befunde, Medikationspläne oder Fotos helfen bei der Vorbereitung.",
+      "documentsAction": "Gesundheitsakte öffnen",
+      "questions": "Fragen notieren",
+      "questionsText": "Schreiben Sie vorab eine Nachricht, wenn etwas unklar ist.",
+      "questionsAction": "Nachrichten öffnen",
+      "join": "Videoraum betreten",
+      "joinText": "Öffnen Sie den Raum einige Minuten vor Beginn; Sie können teilnehmen, sobald die Sprechstunde geöffnet ist."
+    }
   },
   "patientEpisode": {
     "returnToDashboard": "Zurück zur Übersicht",

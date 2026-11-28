@@ -29,9 +29,9 @@ for(const [role,portal,home] of [['PATIENT','patient','/patient/dashboard'],['PR
     await expect(brand).toHaveAttribute('href',home)
     const menu=header.getByRole('button',{name:'Hide sidebar',exact:true})
     expect((await brand.boundingBox())!.x).toBeLessThan((await menu.boundingBox())!.x)
-    await expect(brand.locator('img:visible')).toHaveAttribute('src',/qarevo-logo-light\.svg/)
+    await expect(brand.locator('img:visible')).toHaveAttribute('src',/qarevo-horizontal-colour\.svg/)
     await page.getByRole('button',{name:'Dark mode',exact:true}).click()
-    await expect(brand.locator('img:visible')).toHaveAttribute('src',/qarevo-logo-dark\.svg/)
+    await expect(brand.locator('img:visible')).toHaveAttribute('src',/qarevo-horizontal-white\.svg/)
     await expect(page.getByRole('contentinfo').getByRole('link',{name:'Qarevo Health home',exact:true})).toHaveAttribute('href',home)
     for(const width of [820,390,320]) {
       await page.setViewportSize({width,height:900})

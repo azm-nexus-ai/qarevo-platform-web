@@ -351,7 +351,7 @@ export default function AccountCreatedPage() {
       </div>
 
       <div className='created-wrap' style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '44px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '500px' }}>
+        <div style={{ width: '100%', maxWidth: '500px', minWidth: 0 }}>
           <section
             className='created-card'
             aria-live='polite'
@@ -446,7 +446,7 @@ export default function AccountCreatedPage() {
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '8px' }}>
                 <TrustCard label={t('accountCreated.secureEncrypted')} sub={t('accountCreated.endToEndProtected')} icon={ICONS.lock} accent={T.blue} />
                 <TrustCard label={t('accountCreated.aiAssistedHealthcare')} sub={t('accountCreated.smartClinicalGuidance')} icon={ICONS.brain} accent={T.purple} />
                 <TrustCard label={t('accountCreated.verifiedPhysicians')} sub={t('accountCreated.trustedSpecialistsOnly')} icon={ICONS.steth} accent={T.teal} />

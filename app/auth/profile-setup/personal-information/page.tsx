@@ -441,7 +441,7 @@ export default function PersonalInformationPage() {
       </div>
 
       <div className='pi-wrap' style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '44px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '720px' }}>
+        <div style={{ width: '100%', maxWidth: '720px', minWidth: 0 }}>
           <form
             className='pi-card'
             onSubmit={onSubmit}

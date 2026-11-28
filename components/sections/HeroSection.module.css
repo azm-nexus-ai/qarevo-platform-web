@@ -1,0 +1,12 @@
+/* Text first for reading order; the 3D mark is decorative and sits beside it on wide screens. */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; gap: clamp(8px, 3vw, 24px); }
+.copy { min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.copy h1, .copy p { margin-inline: auto !important; }
+.visual { width: min(100%, 240px); }
+@media (min-width: 900px) {
+  .hero { grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr); justify-items: stretch; text-align: left; align-items: center; gap: clamp(24px, 5vw, 72px); }
+  .copy { order: 1; align-items: flex-start; }
+  .copy h1, .copy p { margin-inline: 0 !important; }
+  .visual { order: 2; width: 100%; }
+}
+@media (min-width: 900px) { .copy :global(.hero-btns) { justify-content: flex-start; } }

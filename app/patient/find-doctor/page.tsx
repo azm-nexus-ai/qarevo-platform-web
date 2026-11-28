@@ -674,7 +674,7 @@ function FindDoctorPageContent() {
                   <span>{t('loadFailedBody')}</span>
                   <span style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     <button type='button' onClick={() => setReload(value => value + 1)} disabled={loading} style={{ minHeight: 44, padding: '0 14px', borderRadius: '11px', border: 'none', background: 'var(--primary)', color: 'var(--on-primary, #fff)', fontWeight: 700, cursor: 'pointer' }}>{t('retryPhysicianSearch')}</button>
-                    <Link href='/patient/help' style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', padding: '0 14px', borderRadius: '11px', border: '1px solid var(--border)', color: T.navy, fontWeight: 700, textDecoration: 'none' }}>{t('getHelp')}</Link>
+                    <Link href='/support' style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', padding: '0 14px', borderRadius: '11px', border: '1px solid var(--border)', color: T.navy, fontWeight: 700, textDecoration: 'none' }}>{t('getHelp')}</Link>
                   </span>
                 </div>
               )}

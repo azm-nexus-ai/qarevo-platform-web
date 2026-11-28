@@ -1,4 +1,5 @@
 'use client'
+import BrandLogo from '@/components/branding/BrandLogo'
 import { useTranslations } from 'next-intl'
 import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
 import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
@@ -8,7 +9,6 @@ import { useEffect, useState, useId } from 'react'
 import Link from 'next/link'
 import SocialSignInButtons from '@/components/auth/SocialSignInButtons'
 import { useLoginCooldown } from '@/lib/use-login-cooldown'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -155,15 +155,7 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('qarevoHealthHome')}>
-          <Image
-            src='/brand/Untitled design - 2026-08-03T165058.603.png'
-            alt='Qarevo Health'
-            width={160}
-            height={34}
-            priority
-            unoptimized
-            style={{ width: '160px', height: 'auto' }}
-          />
+          <BrandLogo tone='white' width={160} />
         </Link>
       </div>
 
@@ -283,8 +275,8 @@ export default function DoctorLoginPage() {
       </div>
 
       {/* Right panel - login form */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '460px' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 6vw, 48px) clamp(12px, 4vw, 24px)', minHeight: '100vh' }}>
+        <div style={{ width: '100%', maxWidth: '460px', minWidth: 0 }}>
           {/* Back link */}
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />

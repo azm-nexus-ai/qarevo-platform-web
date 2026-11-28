@@ -1,11 +1,11 @@
 'use client'
 
+import BrandLogo from '@/components/branding/BrandLogo'
 import { useState, useEffect, useId, Suspense } from 'react'
 import { useTranslations } from 'next-intl'
 
 type Translate = ReturnType<typeof useTranslations>
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -177,15 +177,7 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('doctorPhone.qarevoHealthHome')}>
-          <Image
-            src='/brand/Untitled design - 2026-08-03T165058.603.png'
-            alt='Qarevo Health'
-            width={160}
-            height={34}
-            priority
-            unoptimized
-            style={{ width: '160px', height: 'auto' }}
-          />
+          <BrandLogo tone='white' width={160} />
         </Link>
       </div>
 
@@ -296,8 +288,8 @@ function DoctorVerifyPhonePageContent() {
       </div>
 
       {/* Right panel - verification form */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '460px' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 6vw, 48px) clamp(12px, 4vw, 24px)', minHeight: '100vh' }}>
+        <div style={{ width: '100%', maxWidth: '460px', minWidth: 0 }}>
           {/* Back link */}
           <button
             onClick={() => router.back()}
@@ -315,7 +307,7 @@ function DoctorVerifyPhonePageContent() {
             borderRadius: '22px',
             border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
-            padding: '40px 40px 36px',
+            padding: 'clamp(22px, 6vw, 40px) clamp(18px, 5.5vw, 40px) clamp(22px, 5vw, 36px)',
           }}>
             {/* Header */}
             <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>

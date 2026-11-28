@@ -1,4 +1,6 @@
 'use client'
+import BrandScene3D from '@/components/brand/BrandScene3D'
+import BrandLogo from '@/components/branding/BrandLogo'
 import PortalSignInReference, { WrongPortalNotice } from '@/components/auth/PortalSignInReference'
 import SessionPolicyHint from '@/components/auth/SessionPolicyHint'
 import { authenticatedPortalHandoff, safePortalDestination, type PortalHandoff } from '@/lib/portal-handoff'
@@ -8,7 +10,6 @@ import { useState, useId, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useLoginCooldown } from '@/lib/use-login-cooldown'
 import { getOnboarding, onboardingPath } from '@/lib/patient-onboarding'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { setAuthenticatedOnboardingStage } from '@/lib/auth-flow'
@@ -44,60 +45,6 @@ const TRUST_FEATURES = [
   { icon: ICONS.shield, key: 'access' },
 ] as const
 
-function WellnessVisual() {
-  return (
-    <div style={{ position: 'relative', width: '260px', height: '260px', margin: '0 auto', flexShrink: 0 }}>
-      {/* Rings */}
-      {[0, 28, 56].map((inset, i) => (
-        <div key={i} style={{ position: 'absolute', inset, borderRadius: '50%', border: `1px solid rgba(255,255,255,${0.05 + i * 0.04})` }} />
-      ))}
-      {/* Core orb */}
-      <div style={{
-        position: 'absolute', inset: '84px', borderRadius: '50%',
-        background: 'radial-gradient(circle at 38% 32%, rgba(52,140,234,0.32) 0%, rgba(32,181,223,0.16) 55%, transparent 78%)',
-        border: '1px solid rgba(52,140,234,0.26)',
-        boxShadow: '0 0 56px rgba(32,181,223,0.32), inset 0 1px 0 rgba(255,255,255,0.22)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Ico p={ICONS.heart} size={34} sw={1.25} color="rgba(255,255,255,0.9)" />
-      </div>
-      {/* Pulse ripple */}
-      <div style={{
-        position: 'absolute', inset: '72px', borderRadius: '50%',
-        border: '1px solid rgba(52,140,234,0.18)',
-        animation: 'none',
-      }} />
-      {/* Orbit nodes */}
-      {[
-        { angle: 0,   icon: ICONS.steth,    bg: 'rgba(9,173,112,0.28)',  border: 'rgba(165,224,218,0.3)'  },
-        { angle: 90,  icon: ICONS.shield,   bg: 'rgba(32,181,223,0.28)',  border: 'rgba(52,140,234,0.3)'  },
-        { angle: 180, icon: ICONS.activity, bg: 'rgba(52,140,234,0.28)', border: 'rgba(52,140,234,0.3)' },
-        { angle: 270, icon: ICONS.lock,     bg: 'rgba(32,181,223,0.28)',  border: 'rgba(165,224,218,0.3)'  },
-      ].map(({ angle, icon, bg, border }) => {
-        const r = 100, rad = (angle - 90) * Math.PI / 180
-        const x = 130 + r * Math.cos(rad), y = 130 + r * Math.sin(rad)
-        return (
-          <div key={angle} style={{
-            position: 'absolute', left: `${x - 20}px`, top: `${y - 20}px`,
-            width: '40px', height: '40px', borderRadius: '13px',
-            background: bg, border: `1px solid ${border}`,
-            backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.18)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Ico p={icon} size={17} sw={1.5} color="rgba(255,255,255,0.88)" />
-          </div>
-        )
-      })}
-      {/* ECG */}
-      <svg viewBox="0 0 260 24" style={{ position: 'absolute', bottom: '8px', left: 0, width: '100%', opacity: 0.45 }}>
-        <polyline points="0,12 48,12 64,2 72,22 80,2 88,22 100,12 260,12" fill="none" stroke="rgba(52,140,234,0.85)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="88" cy="22" r="2.5" fill="rgba(52,140,234,0.9)" />
-      </svg>
-    </div>
-  )
-}
-
 function LeftPanel() {
   const t = useTranslations('auth.signIn')
   return (
@@ -120,21 +67,13 @@ function LeftPanel() {
       {/* Logo */}
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('home')}>
-          <Image
-            src='/brand/Untitled design - 2026-08-03T165058.603.png'
-            alt='Qarevo Health'
-            width={160}
-            height={34}
-            priority
-            unoptimized
-            style={{ width: '160px', height: 'auto' }}
-          />
+          <BrandLogo tone='white' width={160} />
         </Link>
       </div>
 
       {/* Centre content */}
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <WellnessVisual />
+        <BrandScene3D size={250} tone='dark' />
         <div style={{ marginTop: '32px', textAlign: 'center' }}>
           <h2 style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif", fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '-0.035em', lineHeight: 1.18, margin: '0 0 10px' }}>
             {t('panelTitle')}<br />
@@ -442,8 +381,8 @@ export default function SignInPage() {
       </div>
 
       {/* Right: form area */}
-      <div className="signin-form-area" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
-        <div className="signin-form-wrap" style={{ width: '100%', maxWidth: '460px' }}>
+      <div className="signin-form-area" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 6vw, 48px) clamp(12px, 4vw, 24px)', minHeight: '100vh' }}>
+        <div className="signin-form-wrap" style={{ width: '100%', maxWidth: '460px', minWidth: 0 }}>
 
           {/* Back */}
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
@@ -459,7 +398,7 @@ export default function SignInPage() {
             borderRadius: '22px',
             border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
-            padding: '40px 40px 36px',
+            padding: 'clamp(22px, 6vw, 40px) clamp(18px, 5.5vw, 40px) clamp(22px, 5vw, 36px)',
             animation: authError ? 'shake 0.35s ease' : 'none',
           }}>
 

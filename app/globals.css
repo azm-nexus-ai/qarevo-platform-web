@@ -455,8 +455,9 @@ button:disabled { cursor: not-allowed; }
 .preferences-dialog a { color: var(--link); text-decoration: underline; }
 .preferences-dialog-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 @media(min-width:921px) {
-  .corporate-footer[data-portal-footer=doctor],.corporate-footer[data-portal-footer=admin] { margin-left: 260px; }
-  html[data-doctor-sidebar=collapsed] .corporate-footer[data-portal-footer=doctor],html[data-admin-sidebar=collapsed] .corporate-footer[data-portal-footer=admin] { margin-left: 0; }
+  /* The fixed primary sidebar is 260px wide: every portal footer starts after it, never underneath. */
+  .corporate-footer[data-portal-footer=doctor],.corporate-footer[data-portal-footer=admin],.corporate-footer[data-portal-footer=practice] { margin-left: 260px; }
+  html[data-doctor-sidebar=collapsed] .corporate-footer[data-portal-footer=doctor],html[data-admin-sidebar=collapsed] .corporate-footer[data-portal-footer=admin],html[data-practice-sidebar=collapsed] .corporate-footer[data-portal-footer=practice] { margin-left: 0; }
 }
 @media(max-width:600px) { .corporate-footer-content { grid-template-columns: minmax(0,1fr); } .preferences-dialog-actions .theme-toggle { white-space: normal; text-align: left; } }
 
@@ -608,3 +609,13 @@ button:disabled { cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
+
+/* Icon-only theme toggle in tight phone headers: still a 44px target. */
+.theme-toggle-compact { min-width: 44px; justify-content: center; padding-inline: 10px; }
+
+/* Long German compounds ("Administratorzugang", "Datenschutzerklärung") must wrap, never widen the page.
+   Headings may break anywhere as a last resort; running text hyphenates where the browser can. */
+:where(h1, h2, h3, h4, h5, h6) { overflow-wrap: anywhere; }
+:where(p, li, dt, dd, label, legend, figcaption, td, th, summary) { overflow-wrap: break-word; }
+/* Hyphenate only where columns are narrow; wide layouts keep whole words. */
+@media (max-width: 600px) { :where(h1, h2, h3, h4, h5, h6, p, li, dd, label, legend):lang(de) { hyphens: auto; -webkit-hyphens: auto; } }

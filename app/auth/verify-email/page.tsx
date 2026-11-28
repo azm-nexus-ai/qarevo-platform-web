@@ -1,4 +1,5 @@
 'use client'
+import StepProgress from '@/components/auth/StepProgress'
 
 import { useTranslations } from 'next-intl'
 import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
@@ -39,7 +40,7 @@ function EnvelopeScene({ verified }: { verified: boolean }) {
   const glow = phase % 2 === 0
 
   return (
-    <div style={{ position: 'relative', width: '280px', height: '200px', margin: '0 auto', userSelect: 'none' }}>
+    <div aria-hidden='true' style={{ position: 'relative', width: '280px', maxWidth: '100%', height: '200px', margin: '0 auto', userSelect: 'none', overflow: 'hidden' }}>
       {/* Background halo */}
       <div style={{
         position: 'absolute', top: '50%', left: '50%',
@@ -232,14 +233,14 @@ function OtpInput({ email, onStart, onComplete }: { email: string; onStart: () =
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', gap: 'clamp(4px, 1.8vw, 8px)', justifyContent: 'center', marginBottom: '10px' }}>
         {values.map((v, i) => {
           const filled = v !== ''
           return (
             <input
               key={i}
               ref={el => { refs.current[i] = el }}
-              aria-label={`Verification code digit ${i + 1}`}
+              aria-label={t('digitLabel', { number: i + 1 })}
               maxLength={1}
               inputMode="numeric"
               value={v}
@@ -248,8 +249,8 @@ function OtpInput({ email, onStart, onComplete }: { email: string; onStart: () =
               onPaste={handlePaste}
               disabled={loading || success}
               style={{
-                width: '48px', height: '56px', textAlign: 'center',
-                fontSize: '22px', fontWeight: 700, color: T.navy,
+                width: 'clamp(36px, 11vw, 48px)', height: 'clamp(48px, 14vw, 56px)', minWidth: 0, textAlign: 'center',
+                fontSize: 'clamp(19px, 5.6vw, 22px)', fontWeight: 700, color: T.navy,
                 fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
                 borderRadius: '12px',
                 border: `2px solid ${error ? 'rgba(220,38,38,0.4)' : success ? 'rgba(9,173,112,0.5)' : filled ? 'rgba(32,181,223,0.4)' : "var(--border)"}`,
@@ -287,37 +288,8 @@ function OtpInput({ email, onStart, onComplete }: { email: string; onStart: () =
 
 // ─── Step bar ──────────────────────────────────────────────────────────────────
 function StepBar({ step }: { step: 0 | 1 | 2 }) {
-  const t = useTranslations('auth.verifyEmail')
-  const steps = [t('createAccount'), t('verifyEmail'), t('getStarted')]
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: '0', marginBottom: '36px' }}>
-      {steps.map((label, i) => {
-        const done = i < step, active = i === step
-        return (
-          <div key={label} style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-              <div style={{
-                width: '28px', height: '28px', borderRadius: '50%',
-                background: done ? T.green : active ? T.blue : "var(--surface-hover)",
-                border: `2px solid ${done ? T.green : active ? T.blue : "var(--border)"}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: active ? `0 0 0 4px rgba(32,181,223,0.1)` : done ? `0 0 0 3px rgba(9,173,112,0.1)` : 'none',
-                transition: 'all 0.35s ease', flexShrink: 0,
-              }}>
-                {done
-                  ? <Ico p={ICONS.check} size={11} sw={3} color="#fff" />
-                  : <span style={{ fontSize: "13px", fontWeight: 700, color: active ? '#fff' : T.slate2 }}>{i + 1}</span>}
-              </div>
-              <span style={{ fontSize: "13px", fontWeight: done || active ? 600 : 400, color: done ? T.green : active ? T.link : T.slate2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>{label}</span>
-            </div>
-            {i < steps.length - 1 && (
-              <div style={{ width: '52px', height: '2px', margin: '13px 6px 0', borderRadius: '2px', background: done ? T.green : "var(--surface-hover)", transition: 'background 0.4s ease', flexShrink: 0 }} />
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
+  const t = useTranslations('auth.verifyEmail'), common = useTranslations('common')
+  return <StepProgress steps={[t('createAccount'), t('verifyEmail'), t('getStarted')]} current={step} label={common('progress')} />
 }
 
 // ─── Tip accordion item ────────────────────────────────────────────────────────

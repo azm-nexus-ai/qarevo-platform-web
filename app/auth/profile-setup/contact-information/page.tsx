@@ -409,7 +409,7 @@ export default function ContactInformationPage() {
       </div>
 
       <div className='ci-wrap' style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '44px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '760px' }}>
+        <div style={{ width: '100%', maxWidth: '760px', minWidth: 0 }}>
           <form
             className='ci-card'
             onSubmit={onSubmit}

@@ -1,0 +1,12 @@
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 0 auto 32px; padding: 0; list-style: none; max-width: 420px; counter-reset: none; }
+.step { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; text-align: center; }
+/* Connector from this step to the next, drawn behind the dots. */
+.step:not(:last-child)::after { content: ''; position: absolute; top: 13px; left: calc(50% + 20px); right: calc(-50% + 20px); height: 2px; border-radius: 2px; background: var(--surface-hover); transition: background .4s ease; }
+.step[data-state=done]:not(:last-child)::after { background: var(--success, #09ad70); }
+.dot { width: 28px; height: 28px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--text-secondary); background: var(--surface-hover); border: 2px solid var(--border); transition: all .35s ease; }
+.step[data-state=active] .dot { color: #fff; background: var(--brand-cyan, #20B5DF); border-color: var(--brand-cyan, #20B5DF); box-shadow: 0 0 0 4px rgba(32,181,223,.12); }
+.step[data-state=done] .dot { background: var(--success, #09ad70); border-color: var(--success, #09ad70); box-shadow: 0 0 0 3px rgba(9,173,112,.12); }
+.label { max-width: 100%; font-size: 13px; line-height: 1.3; letter-spacing: -.01em; color: var(--text-secondary); overflow-wrap: anywhere; hyphens: auto; }
+.step[data-state=active] .label { font-weight: 600; color: var(--link); }
+.step[data-state=done] .label { font-weight: 600; color: var(--success, #09ad70); }
+@media (prefers-reduced-motion: reduce) { .dot, .step::after { transition: none; } }

@@ -1,9 +1,9 @@
 'use client'
+import BrandLogo from '@/components/branding/BrandLogo'
 import { safePortalDestination } from '@/lib/portal-handoff'
 
 import { useState, useId, useRef } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -147,15 +147,7 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('qarevoHealthHome')}>
-          <Image
-            src='/brand/Untitled design - 2026-08-03T165058.603.png'
-            alt='Qarevo Health'
-            width={160}
-            height={34}
-            priority
-            unoptimized
-            style={{ width: '160px', height: 'auto' }}
-          />
+          <BrandLogo tone='white' width={160} />
         </Link>
       </div>
 
@@ -261,7 +253,7 @@ export default function Doctor2FAPage() {
       <style>{`* { box-sizing: border-box; } input::placeholder { color: var(--text-muted); } @media (max-width: 860px) { .doctor-2fa-left { display: none !important; } } .doctor-2fa-card { padding: clamp(22px, 6vw, 40px); }`}</style>
       <div className="doctor-2fa-left"><LeftPanel /></div>
       <main style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 6vw, 48px) 16px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '460px' }}>
+        <div style={{ width: '100%', maxWidth: '460px', minWidth: 0 }}>
           <button type="button" onClick={handleBack}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, fontSize: '13px', fontWeight: 600, color: T.slate2, marginBottom: '20px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />

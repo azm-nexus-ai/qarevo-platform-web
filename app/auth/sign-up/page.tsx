@@ -1,11 +1,11 @@
 'use client'
 
+import BrandLogo from '@/components/branding/BrandLogo'
 import { useTranslations } from 'next-intl'
 
 type Translate = ReturnType<typeof useTranslations>
 import { useEffect, useState, useId } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -284,15 +284,7 @@ function LeftDecor() {
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '48px' }}>
           <Link href='/' aria-label={t('qarevoHealthHome')} style={{ display: 'inline-flex', alignItems: 'center' }}>
-            <Image
-              src='/brand/Untitled design - 2026-08-03T165058.603.png'
-              alt='Qarevo Health'
-              width={160}
-              height={34}
-              priority
-              unoptimized
-              style={{ width: '160px', height: 'auto' }}
-            />
+            <BrandLogo tone='white' width={160} />
           </Link>
         </div>
 
@@ -519,7 +511,7 @@ export default function SignUpPage() {
 
       {/* Right: form */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '48px 24px 64px', overflowY: 'auto' }}>
-        <div style={{ width: '100%', maxWidth: '500px' }}>
+        <div style={{ width: '100%', maxWidth: '500px', minWidth: 0 }}>
 
           {/* Back link */}
           <Link href="/auth" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
@@ -535,7 +527,7 @@ export default function SignUpPage() {
             borderRadius: '22px',
             border: "1px solid var(--border)",
             boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.06)',
-            padding: '40px 40px 36px',
+            padding: 'clamp(22px, 6vw, 40px) clamp(18px, 5.5vw, 40px) clamp(22px, 5vw, 36px)',
           }}>
             {/* Header */}
             <div style={{ marginBottom: '28px' }}>

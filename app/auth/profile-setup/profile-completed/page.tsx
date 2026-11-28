@@ -133,7 +133,7 @@ export default function ProfileCompletedPage() {
       </div>
 
       <div className='pc-wrap' style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '44px 24px 64px', overflowY: 'auto' }}>
-        <div style={{ width: '100%', maxWidth: '760px' }}>
+        <div style={{ width: '100%', maxWidth: '760px', minWidth: 0 }}>
           <section className='pc-card' style={{ background: "var(--surface-glass)", backdropFilter: 'blur(34px) saturate(200%)', WebkitBackdropFilter: 'blur(34px) saturate(200%)', borderRadius: '24px', border: "1px solid var(--border)", boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 28px 68px rgba(4,53,77,0.1)', padding: '36px 32px' }}>
             <div style={{ padding: '12px 14px', borderRadius: '12px', background: "var(--surface-hover)", border: "1px solid var(--border)", display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div>

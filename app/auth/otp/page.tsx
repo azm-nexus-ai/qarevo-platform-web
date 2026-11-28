@@ -1,9 +1,10 @@
 'use client'
+import BrandLogo from '@/components/branding/BrandLogo'
+import StepProgress from '@/components/auth/StepProgress'
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { T, PAGE_BG } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -175,37 +176,8 @@ function SecurityIllustration({ state }: { state: 'idle' | 'success' | 'error' }
 
 // ─── Progress bar ──────────────────────────────────────────────────────────────
 function StepBar({ step }: { step: 0 | 1 | 2 }) {
-  const t = useTranslations('auth')
-  const steps = [t('otp.accountCreated'), t('otp.verifyIdentity'), t('otp.allSet')]
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', marginBottom: '32px' }}>
-      {steps.map((label, i) => {
-        const done = i < step, active = i === step
-        return (
-          <div key={label} style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-              <div style={{
-                width: '28px', height: '28px', borderRadius: '50%',
-                background: done ? T.green : active ? T.blue : "var(--surface-hover)",
-                border: `2px solid ${done ? T.green : active ? T.blue : "var(--border)"}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                boxShadow: active ? '0 0 0 4px rgba(32,181,223,0.1)' : done ? '0 0 0 3px rgba(9,173,112,0.1)' : 'none',
-                transition: 'all 0.35s ease',
-              }}>
-                {done
-                  ? <Ico p={ICONS.check} size={11} sw={3} color="#fff" />
-                  : <span style={{ fontSize: "13px", fontWeight: 700, color: active ? '#fff' : T.slate2 }}>{i + 1}</span>}
-              </div>
-              <span style={{ fontSize: "13px", fontWeight: done || active ? 600 : 400, color: done ? T.green : active ? T.link : T.slate2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>{label}</span>
-            </div>
-            {i < steps.length - 1 && (
-              <div style={{ width: '48px', height: '2px', margin: '13px 5px 0', borderRadius: '2px', background: done ? T.green : "var(--surface-hover)", transition: 'background 0.4s ease', flexShrink: 0 }} />
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
+  const t = useTranslations('auth'), common = useTranslations('common')
+  return <StepProgress steps={[t('otp.accountCreated'), t('otp.verifyIdentity'), t('otp.allSet')]} current={step} label={common('progress')} />
 }
 
 // ─── OTP cells ─────────────────────────────────────────────────────────────────
@@ -219,6 +191,7 @@ interface OtpProps {
 }
 
 function OtpCells({ value, onChange, onComplete, error, success, disabled }: OtpProps) {
+  const t = useTranslations('auth')
   const inputs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => { inputs.current[0]?.focus() }, [])
@@ -270,8 +243,9 @@ function OtpCells({ value, onChange, onComplete, error, success, disabled }: Otp
     const filled   = value[i] !== ''
     const isActive = !disabled && (filled || value.findIndex(d => d === '') === i)
     return {
-      width: '54px', height: '62px',
-      textAlign: 'center', fontSize: '24px', fontWeight: 800,
+      // Six cells must fit a 320px phone inside the card: scale with the viewport.
+      width: 'clamp(36px, 11vw, 54px)', height: 'clamp(48px, 14vw, 62px)', minWidth: 0,
+      textAlign: 'center', fontSize: 'clamp(20px, 6vw, 24px)', fontWeight: 800,
       fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
       color: error ? T.red : success ? T.green : T.navy,
       borderRadius: '14px',
@@ -297,7 +271,7 @@ function OtpCells({ value, onChange, onComplete, error, success, disabled }: Otp
   }
 
   return (
-    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }} onPaste={handlePaste}>
+    <div style={{ display: 'flex', gap: 'clamp(4px, 1.8vw, 8px)', justifyContent: 'center' }} onPaste={handlePaste}>
       {value.map((v, i) => (
         <input
           key={i}
@@ -310,7 +284,7 @@ function OtpCells({ value, onChange, onComplete, error, success, disabled }: Otp
           onChange={e => handleChange(i, e.target.value)}
           onKeyDown={e => handleKeyDown(i, e)}
           style={cellStyle(i)}
-          aria-label={`Digit ${i + 1} of 6`}
+          aria-label={t('otp.digitLabel', { number: i + 1 })}
         />
       ))}
     </div>
@@ -524,15 +498,7 @@ function OtpPageContent() {
       {/* Logo */}
       <div style={{ marginBottom: '28px', animation: 'fadeUp 0.4s ease both' }}>
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('otp.qarevoHealthHome')}>
-          <Image
-            src='/brand/Untitled design - 2026-08-03T165058.603.png'
-            alt='Qarevo Health'
-            width={160}
-            height={34}
-            priority
-            unoptimized
-            style={{ width: '160px', height: 'auto' }}
-          />
+          <BrandLogo tone='white' width={160} />
         </Link>
       </div>
 

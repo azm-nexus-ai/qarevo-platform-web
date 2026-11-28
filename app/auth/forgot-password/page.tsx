@@ -511,8 +511,8 @@ export default function ForgotPasswordPage() {
         <LeftPanel />
       </div>
 
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '460px' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 6vw, 48px) clamp(12px, 4vw, 24px)', minHeight: '100vh' }}>
+        <div style={{ width: '100%', maxWidth: '460px', minWidth: 0 }}>
           <Link
             href={portal.signIn}
             style={{
@@ -540,7 +540,7 @@ export default function ForgotPasswordPage() {
               borderRadius: '22px',
               border: "1px solid var(--border)",
               boxShadow: 'inset 0 1px 0 #fff, 0 4px 16px rgba(4,53,77,0.06), 0 24px 64px rgba(4,53,77,0.1), 0 48px 96px rgba(4,53,77,0.05)',
-              padding: '40px 40px 36px',
+              padding: 'clamp(22px, 6vw, 40px) clamp(18px, 5.5vw, 40px) clamp(22px, 5vw, 36px)',
               animation: 'fadeUp 0.3s ease',
             }}
           >
@@ -559,7 +559,7 @@ export default function ForgotPasswordPage() {
                         margin: '0 0 7px',
                       }}
                     >
-                      {portal.title}
+                      {t(`recoveryTitle.${portal.kind}`)}
                     </h1>
                     <p style={{ fontSize: '14px', color: T.slate, lineHeight: 1.65, margin: 0, letterSpacing: '-0.01em' }}>
                       {portal.kind === 'admin' ? t('enterYourAdministratorEmailAddress') : t('enterTheEmailAddressAssociated')}
@@ -840,14 +840,10 @@ export default function ForgotPasswordPage() {
 
           {portal.kind === 'patient' && <RecoverySignInLinks />}
           <p style={{ textAlign: 'center', fontSize: "13px", color: T.slate2, marginTop: '20px', letterSpacing: '-0.005em', lineHeight: 1.5 }}>
-            Review the status of our{' '}
-            <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
-              {t('terms')}
-            </Link>{' '}
-            and{' '}
-            <Link href='/privacy' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>
-              {t('privacyPolicy')}
-            </Link>
+            {t.rich('legalLinks', {
+              terms: chunks => <Link href='/terms' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{chunks}</Link>,
+              privacy: chunks => <Link href='/privacy' style={{ color: T.link, fontWeight: 500, textDecoration: 'none' }}>{chunks}</Link>,
+            })}
           </p>
         </div>
       </div>

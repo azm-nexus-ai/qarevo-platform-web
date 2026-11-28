@@ -556,7 +556,7 @@ export default function MedicalHistoryAllergiesPage() {
       </div>
 
       <div className='hp-wrap' style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '44px 24px 64px', overflowY: 'auto' }}>
-        <div style={{ width: '100%', maxWidth: '860px' }}>
+        <div style={{ width: '100%', maxWidth: '860px', minWidth: 0 }}>
           <Link href='/auth/profile-setup/contact-information' style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: T.slate2, textDecoration: 'none', marginBottom: '28px', letterSpacing: '-0.01em' }}>
             <Ico p={ICONS.arrowSm} size={14} sw={2} style={{ transform: 'rotate(180deg)' }} />
             {t('back')}
@@ -631,7 +631,7 @@ export default function MedicalHistoryAllergiesPage() {
                 ))}
               </div>
               {form.allergies.filter((item) => item !== 'No Known Allergies').length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '12px' }}>
                   {form.allergies.filter((item) => item !== 'No Known Allergies').map((allergy) => (
                     <TextAreaField key={allergy} label={t('allergyDetails', { allergy: optionLabel(allergy) })} placeholder={t('describeTheReactionSeverityOr')} value={form.allergyDetails[allergy] || ''} onChange={(value) => setForm((previous) => ({ ...previous, allergyDetails: { ...previous.allergyDetails, [allergy]: value } }))} optional={allergy !== 'Other'} error={submitted && allergy === 'Other' && !form.allergyDetails.Other?.trim() ? t('allergyOtherError') : undefined} />
                   ))}

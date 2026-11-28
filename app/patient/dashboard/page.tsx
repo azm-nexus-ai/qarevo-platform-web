@@ -125,7 +125,7 @@ const quickActions: QuickAction[] = [
   { label: 'Health record', sub: '', icon: ICONS.shield, href: PATIENT_ROUTES.medicalRecords },
   { label: 'Messages', sub: '', icon: ICONS.message, href: PATIENT_ROUTES.messages },
   { label: 'Bills and payments', sub: '', icon: ICONS.info, href: PATIENT_ROUTES.billing },
-  { label: 'Help', sub: '', icon: ICONS.user, href: '/patient/help' },
+  { label: 'Help', sub: '', icon: ICONS.user, href: '/support' },
 ]
 
 
@@ -172,7 +172,7 @@ const ACTION_KEYS: Record<string, [string, string]> = {
   '/patient/referrals': ['actionReferrals', 'actionReferralsSub'],
   '/patient/billing': ['actionBilling', 'actionBillingSub'],
   '/patient/appointments': ['actionAppointments', 'actionAppointmentsSub'],
-  '/patient/help': ['actionHelp', 'actionHelpSub'],
+  '/support': ['actionHelp', 'actionHelpSub'],
 }
 
 /** Portal areas the dashboard search can open directly, in addition to doctors, records and prescriptions. */
@@ -182,7 +182,7 @@ const SEARCH_DESTINATIONS: { href: string; key: string }[] = [
   { href: '/patient/prescription-care-plan', key: 'medication' }, { href: '/patient/lab-requests', key: 'labOrders' },
   { href: '/patient/referrals', key: 'referrals' }, { href: '/patient/messages', key: 'messages' },
   { href: '/patient/notifications', key: 'notifications' }, { href: '/patient/settings', key: 'settings' },
-  { href: '/patient/help', key: 'help' },
+  { href: '/support', key: 'help' },
 ]
 /** Lower case without accents, so "Ärztin" matches "arztin" and "Rechnung" matches "rechnungen". */
 const searchable = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()

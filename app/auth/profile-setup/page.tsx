@@ -323,7 +323,7 @@ export default function ProfileSetupPage() {
       </div>
 
       <div className='onboard-wrap' style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '46px 24px', minHeight: '100vh' }}>
-        <div style={{ width: '100%', maxWidth: '520px' }}>
+        <div style={{ width: '100%', maxWidth: '520px', minWidth: 0 }}>
           <section
             className='onboard-card'
             aria-live='polite'
@@ -391,7 +391,7 @@ export default function ProfileSetupPage() {
               <p style={{ margin: '0 0 10px', fontSize: "13px", fontWeight: 700, color: T.slate2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                 {t('profileSetupIntro.whyWeNeedThis')}
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '8px' }}>
                 <TrustCard label={t('profileSetupIntro.betterDoctorRecommendations')} sub={t('profileSetupIntro.tailoredPhysicianSuggestionsForYour')} icon={ICONS.steth} accent={T.blue} />
                 <TrustCard label={t('profileSetupIntro.personalizedCare')} sub={t('profileSetupIntro.moreEffectiveConsultationsWithBetter')} icon={ICONS.activity} accent={T.teal} />
                 <TrustCard label={t('profileSetupIntro.secureMedicalRecords')} sub={t('profileSetupIntro.enterpriseGradeEncryptionAndProtection')} icon={ICONS.lock} accent={T.cyan} />
@@ -414,6 +414,9 @@ export default function ProfileSetupPage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '5px',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      overflowWrap: 'anywhere',
                       padding: '6px 11px',
                       borderRadius: '100px',
                       background: "var(--surface-hover)",

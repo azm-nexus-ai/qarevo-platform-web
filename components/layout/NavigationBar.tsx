@@ -355,7 +355,7 @@ export default function NavigationBar() {
                   <AuthenticatedLogo priority width={100} />
                 </Link>
 
-                <ThemeToggle />
+                <span style={{ marginLeft: 'auto', display: 'inline-flex', flexShrink: 0 }}><ThemeToggle compact /></span>
                 {/* Mobile hamburger */}
                 <button
                   ref={hamburgerRef}
@@ -364,6 +364,7 @@ export default function NavigationBar() {
                   aria-controls="mobile-drawer"
                   onClick={() => setMobileOpen(prev => !prev)}
                   style={{
+                    flexShrink: 0,
                     background: 'none',
                     border: "1px solid var(--border)",
                     borderRadius: '8px',

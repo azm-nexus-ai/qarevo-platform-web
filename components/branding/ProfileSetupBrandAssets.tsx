@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import BrandLogo from '@/components/branding/BrandLogo'
 import type { CSSProperties } from 'react'
 
 type ProfileSetupLogoProps = {
@@ -13,14 +14,7 @@ type ProfileSetupMarkProps = {
 
 export function ProfileSetupLogo({ priority = false, style }: ProfileSetupLogoProps) {
   return (
-    <Image
-      src='/brand/Untitled design - 2026-08-03T165058.603.png'
-      alt='Qarevo Health'
-      width={160}
-      height={34}
-      priority={priority}
-      style={{ width: '160px', height: 'auto', maxWidth: '100%', display: 'block', ...style }}
-    />
+    <BrandLogo tone='white' width={160} />
   )
 }
 

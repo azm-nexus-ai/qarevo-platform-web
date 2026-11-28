@@ -37,12 +37,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 }
 export const useTheme = () => useContext(ThemeContext)
 
-export function ThemeToggle() {
+/** `compact` shows only the icon (tight phone headers); the label stays available to assistive technology. */
+export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const { theme, setTheme, ready } = useTheme(), t = useTranslations('common.theme')
   const action = ready && theme === 'dark' ? t('light') : t('dark')
-  return <button type="button" className="theme-toggle" aria-label={action} title={ready && theme === 'dark' ? t('switchToLight') : t('switchToDark')}
+  return <button type="button" className={compact ? 'theme-toggle theme-toggle-compact' : 'theme-toggle'} aria-label={action} title={ready && theme === 'dark' ? t('switchToLight') : t('switchToDark')}
     onClick={() => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')}>
     <span aria-hidden="true">{ready && theme === 'dark' ? '☀' : '☾'}</span>
-    <span>{action}</span>
+    {!compact && <span>{action}</span>}
   </button>
 }

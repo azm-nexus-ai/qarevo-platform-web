@@ -1,9 +1,9 @@
 'use client'
 
+import BrandLogo from '@/components/branding/BrandLogo'
 import { useTranslations } from 'next-intl'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { ICONS } from '@/constants/icons'
@@ -95,15 +95,7 @@ function LeftPanel() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('home')}>
-          <Image
-            src='/brand/Untitled design - 2026-08-03T165058.603.png'
-            alt='Qarevo Health'
-            width={160}
-            height={34}
-            priority
-            unoptimized
-            style={{ width: '160px', height: 'auto' }}
-          />
+          <BrandLogo tone='white' width={160} />
         </Link>
       </div>
 

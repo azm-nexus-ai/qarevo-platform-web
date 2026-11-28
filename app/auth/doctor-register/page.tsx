@@ -1,9 +1,9 @@
 'use client'
 
+import BrandLogo from '@/components/branding/BrandLogo'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState, useId } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { focusValidation } from '@/components/ui/ValidationFeedback'
 import { T } from '@/lib/tokens'
@@ -122,9 +122,9 @@ function Field({ label, placeholder, type = 'text', value, onChange, error, hint
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em' }}>
-          {label}{!optional && ' (Required)'}
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', gap: '2px 8px', minWidth: 0 }}>
+        <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: T.navy, letterSpacing: '-0.01em', minWidth: 0, overflowWrap: 'anywhere', hyphens: 'auto' }}>
+          {label}{!optional && ` ${t('requiredSuffix')}`}
         </label>
         {optional && <span style={{ fontSize: "13px", color: T.slate2, fontWeight: 400 }}>{t('optional')}</span>}
       </div>
@@ -429,15 +429,7 @@ export default function DoctorRegisterPage() {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} aria-label={t('qarevoHealthHome')}>
-            <Image
-              src='/brand/Untitled design - 2026-08-03T165058.603.png'
-              alt='Qarevo Health'
-              width={160}
-              height={34}
-              priority
-              unoptimized
-              style={{ width: '160px', height: 'auto' }}
-            />
+            <BrandLogo tone='white' width={160} />
           </Link>
         </div>
 
@@ -504,7 +496,7 @@ export default function DoctorRegisterPage() {
             {/* Form */}
             <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Name fields */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '12px' }}>
                 <Field
                   label={t('firstName')}
                   placeholder={t('firstNamePlaceholder')}
@@ -597,7 +589,7 @@ export default function DoctorRegisterPage() {
               )}
 
               {/* Phone fields */}
-              <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(84px, 110px) minmax(0, 1fr)', gap: '12px' }}>
                 <Field
                   label={t('countryCode')}
                   placeholder="+49"
@@ -618,7 +610,7 @@ export default function DoctorRegisterPage() {
               </div>
 
               {/* Professional information */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '12px' }}>
                 <Field
                   label={t('dateOfBirth')}
                   placeholder={t('selectDateOfBirth')}
@@ -723,7 +715,7 @@ export default function DoctorRegisterPage() {
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '12px' }}>
                 <Field
                   label={t('yearsOfExperience')}
                   error={experienceErr || undefined}

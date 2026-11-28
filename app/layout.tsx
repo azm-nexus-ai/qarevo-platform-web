@@ -25,8 +25,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: t('description'),
     keywords: ['healthcare', 'telemedicine', 'physician', 'clinical intelligence'],
+    // Official brand mark (LOGO3A) as a crisp vector favicon, with the PNG for older browsers and iOS.
     icons: {
-      icon: '/brand/qarevo-mark.png',
+      icon: [{ url: '/brand/logo/qarevo-mark-colour.svg', type: 'image/svg+xml' }, { url: '/brand/qarevo-mark.png', type: 'image/png' }],
       shortcut: '/brand/qarevo-mark.png',
       apple: '/brand/qarevo-mark.png',
     },

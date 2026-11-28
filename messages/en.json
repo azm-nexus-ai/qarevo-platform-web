@@ -10,7 +10,8 @@
       "switchToDark": "Switch to dark mode"
     },
     "signingOut": "Signing out…",
-    "validationSummary": "Please check the following before continuing:"
+    "validationSummary": "Please check the following before continuing:",
+    "progress": "Progress"
   },
   "nav": {
     "patient": {
@@ -512,7 +513,14 @@
       "secureRecovery": "Secure Recovery",
       "singleUseLink": "Single-use Link",
       "accountRecovery": "Account Recovery",
-      "ifAnEligibleAccountExists": "If an eligible account exists, we will attempt to send reset instructions. Check your inbox and spam folder. Use the newest email; requesting another link replaces earlier links. If you refreshed the reset page, reopen the full link from the email."
+      "ifAnEligibleAccountExists": "If an eligible account exists, we will attempt to send reset instructions. Check your inbox and spam folder. Use the newest email; requesting another link replaces earlier links. If you refreshed the reset page, reopen the full link from the email.",
+      "recoveryTitle": {
+        "patient": "Forgot your password?",
+        "doctor": "Recover clinician access",
+        "admin": "Recover administrator access",
+        "practice": "Recover practice access"
+      },
+      "legalLinks": "Review the status of our <terms>Terms</terms> and <privacy>Privacy Policy</privacy>"
     },
     "doctorRegister": {
       "optional": "Optional",
@@ -632,7 +640,8 @@
       "socialCancel": "Register without {provider}",
       "errSocial": "Provider sign-up is not possible: the email must be the one the provider confirmed, the provider account must not be connected yet, and the sign-up is valid for 30 minutes. Otherwise register without the provider.",
       "pleaseCorrectTheHighlightedFields": "Please correct the highlighted fields before continuing.",
-      "pleaseAcknowledgeTheDevelopmentTest": "Please acknowledge the development test conditions"
+      "pleaseAcknowledgeTheDevelopmentTest": "Please acknowledge the development test conditions",
+      "requiredSuffix": "(Required)"
     },
     "verifyEmail": {
       "codeVerifiedActivatingYourAccount": "Code verified — activating your account…",
@@ -682,7 +691,8 @@
       "secureVerification": "Secure verification",
       "endToEndEncrypted": "End-to-end encrypted",
       "emailVerificationProtectedAccess": "Email verification · Protected access",
-      "medicalGradePrivacy": "Medical-grade privacy"
+      "medicalGradePrivacy": "Medical-grade privacy",
+      "digitLabel": "Verification code digit {number} of 6"
     },
     "resetPassword": {
       "securityFirst": "Security first.",
@@ -741,7 +751,14 @@
       "secureCredentials": "Secure Credentials",
       "protectedAccountAccess": "Protected account access",
       "thePasswordResetLinkIs": "The password reset link is missing or invalid. Reopen the full link from your newest reset email. Refreshing this page removes the link from memory; request a new email only if the original link has expired.",
-      "protectingYourMedicalInformationIs": "Protecting your medical information is Qarevo Health's highest priority. Create a strong password to safely restore account access."
+      "protectingYourMedicalInformationIs": "Protecting your medical information is Qarevo Health's highest priority. Create a strong password to safely restore account access.",
+      "resetTitle": {
+        "patient": "Reset Your Password",
+        "doctor": "Reset clinician password",
+        "admin": "Reset administrator password",
+        "practice": "Reset account password"
+      },
+      "legalLinks": "Review the status of our <terms>Terms</terms> and <privacy>Privacy Policy</privacy>"
     },
     "doctorTwoFactor": {
       "back": "Back to sign-in",
@@ -830,7 +847,8 @@
       "enter6DigitCode": "Enter 6-digit code",
       "verificationEmailRequestedCheckYour": "Verification email requested. Check your inbox and spam folder.",
       "verifyYourIdentity": "Verify Your Identity",
-      "change": "Change"
+      "change": "Change",
+      "digitLabel": "Digit {number} of 6"
     },
     "accountCreated": {
       "welcomeToYourCareJourney": "Welcome to your care journey.",
@@ -2356,7 +2374,23 @@
     "yourSavedAppointmentCareTeam": "Your saved appointment, care team and preparation steps.",
     "loadingAppointment": "Loading appointment…",
     "yourAppointmentCouldNotBe": "Your appointment could not be loaded. Please retry.",
-    "assignedClinician": "Assigned clinician"
+    "assignedClinician": "Assigned clinician",
+    "calendarTitle": "Video consultation: {doctor}",
+    "calendarDescription": "Qarevo Health appointment. Open it in the patient portal for preparation and the video room: {url}",
+    "startsIn": "starts {relative}",
+    "addToCalendar": "Add to calendar",
+    "steps": {
+      "device": "Check your camera and microphone",
+      "deviceText": "Takes about a minute. Use the device you will join from.",
+      "documents": "Share documents for your doctor",
+      "documentsText": "Findings, medication plans or photos help your doctor prepare.",
+      "documentsAction": "Open health record",
+      "questions": "Note your questions",
+      "questionsText": "Send your doctor a message if something is unclear before the appointment.",
+      "questionsAction": "Open messages",
+      "join": "Join the video room",
+      "joinText": "Open the room a few minutes before the start; you can join as soon as the consultation is open."
+    }
   },
   "patientEpisode": {
     "returnToDashboard": "Return to Dashboard",
